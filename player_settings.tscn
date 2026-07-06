@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://djqlpoymudli6"]
+
+[ext_resource type="Script" uid="uid://sn1hcyqakku6" path="res://player_settings.gd" id="1_g1s3k"]
+
+[node name="PlayerSettings" type="Control" unique_id=1072268312]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_g1s3k")

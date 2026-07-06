@@ -1,0 +1,56 @@
+[gd_scene format=3 uid="uid://befjncsqpswu2"]
+
+[ext_resource type="Script" uid="uid://bqhdpt43v8aon" path="res://melee_weapon.gd" id="1_vax1h"]
+[ext_resource type="PackedScene" uid="uid://dkkm2gfh36wb7" path="res://models/weaponModels/scarlet_sword_adventure_time.glb" id="2_3eo4f"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_xhknj"]
+size = Vector3(2.0025635, 1, 2.46167)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vax1h"]
+albedo_color = Color(1, 0.5411765, 0.11372549, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vax1h"]
+material = SubResource("StandardMaterial3D_vax1h")
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_3eo4f"]
+radius = 1.5
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bf788"]
+size = Vector3(0.59342957, 1.0805664, 0.5715027)
+
+[node name="MeleeWeapon" type="RigidBody3D" unique_id=1665878362]
+collision_layer = 4
+script = ExtResource("1_vax1h")
+
+[node name="Sketchfab_Scene" parent="." unique_id=1210188417 instance=ExtResource("2_3eo4f")]
+transform = Transform3D(0.045, 0, 0, 0, -1.9670126e-09, -0.045, 0, 0.045, -1.9670126e-09, 0, 0, -0.5984657)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2020956412]
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.6, -0.0017120354, 0, 0.036987305)
+shape = SubResource("BoxShape3D_xhknj")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=91112034]
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.6, 0, 0, 0)
+visible = false
+mesh = SubResource("BoxMesh_vax1h")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=1920030490]
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1884165992]
+shape = SubResource("SphereShape3D_3eo4f")
+
+[node name="HitBox" type="Area3D" parent="." unique_id=1538793150]
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitBox" unique_id=1662649966]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 3, -0.004055023, 0.020141602, 0.3347497)
+shape = SubResource("BoxShape3D_bf788")
+
+[node name="Node3D" type="Node3D" parent="." unique_id=1835559051]
+
+[node name="PickupLabel" type="Label3D" parent="." unique_id=167790376]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+billboard = 1
+no_depth_test = true
+text = "[F] Pick Up Weapon"

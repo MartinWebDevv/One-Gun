@@ -1,0 +1,917 @@
+[gd_scene format=3 uid="uid://bm3uvujkldw1s"]
+
+[ext_resource type="PackedScene" uid="uid://ddjvi4ck1h7rc" path="res://player.tscn" id="1_1djch"]
+[ext_resource type="PackedScene" uid="uid://b0o8qjgssykx5" path="res://gun.tscn" id="1_2jrbx"]
+[ext_resource type="PackedScene" uid="uid://befjncsqpswu2" path="res://melee_weapon.tscn" id="2_id0bc"]
+[ext_resource type="Script" uid="uid://cvvwonydncavs" path="res://round_label.gd" id="4_6aiab"]
+[ext_resource type="Script" uid="uid://bvqj5matij4cw" path="res://kill_feed.gd" id="5_qt6xw"]
+[ext_resource type="Script" uid="uid://egcbpt4rhdl1" path="res://match_hud.gd" id="6_cwwr8"]
+[ext_resource type="Script" uid="uid://c6g4qdggsmsjd" path="res://status_label.gd" id="6_kpkqg"]
+[ext_resource type="Script" uid="uid://8cb5vuepvo2w" path="res://player_ui_container.gd" id="7_xk627"]
+[ext_resource type="Script" uid="uid://c0djnbn6whcf5" path="res://crosshair.gd" id="8_c0ovt"]
+[ext_resource type="Script" uid="uid://kq7rxku3mu47" path="res://stamina_bar.gd" id="9_y2qti"]
+[ext_resource type="Script" uid="uid://i1kxwgxjurmb" path="res://dash_charges.gd" id="10_0gte7"]
+[ext_resource type="Script" uid="uid://dmq6onhybdv8t" path="res://gun_ui.gd" id="11_8hpx1"]
+[ext_resource type="Texture2D" uid="uid://b5vd4r3sebxop" path="res://icon.svg" id="12_tpctg"]
+[ext_resource type="Script" uid="uid://dyy60np7vjpc6" path="res://melee_ui.gd" id="13_2pu1v"]
+[ext_resource type="Script" uid="uid://cv3mmrvig6mce" path="res://reload_spinner.gd" id="14_fltnx"]
+[ext_resource type="Script" uid="uid://emh4vrqytxqx" path="res://item_ui.gd" id="15_ch848"]
+[ext_resource type="Script" uid="uid://bwsmgbp1vw6l2" path="res://inventory_slots.gd" id="16_v8y5m"]
+[ext_resource type="Script" uid="uid://dcs71qvxprgew" path="res://powerup_status.gd" id="17_lc760"]
+[ext_resource type="Script" uid="uid://bigaqrmy6p743" path="res://pause_menu.gd" id="18_gmap1"]
+[ext_resource type="Script" uid="uid://dm7m7cqa3abt0" path="res://round_manager.gd" id="19_glsbd"]
+[ext_resource type="Script" uid="uid://cd1gvr838772b" path="res://splitscreen_manager.gd" id="20_ed6xf"]
+[ext_resource type="PackedScene" uid="uid://lxicxytw7d7w" path="res://powerup.tscn" id="21_ij4eg"]
+[ext_resource type="PackedScene" uid="uid://c2x5oayflfvyy" path="res://item.tscn" id="22_fy782"]
+[ext_resource type="PackedScene" uid="uid://c4se2kvv2q2ke" path="res://bubble_gum_trap.tscn" id="23_id0bc"]
+
+[sub_resource type="Environment" id="Environment_1djch"]
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.3
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_id0bc"]
+vertices = PackedVector3Array(-24.940002, 0.4601518, -18.919998, -23.440002, 0.4601518, -18.919998, -23.690002, 0.4601518, -33.67, -25.190002, 0.4601518, -18.419998, -51.190002, 0.4601518, -33.67, -51.190002, 0.4601518, -18.419998, -22.190002, 0.4601518, -18.919998, -21.940002, 0.4601518, -17.919998, -21.440002, 0.4601518, -17.919998, -21.190002, 0.4601518, -18.919998, -10.690002, 0.4601518, -18.919998, -10.440002, 0.4601518, -33.67, 24.309998, 0.4601518, -17.919998, 25.059998, 0.4601518, -18.169998, 25.059998, 0.4601518, -18.669998, 24.309998, 0.4601518, -18.919998, 0.30999756, 0.4601518, -12.419998, 24.309998, 0.4601518, -25.919998, 26.559998, 0.4601518, -26.169998, 26.559998, 0.4601518, -33.67, -8.940002, 0.4601518, -18.669998, -8.940002, 0.4601518, -12.419998, 0.55999756, 0.4601518, -11.669998, 24.309998, 0.4601518, -11.919998, 41.309998, 0.4601518, -26.169998, 41.309998, 0.4601518, -33.67, 43.309998, 0.4601518, -26.169998, 43.559998, 0.4601518, -24.419998, 49.309998, 0.4601518, -24.669998, 49.309998, 0.4601518, -33.67, 25.809998, 0.4601518, -18.919998, 25.809998, 0.4601518, -17.919998, 42.059998, 0.4601518, -17.919998, 42.059998, 0.4601518, -18.919998, 25.809998, 0.4601518, -12.669998, 42.059998, 0.4601518, -12.669998, 42.809998, 0.4601518, -18.169998, 42.809998, 0.4601518, -18.669998, 42.059998, 0.4601518, -24.919998, 25.809998, 0.4601518, -24.919998, 43.559998, 0.4601518, -18.919998, 43.559998, 0.4601518, -17.919998, 49.309998, 0.4601518, -12.669998, 43.559998, 0.4601518, -12.919998, -36.690002, 0.4601518, 11.080002, -36.440002, 0.4601518, 11.830002, -35.940002, 0.4601518, 11.830002, -35.690002, 0.4601518, 11.080002, -45.190002, 0.4601518, 11.080002, -25.190002, 0.4601518, -2.1699982, -51.190002, 0.4601518, 12.580002, -45.440002, 0.4601518, 12.830002, -26.690002, 0.4601518, 11.080002, -26.440002, 0.4601518, 11.580002, -24.690002, 0.4601518, -1.9199982, -7.6900024, 5.7101517, -2.9199982, -7.6900024, 5.7101517, -11.419998, -9.940002, 5.7101517, -11.669998, -9.940002, 5.7101517, -17.919998, -24.190002, 5.7101517, -17.919998, -24.190002, 5.7101517, -2.9199982, -14.190002, 0.4601518, -2.9199982, -13.690002, 0.4601518, -2.9199982, -13.440002, 0.4601518, -3.9199982, -14.440002, 0.4601518, -3.9199982, -22.940002, 0.4601518, -3.9199982, -10.940002, 0.4601518, -8.669998, -10.940002, 0.4601518, -16.919998, -21.190002, 0.4601518, -16.919998, -22.190002, 0.4601518, -16.919998, -10.940002, 0.4601518, -6.669998, -9.940002, 0.4601518, -6.919998, -9.940002, 0.4601518, -8.419998, -22.940002, 0.4601518, -16.919998, -10.940002, 0.4601518, -3.9199982, 43.309998, 0.4601518, -11.169998, 49.309998, 0.4601518, 3.8300018, 24.809998, 0.4601518, -11.169998, 24.059998, 0.4601518, 1.0800018, 27.809998, 0.4601518, 3.0800018, 28.059998, 0.4601518, 3.8300018, 23.059998, 0.4601518, 0.83000183, 0.55999756, 0.4601518, -2.4199982, -0.44000244, 5.7101517, -2.9199982, -0.44000244, 5.7101517, -11.419998, -8.940002, 0.4601518, -6.669998, -8.940002, 0.4601518, -8.669998, -1.1900024, 0.4601518, -3.6699982, -1.1900024, 0.4601518, -10.919998, -8.940002, 0.4601518, -10.919998, -8.940002, 0.4601518, -3.6699982, 13.559998, 0.4601518, 32.08, 13.809998, 0.4601518, 32.83, 14.309998, 0.4601518, 32.83, 14.559998, 0.4601518, 32.08, -26.440002, 0.4601518, 33.83, -0.69000244, 0.4601518, 34.08, -0.44000244, 0.4601518, 32.08, -13.440002, 0.4601518, -1.9199982, -14.440002, 0.4601518, -1.9199982, 14.559998, 0.4601518, 16.080002, 15.059998, 0.4601518, 14.080002, 0.05999756, 0.4601518, -1.9199982, 16.559998, 0.4601518, 13.830002, 16.059998, 0.4601518, 12.330002, 19.059998, 0.4601518, 32.08, 19.059998, 0.4601518, 18.580002, 16.559998, 0.4601518, 11.580002, 22.059998, 0.4601518, 1.8300018, 26.809998, 4.2101517, 4.080002, 23.809998, 4.2101517, 2.0800018, 23.059998, 4.2101517, 2.3300018, 15.559998, 4.2101517, 15.330002, 19.059998, 4.2101517, 17.330002, 24.559998, 0.4601518, 6.330002, 26.059998, 0.4601518, 5.830002, 26.059998, 0.4601518, 5.580002, 25.809998, 0.4601518, 4.080002, 24.059998, 0.4601518, 3.0800018, 23.309998, 0.4601518, 3.3300018, 17.809998, 0.4601518, 13.330002, 16.809998, 0.4601518, 15.580002, 18.559998, 0.4601518, 16.580002, 19.309998, 0.4601518, 16.080002, 27.059998, 0.4601518, 5.580002, 26.309998, 0.4601518, 7.330002, 24.809998, 0.4601518, 32.08, 25.059998, 0.4601518, 33.83, 49.309998, 0.4601518, 33.58, 20.559998, 0.4601518, 17.330002, -36.690002, 0.4601518, 34.33, -36.440002, 0.4601518, 35.33, -35.940002, 0.4601518, 35.33, -35.690002, 0.4601518, 34.33, -35.690002, 0.4601518, 12.830002, -36.690002, 0.4601518, 12.830002, -44.190002, 0.4601518, 12.830002, -44.190002, 0.4601518, 34.33, -27.940002, 0.4601518, 34.33, -27.940002, 0.4601518, 12.830002, -51.190002, 0.4601518, 34.58, -45.440002, 0.4601518, 34.33, 21.059998, 0.4601518, 46.83, 21.309998, 0.4601518, 47.83, 21.809998, 0.4601518, 47.83, 22.059998, 0.4601518, 46.83, 11.059998, 0.4601518, 38.83, 11.059998, 0.4601518, 46.83, 14.559998, 0.4601518, 33.83, 13.559998, 0.4601518, 33.83, 11.059998, 0.4601518, 36.58, 23.059998, 0.4601518, 33.83, 10.059998, 0.4601518, 36.83, 10.059998, 0.4601518, 38.58, 23.059998, 0.4601518, 46.83, 11.059998, 0.4601518, 33.83, 7.5599976, 5.7101517, 41.58, 7.5599976, 5.7101517, 33.08, 0.30999756, 5.7101517, 33.08, 0.30999756, 5.7101517, 41.58, 9.809998, 5.7101517, 41.83, 9.809998, 5.7101517, 47.83, 24.059998, 5.7101517, 47.83, 24.059998, 5.7101517, 33.08, 1.0599976, 0.4601518, 34.58, 0.05999756, 0.4601518, 34.83, 0.05999756, 0.4601518, 35.08, 1.0599976, 0.4601518, 35.33, 8.809998, 0.4601518, 36.58, 8.809998, 0.4601518, 33.58, 1.0599976, 0.4601518, 40.83, 8.809998, 0.4601518, 38.83, 8.809998, 0.4601518, 40.83, 1.0599976, 0.4601518, 33.58, 25.059998, 0.4601518, 47.08, 49.309998, 0.4601518, 47.33, -0.69000244, 0.4601518, 35.33, -0.69000244, 0.4601518, 34.58, -26.440002, 0.4601518, 35.83, -26.940002, 0.4601518, 36.08, -0.69000244, 0.4601518, 42.33, 8.809998, 0.4601518, 48.58, 8.809998, 0.4601518, 42.58, 10.309998, 0.4601518, 64.58, 10.559998, 0.4601518, 48.83, -26.940002, 0.4601518, 64.58, -35.690002, 0.4601518, 36.08, -36.690002, 0.4601518, 36.08, -45.190002, 0.4601518, 36.08, -51.190002, 0.4601518, 64.58, 24.809998, 0.4601518, 48.83, 23.309998, 0.4601518, 48.83, 23.559998, 0.4601518, 64.58, 49.309998, 0.4601518, 64.58, 22.059998, 0.4601518, 48.83, 21.059998, 0.4601518, 48.83)
+polygons = [PackedInt32Array(2, 1, 0), PackedInt32Array(0, 3, 2), PackedInt32Array(2, 3, 5), PackedInt32Array(2, 5, 4), PackedInt32Array(7, 6, 8), PackedInt32Array(8, 6, 9), PackedInt32Array(9, 6, 2), PackedInt32Array(10, 9, 11), PackedInt32Array(11, 9, 2), PackedInt32Array(1, 2, 6), PackedInt32Array(13, 12, 14), PackedInt32Array(14, 12, 15), PackedInt32Array(15, 12, 16), PackedInt32Array(17, 15, 16), PackedInt32Array(19, 18, 17), PackedInt32Array(16, 21, 20), PackedInt32Array(11, 20, 10), PackedInt32Array(20, 11, 16), PackedInt32Array(16, 11, 17), PackedInt32Array(17, 11, 19), PackedInt32Array(22, 16, 23), PackedInt32Array(23, 16, 12), PackedInt32Array(19, 25, 18), PackedInt32Array(18, 25, 24), PackedInt32Array(28, 27, 26), PackedInt32Array(26, 24, 25), PackedInt32Array(28, 26, 29), PackedInt32Array(29, 26, 25), PackedInt32Array(14, 30, 13), PackedInt32Array(13, 30, 31), PackedInt32Array(31, 30, 33), PackedInt32Array(31, 33, 32), PackedInt32Array(32, 35, 31), PackedInt32Array(31, 35, 34), PackedInt32Array(36, 32, 37), PackedInt32Array(37, 32, 33), PackedInt32Array(30, 39, 33), PackedInt32Array(33, 39, 38), PackedInt32Array(37, 40, 36), PackedInt32Array(36, 40, 41), PackedInt32Array(41, 40, 42), PackedInt32Array(42, 40, 28), PackedInt32Array(42, 43, 41), PackedInt32Array(40, 27, 28), PackedInt32Array(45, 44, 46), PackedInt32Array(46, 44, 47), PackedInt32Array(49, 44, 48), PackedInt32Array(48, 51, 50), PackedInt32Array(54, 53, 52), PackedInt32Array(54, 52, 49), PackedInt32Array(49, 52, 47), PackedInt32Array(48, 50, 49), PackedInt32Array(49, 50, 3), PackedInt32Array(3, 50, 5), PackedInt32Array(49, 47, 44), PackedInt32Array(57, 56, 55), PackedInt32Array(59, 58, 57), PackedInt32Array(55, 60, 57), PackedInt32Array(57, 60, 59), PackedInt32Array(61, 64, 62), PackedInt32Array(62, 64, 63), PackedInt32Array(64, 65, 66), PackedInt32Array(66, 65, 67), PackedInt32Array(67, 65, 68), PackedInt32Array(8, 68, 7), PackedInt32Array(7, 68, 69), PackedInt32Array(69, 68, 65), PackedInt32Array(63, 64, 70), PackedInt32Array(70, 64, 66), PackedInt32Array(71, 70, 72), PackedInt32Array(72, 70, 66), PackedInt32Array(65, 73, 69), PackedInt32Array(70, 74, 63), PackedInt32Array(43, 42, 75), PackedInt32Array(75, 42, 76), PackedInt32Array(79, 78, 77), PackedInt32Array(79, 77, 80), PackedInt32Array(80, 77, 75), PackedInt32Array(80, 75, 76), PackedInt32Array(81, 77, 78), PackedInt32Array(77, 81, 23), PackedInt32Array(23, 81, 82), PackedInt32Array(23, 82, 22), PackedInt32Array(56, 84, 55), PackedInt32Array(55, 84, 83), PackedInt32Array(72, 86, 71), PackedInt32Array(71, 86, 85), PackedInt32Array(86, 88, 85), PackedInt32Array(85, 88, 87), PackedInt32Array(86, 89, 88), PackedInt32Array(87, 90, 85), PackedInt32Array(92, 91, 93), PackedInt32Array(93, 91, 94), PackedInt32Array(97, 96, 95), PackedInt32Array(62, 98, 61), PackedInt32Array(61, 98, 99), PackedInt32Array(100, 102, 101), PackedInt32Array(103, 101, 104), PackedInt32Array(104, 101, 102), PackedInt32Array(106, 105, 94), PackedInt32Array(106, 94, 91), PackedInt32Array(106, 91, 100), PackedInt32Array(100, 91, 97), PackedInt32Array(53, 54, 99), PackedInt32Array(53, 99, 98), PackedInt32Array(102, 107, 104), PackedInt32Array(98, 102, 53), PackedInt32Array(53, 102, 100), PackedInt32Array(53, 100, 97), PackedInt32Array(53, 97, 95), PackedInt32Array(102, 82, 107), PackedInt32Array(107, 82, 108), PackedInt32Array(82, 81, 108), PackedInt32Array(110, 109, 111), PackedInt32Array(111, 109, 113), PackedInt32Array(111, 113, 112), PackedInt32Array(115, 114, 116), PackedInt32Array(116, 114, 117), PackedInt32Array(117, 114, 118), PackedInt32Array(118, 114, 119), PackedInt32Array(121, 103, 120), PackedInt32Array(122, 121, 123), PackedInt32Array(123, 121, 120), PackedInt32Array(123, 120, 114), PackedInt32Array(114, 120, 119), PackedInt32Array(116, 124, 115), PackedInt32Array(115, 124, 125), PackedInt32Array(128, 127, 126), PackedInt32Array(124, 80, 125), PackedInt32Array(125, 80, 76), PackedInt32Array(106, 129, 105), PackedInt32Array(105, 129, 126), PackedInt32Array(129, 125, 126), PackedInt32Array(126, 125, 128), PackedInt32Array(128, 125, 76), PackedInt32Array(131, 130, 132), PackedInt32Array(132, 130, 133), PackedInt32Array(133, 130, 135), PackedInt32Array(133, 135, 134), PackedInt32Array(130, 137, 135), PackedInt32Array(135, 137, 136), PackedInt32Array(46, 134, 45), PackedInt32Array(45, 134, 135), PackedInt32Array(134, 139, 133), PackedInt32Array(133, 139, 138), PackedInt32Array(141, 140, 51), PackedInt32Array(51, 140, 50), PackedInt32Array(143, 142, 144), PackedInt32Array(144, 142, 145), PackedInt32Array(142, 147, 146), PackedInt32Array(93, 148, 92), PackedInt32Array(92, 148, 149), PackedInt32Array(150, 148, 146), PackedInt32Array(146, 148, 151), PackedInt32Array(146, 151, 142), PackedInt32Array(142, 151, 145), PackedInt32Array(152, 150, 153), PackedInt32Array(153, 150, 146), PackedInt32Array(151, 154, 145), PackedInt32Array(150, 155, 149), PackedInt32Array(150, 149, 148), PackedInt32Array(159, 158, 156), PackedInt32Array(156, 158, 157), PackedInt32Array(160, 156, 157), PackedInt32Array(162, 161, 160), PackedInt32Array(157, 163, 160), PackedInt32Array(160, 163, 162), PackedInt32Array(165, 164, 166), PackedInt32Array(166, 164, 167), PackedInt32Array(167, 164, 169), PackedInt32Array(167, 169, 168), PackedInt32Array(168, 171, 167), PackedInt32Array(167, 171, 170), PackedInt32Array(153, 171, 152), PackedInt32Array(152, 171, 168), PackedInt32Array(171, 172, 170), PackedInt32Array(164, 173, 169), PackedInt32Array(127, 128, 174), PackedInt32Array(174, 128, 175), PackedInt32Array(166, 176, 165), PackedInt32Array(165, 176, 177), PackedInt32Array(177, 176, 178), PackedInt32Array(177, 178, 95), PackedInt32Array(178, 176, 179), PackedInt32Array(179, 176, 180), PackedInt32Array(180, 182, 181), PackedInt32Array(181, 184, 183), PackedInt32Array(181, 183, 180), PackedInt32Array(180, 183, 185), PackedInt32Array(180, 185, 179), PackedInt32Array(95, 96, 177), PackedInt32Array(132, 186, 131), PackedInt32Array(131, 186, 187), PackedInt32Array(187, 186, 185), PackedInt32Array(186, 179, 185), PackedInt32Array(141, 188, 140), PackedInt32Array(140, 188, 189), PackedInt32Array(188, 187, 189), PackedInt32Array(189, 187, 185), PackedInt32Array(192, 191, 190), PackedInt32Array(190, 174, 192), PackedInt32Array(192, 174, 175), PackedInt32Array(192, 175, 193), PackedInt32Array(144, 194, 143), PackedInt32Array(143, 194, 195), PackedInt32Array(195, 194, 192), PackedInt32Array(184, 195, 183), PackedInt32Array(183, 195, 192), PackedInt32Array(194, 191, 192)]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vtrmx"]
+albedo_color = Color(0.5785, 0.89, 0.5785, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7f2x3"]
+albedo_color = Color(0, 1, 1, 1)
+metallic_specular = 0.88
+roughness = 0.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_13qdw"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b1lj4"]
+albedo_color = Color(1, 0.54901963, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_25bs2"]
+albedo_color = Color(1, 1, 0, 1)
+
+[node name="Main" type="Node3D" unique_id=1497330761]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1110697007]
+environment = SubResource("Environment_1djch")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1982343284]
+transform = Transform3D(1, 0, 0, 0, 0.49999997, 0.86602545, 0, -0.86602545, 0.49999997, 0.05762863, 10, 11.474)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=705182487]
+navigation_mesh = SubResource("NavigationMesh_id0bc")
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="NavigationRegion3D" unique_id=708011876]
+use_collision = true
+collision_layer = 5
+collision_mask = 5
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D" unique_id=1866326598]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9000015, -0.20000005, 15.700001)
+size = Vector3(101.8, 0.6, 100)
+material = SubResource("StandardMaterial3D_vtrmx")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D/CSGBox3D" unique_id=1115135640]
+transform = Transform3D(1, 0, 0, 0, 2.7, 0, 0, 0, 4.8, 0.25000226, 2.9500008, 49.780003)
+size = Vector3(102.9, 2.1000001, 0.1)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D/CSGBox3D" unique_id=1815761241]
+transform = Transform3D(1, 0, 0, 0, 2.7, 0, 0, 0, 4.8, 0.25000226, 2.9500008, -50.12)
+size = Vector3(102.9, 2.1000001, 0.1)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D/CSGBox3D" unique_id=1362574253]
+transform = Transform3D(-4.3711385e-08, 0, 4.7999997, 0, 2.6999998, 0, -0.99999994, 0, -2.0981466e-07, 51.150005, 2.9500008, -0.27000046)
+size = Vector3(100.200005, 2.1000001, 0.1)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D/CSGBox3D" unique_id=642233836]
+transform = Transform3D(-4.3711385e-08, 0, 4.7999997, 0, 2.6999998, 0, -0.99999994, 0, -2.0981466e-07, -51.05, 2.9500008, -0.27000046)
+size = Vector3(100.200005, 2.1000001, 0.1)
+
+[node name="bigPlantHouse" type="CSGCombiner3D" parent="NavigationRegion3D" unique_id=1356500530]
+use_collision = true
+collision_layer = 5
+collision_mask = 5
+
+[node name="big plant house" type="CSGBox3D" parent="NavigationRegion3D/bigPlantHouse" unique_id=1015010600]
+transform = Transform3D(19.800001, 0, 0, 0, 19.800001, 0, 0, 0, 19.800001, -35.989998, 2.8300266, 23.580002)
+size = Vector3(0.90000004, 0.3, 1.2)
+material = SubResource("StandardMaterial3D_7f2x3")
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="NavigationRegion3D/bigPlantHouse/big plant house" unique_id=2065330370]
+transform = Transform3D(0.41915154, 0, 2.5936233e-08, 0, 0.29939392, 0, -6.425238e-09, 0, 0.35927278, -0.010088682, -0.06359596, 0.5845051)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="NavigationRegion3D/bigPlantHouse/big plant house" unique_id=197518468]
+transform = Transform3D(0.41915154, 0, 2.5936233e-08, 0, 0.29939392, 0, -6.425238e-09, 0, 0.35927278, -0.010088682, -0.06359596, -0.5821616)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/bigPlantHouse/big plant house" unique_id=258949709]
+transform = Transform3D(0.4, 0, 0, 0, 0.4, 0, 0, 0, 0.4, -0.00040400028, 0.060606077, 0.00020194054)
+operation = 2
+size = Vector3(2.2, 1, 2.9)
+
+[node name="building" type="CSGCombiner3D" parent="NavigationRegion3D" unique_id=13813328]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000001, 0, -0.56182194, 9.536743e-07)
+use_collision = true
+collision_layer = 5
+collision_mask = 5
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="NavigationRegion3D/building" unique_id=1313279716]
+transform = Transform3D(8.299199, 0, 0, 0, 5.9279995, 0, 0, 0, 7.113599, -17, 3.0000002, -10.411)
+size = Vector3(1.8000001, 1, 2.2)
+material = SubResource("StandardMaterial3D_13qdw")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/building/CSGBox3D4" unique_id=1192023606]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, 0, -5.9604645e-08, 0)
+operation = 2
+size = Vector3(1.6, 0.8, 2)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="NavigationRegion3D/building/CSGBox3D4" unique_id=906988628]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, -0.5566416, -0.14878544, -1.0888221)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="NavigationRegion3D/building/CSGBox3D4" unique_id=1470653213]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, 0.35910928, -0.14878544, 1.0479307)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="NavigationRegion3D/building/CSGBox3D4" unique_id=1622999759]
+transform = Transform3D(-1.1491161e-07, 0, 1.0000006, 0, 1, 0, -1.0000004, 0, -1.0054765e-07, 0.88928115, -0.14878544, 0.38562846)
+operation = 2
+size = Vector3(0.4, 0.5, 0.2)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="NavigationRegion3D/building" unique_id=1286666651]
+transform = Transform3D(8.299199, 0, 0, 0, 5.9279995, 0, 0, 0, 7.113599, -5, 3.0000002, -7.21)
+size = Vector3(1.2, 1, 1.3000001)
+material = SubResource("StandardMaterial3D_b1lj4")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/building/CSGBox3D5" unique_id=56804152]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, -0.06385189, 0.049999952, -1.1920929e-07)
+operation = 2
+size = Vector3(1.2, 0.90000004, 1.2)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="NavigationRegion3D/building/CSGBox3D5" unique_id=655493042]
+transform = Transform3D(-1.0000004, 0, -8.742281e-08, 0, 1, 0, 8.74228e-08, 0, -1.0000004, 0.5891846, -0.1500001, 0.31725156)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGCombiner3D2" type="CSGCombiner3D" parent="NavigationRegion3D" unique_id=1990107924]
+transform = Transform3D(-0.9999999, 0, 2.9802322e-08, 0, 1, 0, -5.9604645e-08, 0, -1, 0, -0.60000026, 30)
+use_collision = true
+collision_layer = 5
+collision_mask = 5
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2" unique_id=6928036]
+transform = Transform3D(8.299199, 0, 0, 0, 5.9279995, 0, 0, 0, 7.113599, -17, 3.0000002, -10.411)
+size = Vector3(1.8000001, 1, 2.2)
+material = SubResource("StandardMaterial3D_13qdw")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2/CSGBox3D4" unique_id=807050233]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, 0, -5.9604645e-08, 0)
+operation = 2
+size = Vector3(1.6, 0.8, 2)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2/CSGBox3D4" unique_id=1229242467]
+transform = Transform3D(1.0000001, 0, 0, 0, 1, 0, 0, 0, 1.0000004, -0.5566416, -0.14878544, -1.0888224)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2/CSGBox3D4" unique_id=276992924]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, 0.35910928, -0.14878544, 1.0479307)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2/CSGBox3D4" unique_id=158074397]
+transform = Transform3D(-1.1491161e-07, 0, 1.0000006, 0, 1, 0, -1.0000004, 0, -1.0054765e-07, 0.88928115, -0.14878544, 0.38562846)
+operation = 2
+size = Vector3(0.4, 0.5, 0.2)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2" unique_id=1126962022]
+transform = Transform3D(8.299199, 0, 0, 0, 5.9279995, 0, 0, 0, 7.113599, -5, 3.0000002, -7.21)
+size = Vector3(1.2, 1, 1.3000001)
+material = SubResource("StandardMaterial3D_b1lj4")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2/CSGBox3D5" unique_id=479127492]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000004, -0.06385189, 0.049999952, -1.1920929e-07)
+operation = 2
+size = Vector3(1.2, 0.90000004, 1.2)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="NavigationRegion3D/CSGCombiner3D2/CSGBox3D5" unique_id=1966751346]
+transform = Transform3D(-1.0000004, 0, -8.742281e-08, 0, 1, 0, 8.74228e-08, 0, -1.0000004, 0.5891846, -0.1500001, 0.31725156)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="smallPlantHouse" type="CSGCombiner3D" parent="NavigationRegion3D" unique_id=2127009967]
+use_collision = true
+collision_layer = 5
+collision_mask = 5
+
+[node name="small plant house" type="CSGBox3D" parent="NavigationRegion3D/smallPlantHouse" unique_id=868690574]
+transform = Transform3D(-19.800001, 0, -1.730971e-06, 0, 19.800001, 0, 1.730971e-06, 0, -19.800001, 33.960007, 2.7767248, -18.719997)
+size = Vector3(0.90000004, 0.3, 0.7)
+material = SubResource("StandardMaterial3D_7f2x3")
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="NavigationRegion3D/smallPlantHouse/small plant house" unique_id=530542301]
+transform = Transform3D(4.3305064e-08, 0, 0.35927263, 0, 0.29939383, 0, -0.41915128, 0, 2.6411477e-08, 0.45153117, -0.0632323, -0.019011497)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D6" type="CSGBox3D" parent="NavigationRegion3D/smallPlantHouse/small plant house" unique_id=112357620]
+transform = Transform3D(4.3305064e-08, 0, 0.35927263, 0, 0.29939383, 0, -0.41915128, 0, 2.6411481e-08, -0.46261013, -0.063232295, -0.019011557)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/smallPlantHouse/small plant house" unique_id=52927975]
+transform = Transform3D(0.4, 0, -3.5527137e-15, 0, 0.4, 0, 3.5527137e-15, 0, 0.4, 0, 0, -0.00020182133)
+operation = 2
+size = Vector3(2.2, 1, 1.7)
+
+[node name="Container" type="CSGCombiner3D" parent="NavigationRegion3D" unique_id=1174305786]
+use_collision = true
+collision_layer = 5
+collision_mask = 5
+
+[node name="contaner" type="CSGBox3D" parent="NavigationRegion3D/Container" unique_id=69835280]
+transform = Transform3D(3.9, 0, 6.7549996, 0, 7.800001, 0, -6.7549996, 0, 3.9, 21.21, 1.3698496, 9.740001)
+size = Vector3(2.1000001, 0.6178711, 0.6)
+material = SubResource("StandardMaterial3D_25bs2")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="NavigationRegion3D/Container/contaner" unique_id=104998988]
+transform = Transform3D(0.91339755, 0, 0, 0, 0.39999998, 0, 1.4901161e-07, 0, 1.05, -0.008586049, 0.010256395, 0.0051932335)
+operation = 2
+size = Vector3(2.2, 1, 0.5)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="NavigationRegion3D/Container/contaner" unique_id=857867947]
+transform = Transform3D(-1.0639997, 0, 2.0861626e-07, 0, 0.7599999, 0, -1.7881393e-07, 0, -0.9120002, 0.7617061, 0.021538451, 0.2722473)
+operation = 2
+size = Vector3(0.2, 0.5, 0.2)
+
+[node name="CSGBox3D6" type="CSGBox3D" parent="NavigationRegion3D/Container/contaner" unique_id=1361559058]
+transform = Transform3D(-1.0639997, 0, 2.0861626e-07, 0, 0.7599999, 0, -1.7881393e-07, 0, -0.9120002, -0.7530123, 0.020773038, -0.27439928)
+operation = 2
+size = Vector3(0.2, 0.49798584, 0.2)
+
+[node name="Gun" parent="." unique_id=1257422070 instance=ExtResource("1_2jrbx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+
+[node name="MeleeWeapon" parent="." unique_id=1665878362 instance=ExtResource("2_id0bc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.577026, 0.23999846, 24.220407)
+
+[node name="MeleeWeapon2" parent="." unique_id=1064956204 instance=ExtResource("2_id0bc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -37.489902, 0.24000037, -6.742014)
+
+[node name="MeleeWeapon3" parent="." unique_id=1891981213 instance=ExtResource("2_id0bc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.755626, 0.24000037, 33.734978)
+
+[node name="MeleeWeapon4" parent="." unique_id=1177120052 instance=ExtResource("2_id0bc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.078432, 0.23999846, -11.4604225)
+
+[node name="player1" parent="." unique_id=1526157025 instance=ExtResource("1_1djch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.31183147, 1, -29.44763)
+
+[node name="player2" parent="." unique_id=1181826603 instance=ExtResource("1_1djch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7003145, 1.1055852, 51.16562)
+input_prefix = "p2"
+is_player2 = true
+use_gamepad_look = true
+
+[node name="SpawnPoint1" type="Marker3D" parent="." unique_id=1340477506 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36.903, 0, 53.52887)
+
+[node name="SpawnPoint2" type="Marker3D" parent="." unique_id=960840662 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36.903, 0, -19.336723)
+
+[node name="SpawnPoint3" type="Marker3D" parent="." unique_id=167749315 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.102215, 0, 53.52887)
+
+[node name="SpawnPoint4" type="Marker3D" parent="." unique_id=1840129162 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.611038, 0, -6.7269783)
+
+[node name="SpawnPoint5" type="Marker3D" parent="." unique_id=1550421411 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.636335, 0, -27.816208)
+
+[node name="SpawnPoint6" type="Marker3D" parent="." unique_id=1211565870 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44.970543, 0, 14.6473465)
+
+[node name="SpawnPoint7" type="Marker3D" parent="." unique_id=1268981872 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.83651, 0, 44.281673)
+
+[node name="SpawnPoint8" type="Marker3D" parent="." unique_id=1332148172 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33.59548, 0, 49.581783)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=665257488]
+
+[node name="RoundLabel" type="Label" parent="CanvasLayer" unique_id=410589062]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -73.5
+offset_right = 24.0
+offset_bottom = -6.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7924642, 0.000498057, 0.7944216, 1)
+theme_override_font_sizes/font_size = 48
+script = ExtResource("4_6aiab")
+
+[node name="RoundLabel2" type="Label" parent="CanvasLayer" unique_id=1078024508]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -73.5
+offset_right = 24.0
+offset_bottom = -6.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7924642, 0.000498057, 0.7944216, 1)
+theme_override_font_sizes/font_size = 48
+script = ExtResource("4_6aiab")
+is_second_screen = true
+
+[node name="KillFeed" type="VBoxContainer" parent="CanvasLayer" unique_id=1983484325]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -274.0
+offset_top = 20.0
+offset_right = -17.0
+offset_bottom = 203.0
+grow_horizontal = 0
+script = ExtResource("5_qt6xw")
+
+[node name="KillFeed2" type="VBoxContainer" parent="CanvasLayer" unique_id=1018579019]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -274.0
+offset_top = 20.0
+offset_right = -17.0
+offset_bottom = 203.0
+grow_horizontal = 0
+script = ExtResource("5_qt6xw")
+is_second_screen = true
+
+[node name="MatchHUD" type="Control" parent="CanvasLayer" unique_id=954880529]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("6_cwwr8")
+
+[node name="MatchHUD2" type="Control" parent="CanvasLayer" unique_id=84478554]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("6_cwwr8")
+is_second_screen = true
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer" unique_id=1400835245]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -486.0
+offset_top = 20.0
+offset_right = -446.0
+offset_bottom = 43.0
+grow_horizontal = 2
+script = ExtResource("6_kpkqg")
+
+[node name="StatusLabel2" type="Label" parent="CanvasLayer" unique_id=1667869826]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -486.0
+offset_top = 20.0
+offset_right = -446.0
+offset_bottom = 43.0
+grow_horizontal = 2
+script = ExtResource("6_kpkqg")
+is_second_screen = true
+
+[node name="PlayerUI1" type="Control" parent="CanvasLayer" unique_id=1189121021]
+layout_mode = 3
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7_xk627")
+player_path = NodePath("../../player1")
+
+[node name="Crosshair" type="Label" parent="CanvasLayer/PlayerUI1" unique_id=1430180839]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -308.0
+offset_top = -22.5
+offset_right = -268.0
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "+"
+script = ExtResource("8_c0ovt")
+
+[node name="StaminaBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1" unique_id=2141333860]
+layout_mode = 0
+offset_left = -560.0
+offset_top = 603.0
+offset_right = -337.0
+offset_bottom = 630.0
+value = 100.0
+script = ExtResource("9_y2qti")
+
+[node name="DashCharges" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=187565396]
+layout_mode = 0
+offset_left = -551.0
+offset_top = 569.0
+offset_right = -347.0
+offset_bottom = 599.0
+script = ExtResource("10_0gte7")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/PlayerUI1/DashCharges" unique_id=2072650860]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ColorRect2" type="ColorRect" parent="CanvasLayer/PlayerUI1/DashCharges" unique_id=948045051]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="GunUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=597226127]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -117.0
+offset_top = -108.0
+offset_right = 16.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("11_8hpx1")
+
+[node name="AmmoLabel" type="Label" parent="CanvasLayer/PlayerUI1/GunUI" unique_id=1705549143]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/GunUI" unique_id=1942764595]
+layout_mode = 2
+texture = ExtResource("12_tpctg")
+
+[node name="MeleeUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=738201040]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -117.0
+offset_top = -108.0
+offset_right = 16.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("13_2pu1v")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/MeleeUI" unique_id=2140325520]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/MeleeUI" unique_id=1260295819]
+layout_mode = 2
+texture = ExtResource("12_tpctg")
+
+[node name="ReloadSpinner" type="Control" parent="CanvasLayer/PlayerUI1" unique_id=189047925]
+modulate = Color(18.892157, 0, 0, 1)
+anchors_preset = 0
+offset_left = -576.0
+offset_right = -536.0
+offset_bottom = 40.0
+script = ExtResource("14_fltnx")
+
+[node name="ItemUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=1646854172]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("15_ch848")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/ItemUI" unique_id=1433363086]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/ItemUI" unique_id=1921239911]
+layout_mode = 2
+
+[node name="InventorySlots" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=438510409]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("16_v8y5m")
+
+[node name="WeaponSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=1509533199]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=338681739]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=141687197]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_tpctg")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=4374239]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=1322452428]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=741417255]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=1655115302]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_tpctg")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=1699372454]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=205256646]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("17_lc760")
+
+[node name="PlayerUI2" type="Control" parent="CanvasLayer" unique_id=2105899295]
+layout_mode = 3
+anchor_left = 0.5
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7_xk627")
+player_path = NodePath("../../player2")
+
+[node name="Crosshair2" type="Label" parent="CanvasLayer/PlayerUI2" unique_id=284642727]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 268.0
+offset_top = -22.5
+offset_right = 308.0
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "+"
+script = ExtResource("8_c0ovt")
+
+[node name="ReloadSpinner2" type="Control" parent="CanvasLayer/PlayerUI2" unique_id=682503026]
+modulate = Color(18.892157, 0, 0, 1)
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("14_fltnx")
+
+[node name="MeleeUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1363588123]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 459.0
+offset_top = -108.0
+offset_right = 592.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("13_2pu1v")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/MeleeUI2" unique_id=270510909]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/MeleeUI2" unique_id=1646323571]
+layout_mode = 2
+texture = ExtResource("12_tpctg")
+
+[node name="GunUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=443611475]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 459.0
+offset_top = -108.0
+offset_right = 592.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("11_8hpx1")
+
+[node name="AmmoLabel" type="Label" parent="CanvasLayer/PlayerUI2/GunUI2" unique_id=1496597430]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/GunUI2" unique_id=1875913065]
+layout_mode = 2
+texture = ExtResource("12_tpctg")
+
+[node name="DashCharges2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=877559931]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 569.0
+offset_right = 229.0
+offset_bottom = 599.0
+script = ExtResource("10_0gte7")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/PlayerUI2/DashCharges2" unique_id=109388923]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ColorRect2" type="ColorRect" parent="CanvasLayer/PlayerUI2/DashCharges2" unique_id=1602202418]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="StaminaBar2" type="ProgressBar" parent="CanvasLayer/PlayerUI2" unique_id=697989154]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 603.0
+offset_right = 239.0
+offset_bottom = 630.0
+value = 100.0
+script = ExtResource("9_y2qti")
+
+[node name="ItemUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1281017642]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -760.0
+offset_bottom = 40.0
+script = ExtResource("15_ch848")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/ItemUI2" unique_id=1529911876]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/ItemUI2" unique_id=1033936152]
+layout_mode = 2
+
+[node name="InventorySlots" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=821244339]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -656.0
+offset_bottom = 70.0
+script = ExtResource("16_v8y5m")
+
+[node name="WeaponSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=407829374]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=970415568]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=1518504710]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_tpctg")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=618677422]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=2054650249]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=2065376696]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=1505896804]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_tpctg")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=1091516326]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=681366259]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -760.0
+offset_bottom = 40.0
+script = ExtResource("17_lc760")
+
+[node name="PauseMenu" type="Control" parent="CanvasLayer" unique_id=596692273]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("18_gmap1")
+
+[node name="RoundManager" type="Node" parent="." unique_id=723514005]
+script = ExtResource("19_glsbd")
+
+[node name="SplitScreenLayer" type="CanvasLayer" parent="." unique_id=253764781]
+layer = 0
+script = ExtResource("20_ed6xf")
+player1_path = NodePath("../player1")
+player2_path = NodePath("../player2")
+
+[node name="ViewportRow" type="HBoxContainer" parent="SplitScreenLayer" unique_id=351340773]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="SubViewportContainer1" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=77614764]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport1" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1" unique_id=1940564359]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera1" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1/SubViewport1" unique_id=1424052379]
+current = true
+
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=190480339]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport2" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2" unique_id=877475056]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2" unique_id=787409211]
+current = true
+
+[node name="powerup" parent="." unique_id=1880222296 instance=ExtResource("21_ij4eg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.152138, 0.5999985, -1.1872959)
+
+[node name="powerup2" parent="." unique_id=2027140035 instance=ExtResource("21_ij4eg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27.675766, 0.5999985, 38.26157)
+
+[node name="item" parent="." unique_id=891186044 instance=ExtResource("22_fy782")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29.752092, 0.34999847, 4.170061)
+deployed_scene = ExtResource("23_id0bc")
+
+[node name="item2" parent="." unique_id=2047597354 instance=ExtResource("22_fy782")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.459732, 0.34999847, 28.219025)
+deployed_scene = ExtResource("23_id0bc")

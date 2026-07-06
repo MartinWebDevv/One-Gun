@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://b0o8qjgssykx5"]
+
+[ext_resource type="Script" uid="uid://bhb1kxg2gdnmm" path="res://gun.gd" id="1_vk1bi"]
+[ext_resource type="PackedScene" uid="uid://coo8bed60dyha" path="res://models/weaponModels/water_gun.glb" id="2_dk5gl"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_r8ywq"]
+size = Vector3(1, 1, 1.1030273)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_dk5gl"]
+radius = 1.5
+
+[node name="Gun" type="RigidBody3D" unique_id=1257422070]
+collision_layer = 4
+script = ExtResource("1_vk1bi")
+
+[node name="WaterGun" parent="." unique_id=2093676237 instance=ExtResource("2_dk5gl")]
+transform = Transform3D(-0.002, 0, -1.7484555e-10, 0, 0.002, 0, 1.7484555e-10, 0, -0.002, 0, 0, 0)
+
+[node name="MuzzlePoint" type="Marker3D" parent="WaterGun" unique_id=942291664]
+transform = Transform3D(-499.99997, 0, 4.371138e-05, 0, 499.99997, 0, -4.371138e-05, 0, -499.99997, -38.939793, 193.96219, 230.44559)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1439369194]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3972844, -0.051513672)
+shape = SubResource("BoxShape3D_r8ywq")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=1607355358]
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=2013316374]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.003955841, 0, 0.012660384)
+visible = false
+shape = SubResource("SphereShape3D_dk5gl")
+
+[node name="ReloadTimer" type="Timer" parent="." unique_id=593853646]
+wait_time = 2.0
+one_shot = true
+
+[node name="Node3D" type="Node3D" parent="." unique_id=1263737657]
+
+[node name="PickupLabel" type="Label3D" parent="." unique_id=700482985]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.88958025, 0)
+billboard = 1
+no_depth_test = true
+text = "[F] Pick Up Gun"

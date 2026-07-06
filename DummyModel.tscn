@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://dm22m44ufja8k"]
+
+[ext_resource type="Script" uid="uid://dvyjb64l6o4jm" path="res://dummy.gd" id="1_igrf6"]
+[ext_resource type="PackedScene" uid="uid://cary3bj0vx1ut" path="res://botmodel.tscn" id="2_7i3i3"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1acbd"]
+radius = 0.555
+height = 2.675
+
+[node name="Dummy" type="CharacterBody3D" unique_id=2075100319 groups=["player"]]
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_igrf6")
+
+[node name="new guy one gun model orange running" parent="." unique_id=1727493150 instance=ExtResource("2_7i3i3")]
+transform = Transform3D(-0.7, 0, -1.0569706e-07, 0, 0.7, 0, 1.0569706e-07, 0, -0.7, -0.07317364, 0, -3.4283566e-08)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1553277431]
+transform = Transform3D(1, 0, 0, 0, 0.96814764, 0.25038, 0, -0.25038, 0.96814764, 0, 1.2751508, -0.07181816)
+shape = SubResource("CapsuleShape3D_1acbd")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=1182560019]
+
+[node name="GunHoldPoint" type="Node3D" parent="." unique_id=707324782]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.115, 1.9, -0.866)
+
+[node name="MeleeHoldPoint" type="Marker3D" parent="." unique_id=276989243]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.1253916, 2.020153, -0.76496667)
+
+[node name="ItemHoldPoint" type="Marker3D" parent="." unique_id=297623526]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.115, 1.9, -0.866)

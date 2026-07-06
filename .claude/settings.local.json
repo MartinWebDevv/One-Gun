@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\Godot Projects\\\\one-gun\" -Recurse -Include \"*.gd\", \"*.tscn\")",
+      "Bash(Select-Object FullName)"
+    ]
+  }
+}

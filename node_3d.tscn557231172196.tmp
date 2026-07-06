@@ -1,0 +1,824 @@
+[gd_scene format=3 uid="uid://c0mj6vovrk0pk"]
+
+[ext_resource type="Script" uid="uid://dodnt6k02jfm6" path="res://game_events.gd" id="1_6iypd"]
+[ext_resource type="PackedScene" uid="uid://befjncsqpswu2" path="res://melee_weapon.tscn" id="2_a0tk4"]
+[ext_resource type="PackedScene" uid="uid://tgd5t7uyqt40" path="res://models/dummy.tscn" id="2_dhlwf"]
+[ext_resource type="PackedScene" uid="uid://b0o8qjgssykx5" path="res://gun.tscn" id="2_noarx"]
+[ext_resource type="Script" uid="uid://kq7rxku3mu47" path="res://stamina_bar.gd" id="4_r3fl7"]
+[ext_resource type="Script" uid="uid://cvvwonydncavs" path="res://round_label.gd" id="5_tuemg"]
+[ext_resource type="Script" uid="uid://i1kxwgxjurmb" path="res://dash_charges.gd" id="6_i5arm"]
+[ext_resource type="Script" uid="uid://8cb5vuepvo2w" path="res://player_ui_container.gd" id="6_tcnuu"]
+[ext_resource type="Script" uid="uid://c0djnbn6whcf5" path="res://crosshair.gd" id="7_jsk3o"]
+[ext_resource type="Script" uid="uid://c6g4qdggsmsjd" path="res://status_label.gd" id="7_s0gvp"]
+[ext_resource type="Script" uid="uid://dm7m7cqa3abt0" path="res://round_manager.gd" id="7_wc5p8"]
+[ext_resource type="Script" uid="uid://bvqj5matij4cw" path="res://kill_feed.gd" id="9_tereu"]
+[ext_resource type="Script" uid="uid://dmq6onhybdv8t" path="res://gun_ui.gd" id="10_cdqbm"]
+[ext_resource type="Texture2D" uid="uid://b5vd4r3sebxop" path="res://icon.svg" id="10_tereu"]
+[ext_resource type="Script" uid="uid://cv3mmrvig6mce" path="res://reload_spinner.gd" id="12_imku0"]
+[ext_resource type="Script" uid="uid://dyy60np7vjpc6" path="res://melee_ui.gd" id="12_wlxy5"]
+[ext_resource type="PackedScene" uid="uid://ddjvi4ck1h7rc" path="res://player.tscn" id="14_wlxy5"]
+[ext_resource type="Script" uid="uid://cd1gvr838772b" path="res://splitscreen_manager.gd" id="15_3v7ru"]
+[ext_resource type="Script" uid="uid://emh4vrqytxqx" path="res://item_ui.gd" id="15_ealrb"]
+[ext_resource type="Script" uid="uid://bwsmgbp1vw6l2" path="res://inventory_slots.gd" id="17_vxd74"]
+[ext_resource type="Script" uid="uid://dcs71qvxprgew" path="res://powerup_status.gd" id="18_dhlwf"]
+[ext_resource type="PackedScene" uid="uid://lxicxytw7d7w" path="res://powerup.tscn" id="18_ealrb"]
+[ext_resource type="PackedScene" uid="uid://c4se2kvv2q2ke" path="res://bubble_gum_trap.tscn" id="19_jsnrv"]
+[ext_resource type="PackedScene" uid="uid://c2x5oayflfvyy" path="res://item.tscn" id="20_jsnrv"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_a202f"]
+sky_top_color = Color(0, 0.518937, 0.99365705, 1)
+sky_horizon_color = Color(1.4522846, 1.5820189, 1.7006989, 1)
+ground_bottom_color = Color(1, 1, 1, 1)
+ground_horizon_color = Color(1.4522846, 1.5820189, 1.7006989, 1)
+
+[sub_resource type="Sky" id="Sky_noarx"]
+sky_material = SubResource("ProceduralSkyMaterial_a202f")
+
+[sub_resource type="Environment" id="Environment_a0tk4"]
+background_mode = 2
+sky = SubResource("Sky_noarx")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_dhlwf"]
+vertices = PackedVector3Array(-58.9586, 0.5, -4.3368874, -10.208599, 0.5, -4.3368874, -9.708599, 0.5, -5.3368874, -4.958599, 0.5, -8.836887, -4.958599, 0.5, -58.836887, -58.9586, 0.5, -58.836887, -3.208599, 0.5, -7.0868874, 1.0414009, 0.5, -7.3368874, 1.0414009, 0.5, -8.086887, -4.458599, 0.5, -8.836887, 2.541401, 0.5, -9.086887, 2.541401, 0.5, -58.836887, 3.541401, 0.5, -8.836887, 4.791401, 0.5, -7.3368874, 8.291401, 0.5, -4.8368874, 59.0414, 0.5, -4.0868874, 59.0414, 0.5, -58.836887, 8.541401, 0.5, -4.0868874, 5.791401, 4.5, -4.0868874, 6.791401, 4.5, -3.3368874, 7.291401, 4.5, -3.5868874, 6.291401, 4.5, -5.0868874, 4.291401, 4.5, -6.3368874, 2.041401, 4.5, -7.5868874, 3.041401, 4.5, -7.8368874, -8.208599, 4.5, -3.8368874, -4.458599, 4.5, -7.0868874, -5.208599, 4.5, -7.5868874, -8.958599, 4.5, -4.3368874, -0.20859909, 0.5, 7.4131126, 0.04140091, 0.5, 7.9131126, 0.2914009, 0.5, 7.9131126, 0.5414009, 0.5, 6.9131126, -3.708599, 0.5, -6.0868874, -6.708599, 0.5, -3.5868874, -8.958599, 0.5, 0.16311264, -7.958599, 0.5, -2.5868874, -8.708599, 0.5, -2.5868874, -2.708599, 0.5, 7.6631126, 4.791401, 0.5, 2.9131126, 5.541401, 0.5, 2.1631126, 6.291401, 0.5, 2.1631126, 6.541401, 0.5, -2.3368874, 2.041401, 0.5, -5.8368874, 3.041401, 0.5, 6.4131126, -9.958599, 0.5, 0.16311264, -10.208599, 0.5, -3.8368874, -11.208599, 0.5, 1.9131126, -58.9586, 0.5, 1.9131126, 7.541401, 0.5, -2.3368874, 7.791401, 0.5, 2.9131126, 8.291401, 0.5, 3.9131126, 59.0414, 0.5, 3.9131126, -4.958599, 4.5, 7.9131126, -4.208599, 4.5, 8.663113, -3.458599, 4.5, 8.413113, -9.208599, 4.5, 1.1631126, -9.958599, 4.5, 1.6631126, -3.958599, 0.5, 58.913113, -3.958599, 0.5, 9.913113, -5.958599, 0.5, 8.413113, -58.9586, 0.5, 58.913113, 4.041401, 4.5, 6.6631126, 4.041401, 4.5, 7.1631126, 5.041401, 4.5, 7.4131126, 7.041401, 4.5, 4.1631126, 6.541401, 4.5, 3.4131126, 5.791401, 4.5, 3.4131126, 6.041401, 0.5, 8.163113, 6.041401, 0.5, 58.913113, 59.0414, 0.5, 58.913113, 0.7914009, 0.5, 8.413113, -0.20859909, 0.5, 8.913113, 4.541401, 0.5, 8.663113, 3.541401, 0.5, 7.9131126, -2.458599, 0.5, 9.163113)
+polygons = [PackedInt32Array(0, 2, 1), PackedInt32Array(2, 0, 3), PackedInt32Array(3, 0, 4), PackedInt32Array(4, 0, 5), PackedInt32Array(8, 7, 6), PackedInt32Array(6, 9, 8), PackedInt32Array(8, 9, 10), PackedInt32Array(9, 3, 10), PackedInt32Array(10, 3, 11), PackedInt32Array(11, 3, 4), PackedInt32Array(13, 12, 14), PackedInt32Array(14, 12, 11), PackedInt32Array(14, 11, 15), PackedInt32Array(15, 11, 16), PackedInt32Array(12, 10, 11), PackedInt32Array(15, 17, 14), PackedInt32Array(19, 18, 20), PackedInt32Array(20, 18, 21), PackedInt32Array(21, 18, 22), PackedInt32Array(22, 18, 23), PackedInt32Array(23, 24, 22), PackedInt32Array(28, 27, 25), PackedInt32Array(25, 27, 26), PackedInt32Array(30, 29, 31), PackedInt32Array(31, 29, 32), PackedInt32Array(35, 34, 33), PackedInt32Array(35, 37, 36), PackedInt32Array(29, 38, 32), PackedInt32Array(32, 38, 39), PackedInt32Array(34, 35, 36), PackedInt32Array(42, 41, 40), PackedInt32Array(6, 7, 33), PackedInt32Array(33, 7, 43), PackedInt32Array(39, 42, 40), PackedInt32Array(42, 39, 43), PackedInt32Array(43, 39, 33), PackedInt32Array(33, 39, 35), PackedInt32Array(35, 39, 38), PackedInt32Array(39, 44, 32), PackedInt32Array(37, 35, 45), PackedInt32Array(37, 45, 46), PackedInt32Array(46, 45, 47), PackedInt32Array(46, 47, 1), PackedInt32Array(1, 47, 48), PackedInt32Array(1, 48, 0), PackedInt32Array(42, 49, 41), PackedInt32Array(41, 49, 50), PackedInt32Array(50, 49, 51), PackedInt32Array(51, 49, 17), PackedInt32Array(51, 17, 15), PackedInt32Array(51, 15, 52), PackedInt32Array(54, 53, 55), PackedInt32Array(55, 53, 56), PackedInt32Array(56, 53, 57), PackedInt32Array(60, 59, 58), PackedInt32Array(47, 60, 48), PackedInt32Array(48, 60, 58), PackedInt32Array(48, 58, 61), PackedInt32Array(63, 62, 64), PackedInt32Array(64, 62, 65), PackedInt32Array(65, 62, 66), PackedInt32Array(66, 62, 67), PackedInt32Array(51, 52, 68), PackedInt32Array(68, 52, 69), PackedInt32Array(69, 52, 70), PackedInt32Array(31, 71, 30), PackedInt32Array(30, 71, 72), PackedInt32Array(73, 68, 69), PackedInt32Array(71, 74, 72), PackedInt32Array(72, 74, 73), PackedInt32Array(75, 72, 59), PackedInt32Array(59, 72, 73), PackedInt32Array(59, 73, 58), PackedInt32Array(58, 73, 69)]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_noarx"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5t8nk"]
+albedo_color = Color(0.23137255, 0.77254903, 0.14117648, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_a0tk4"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tcnuu"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_tuemg"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tuemg"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i0g27"]
+albedo_color = Color(0, 0.33333334, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ealrb"]
+material = SubResource("StandardMaterial3D_i0g27")
+
+[node name="Node3D" type="Node3D" unique_id=376753058]
+script = ExtResource("1_6iypd")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=969129583]
+environment = SubResource("Environment_a0tk4")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=454390210]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 15.84392, 0)
+shadow_enabled = true
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=479349536]
+navigation_mesh = SubResource("NavigationMesh_dhlwf")
+
+[node name="MapWallStuff" type="StaticBody3D" parent="NavigationRegion3D" unique_id=2110321288]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff" unique_id=1311216777]
+transform = Transform3D(120, 0, 0, 0, 0.2, 0, 0, 0, 120, 0, 0, 0)
+shape = SubResource("BoxShape3D_noarx")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff" unique_id=633763971]
+transform = Transform3D(120, 0, 0, 0, 0.2, 0, 0, 0, 120, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_5t8nk")
+mesh = SubResource("BoxMesh_a0tk4")
+
+[node name="WallNorth" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=1510318274]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -59.836887)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/WallNorth" unique_id=1039631134]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 0)
+shape = SubResource("BoxShape3D_tcnuu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/WallNorth" unique_id=388184000]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_tuemg")
+
+[node name="WallSouth" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=734960612]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 54.75009)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/WallSouth" unique_id=1841158889]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 0)
+shape = SubResource("BoxShape3D_tcnuu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/WallSouth" unique_id=1108382393]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_tuemg")
+
+[node name="WallWest" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=1681396698]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 15, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/WallWest" unique_id=1564083112]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 44.89)
+shape = SubResource("BoxShape3D_tcnuu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/WallWest" unique_id=425455769]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, -1.9625018e-06, 0, 44.89681)
+mesh = SubResource("BoxMesh_tuemg")
+
+[node name="WallEast" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=1849361879]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -59.958595, 2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/WallEast" unique_id=1526806149]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 0)
+shape = SubResource("BoxShape3D_tcnuu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/WallEast" unique_id=2111916037]
+transform = Transform3D(120, 0, 0, 0, 4, 0, 0, 0, 0.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_tuemg")
+
+[node name="Cover1" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=1707720897]
+transform = Transform3D(0.49999997, 0, 0.86602545, 0, 1, 0, -0.86602545, 0, 0.49999997, 5.5317435, 2, 5.429316)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/Cover1" unique_id=2026580357]
+transform = Transform3D(5, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+shape = SubResource("BoxShape3D_tuemg")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/Cover1" unique_id=88479180]
+transform = Transform3D(5, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0)
+mesh = SubResource("BoxMesh_ealrb")
+
+[node name="Cover2" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=1366160722]
+transform = Transform3D(-0.64278764, 0, 0.76604444, 0, 1, 0, -0.76604444, 0, -0.64278764, -6.673009, 2, 5.046186)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/Cover2" unique_id=197971646]
+transform = Transform3D(10, 0, 0, 0, 4, 0, 0, 0, 1.5, 0, 0, 0)
+shape = SubResource("BoxShape3D_tuemg")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/Cover2" unique_id=70897627]
+transform = Transform3D(10, 0, 0, 0, 4, 0, 0, 0, 1.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_ealrb")
+
+[node name="Cover3" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=338014578]
+transform = Transform3D(-0.76604444, 0, 0.64278764, 0, 1, 0, -0.64278764, 0, -0.76604444, 4.7476983, 2, -5.6781864)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/Cover3" unique_id=652078458]
+transform = Transform3D(7, 0, 0, 0, 4, 0, 0, 0, 1.5, 0, 0, 0)
+shape = SubResource("BoxShape3D_tuemg")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/Cover3" unique_id=2103967835]
+transform = Transform3D(7, 0, 0, 0, 4, 0, 0, 0, 1.5, 0, 0, 0)
+mesh = SubResource("BoxMesh_ealrb")
+
+[node name="Cover4" type="StaticBody3D" parent="NavigationRegion3D/MapWallStuff" unique_id=508279954]
+transform = Transform3D(0.76604444, 0, 0.6427876, 0, 1, 0, -0.6427876, 0, 0.76604444, -6.712743, 1, -5.7051682)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MapWallStuff/Cover4" unique_id=2015671522]
+transform = Transform3D(6, 0, 0, 0, 4, 0, 0, 0, 1.5, 0, 0, 0)
+shape = SubResource("BoxShape3D_tuemg")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/MapWallStuff/Cover4" unique_id=1498689452]
+transform = Transform3D(6, 0, 0, 0, 4, 0, 0, 0, 1.5, 0, 1.036628, 0)
+mesh = SubResource("BoxMesh_ealrb")
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="NavigationRegion3D/MapWallStuff" unique_id=654076816]
+use_collision = true
+
+[node name="Doorway Wall" type="CSGBox3D" parent="NavigationRegion3D/MapWallStuff/CSGCombiner3D" unique_id=913643414]
+transform = Transform3D(0.9781476, 0, 0.2079117, 0, 1, 0, -0.2079117, 0, 0.9781476, 0.27855417, 2.1380398, 7.855801)
+size = Vector3(6.4675293, 4.0057373, 0.27746582)
+
+[node name="Door Hole" type="CSGBox3D" parent="NavigationRegion3D/MapWallStuff/CSGCombiner3D/Doorway Wall" unique_id=1626821328]
+transform = Transform3D(0.99999756, 0, 3.427267e-07, 0, 1, 0, -3.427267e-07, 0, 0.99999756, -0.097779274, -0.6547624, -0.002439499)
+operation = 2
+size = Vector3(1.7756348, 2.7713623, 0.2841797)
+
+[node name="Dummy" parent="." unique_id=1323311940 instance=ExtResource("2_dhlwf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.239225, 1, -8.169664)
+visible = false
+
+[node name="Gun" parent="." unique_id=1257422070 instance=ExtResource("2_noarx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+
+[node name="MeleeWeapon" parent="." unique_id=1665878362 instance=ExtResource("2_a0tk4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.104715, 0.3, 2.396614)
+use_random_attributes = true
+
+[node name="MeleeWeapon2" parent="." unique_id=1195456153 instance=ExtResource("2_a0tk4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0710363, 0.3, -3.7807064)
+speed_category = "fast"
+effect_category = "stagger"
+tier = 2
+use_random_attributes = true
+
+[node name="player1" parent="." unique_id=1526157025 groups=["local_player"] instance=ExtResource("14_wlxy5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1, -12)
+
+[node name="player2" parent="." unique_id=712590043 instance=ExtResource("14_wlxy5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1, 12)
+input_prefix = "p2"
+is_player2 = true
+use_gamepad_look = true
+
+[node name="BotSpawn1" type="Marker3D" parent="." unique_id=288609902 groups=["bot_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.790904, 0, -10.153082)
+
+[node name="BotSpawn2" type="Marker3D" parent="." unique_id=1778790112]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25400162, 0, -16.254345)
+
+[node name="BotSpawn3" type="Marker3D" parent="." unique_id=1168448548]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.1675, 0, -1.0327072)
+
+[node name="BotSpawn4" type="Marker3D" parent="." unique_id=1709465123]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.540423, 0, 9.917939)
+
+[node name="BotSpawn5" type="Marker3D" parent="." unique_id=1213123251]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6323576, 0, 12.593023)
+
+[node name="BotSpawn6" type="Marker3D" parent="." unique_id=574631750]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.204833, 0, -1.5096226)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1491490381]
+
+[node name="RoundLabel" type="Label" parent="CanvasLayer" unique_id=855355273]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -73.5
+offset_right = 24.0
+offset_bottom = -6.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7924642, 0.000498057, 0.7944216, 1)
+theme_override_font_sizes/font_size = 48
+script = ExtResource("5_tuemg")
+
+[node name="RoundLabel2" type="Label" parent="CanvasLayer" unique_id=1446113615]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -73.5
+offset_right = 24.0
+offset_bottom = -6.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7924642, 0.000498057, 0.7944216, 1)
+theme_override_font_sizes/font_size = 48
+script = ExtResource("5_tuemg")
+is_second_screen = true
+
+[node name="KillFeed" type="VBoxContainer" parent="CanvasLayer" unique_id=1444745508]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -274.0
+offset_top = 20.0
+offset_right = -17.0
+offset_bottom = 203.0
+grow_horizontal = 0
+script = ExtResource("9_tereu")
+
+[node name="KillFeed2" type="VBoxContainer" parent="CanvasLayer" unique_id=237276384]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -274.0
+offset_top = 20.0
+offset_right = -17.0
+offset_bottom = 203.0
+grow_horizontal = 0
+script = ExtResource("9_tereu")
+is_second_screen = true
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer" unique_id=1683195792]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -486.0
+offset_top = 20.0
+offset_right = -446.0
+offset_bottom = 43.0
+grow_horizontal = 2
+script = ExtResource("7_s0gvp")
+
+[node name="StatusLabel2" type="Label" parent="CanvasLayer" unique_id=1572745478]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -486.0
+offset_top = 20.0
+offset_right = -446.0
+offset_bottom = 43.0
+grow_horizontal = 2
+script = ExtResource("7_s0gvp")
+is_second_screen = true
+
+[node name="PlayerUI1" type="Control" parent="CanvasLayer" unique_id=272555853]
+layout_mode = 3
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_tcnuu")
+player_path = NodePath("../../player1")
+
+[node name="Crosshair" type="Label" parent="CanvasLayer/PlayerUI1" unique_id=1079730962]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -308.0
+offset_top = -22.5
+offset_right = -268.0
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "+"
+script = ExtResource("7_jsk3o")
+
+[node name="StaminaBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1" unique_id=301851681]
+layout_mode = 0
+offset_left = -560.0
+offset_top = 603.0
+offset_right = -337.0
+offset_bottom = 630.0
+value = 100.0
+script = ExtResource("4_r3fl7")
+
+[node name="DashCharges" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=255332630]
+layout_mode = 0
+offset_left = -551.0
+offset_top = 569.0
+offset_right = -347.0
+offset_bottom = 599.0
+script = ExtResource("6_i5arm")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/PlayerUI1/DashCharges" unique_id=518269145]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ColorRect2" type="ColorRect" parent="CanvasLayer/PlayerUI1/DashCharges" unique_id=2011664029]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="GunUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=735496785]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -117.0
+offset_top = -108.0
+offset_right = 16.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("10_cdqbm")
+
+[node name="AmmoLabel" type="Label" parent="CanvasLayer/PlayerUI1/GunUI" unique_id=476489339]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/GunUI" unique_id=617465696]
+layout_mode = 2
+texture = ExtResource("10_tereu")
+
+[node name="MeleeUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=272762179]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -117.0
+offset_top = -108.0
+offset_right = 16.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("12_wlxy5")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/MeleeUI" unique_id=1654289598]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/MeleeUI" unique_id=1391562385]
+layout_mode = 2
+texture = ExtResource("10_tereu")
+
+[node name="ReloadSpinner" type="Control" parent="CanvasLayer/PlayerUI1" unique_id=1344082236]
+modulate = Color(18.892157, 0, 0, 1)
+anchors_preset = 0
+offset_left = -576.0
+offset_right = -536.0
+offset_bottom = 40.0
+script = ExtResource("12_imku0")
+
+[node name="ItemUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=1397533750]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("15_ealrb")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/ItemUI" unique_id=1220069691]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/ItemUI" unique_id=1977582771]
+layout_mode = 2
+
+[node name="InventorySlots" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=2070853375]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("17_vxd74")
+
+[node name="WeaponSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=2040829401]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=1745643220]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=125509099]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("10_tereu")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=256774335]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=2049182657]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=66688358]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=1307400061]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("10_tereu")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=2002448799]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=1184636033]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("18_dhlwf")
+
+[node name="PlayerUI2" type="Control" parent="CanvasLayer" unique_id=1788809178]
+layout_mode = 3
+anchor_left = 0.5
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_tcnuu")
+player_path = NodePath("../../player2")
+
+[node name="Crosshair2" type="Label" parent="CanvasLayer/PlayerUI2" unique_id=287892441]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 268.0
+offset_top = -22.5
+offset_right = 308.0
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "+"
+script = ExtResource("7_jsk3o")
+
+[node name="ReloadSpinner2" type="Control" parent="CanvasLayer/PlayerUI2" unique_id=1085227660]
+modulate = Color(18.892157, 0, 0, 1)
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("12_imku0")
+
+[node name="MeleeUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1528505772]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 459.0
+offset_top = -108.0
+offset_right = 592.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("12_wlxy5")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/MeleeUI2" unique_id=812928250]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/MeleeUI2" unique_id=997497049]
+layout_mode = 2
+texture = ExtResource("10_tereu")
+
+[node name="GunUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=287300317]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 459.0
+offset_top = -108.0
+offset_right = 592.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("10_cdqbm")
+
+[node name="AmmoLabel" type="Label" parent="CanvasLayer/PlayerUI2/GunUI2" unique_id=2096258950]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/GunUI2" unique_id=1395177525]
+layout_mode = 2
+texture = ExtResource("10_tereu")
+
+[node name="DashCharges2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1536996346]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 569.0
+offset_right = 229.0
+offset_bottom = 599.0
+script = ExtResource("6_i5arm")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/PlayerUI2/DashCharges2" unique_id=1169563268]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ColorRect2" type="ColorRect" parent="CanvasLayer/PlayerUI2/DashCharges2" unique_id=515485769]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="StaminaBar2" type="ProgressBar" parent="CanvasLayer/PlayerUI2" unique_id=1145514129]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 603.0
+offset_right = 239.0
+offset_bottom = 630.0
+value = 100.0
+script = ExtResource("4_r3fl7")
+
+[node name="ItemUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=606673696]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -760.0
+offset_bottom = 40.0
+script = ExtResource("15_ealrb")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/ItemUI2" unique_id=1544516377]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/ItemUI2" unique_id=644848054]
+layout_mode = 2
+
+[node name="InventorySlots" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=140670321]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -656.0
+offset_bottom = 70.0
+script = ExtResource("17_vxd74")
+
+[node name="WeaponSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=1637195738]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=1586516916]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=237545087]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("10_tereu")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=1731798238]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=1547510677]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=1040978080]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=1752611664]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("10_tereu")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=988073452]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1169907574]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -760.0
+offset_bottom = 40.0
+script = ExtResource("18_dhlwf")
+
+[node name="RoundManager" type="Node" parent="." unique_id=37004661]
+script = ExtResource("7_wc5p8")
+
+[node name="SplitScreenLayer" type="CanvasLayer" parent="." unique_id=1857482199]
+layer = 0
+script = ExtResource("15_3v7ru")
+player1_path = NodePath("../player1")
+player2_path = NodePath("../player2")
+
+[node name="ViewportRow" type="HBoxContainer" parent="SplitScreenLayer" unique_id=1466878209]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="SubViewportContainer1" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=164828583]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport1" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1" unique_id=1017380843]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera1" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1/SubViewport1" unique_id=1363854146]
+current = true
+
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=2008848215]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport2" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2" unique_id=1834719052]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2" unique_id=1253853022]
+current = true
+
+[node name="powerup" parent="." unique_id=1880222296 instance=ExtResource("18_ealrb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.635178, 0.6000004, 7.744311)
+cycle_interval = 5.0
+effect_duration = 1.5
+
+[node name="powerup2" parent="." unique_id=1966311520 instance=ExtResource("18_ealrb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6432967, 0.5999999, -9.165957)
+cycle_interval = 5.0
+effect_duration = 1.5
+
+[node name="item" parent="." unique_id=891186044 instance=ExtResource("20_jsnrv")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3951304, 0.35000038, -7.9176073)
+deployed_scene = ExtResource("19_jsnrv")
+deployed_lifetime = 4.0
+respawn_after_deploy_time = 8.0
