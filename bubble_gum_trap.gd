@@ -16,5 +16,12 @@ func _on_body_entered(body):
 		return
 	if not GameConfig.can_affect(owner_player, body):
 		return
+	if NetworkManager.is_online():
+		if multiplayer.is_server():
+			var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+			var actor_id = body.get("actor_id")
+			if rm != null and actor_id != null:
+				rm.server_apply_online_item_effect("slow", int(actor_id), {"duration": slow_duration, "multiplier": slow_multiplier})
+		return
 	if body.has_method("apply_slow"):
 		body.apply_slow(slow_duration, slow_multiplier)

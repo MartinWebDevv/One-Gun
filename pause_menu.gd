@@ -5,7 +5,9 @@ var exit_confirm_dialog: ConfirmationDialog = null
 var pending_exit_target := ""
 
 func _ready():
-	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	# Online uses a local overlay without pausing SceneTree, so this menu must
+	# process in both the local paused state and the online unpaused state.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	_build_ui()
@@ -55,16 +57,20 @@ func _build_ui():
 	settings_button.pressed.connect(_open_settings_overlay)
 	panel.add_child(settings_button)
 
-	var lobby_button = Button.new()
-	lobby_button.text = "Return to Lobby"
-	lobby_button.custom_minimum_size = Vector2(0, 44)
-	lobby_button.pressed.connect(func(): _prompt_exit_confirmation("res://game_setup.tscn", "Return to the lobby? This will abandon the current match."))
-	panel.add_child(lobby_button)
+	if not NetworkManager.is_online() or NetworkManager.is_host():
+		var lobby_button = Button.new()
+		lobby_button.text = "Return to Lobby"
+		lobby_button.custom_minimum_size = Vector2(0, 44)
+		lobby_button.pressed.connect(func(): _prompt_exit_confirmation("res://game_setup.tscn", "Return everyone to the lobby? This will abandon the current match."))
+		panel.add_child(lobby_button)
 
 	var title_menu_button = Button.new()
-	title_menu_button.text = "Title Menu"
+	title_menu_button.text = "Return to Main Menu"
 	title_menu_button.custom_minimum_size = Vector2(0, 44)
-	title_menu_button.pressed.connect(func(): _prompt_exit_confirmation("res://main_menu.tscn", "Exit to the title screen? This will abandon the current match."))
+	var main_message := "Return everyone to the main menu?" if NetworkManager.is_host() else "Leave this online match and return to the main menu?"
+	if not NetworkManager.is_online():
+		main_message = "Exit to the title screen? This will abandon the current match."
+	title_menu_button.pressed.connect(func(): _prompt_exit_confirmation("res://main_menu.tscn", main_message))
 	panel.add_child(title_menu_button)
 
 func _open_settings_overlay():
@@ -72,7 +78,7 @@ func _open_settings_overlay():
 		return
 	var settings_scene = load("res://player_settings.tscn")
 	settings_overlay = settings_scene.instantiate()
-	settings_overlay.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 	settings_overlay.is_overlay = true
 	add_child(settings_overlay)
 	settings_overlay.settings_closed.connect(_close_settings_overlay)
@@ -90,7 +96,7 @@ func _prompt_exit_confirmation(target_scene: String, message: String):
 		return
 	pending_exit_target = target_scene
 	exit_confirm_dialog = ConfirmationDialog.new()
-	exit_confirm_dialog.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	exit_confirm_dialog.process_mode = Node.PROCESS_MODE_ALWAYS
 	exit_confirm_dialog.dialog_text = message
 	exit_confirm_dialog.title = "Leave Match"
 	exit_confirm_dialog.dialog_close_on_escape = false
@@ -100,9 +106,15 @@ func _prompt_exit_confirmation(target_scene: String, message: String):
 
 	exit_confirm_dialog.confirmed.connect(func():
 		PauseManager.clear_escape_override()
-		get_tree().paused = false
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		get_tree().change_scene_to_file(pending_exit_target)
+		if NetworkManager.is_online():
+			if pending_exit_target == "res://game_setup.tscn":
+				NetworkManager.host_return_everyone_to_lobby()
+			else:
+				NetworkManager.leave_online_to_main_menu()
+		else:
+			PauseManager.reset_pause_state()
+			get_tree().change_scene_to_file(pending_exit_target)
 	)
 	exit_confirm_dialog.canceled.connect(_cancel_exit_confirmation)
 

@@ -14,7 +14,23 @@ const STACK_WIDTH := 160
 
 const DISPLAY_NAMES = {
 	"extra_dash": "Extra Dash",
-	"extra_melee_shield": "Disarm Shield"
+	"extra_melee_shield": "Disarm Shield",
+	"speed_surge": "Speed Surge",
+	"silent_steps": "Silent Steps",
+	"vampire_touch": "Vampire Touch",
+	"second_wind": "Second Wind",
+	"magnet_hands": "Magnet Hands",
+}
+
+# One-line effect blurbs, shown under the name while the powerup is active.
+const DESCRIPTIONS = {
+	"extra_dash": "+1 dash charge",
+	"extra_melee_shield": "blocks one disarm",
+	"speed_surge": "+40% move speed",
+	"silent_steps": "your footsteps are silent",
+	"vampire_touch": "melee hits refund stamina",
+	"second_wind": "survive one elimination",
+	"magnet_hands": "pulls nearby items to you",
 }
 
 var player = null
@@ -58,6 +74,8 @@ func _process(_delta):
 	_reorder_entries(active)
 
 func _create_entry(power_type: String):
+	var block = VBoxContainer.new()
+	block.add_theme_constant_override("separation", 0)
 	var row = HBoxContainer.new()
 	row.custom_minimum_size = Vector2(STACK_WIDTH, ENTRY_HEIGHT)
 
@@ -73,9 +91,16 @@ func _create_entry(power_type: String):
 
 	row.add_child(name_label)
 	row.add_child(value_label)
-	add_child(row)
+	block.add_child(row)
 
-	entry_nodes[power_type] = {"root": row, "name_label": name_label, "value_label": value_label}
+	var desc_label = Label.new()
+	desc_label.text = DESCRIPTIONS.get(power_type, "")
+	desc_label.add_theme_font_size_override("font_size", 11)
+	desc_label.modulate = Color(1, 1, 1, 0.65)
+	block.add_child(desc_label)
+	add_child(block)
+
+	entry_nodes[power_type] = {"root": block, "name_label": name_label, "value_label": value_label}
 
 func _update_entry(power_type: String, entry: Dictionary):
 	var nodes = entry_nodes[power_type]

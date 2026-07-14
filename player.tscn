@@ -4,7 +4,8 @@
 [ext_resource type="PackedScene" uid="uid://bhgxubx7snc4x" path="res://models/playerAnimations/cat model firing ani.glb" id="2_onrkg"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r3fl7"]
-height = 2.42
+radius = 0.495
+height = 2.3266993
 
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=1526157025 groups=["player"]]
 collision_layer = 2
@@ -12,13 +13,14 @@ collision_mask = 3
 script = ExtResource("1_4flbx")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1647789790]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07334959, 0)
 shape = SubResource("CapsuleShape3D_r3fl7")
 
 [node name="AimPivot" type="Node3D" parent="." unique_id=1361963331]
 
 [node name="SpringArm3D" type="SpringArm3D" parent="AimPivot" unique_id=1000966572]
 transform = Transform3D(1, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0.6596317, 1.6743513, -0.5467267)
+collision_mask = 0
 spring_length = 4.0
 
 [node name="Camera3D" type="Camera3D" parent="AimPivot/SpringArm3D" unique_id=1994487957]
@@ -29,7 +31,7 @@ transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, -1, 0)
 
 [node name="cat model firing ani" parent="CharacterModel" unique_id=118698642 instance=ExtResource("2_onrkg")]
 
-[node name="Skeleton3D" parent="CharacterModel/cat model firing ani/Armature" parent_id_path=PackedInt32Array(118698642, 1614738541) index="0" unique_id=477599773]
+[node name="Skeleton3D" parent="CharacterModel/cat model firing ani/Armature" parent_id_path=PackedInt32Array(118698642, 213824027) index="0" unique_id=1640374352]
 bones/0/position = Vector3(5.442561, -6.027874, -168.13065)
 bones/0/rotation = Quaternion(-0.6837957, -0.2668565, 0.2508369, 0.63110375)
 bones/1/position = Vector3(7.748604e-07, 33.052177, 1.0519818)
@@ -111,7 +113,7 @@ transform = Transform3D(-74.1376, 208.48967, -20.454645, 7.018403, 24.157467, 22
 [node name="ItemHoldPoint" type="Marker3D" parent="CharacterModel/cat model firing ani/Armature/Skeleton3D/RightHandBoneAttch" unique_id=867258982]
 transform = Transform3D(-15.493153, 220.42343, -23.585102, 7.028567, 24.119192, 220.79762, 221.57016, 14.647828, -8.65314, -5.212082, 9.71949, -15.227982)
 
-[node name="AnimationPlayer" parent="CharacterModel/cat model firing ani" index="82" unique_id=584986174]
+[node name="AnimationPlayer" parent="CharacterModel/cat model firing ani" index="82" unique_id=1140343903]
 root_motion_track = NodePath("Armature/Skeleton3D:mixamorig_Hips")
 
 [editable path="CharacterModel/cat model firing ani"]

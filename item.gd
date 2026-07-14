@@ -5,8 +5,14 @@ extends RigidBody3D
 @export var deployed_lifetime := 8.0
 @export var respawn_after_deploy_time := 12.0
 @export var HELD_SCALE := 0.5
+# 0 = deploy on first contact (default, e.g. bubble gum trap). > 0 = deploy
+# this many seconds after being thrown, regardless of contact/landing —
+# for grenade-style items that should keep flying/bouncing until they detonate.
+@export var fuse_time := 0.0
 
 const THROW_IMPULSE = 10.0
+const THROW_ARC_UPWARD_BOOST = 4.0
+const ONLINE_PICKUP_MAX_DISTANCE := 3.0
 
 var player_ref = null
 var is_held = false
@@ -14,6 +20,9 @@ var is_in_flight = false
 
 var spawn_position = Vector3.ZERO
 var spawn_rotation = Vector3.ZERO
+var online_item_id := -1
+var online_spawn_id := -1
+var online_owner_actor_id := -1
 
 func get_interact_category():
 	return "item"
@@ -33,6 +42,8 @@ func _ready():
 	body_entered.connect(_on_flight_body_entered)
 	spawn_position = global_position
 	spawn_rotation = global_rotation
+	# items sit exactly where placed - physics only applies while thrown
+	freeze = true
 	_update_pickup_label()
 
 func _on_pickup_area_entered(body):
@@ -43,13 +54,42 @@ func _on_pickup_area_exited(body):
 	if body.has_method("unregister_interactable"):
 		body.unregister_interactable(self)
 
-func pick_up(p = null):
+func pick_up(p = null) -> bool:
 	if p == null:
 		p = player_ref
 	if p == null:
-		return
-	if "held_item" in p and p.held_item != null:
-		return
+		return false
+	if NetworkManager.is_online():
+		if p.is_multiplayer_authority():
+			var rm = _online_round_manager()
+			if rm != null:
+				if NetworkManager.is_host() and "is_bot" in p and p.is_bot:
+					_server_try_pickup(int(p.actor_id), _online_round_epoch())
+				else:
+					rm.request_online_item_action(online_item_id, "pickup", _online_round_epoch())
+		return true
+	return _do_pickup(p)
+
+func _do_pickup(p) -> bool:
+	if p == null or is_held or is_in_flight or not visible:
+		return false
+	_drop_token += 1  # cancel any pending dropped-return timer
+	if p.has_method("can_pick_up_item"):
+		# Slot-aware controller (human, up to 2 item slots). If both are
+		# full, swap out whichever slot is currently active.
+		if not p.can_pick_up_item():
+			var old_item = p.get_active_item() if p.has_method("get_active_item") else null
+			if old_item == null or old_item == self:
+				return false
+			var swap_position = global_position
+			if NetworkManager.is_online() and old_item.has_method("_net_do_drop"):
+				old_item._net_do_drop(swap_position)
+			else:
+				old_item.drop()
+			old_item.global_position = swap_position
+	elif "held_item" in p and p.held_item != null:
+		# Simple single-slot controller (bot) — refuse if already holding one.
+		return false
 	is_held = true
 	is_in_flight = false
 	freeze = true
@@ -63,31 +103,224 @@ func pick_up(p = null):
 	position = Vector3.ZERO
 	rotation = Vector3.ZERO
 	scale = Vector3.ONE * HELD_SCALE
-	p.held_item = self
+	if p.has_method("assign_item"):
+		p.assign_item(self)
+	elif "held_item" in p:
+		p.held_item = self
 	player_ref = p
 	_update_pickup_label()
+	return true
 
 func drop():
+	if NetworkManager.is_online():
+		request_online_drop()
+		return
+	_do_drop()
+
+func _do_drop(forced_position = null):
+	if not is_held or player_ref == null:
+		return
 	var p = player_ref
 	var world = get_tree().current_scene
+	visible = true
 	scale = Vector3.ONE
 	var drop_transform = global_transform
 	var hold_point = get_parent()
 	hold_point.remove_child(self)
 	world.add_child(self)
 	global_transform = drop_transform
-	freeze = false
+	if forced_position is Vector3:
+		global_position = forced_position
+	# dropped items stay put (no roll); physics is reserved for throws
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
 	is_held = false
-	if p != null and p.held_item == self:
-		p.held_item = null
+	if p != null:
+		if p.has_method("clear_item_slot"):
+			p.clear_item_slot(self)
+		elif "held_item" in p and p.held_item == self:
+			p.held_item = null
 	_update_pickup_label()
+	_start_dropped_return_timer()
+
+func request_online_drop() -> void:
+	if not NetworkManager.is_online() or not is_held or player_ref == null:
+		return
+	if not player_ref.is_multiplayer_authority():
+		return
+	var rm = _online_round_manager()
+	if rm != null:
+		if NetworkManager.is_host() and "is_bot" in player_ref and player_ref.is_bot:
+			_server_try_drop(_holder_actor_id(), _online_round_epoch())
+		else:
+			rm.request_online_item_action(online_item_id, "drop", _online_round_epoch())
+
+func _net_do_drop(drop_position: Vector3) -> void:
+	_do_drop(drop_position)
+
+func force_online_drop_at(drop_position: Vector3) -> void:
+	if NetworkManager.is_online():
+		_net_do_drop(drop_position)
+	else:
+		_do_drop(drop_position)
+
+# Dropped items that nobody grabs within 2s return to their spawn point.
+const DROPPED_RETURN_TIME := 2.0
+var _drop_token := 0
+
+func _start_dropped_return_timer():
+	_drop_token += 1
+	var token := _drop_token
+	await get_tree().create_timer(DROPPED_RETURN_TIME).timeout
+	if token != _drop_token:
+		return  # a newer drop/pickup cycle superseded this timer
+	if is_held or is_in_flight or not visible:
+		return  # picked up, thrown, or deployed in the meantime
+	if global_position.distance_to(spawn_position) < 0.5:
+		return  # already at home
+	if NetworkManager.is_online():
+		if multiplayer.is_server():
+			var rm = _online_round_manager()
+			if rm != null:
+				rm.broadcast_online_item_action(online_item_id, "return", {
+					"position": spawn_position,
+					"rotation": spawn_rotation,
+				})
+		return
+	_net_return_to_spawn(spawn_position, spawn_rotation)
+
+func _net_return_to_spawn(return_position: Vector3, return_rotation: Vector3) -> void:
+	if is_held or is_in_flight:
+		return
+	global_position = return_position
+	global_rotation = return_rotation
+	scale = Vector3.ONE
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	_update_pickup_label()
+
+func _net_set_loose_position(new_position: Vector3) -> void:
+	if not is_held and not is_in_flight and visible:
+		global_position = new_position
 
 func try_throw():
 	if not is_held:
 		return
+	if NetworkManager.is_online():
+		if player_ref != null and player_ref.is_multiplayer_authority():
+			var rm = _online_round_manager()
+			if rm != null:
+				var direction: Vector3 = player_ref.get_aim_direction()
+				if NetworkManager.is_host() and "is_bot" in player_ref and player_ref.is_bot:
+					_server_try_throw(_holder_actor_id(), _online_round_epoch(), direction)
+				else:
+					rm.request_online_item_action(online_item_id, "throw", _online_round_epoch(), direction)
+		return
 	throw()
+
+func _online_round_manager():
+	var scene := get_tree().current_scene
+	return scene.get_node_or_null("RoundManager") if scene != null else null
+
+func _online_round_epoch() -> int:
+	var rm = _online_round_manager()
+	return int(rm.get("online_round_epoch")) if rm != null else -1
+
+func _holder_peer_id() -> int:
+	if player_ref != null and "owner_peer_id" in player_ref:
+		return int(player_ref.owner_peer_id)
+	return -1
+
+func _holder_actor_id() -> int:
+	if player_ref != null and "actor_id" in player_ref:
+		return int(player_ref.actor_id)
+	return _holder_peer_id()
+
+func _server_try_pickup(sender_id: int, epoch: int) -> void:
+	if not multiplayer.is_server() or is_held or is_in_flight or not visible:
+		return
+	var rm = _online_round_manager()
+	if rm == null or not rm.can_accept_online_combat(epoch):
+		return
+	var player = NetworkManager.find_actor(sender_id)
+	if player == null or player.is_eliminated or player.global_position.distance_to(global_position) > ONLINE_PICKUP_MAX_DISTANCE:
+		return
+	if player.has_method("can_pick_up_item") and not player.can_pick_up_item():
+		if ("is_bot" in player and player.is_bot) or not player.has_method("get_active_item") or player.get_active_item() == null:
+			return
+	rm.broadcast_online_item_action(online_item_id, "pickup", {"holder_actor_id": sender_id})
+
+func _server_try_drop(sender_id: int, epoch: int) -> void:
+	if not multiplayer.is_server() or not is_held or _holder_actor_id() != sender_id:
+		return
+	var rm = _online_round_manager()
+	if rm == null or not rm.can_accept_online_combat(epoch):
+		return
+	var pos: Vector3 = player_ref.global_position + Vector3(0.0, 0.6, 0.0)
+	rm.broadcast_online_item_action(online_item_id, "drop", {"position": pos})
+
+func _server_try_throw(sender_id: int, epoch: int, direction: Vector3) -> void:
+	if not multiplayer.is_server() or not is_held or _holder_actor_id() != sender_id:
+		return
+	var rm = _online_round_manager()
+	if rm == null or not rm.can_accept_online_combat(epoch):
+		return
+	var player = NetworkManager.find_actor(sender_id)
+	if player == null or player.is_eliminated or not direction.is_finite() or direction.is_zero_approx():
+		return
+	direction = direction.normalized()
+	var expected: Vector3 = player.get_aim_direction().normalized()
+	if direction.dot(expected) < cos(deg_to_rad(35.0)):
+		return
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
+	var start: Vector3 = player.global_position + flat * 0.6 + Vector3.UP * 1.0
+	var velocity: Vector3 = direction * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST
+	rm.broadcast_online_item_action(online_item_id, "throw", {
+		"position": start,
+		"rotation": player.global_rotation,
+		"velocity": velocity,
+		"direction": direction,
+		"owner_actor_id": int(player.actor_id),
+	})
+
+func _net_do_pickup(holder_actor_id: int) -> void:
+	var player = NetworkManager.find_actor(holder_actor_id)
+	if player != null:
+		_do_pickup(player)
+
+func _net_do_throw(start_position: Vector3, start_rotation: Vector3, velocity: Vector3, _direction: Vector3, owner_actor_id: int) -> void:
+	var p = player_ref
+	if p == null or not is_held:
+		return
+	var world = get_tree().current_scene
+	get_parent().remove_child(self)
+	world.add_child(self)
+	global_position = start_position
+	global_rotation = start_rotation
+	scale = Vector3.ONE
+	freeze = false
+	$CollisionShape3D.disabled = false
+	$Area3D.monitoring = false
+	is_held = false
+	is_in_flight = true
+	online_owner_actor_id = owner_actor_id
+	if p.has_method("clear_item_slot"):
+		p.clear_item_slot(self)
+	elif "held_item" in p and p.held_item == self:
+		p.held_item = null
+	linear_velocity = velocity
+	angular_velocity = Vector3.ZERO
+	_update_pickup_label()
+	if fuse_time > 0.0 and multiplayer.is_server():
+		_start_fuse_timer()
+	await get_tree().create_timer(0.15).timeout
+	if is_in_flight:
+		set_collision_mask_value(2, multiplayer.is_server())
 
 func throw():
 	var p = player_ref
@@ -117,57 +350,172 @@ func throw():
 
 	is_held = false
 	is_in_flight = true
-	if p.held_item == self:
+	if p.has_method("clear_item_slot"):
+		p.clear_item_slot(self)
+	elif "held_item" in p and p.held_item == self:
 		p.held_item = null
 
 	linear_velocity = Vector3.ZERO
-	apply_impulse(forward * THROW_IMPULSE)
+	apply_impulse(forward * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST)
 	_update_pickup_label()
+
+	if fuse_time > 0.0:
+		_start_fuse_timer()
 
 	await get_tree().create_timer(0.15).timeout
 	if is_in_flight:
 		set_collision_mask_value(2, true)
+
+func _start_fuse_timer():
+	await get_tree().create_timer(fuse_time).timeout
+	if is_in_flight:
+		is_in_flight = false
+		set_collision_mask_value(2, false)
+		if NetworkManager.is_online():
+			_server_request_online_deploy()
+		else:
+			_deploy()
 
 func _on_flight_body_entered(body):
 	if not is_in_flight:
 		return
 	if body == player_ref:
 		return
+	if NetworkManager.is_online() and not multiplayer.is_server():
+		return
+	# Fuse-based items (e.g. grenades) keep bouncing on contact — they only
+	# detonate when their fuse timer above expires, not on first hit.
+	if fuse_time > 0.0:
+		return
 	is_in_flight = false
 	set_collision_mask_value(2, false)
-	_deploy()
+	if NetworkManager.is_online():
+		_server_request_online_deploy()
+	else:
+		_deploy()
+
+func _floor_deploy_position() -> Vector3:
+	var deploy_pos := global_position
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * 0.2, global_position + Vector3.DOWN * 12.0, 1)
+	var hit := space.intersect_ray(q)
+	if hit:
+		deploy_pos = hit.position
+	return deploy_pos
+
+func _server_request_online_deploy() -> void:
+	if not multiplayer.is_server():
+		return
+	var rm = _online_round_manager()
+	if rm != null:
+		rm.server_deploy_online_item(online_item_id, _floor_deploy_position(), online_owner_actor_id, respawn_after_deploy_time, _online_round_epoch())
 
 func _deploy():
+	var deploy_pos := _floor_deploy_position()
+	_spawn_deployed(deploy_pos, -1, -1)
+	_hide_after_use()
+	_schedule_respawn()
+
+func _spawn_deployed(deploy_pos: Vector3, deployed_id: int, owner_actor_id: int) -> void:
 	if deployed_scene != null:
 		var deployed = deployed_scene.instantiate()
-		get_tree().current_scene.add_child(deployed)
-		deployed.global_position = global_position
-		deployed.add_to_group("deployed_trap")
+		if deployed_id >= 0:
+			deployed.name = "OnlineDeployed%d" % deployed_id
+			deployed.set_meta("online_deployed_id", deployed_id)
+			deployed.set_meta("online_owner_actor_id", owner_actor_id)
+			deployed.add_to_group("online_deployed", true)
 		if "owner_player" in deployed:
-			deployed.owner_player = player_ref
+			deployed.owner_player = NetworkManager.find_actor(owner_actor_id) if NetworkManager.is_online() else player_ref
+		var world = get_tree().current_scene
+		# Set the future parent-local position before _ready() runs. One-shot
+		# deployables such as grenades resolve their effect immediately in _ready.
+		if world is Node3D:
+			deployed.position = world.to_local(deploy_pos)
+		world.add_child(deployed)
+		deployed.global_position = deploy_pos
+		# Maps are scaled (root scale 2); players get their scale cleaned by
+		# round_manager, but a deployed child inherits the map scale. Cancel it
+		# so deployed props (decoy, trap, pad) render at their authored,
+		# player-matching size instead of 2x too big.
+		var pscale = deployed.get_parent().global_transform.basis.get_scale()
+		if pscale.x != 0.0 and pscale.y != 0.0 and pscale.z != 0.0:
+			deployed.scale = Vector3(1.0 / pscale.x, 1.0 / pscale.y, 1.0 / pscale.z)
+		deployed.add_to_group("deployed_trap")
 		_schedule_deployed_cleanup(deployed)
+
+func _hide_after_use() -> void:
 	visible = false
 	freeze = true
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
 	_update_pickup_label()
-	_schedule_respawn()
+
+func _net_do_deploy(deploy_pos: Vector3, deployed_id: int, owner_actor_id: int) -> void:
+	is_in_flight = false
+	set_collision_mask_value(2, false)
+	_spawn_deployed(deploy_pos, deployed_id, owner_actor_id)
+	_hide_after_use()
+
+func _net_consume() -> void:
+	is_in_flight = false
+	visible = false
+	freeze = true
+	$CollisionShape3D.disabled = true
+	$Area3D.monitoring = false
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	_update_pickup_label()
 
 func _schedule_deployed_cleanup(deployed):
 	await get_tree().create_timer(deployed_lifetime).timeout
 	if is_instance_valid(deployed):
 		deployed.queue_free()
 
+# Set by round_manager for marker-spawned items: on respawn they re-roll into
+# a random enabled item type (like powerups re-roll on respawn) instead of
+# coming back as the same item.
+var reroll_on_respawn := false
+
 func _schedule_respawn():
+	if NetworkManager.is_online():
+		return
 	await get_tree().create_timer(respawn_after_deploy_time).timeout
+	if reroll_on_respawn and _respawn_as_random_item():
+		return  # replaced by a fresh random item; this node is freed
 	global_position = spawn_position
 	global_rotation = spawn_rotation
 	scale = Vector3.ONE
 	visible = true
-	freeze = false
+	freeze = true
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
 	_update_pickup_label()
+
+# Spawn a random enabled item at this marker's spot and free self. Returns
+# false if it couldn't (empty pool / bad scene) so the caller restores self.
+func _respawn_as_random_item() -> bool:
+	var enabled: Array = []
+	for t in GameConfig.ITEM_SCENES:
+		if GameConfig.is_item_enabled(t):
+			enabled.append(t)
+	if enabled.is_empty():
+		return false
+	var pick: String = enabled[randi() % enabled.size()]
+	var scene = load(GameConfig.ITEM_SCENES[pick])
+	if scene == null:
+		return false
+	var inst = scene.instantiate()
+	get_tree().current_scene.add_child(inst)
+	inst.global_position = spawn_position
+	if "spawn_position" in inst:
+		inst.spawn_position = spawn_position
+	if "spawn_rotation" in inst:
+		inst.spawn_rotation = spawn_rotation
+	if "reroll_on_respawn" in inst:
+		inst.reroll_on_respawn = true
+	inst.add_to_group("marker_spawned", true)
+	queue_free()
+	return true
 
 func _update_pickup_label():
 	if has_node("PickupLabel"):
@@ -180,7 +528,7 @@ func reset_to_spawn():
 	visible = true
 	scale = Vector3.ONE
 	set_collision_mask_value(2, false)
-	freeze = false
+	freeze = true
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
 	global_position = spawn_position

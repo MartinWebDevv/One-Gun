@@ -21,10 +21,15 @@ func set_player(p):
 func _process(_delta):
 	if player == null:
 		return
-	visible = "held_item" in player and player.held_item != null
+	var item = null
+	if "active_slot" in player:
+		if player.active_slot == "item1" and "held_item_1" in player:
+			item = player.held_item_1
+		elif player.active_slot == "item2" and "held_item_2" in player:
+			item = player.held_item_2
+	visible = item != null
 	if not visible:
 		return
-	var item = player.held_item
 	if item.has_method("get_display_name"):
 		$NameLabel.text = item.get_display_name()
 	else:

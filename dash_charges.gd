@@ -1,6 +1,7 @@
 extends HBoxContainer
 
 const PIP_GAP := 6
+const TOTAL_WIDTH := 200.0
 
 var player = null
 var pip_template: ColorRect = null
@@ -12,7 +13,7 @@ func _ready():
 	anchor_bottom = 1
 	offset_left = 20
 	offset_top = -75
-	offset_right = 130
+	offset_right = 220
 	offset_bottom = -45
 	add_theme_constant_override("separation", PIP_GAP)
 	if get_child_count() > 0 and get_child(0) is ColorRect:
@@ -35,6 +36,17 @@ func _rebuild_pips():
 		var extra = get_child(get_child_count() - 1)
 		remove_child(extra)
 		extra.queue_free()
+	_resize_pips()
+
+func _resize_pips() -> void:
+	var count := get_child_count()
+	if count <= 0:
+		return
+	var pip_width: float = (TOTAL_WIDTH - float(PIP_GAP * maxi(count - 1, 0))) / float(count)
+	for pip in get_children():
+		if pip is ColorRect:
+			pip.custom_minimum_size = Vector2(pip_width, 14.0)
+			pip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func _process(_delta):
 	if player == null:

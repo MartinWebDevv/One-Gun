@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://befjncsqpswu2"]
 
 [ext_resource type="Script" uid="uid://bqhdpt43v8aon" path="res://melee_weapon.gd" id="1_vax1h"]
-[ext_resource type="PackedScene" uid="uid://dkkm2gfh36wb7" path="res://models/weaponModels/scarlet_sword_adventure_time.glb" id="2_3eo4f"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_xhknj"]
 size = Vector3(2.0025635, 1, 2.46167)
@@ -16,14 +15,11 @@ material = SubResource("StandardMaterial3D_vax1h")
 radius = 1.5
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bf788"]
-size = Vector3(0.59342957, 1.0805664, 0.5715027)
+size = Vector3(0.29671478, 0.5402832, 1.8331089)
 
 [node name="MeleeWeapon" type="RigidBody3D" unique_id=1665878362]
 collision_layer = 4
 script = ExtResource("1_vax1h")
-
-[node name="Sketchfab_Scene" parent="." unique_id=1210188417 instance=ExtResource("2_3eo4f")]
-transform = Transform3D(0.045, 0, 0, 0, -1.9670126e-09, -0.045, 0, 0.045, -1.9670126e-09, 0, 0, -0.5984657)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2020956412]
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.6, -0.0017120354, 0, 0.036987305)
@@ -44,7 +40,7 @@ shape = SubResource("SphereShape3D_3eo4f")
 collision_mask = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="HitBox" unique_id=1662649966]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 3, -0.004055023, 0.020141602, 0.3347497)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004055023, 0.020141602, 0.27544928)
 shape = SubResource("BoxShape3D_bf788")
 
 [node name="Node3D" type="Node3D" parent="." unique_id=1835559051]

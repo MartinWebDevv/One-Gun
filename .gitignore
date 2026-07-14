@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Local tool config / machine-specific files
+.claude/
+*.lnk

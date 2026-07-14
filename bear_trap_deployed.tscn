@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://bear_trap_deployed.gd" id="1_bvq3e"]
+[ext_resource type="PackedScene" path="res://models/items/BearTrap-Open.glb" id="2_d5roc"]
+[ext_resource type="PackedScene" path="res://models/items/BearTrap-Closed.glb" id="3_asx1y"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_m7icc"]
+height = 0.5
+radius = 0.55
+
+[node name="BearTrapDeployed" type="Area3D" unique_id=1849584088]
+script = ExtResource("1_bvq3e")
+
+[node name="@CollisionShape3D@7" type="CollisionShape3D" parent="." unique_id=359917941]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_m7icc")
+
+[node name="TrapOpen" type="Node3D" parent="." unique_id=296273407 instance=ExtResource("2_d5roc")]
+transform = Transform3D(0.110341616, 0, 0, 0, 0.110341616, 0, 0, 0, 0.110341616, 0, 0, 0)
+
+[node name="TrapClosed" type="Node3D" parent="." unique_id=1905561929 instance=ExtResource("3_asx1y")]
+transform = Transform3D(0.45904648, 0, 0, 0, 0.45904648, 0, 0, 0, 0.45904648, 0, 0, 0)
+visible = false

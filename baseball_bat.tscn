@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://models/weaponModels/baseball_bat.glb" id="1_model"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hit"]
+radius = 0.3
+height = 1.15
+
+[node name="baseball_bat" type="Node3D"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="HitShape" type="Area3D" parent="."]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitShape"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0.075)
+shape = SubResource("CapsuleShape3D_hit")

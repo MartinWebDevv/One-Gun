@@ -19,6 +19,7 @@ extends Node
 signal pause_state_changed(is_paused: bool)
 
 var pause_menu: Control = null
+var _pause_open := false
 
 # When set, ESC calls this instead of toggling pause — used so a nested
 # overlay (e.g. Settings opened from the pause menu) can claim ESC to
@@ -46,6 +47,9 @@ func register_pause_menu(menu: Control):
 func unregister_pause_menu(menu: Control):
 	if pause_menu == menu:
 		pause_menu = null
+		_pause_open = false
+		if get_tree().paused:
+			get_tree().paused = false
 
 func set_escape_override(callback: Callable):
 	escape_override = callback
@@ -54,7 +58,7 @@ func clear_escape_override():
 	escape_override = Callable()
 
 func toggle_pause():
-	if get_tree().paused:
+	if _pause_open:
 		resume()
 	else:
 		pause()
@@ -62,14 +66,31 @@ func toggle_pause():
 func pause():
 	if pause_menu == null:
 		return
-	get_tree().paused = true
+	_pause_open = true
+	# An online pause is local UI only: freezing SceneTree would also freeze
+	# replication and authoritative timers while the other peers keep playing.
+	if not NetworkManager.is_online():
+		get_tree().paused = true
 	pause_menu.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	pause_state_changed.emit(true)
 
 func resume():
-	get_tree().paused = false
+	_pause_open = false
+	if get_tree().paused:
+		get_tree().paused = false
 	if pause_menu != null:
 		pause_menu.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	pause_state_changed.emit(false)
+
+func is_pause_open() -> bool:
+	return _pause_open
+
+func reset_pause_state() -> void:
+	_pause_open = false
+	escape_override = Callable()
+	if get_tree().paused:
+		get_tree().paused = false
+	if pause_menu != null:
+		pause_menu.visible = false

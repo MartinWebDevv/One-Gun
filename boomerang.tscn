@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://boomerang.gd" id="1_420uo"]
+[ext_resource type="PackedScene" path="res://models/items/Boomerang.glb" id="2_7wdce"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_iprhk"]
+radius = 0.3
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_41yrk"]
+radius = 1.6
+
+[node name="boomerang" type="RigidBody3D" unique_id=269406361]
+collision_layer = 4
+script = ExtResource("1_420uo")
+item_type = "boomerang"
+respawn_after_deploy_time = 10.0
+HELD_SCALE = 0.33
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1401829479]
+shape = SubResource("SphereShape3D_iprhk")
+
+[node name="Model" type="Node3D" parent="." unique_id=1784699719 instance=ExtResource("2_7wdce")]
+transform = Transform3D(1.3787732, 0, 0, 0, 1.3787732, 0, 0, 0, 1.3787732, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="." unique_id=1402529029]
+collision_layer = 0
+collision_mask = 2
+
+[node name="@CollisionShape3D@6" type="CollisionShape3D" parent="Area3D" unique_id=1954764584]
+shape = SubResource("SphereShape3D_41yrk")
+
+[node name="PickupLabel" type="Label3D" parent="." unique_id=1777491137]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+billboard = 1
+text = "[F]  Boomerang"
+font_size = 40
+outline_size = 8

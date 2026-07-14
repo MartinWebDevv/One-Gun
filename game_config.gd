@@ -2,7 +2,7 @@ extends Node
 
 var split_screen_enabled = false
 var lobby_settings_dirty = false
-var melee_effects_hit_anyone = false
+var melee_effects_hit_anyone = true
 var player2_name = "Player 2"  # session-only, not saved to disk — P2 may be a different guest each time
 
 # -- Bots --
@@ -56,7 +56,24 @@ var consumables_enabled = true
 
 # item_type -> { enabled: bool, category: "hazard" or "consumable" }
 var item_registry = {
-	"bubble_gum": {"enabled": true, "category": "hazard"}
+	"bubble_gum": {"enabled": true, "category": "hazard"},
+	"grenade": {"enabled": true, "category": "hazard"},
+	"bear_trap": {"enabled": true, "category": "hazard"},
+	"spring_pad": {"enabled": true, "category": "hazard"},
+	"smoke_bomb": {"enabled": true, "category": "consumable"},
+	"decoy": {"enabled": true, "category": "consumable"},
+	"boomerang": {"enabled": true, "category": "consumable"}
+}
+
+# item_type -> pickup scene, used by the marker-driven item spawner
+const ITEM_SCENES = {
+	"bubble_gum": "res://item.tscn",
+	"grenade": "res://grenade.tscn",
+	"bear_trap": "res://bear_trap.tscn",
+	"spring_pad": "res://spring_pad.tscn",
+	"smoke_bomb": "res://smoke_bomb.tscn",
+	"decoy": "res://decoy.tscn",
+	"boomerang": "res://boomerang.tscn",
 }
 
 func is_item_enabled(item_type: String) -> bool:
@@ -117,6 +134,7 @@ const PRESET_FIELDS := [
 	"friendly_fire_enabled",
 	"melee_eliminates_gunholder",
 	"melee_eliminates_anyone",
+	"melee_effects_hit_anyone",
 	"melee_spawn_delay",
 	"gun_spawn_mode",
 	"disarm_lock_time",
@@ -139,6 +157,7 @@ const DEFAULT_VALUES := {
 	"friendly_fire_enabled": false,
 	"melee_eliminates_gunholder": false,
 	"melee_eliminates_anyone": false,
+	"melee_effects_hit_anyone": true,
 	"melee_spawn_delay": 0.0,
 	"gun_spawn_mode": "center",
 	"disarm_lock_time": 3.0,
@@ -149,7 +168,10 @@ const DEFAULT_VALUES := {
 	"sets_per_match": 3,
 	"hazards_enabled": true,
 	"consumables_enabled": true,
-	"item_registry": {"bubble_gum": {"enabled": true, "category": "hazard"}},
+	"item_registry": {
+		"bubble_gum": {"enabled": true, "category": "hazard"},
+		"grenade": {"enabled": true, "category": "hazard"},
+	},
 	"bot_configs": [{"difficulty": "easy", "team_id": -1}],
 }
 

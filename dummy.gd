@@ -1,5 +1,15 @@
 extends CharacterBody3D
 
+# Online bots are spawned on every peer, but only peer 1 (the host) runs AI
+# and physics.  Clients receive a lightweight puppet through NetSync.
+var is_online := false
+var net_authority_id := 1
+var actor_id := -1
+var owner_peer_id := 1
+var online_display_name := "Bot"
+var _is_online_authority := true
+var _online_name_tag: Label3D = null
+
 @export_enum("easy", "medium", "hard", "expert") var ai_difficulty := "easy"
 @export var arrive_distance := 1.0
 @export var melee_range := 2.0
@@ -146,8 +156,21 @@ var dash_cooldown := 0.0
 
 var item_throw_cooldown := 0.0
 
+var active_powerup_order: Array = []
+var magnet_timer := 0.0
+
+func _enter_tree() -> void:
+	if is_online:
+		set_multiplayer_authority(net_authority_id)
+		_is_online_authority = is_multiplayer_authority()
+		_build_net_sync()
+
 func _ready():
 	_apply_tier_profile()
+	GameEvents.melee_hit_landed.connect(func(hitter_name):
+		if vampire_timer > 0.0 and hitter_name == get_display_name():
+			stamina = minf(stamina + 30.0, MAX_STAMINA)
+	)
 	$NavigationAgent3D.path_desired_distance = 0.8
 	$NavigationAgent3D.target_desired_distance = arrive_distance
 	var model_node = get_node_or_null("new guy one gun model orange running")
@@ -157,10 +180,39 @@ func _ready():
 			_merge_animations()
 	if model_anim_player == null:
 		push_warning("Dummy: AnimationPlayer not found.")
-	if GameConfig.bot_count < 1:
+	if is_online:
+		# Neutralize the map's root scale so online bots are the same size as
+		# online humans (character_body_3d.gd does the identical fix).
+		var cs = get_tree().current_scene
+		var ms: float = cs.scale.x if cs is Node3D and cs.scale.x != 0.0 else 1.0
+		scale = Vector3.ONE / ms
+		_build_online_name_tag()
+	if not is_online and GameConfig.bot_count < 1:
 		remove_from_group("player")
 		visible = false
 		set_physics_process(false)
+
+func _build_net_sync() -> void:
+	var sync := MultiplayerSynchronizer.new()
+	sync.name = "NetSync"
+	var cfg := SceneReplicationConfig.new()
+	for prop in [".:position", ".:rotation", ".:velocity", ".:stamina"]:
+		cfg.add_property(NodePath(prop))
+	sync.replication_config = cfg
+	sync.set_multiplayer_authority(net_authority_id)
+	add_child(sync)
+
+func _build_online_name_tag() -> void:
+	_online_name_tag = Label3D.new()
+	_online_name_tag.name = "OnlineNameTag"
+	_online_name_tag.position = Vector3(0.0, 2.6, 0.0)
+	_online_name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_online_name_tag.no_depth_test = true
+	_online_name_tag.font_size = 32
+	_online_name_tag.outline_size = 8
+	_online_name_tag.modulate = Color(1.0, 0.78, 0.35)
+	_online_name_tag.text = get_display_name()
+	add_child(_online_name_tag)
 
 func _apply_tier_profile():
 	var profile = TIER_PROFILES.get(ai_difficulty, TIER_PROFILES["easy"])
@@ -252,6 +304,16 @@ func _stop_movement_animation():
 func _physics_process(delta):
 	if bullet_immune_timer > 0.0:
 		bullet_immune_timer -= delta
+	if speed_surge_timer > 0.0:
+		speed_surge_timer -= delta
+	if vampire_timer > 0.0:
+		vampire_timer -= delta
+	if magnet_timer > 0.0:
+		magnet_timer = maxf(magnet_timer - delta, 0.0)
+
+	if is_online and not _is_online_authority:
+		_update_online_puppet_visuals()
+		return
 
 	if slow_timer > 0.0:
 		slow_timer -= delta
@@ -306,7 +368,60 @@ func _physics_process(delta):
 	if can_dash:
 		_update_dash_behavior(delta)
 
+	var _desired_h_vel := Vector3(velocity.x, 0, velocity.z)
 	move_and_slide()
+	_try_step_up(_desired_h_vel, delta)
+
+# Walk straight over knee-height ledges without jumping - kept in sync by hand
+# with character_body_3d.gd's _try_step_up (bots are a separate controller).
+const STEP_HEIGHT := 0.55
+const STEP_FORWARD_PROBE := 0.25
+
+func _try_step_up(desired_h_vel: Vector3, delta: float) -> void:
+	if not is_on_floor():
+		return
+	var h := Vector3(desired_h_vel.x, 0, desired_h_vel.z)
+	if h.length_squared() < 0.04:
+		return
+	var dir := h.normalized()
+	# low steps don't set is_on_wall on a capsule; scan slide collisions
+	var blocked := false
+	for i in get_slide_collision_count():
+		var n := get_slide_collision(i).get_normal()
+		if n.y < 0.7 and n.dot(dir) < -0.4:
+			blocked = true
+			break
+	if not blocked:
+		return
+	var params := PhysicsTestMotionParameters3D.new()
+	var result := PhysicsTestMotionResult3D.new()
+	params.from = global_transform
+	params.motion = Vector3.UP * STEP_HEIGHT
+	var up_dist := STEP_HEIGHT
+	if PhysicsServer3D.body_test_motion(get_rid(), params, result):
+		up_dist = result.get_travel().y
+	if up_dist < 0.03:
+		return
+	var raised := global_transform
+	raised.origin.y += up_dist
+	var fwd := dir * maxf(h.length() * delta, STEP_FORWARD_PROBE)
+	params.from = raised
+	params.motion = fwd
+	if PhysicsServer3D.body_test_motion(get_rid(), params, result):
+		if result.get_travel().length() < fwd.length() * 0.5:
+			return
+	var fwd_pos := raised
+	fwd_pos.origin += fwd
+	params.from = fwd_pos
+	params.motion = Vector3.DOWN * (up_dist + 0.1)
+	if not PhysicsServer3D.body_test_motion(get_rid(), params, result):
+		return
+	if result.get_collision_normal().angle_to(Vector3.UP) > floor_max_angle:
+		return
+	var step_h := up_dist + result.get_travel().y
+	if step_h <= 0.01 or step_h > STEP_HEIGHT:
+		return
+	global_position.y += step_h + 0.02
 
 # ============================================================
 # Stamina
@@ -629,6 +744,8 @@ func _move_toward_objective():
 
 	var dir = to_next.normalized()
 	var speed = move_speed * slow_multiplier_value
+	if speed_surge_timer > 0.0:
+		speed *= SPEED_SURGE_MULT
 	velocity.x = dir.x * speed
 	velocity.z = dir.z * speed
 
@@ -752,7 +869,18 @@ func get_item_hold_point():
 	return $ItemHoldPoint
 
 func get_display_name() -> String:
+	if is_online:
+		return online_display_name
 	return name
+
+func _update_online_puppet_visuals() -> void:
+	if model_anim_player == null or is_eliminated:
+		return
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if speed > 0.6:
+		_play_anim(ANIM_WALK_PISTOL if holding_gun else ANIM_WALK)
+	else:
+		_play_anim(ANIM_IDLE_PISTOL if holding_gun else ANIM_IDLE)
 
 func get_aim_direction():
 	if target_player == null:
@@ -802,15 +930,43 @@ func apply_slow(duration: float, multiplier: float):
 	slow_timer = duration
 	slow_multiplier_value = multiplier
 
+var speed_surge_timer := 0.0
+const SPEED_SURGE_MULT := 1.4
+var vampire_timer := 0.0
+var second_wind_ready := false
+
 func apply_powerup(power_type: String, duration: float):
+	active_powerup_order.erase(power_type)
+	active_powerup_order.push_front(power_type)
 	match power_type:
 		"extra_melee_shield":
 			melee_disarm_shields = 1
 		"extra_dash":
 			if can_dash:
 				dash_charges += 1
+		"speed_surge":
+			speed_surge_timer = duration
+		"vampire_touch":
+			vampire_timer = duration
+		"second_wind":
+			second_wind_ready = true
+		"magnet_hands":
+			magnet_timer = duration
 		_:
-			pass
+			pass  # silent_steps is intentionally a no-op for bots
+
+func can_pick_up_item() -> bool:
+	return held_item == null
+
+func assign_item(item_obj) -> void:
+	held_item = item_obj
+
+func clear_item_slot(item_obj) -> void:
+	if held_item == item_obj:
+		held_item = null
+
+func get_active_item():
+	return held_item
 
 # ============================================================
 # Visual
@@ -856,12 +1012,23 @@ func _find_mesh_instances(node: Node) -> Array:
 func eliminate(killer_name = "", weapon_icon = "💀"):
 	if is_eliminated:
 		return
+	if second_wind_ready and not is_online:
+		second_wind_ready = false
+		grant_bullet_immunity(2.0)
+		if has_method("flash_hit"):
+			flash_hit()
+		return
 	if holding_gun:
 		var hold_point = get_hold_point()
 		if hold_point != null and hold_point.get_child_count() > 0:
 			hold_point.get_child(0).drop()
 	if held_melee_weapon != null:
 		held_melee_weapon.drop(true)
+	if held_item != null:
+		if NetworkManager.is_online() and held_item.has_method("force_online_drop_at"):
+			held_item.force_online_drop_at(global_position + Vector3(0.3, 0.6, 0.0))
+		else:
+			held_item.drop()
 	is_eliminated = true
 	_current_anim = ""
 	if model_anim_player != null:
@@ -904,6 +1071,9 @@ func respawn(spawn_transform):
 	stagger_timer = 0.0
 	bullet_immune_timer = 0.0
 	melee_disarm_shields = 0
+	second_wind_ready = false
+	active_powerup_order.clear()
+	magnet_timer = 0.0
 	slow_timer = 0.0
 	slow_multiplier_value = 1.0
 	dash_charges = MAX_DASH_CHARGES

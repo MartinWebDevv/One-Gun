@@ -2,7 +2,9 @@
 
 [ext_resource type="Script" uid="uid://j7vs5kxj1m3v" path="res://powerup.gd" id="1_vcqqu"]
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_vcqqu"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_vcqqu"]
+radius = 0.31
+height = 1.18
 
 [sub_resource type="SphereMesh" id="SphereMesh_wh0le"]
 radius = 0.3
@@ -16,7 +18,8 @@ emission_energy_multiplier = 3.0
 script = ExtResource("1_vcqqu")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1459669470]
-shape = SubResource("SphereShape3D_vcqqu")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0002322197, 0)
+shape = SubResource("CapsuleShape3D_vcqqu")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1034187409]
 mesh = SubResource("SphereMesh_wh0le")

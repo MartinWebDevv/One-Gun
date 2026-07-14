@@ -24,12 +24,17 @@ PauseManager="*uid://cc87e5e7o21uk"
 MeleeWeaponRegistry="*uid://d04gh61d2pdf"
 ThemeManager="*uid://cpqhwwul3nbwa"
 AudioManager="*uid://cjchkap4v4q61"
+NetworkManager="*res://network_manager.gd"
 
 [display]
 
 window/size/viewport_width=1600
 window/size/viewport_height=900
 window/size/mode=3
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/terrain_3d/plugin.cfg")
 
 [gui]
 

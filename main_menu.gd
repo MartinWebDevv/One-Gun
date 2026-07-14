@@ -224,9 +224,6 @@ func _build_page_multi() -> Control:
 	var vbox = page.get_meta("vbox") as VBoxContainer
 
 	var online_btn = _make_button("Online", _on_online_pressed)
-	online_btn.disabled = true
-	online_btn.modulate = COL_DISABLED
-	online_btn.mouse_default_cursor_shape = Control.CURSOR_FORBIDDEN
 
 	var btns = [
 		online_btn,
@@ -402,9 +399,165 @@ func _on_multiplayer_pressed():
 	_current_page = Page.MULTI
 	_transition_to(_page_main, _page_multi)
 
+var _online_panel: Control = null
+var _online_status: Label = null
+var _online_ip_field: LineEdit = null
+var _online_host_lobby_field: LineEdit = null
+
 func _on_online_pressed():
-	# Dead button — disabled, does nothing
-	pass
+	AudioManager.play_click()
+	if _online_panel == null:
+		_build_online_panel()
+	_online_status.text = ""
+	var tip = NetworkManager.get_tailscale_ip()
+	var host_lbl = _online_panel.get_meta("host_ip_label") as Label
+	if tip != "":
+		host_lbl.text = "Direct-address fallback:  %s" % tip
+	else:
+		host_lbl.text = "Tailscale IP not detected — is Tailscale running?"
+	_online_panel.visible = true
+
+func _build_online_panel():
+	_online_panel = Panel.new()
+	_online_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_online_panel.custom_minimum_size = Vector2(620, 470)
+	_online_panel.size = Vector2(620, 470)
+	_online_panel.position = Vector2(-310, -235)
+	_online_panel.add_theme_stylebox_override("panel", _make_btn_style(Color(0.10, 0.12, 0.20, 0.97), COL_GOLD))
+	add_child(_online_panel)
+
+	var vb = VBoxContainer.new()
+	vb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vb.add_theme_constant_override("separation", 16)
+	vb.offset_left = 30
+	vb.offset_top = 24
+	vb.offset_right = -30
+	vb.offset_bottom = -24
+	_online_panel.add_child(vb)
+
+	var title = Label.new()
+	title.text = "ONLINE  (Tailscale)"
+	if _btn_font: title.add_theme_font_override("font", _btn_font)
+	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_color_override("font_color", COL_GOLD)
+	vb.add_child(title)
+
+	var host_ip = Label.new()
+	host_ip.text = ""
+	host_ip.add_theme_font_size_override("font_size", 15)
+	host_ip.add_theme_color_override("font_color", COL_CYAN)
+	vb.add_child(host_ip)
+	_online_panel.set_meta("host_ip_label", host_ip)
+
+	var host_caption := Label.new()
+	host_caption.text = "CREATE A LOBBY"
+	host_caption.add_theme_font_size_override("font_size", 16)
+	vb.add_child(host_caption)
+	var host_row := HBoxContainer.new()
+	host_row.add_theme_constant_override("separation", 10)
+	_online_host_lobby_field = LineEdit.new()
+	_online_host_lobby_field.placeholder_text = "Choose a lobby name"
+	_online_host_lobby_field.text = "%s's Lobby" % NetworkManager.local_name()
+	_online_host_lobby_field.max_length = 32
+	_online_host_lobby_field.custom_minimum_size = Vector2(390, 52)
+	if _btn_font: _online_host_lobby_field.add_theme_font_override("font", _btn_font)
+	_online_host_lobby_field.add_theme_font_size_override("font_size", 18)
+	host_row.add_child(_online_host_lobby_field)
+	var host_button := _make_button("Host", _on_host_pressed)
+	host_button.custom_minimum_size = Vector2(150, 52)
+	host_row.add_child(host_button)
+	vb.add_child(host_row)
+
+	var join_caption := Label.new()
+	join_caption.text = "JOIN A LOBBY"
+	join_caption.add_theme_font_size_override("font_size", 16)
+	vb.add_child(join_caption)
+	var join_row = HBoxContainer.new()
+	join_row.add_theme_constant_override("separation", 10)
+	_online_ip_field = LineEdit.new()
+	_online_ip_field.placeholder_text = "Lobby name (or 100.x address)"
+	_online_ip_field.max_length = 64
+	_online_ip_field.custom_minimum_size = Vector2(390, 52)
+	if _btn_font: _online_ip_field.add_theme_font_override("font", _btn_font)
+	_online_ip_field.add_theme_font_size_override("font_size", 18)
+	join_row.add_child(_online_ip_field)
+	var join_btn = _make_button("Join", _on_join_pressed)
+	join_btn.custom_minimum_size = Vector2(150, 52)
+	join_row.add_child(join_btn)
+	vb.add_child(join_row)
+
+	_online_status = Label.new()
+	_online_status.text = ""
+	_online_status.add_theme_font_size_override("font_size", 16)
+	_online_status.add_theme_color_override("font_color", COL_WHITE)
+	vb.add_child(_online_status)
+
+	vb.add_child(_make_button("← Back", _on_online_back))
+
+func _on_online_back():
+	AudioManager.play_click()
+	if NetworkManager.is_online():
+		NetworkManager.disconnect_net()
+	if _online_panel != null:
+		_online_panel.visible = false
+
+func _on_host_pressed():
+	AudioManager.play_click()
+	var requested_name := _online_host_lobby_field.text.strip_edges()
+	if requested_name == "":
+		_online_status.text = "Choose a lobby name first."
+		return
+	if not NetworkManager.host_game(NetworkManager.DEFAULT_PORT, requested_name):
+		_online_status.text = "Failed to host — port 24545 in use? Firewall?"
+		return
+	if not GameConfig.lobby_settings_dirty:
+		GameConfig.reset_match_settings_to_defaults()
+	GameConfig.split_screen_enabled = false
+	get_tree().change_scene_to_file("res://game_setup.tscn")
+
+func _on_join_pressed():
+	AudioManager.play_click()
+	var lobby_or_address = _online_ip_field.text.strip_edges()
+	if lobby_or_address == "":
+		_online_status.text = "Enter the lobby name first."
+		return
+	# one-shot handlers for this join attempt
+	if not NetworkManager.connection_succeeded.is_connected(_on_join_ok):
+		NetworkManager.connection_succeeded.connect(_on_join_ok, CONNECT_ONE_SHOT)
+	if not NetworkManager.connection_failed.is_connected(_on_join_fail):
+		NetworkManager.connection_failed.connect(_on_join_fail, CONNECT_ONE_SHOT)
+	if not NetworkManager.lobby_discovery_failed.is_connected(_on_lobby_discovery_fail):
+		NetworkManager.lobby_discovery_failed.connect(_on_lobby_discovery_fail, CONNECT_ONE_SHOT)
+	if lobby_or_address.begins_with("100.") or lobby_or_address.begins_with("127."):
+		_online_status.text = "Connecting to %s ..." % lobby_or_address
+		if not NetworkManager.join_game(lobby_or_address):
+			_online_status.text = "Couldn't start the direct connection."
+	else:
+		_online_status.text = "Searching Tailscale for '%s' ..." % lobby_or_address
+		if not NetworkManager.join_lobby_by_name(lobby_or_address):
+			_online_status.text = "Enter a valid lobby name."
+
+func _on_join_ok():
+	if NetworkManager.connection_failed.is_connected(_on_join_fail):
+		NetworkManager.connection_failed.disconnect(_on_join_fail)
+	if NetworkManager.lobby_discovery_failed.is_connected(_on_lobby_discovery_fail):
+		NetworkManager.lobby_discovery_failed.disconnect(_on_lobby_discovery_fail)
+	GameConfig.split_screen_enabled = false
+	get_tree().change_scene_to_file("res://game_setup.tscn")
+
+func _on_join_fail():
+	if NetworkManager.connection_succeeded.is_connected(_on_join_ok):
+		NetworkManager.connection_succeeded.disconnect(_on_join_ok)
+	if NetworkManager.lobby_discovery_failed.is_connected(_on_lobby_discovery_fail):
+		NetworkManager.lobby_discovery_failed.disconnect(_on_lobby_discovery_fail)
+	_online_status.text = "Connection failed. Check Tailscale and that the host clicked Host."
+
+func _on_lobby_discovery_fail(message: String) -> void:
+	if NetworkManager.connection_succeeded.is_connected(_on_join_ok):
+		NetworkManager.connection_succeeded.disconnect(_on_join_ok)
+	if NetworkManager.connection_failed.is_connected(_on_join_fail):
+		NetworkManager.connection_failed.disconnect(_on_join_fail)
+	_online_status.text = message
 
 func _on_local_pressed():
 	AudioManager.play_click()

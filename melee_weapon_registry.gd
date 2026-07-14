@@ -1,14 +1,17 @@
 extends Node
 
-const EFFECTS = ["normal", "knockback", "stagger"]
+const EFFECTS = ["normal", "knockback", "stagger", "slow"]
 
 func _build_sword() -> WeaponData:
 	var d = WeaponData.new()
 	d.weapon_name = "Sword"
-	d.model_scene_path = "res://models/weaponModels/sword.glb"
+	d.model_scene_path = "res://sword.tscn"
 	d.reach_multiplier = 1.5
 	d.held_rotation = Vector3(-PI/2, PI, 0)
-	d.held_scale = 1.0
+	# Sword_Eternity.glb is raw-exported at ~4.68 units long (measured via its
+	# mesh AABB) — at scale 1.0 that's a ~4.7m sword in a 1-unit-per-meter
+	# world. Scaled to land around ~1.2m; re-tune visually if it looks off.
+	d.held_scale = 0.25
 	d.swing_windup_offset = Vector3(-0.3, 0.5, -0.6)
 	d.swing_followthrough_offset = Vector3(0.5, -0.5, 0.7)
 	d.base_windup_time = 0.08
@@ -21,7 +24,7 @@ func _build_sword() -> WeaponData:
 func _build_bat() -> WeaponData:
 	var d = WeaponData.new()
 	d.weapon_name = "Baseball Bat"
-	d.model_scene_path = "res://models/weaponModels/baseball_bat.glb"
+	d.model_scene_path = "res://baseball_bat.tscn"
 	d.reach_multiplier = 1.3
 	d.held_rotation = Vector3(-PI/2, PI, 0)
 	d.held_scale = 1.0
@@ -37,10 +40,12 @@ func _build_bat() -> WeaponData:
 func _build_stick() -> WeaponData:
 	var d = WeaponData.new()
 	d.weapon_name = "Stick"
-	d.model_scene_path = "res://models/weaponModels/stick.glb"
+	d.model_scene_path = "res://stick.tscn"
 	d.reach_multiplier = 0.75
 	d.held_rotation = Vector3(-PI/2, PI, 0)
-	d.held_scale = 1.0
+	# Stick.glb is raw-exported at ~0.47 units long; bumped up from 1.0
+	# (looked too small in-hand). Re-tune visually if still off.
+	d.held_scale = 1.4
 	d.swing_windup_offset = Vector3(-0.15, 0.3, -0.4)
 	d.swing_followthrough_offset = Vector3(0.2, -0.3, 0.5)
 	d.base_windup_time = 0.04
@@ -53,10 +58,13 @@ func _build_stick() -> WeaponData:
 func _build_crowbar() -> WeaponData:
 	var d = WeaponData.new()
 	d.weapon_name = "Crowbar"
-	d.model_scene_path = "res://models/weaponModels/crowbar.glb"
+	d.model_scene_path = "res://crowbar.tscn"
 	d.reach_multiplier = 1.1
 	d.held_rotation = Vector3(-PI/2, PI, 0)
-	d.held_scale = 1.0
+	# Crowbar.glb is raw-exported at ~11.98 units long — scaled down to land
+	# around ~0.55m, then bumped up (looked too small in-hand). Re-tune
+	# visually if still off.
+	d.held_scale = 0.065
 	d.swing_windup_offset = Vector3(-0.28, 0.45, -0.55)
 	d.swing_followthrough_offset = Vector3(0.42, -0.45, 0.65)
 	d.base_windup_time = 0.08
@@ -69,10 +77,13 @@ func _build_crowbar() -> WeaponData:
 func _build_frying_pan() -> WeaponData:
 	var d = WeaponData.new()
 	d.weapon_name = "Frying Pan"
-	d.model_scene_path = "res://models/weaponModels/frying_pan.glb"
+	d.model_scene_path = "res://frying_pan.tscn"
 	d.reach_multiplier = 0.7
 	d.held_rotation = Vector3(-PI/2, PI, 0)
-	d.held_scale = 1.0
+	# FryingPan.glb is raw-exported at ~2.83 units long (handle to pan edge) —
+	# scaled down to land around ~0.55m, then bumped up (looked too small
+	# in-hand). Re-tune visually if still off.
+	d.held_scale = 0.28
 	d.swing_windup_offset = Vector3(-0.4, 0.7, -0.9)
 	d.swing_followthrough_offset = Vector3(0.6, -0.7, 1.1)
 	d.base_windup_time = 0.32
@@ -95,6 +106,20 @@ func _ready():
 
 func get_random_weapon_data() -> WeaponData:
 	return _weapons[randi() % _weapons.size()]
+
+func get_weapon_data_by_name(weapon_name: String) -> WeaponData:
+	for data in _weapons:
+		if data.weapon_name == weapon_name:
+			return data
+	return null
+
+func get_random_identity() -> Dictionary:
+	var data := get_random_weapon_data()
+	return {
+		"weapon_name": data.weapon_name,
+		"effect": get_random_effect(),
+		"tier": get_random_tier(),
+	}
 
 func get_random_effect() -> String:
 	return EFFECTS[randi() % EFFECTS.size()]

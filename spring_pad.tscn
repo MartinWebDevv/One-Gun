@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://item.gd" id="1_cl2er"]
+[ext_resource type="PackedScene" path="res://spring_pad_deployed.tscn" id="2_djl6c"]
+[ext_resource type="PackedScene" path="res://models/items/JumpPad.glb" id="3_453fa"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_7xqw4"]
+radius = 0.3
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_uejgi"]
+radius = 1.6
+
+[node name="spring_pad" type="RigidBody3D" unique_id=1140223376]
+collision_layer = 4
+script = ExtResource("1_cl2er")
+item_type = "spring_pad"
+deployed_scene = ExtResource("2_djl6c")
+deployed_lifetime = 31.0
+respawn_after_deploy_time = 16.0
+HELD_SCALE = 0.28
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2009475080]
+shape = SubResource("SphereShape3D_7xqw4")
+
+[node name="Model" type="Node3D" parent="." unique_id=1846840791 instance=ExtResource("3_453fa")]
+transform = Transform3D(0.5263157, 0, 0, 0, 0.5263157, 0, 0, 0, 0.5263157, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="." unique_id=2018701136]
+collision_layer = 0
+collision_mask = 2
+
+[node name="@CollisionShape3D@5" type="CollisionShape3D" parent="Area3D" unique_id=48765409]
+shape = SubResource("SphereShape3D_uejgi")
+
+[node name="PickupLabel" type="Label3D" parent="." unique_id=2041745568]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+billboard = 1
+text = "[F]  Spring Pad"
+font_size = 40
+outline_size = 8

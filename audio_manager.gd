@@ -25,15 +25,33 @@ extends Node
 # ============================================================
 
 const MUSIC_PATHS = {
-	"menu": "res://audio/bloodpixelhero_your-last-game.wav",
+	"menu": "res://audio/MainMenu.wav",
+	"forest": "res://audio/ForestSounds/ForestLevelMusic-Loop.wav",
 	# "game": "res://audio/your_game_music.wav",
 	# Drop your in-game music file into res://audio/ and uncomment
 	# the line above with the correct filename to enable game music.
 }
 
+# Looping background ambience (follows the SFX volume slider, offset quieter)
+const AMBIENT_PATHS = {
+	"forest_birds": "res://audio/ForestSounds/ForestBackground-birdChirps.wav",
+}
+
+# Maps set this on enter (and clear it on exit) to give themselves their own
+# in-match music: round_manager's generic play_music("game") gets redirected.
+var level_music_key: String = ""
+
 const SFX_PATHS = {
 	"hover":      "res://audio/ui/button-hover.mp3",
 	"click":      "res://audio/ui/button_click.wav",
+	"gun_shot":   "res://audio/weapon_sounds/Gun_Shot.wav",
+	"melee_swing": "res://audio/weapon_sounds/Swing_Sound.wav",
+	"hit_sword":  "res://audio/weapon_sounds/Sword_Clash.wav",
+	"hit_stick":  "res://audio/weapon_sounds/Stick_Hitting.wav",
+	"hit_crowbar": "res://audio/weapon_sounds/Crow_Bar_Hit.wav",
+	"hit_bat":    "res://audio/weapon_sounds/BaseballBat_hit.mp3",
+	"hit_pan":    "res://audio/weapon_sounds/Frying_Pan.mp3",
+	"footstep":   "res://audio/GlobalSounds/footsteps.wav",
 	# "gun_pickup": "res://audio/sfx/gun_pickup.wav",
 	# "gun_drop":   "res://audio/sfx/gun_drop.wav",
 	# "disarm":     "res://audio/sfx/disarm.wav",
@@ -46,15 +64,17 @@ const SFX_PATHS = {
 # Volume — adjust these or wire to sliders later
 # ============================================================
 
-var MUSIC_VOLUME_DB  = -10.0
+var MUSIC_VOLUME_DB  = -30.0
 var SFX_VOLUME_DB    = 0.0
 var HOVER_VOLUME_DB  = -6.0
+var AMBIENT_OFFSET_DB = -10.0  # ambience sits this much under the SFX level
 
 # ============================================================
 # Internal nodes
 # ============================================================
 
 var _music_player  : AudioStreamPlayer
+var _ambient_player: AudioStreamPlayer
 var _sfx_players   : Array[AudioStreamPlayer] = []
 var _sfx_pool_size : int = 8   # concurrent sfx allowed
 var _sfx_index     : int = 0
@@ -86,6 +106,11 @@ func _build_music_player():
 	_music_player.bus  = "Master"
 	_music_player.volume_db = MUSIC_VOLUME_DB
 	add_child(_music_player)
+	_ambient_player = AudioStreamPlayer.new()
+	_ambient_player.name = "AmbientPlayer"
+	_ambient_player.bus = "Master"
+	_ambient_player.volume_db = SFX_VOLUME_DB + AMBIENT_OFFSET_DB
+	add_child(_ambient_player)
 
 func _build_sfx_pool():
 	# Pool of AudioStreamPlayers for overlapping sound effects.
@@ -102,6 +127,10 @@ func _build_sfx_pool():
 # ============================================================
 
 func play_music(key: String, fade_duration: float = 0.5):
+	# A map can claim its own in-match track: the generic "game" request that
+	# round_manager makes for every match gets redirected to it.
+	if key == "game" and level_music_key != "":
+		key = level_music_key
 	if key == _current_music_key and _music_player.playing:
 		return
 	if not MUSIC_PATHS.has(key):
@@ -155,11 +184,39 @@ func _load_looping(path: String) -> AudioStream:
 	stream = stream.duplicate()
 	if stream is AudioStreamWAV:
 		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		if stream.loop_end <= 0:
+			# WAVs imported without loop metadata have loop_end 0 — an empty
+			# loop region kills playback instantly. Loop the full sample.
+			var bytes_per_frame := 1
+			if stream.format == AudioStreamWAV.FORMAT_16_BITS:
+				bytes_per_frame = 2
+			if stream.stereo:
+				bytes_per_frame *= 2
+			stream.loop_end = stream.data.size() / bytes_per_frame
 	elif stream is AudioStreamMP3:
 		stream.loop = true
 	elif stream is AudioStreamOggVorbis:
 		stream.loop = true
 	return stream
+
+# ============================================================
+# Ambience (looping, follows the SFX volume slider)
+# ============================================================
+
+func play_ambient(key: String):
+	if not AMBIENT_PATHS.has(key):
+		push_warning("AudioManager: no ambient key '%s'" % key)
+		return
+	var path = AMBIENT_PATHS[key]
+	if not ResourceLoader.exists(path):
+		push_warning("AudioManager: ambient file not found: %s" % path)
+		return
+	_ambient_player.stream = _load_looping(path)
+	_ambient_player.volume_db = SFX_VOLUME_DB + AMBIENT_OFFSET_DB
+	_ambient_player.play()
+
+func stop_ambient():
+	_ambient_player.stop()
 
 # ============================================================
 # SFX
@@ -214,3 +271,5 @@ func set_sfx_volume(linear: float):
 	SFX_VOLUME_DB = linear_to_db(max(linear, 0.0001))
 	for p in _sfx_players:
 		p.volume_db = SFX_VOLUME_DB
+	if _ambient_player:
+		_ambient_player.volume_db = SFX_VOLUME_DB + AMBIENT_OFFSET_DB

@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://crevyw0d07efo"]
+
+[ext_resource type="PackedScene" uid="uid://2p43etv8wl6n" path="res://models/westernAssets/BuildingPieces/Saloon/dining_table.glb" id="1_2vxll"]
+[ext_resource type="PackedScene" uid="uid://cebsqcuyr61tk" path="res://models/westernAssets/BuildingPieces/Saloon/dining_chair.glb" id="2_52av6"]
+
+[node name="Table 1" type="Node3D" unique_id=1067301423]
+transform = Transform3D(-6.556708e-09, 0, 0.14999999, 0, 0.14999999, 0, -0.14999999, 0, -6.556708e-09, 0, 0, 0)
+
+[node name="dining_table" parent="." unique_id=979669369 instance=ExtResource("1_2vxll")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3841858e-07, 0)
+
+[node name="dining_chair4" parent="." unique_id=190344392 instance=ExtResource("2_52av6")]
+transform = Transform3D(-0.7000001, 0, 6.119595e-08, 0, 0.7000001, 0, -6.119595e-08, 0, -0.7000001, 0.76102734, -0.05402279, 0.042907715)
+
+[node name="dining_chair" parent="." unique_id=1247137634 instance=ExtResource("2_52av6")]
+transform = Transform3D(-3.0597974e-08, 0, -0.70000005, 0, 0.70000005, 0, 0.70000005, 0, -3.0597974e-08, -0.023717284, -0.05402279, -0.5083562)
+
+[node name="dining_chair3" parent="." unique_id=93614684 instance=ExtResource("2_52av6")]
+transform = Transform3D(0.7000001, 0, 3.5527137e-15, 0, 0.7000001, 0, -3.5527137e-15, 0, 0.7000001, -0.6300206, -0.05402279, 0.022394896)

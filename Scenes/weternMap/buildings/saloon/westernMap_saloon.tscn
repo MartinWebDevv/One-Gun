@@ -1,0 +1,153 @@
+[gd_scene format=3 uid="uid://drplk3ksfoaq0"]
+
+[ext_resource type="PackedScene" uid="uid://b24j3pfimky67" path="res://models/westernAssets/BuildingPieces/Saloon/Saloon_Structure.glb" id="1_dx41q"]
+[ext_resource type="PackedScene" uid="uid://cqn3g5fu10ygd" path="res://models/westernAssets/BuildingPieces/Saloon/Saloon_Roof.glb" id="2_q671t"]
+[ext_resource type="PackedScene" uid="uid://cmw313sowh4en" path="res://models/westernAssets/BuildingPieces/Saloon/Saloon_Sign.glb" id="3_tnenm"]
+[ext_resource type="PackedScene" uid="uid://ce0nn25a2bokj" path="res://models/westernAssets/BuildingPieces/Saloon/Saloon_Porch_Deck.glb" id="4_dhctr"]
+[ext_resource type="PackedScene" uid="uid://drh0qw4wu213x" path="res://models/westernAssets/BuildingPieces/Saloon/Saloon_Balcony_Railing.glb" id="5_wtmbd"]
+[ext_resource type="PackedScene" uid="uid://bwqluq0mx324x" path="res://models/westernAssets/BuildingPieces/Saloon/Saloon_Floor.glb" id="6_gpcyo"]
+[ext_resource type="PackedScene" path="res://Scenes/weternMap/buildings/saloon/saloon_swinging_door.tscn" id="7_hl5db"]
+[ext_resource type="PackedScene" uid="uid://cj3fioeavnasd" path="res://models/westernAssets/BuildingPieces/Saloon/bar_counter.glb" id="8_txxc7"]
+[ext_resource type="PackedScene" uid="uid://c7oceqhewkvmf" path="res://models/westernAssets/BuildingPieces/Saloon/bar_stool.glb" id="9_xkuwa"]
+[ext_resource type="PackedScene" uid="uid://crevyw0d07efo" path="res://Scenes/weternMap/buildings/saloon/Table_set.tscn" id="10_q671t"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cdxyc"]
+albedo_color = Color(1, 0.75, 0.35, 1)
+emission_enabled = true
+emission = Color(1, 0.62, 0.25, 1)
+emission_energy_multiplier = 2.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_ieixg"]
+material = SubResource("StandardMaterial3D_cdxyc")
+size = Vector3(0.16, 0.22, 0.16)
+
+[node name="Saloon_Structure" unique_id=1799874159 instance=ExtResource("1_dx41q")]
+transform = Transform3D(1.25, 0, 0, 0, 1.25, 0, 0, 0, 1.25, 0, 0.55927455, 0)
+
+[node name="tripo_node_85678e64-239c-415d-9a5a-988819e6290a" parent="." index="0" unique_id=421522522]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00022809142, -0.013431877, -0.00031116864)
+
+[node name="Saloon_Roof" parent="." index="1" unique_id=732494078 instance=ExtResource("2_q671t")]
+transform = Transform3D(0.0015925084, -0.035189588, 1.000339, 0.007961664, 0.803774, 0.043784186, -1.174662, 0.00540014, 0.0016529389, 0.00012610853, 0.17510712, 0.02130586)
+
+[node name="Saloon_Sign" parent="." index="2" unique_id=1627303123 instance=ExtResource("3_tnenm")]
+transform = Transform3D(0.314, 0, 0, 0, 0.187, 0, 0, 0, 0.373, 0.0004338324, 0.3321719, -0.48550254)
+
+[node name="Porch_Deck" type="Node3D" parent="." index="3" unique_id=615175903]
+
+[node name="Saloon_Porch_Deck" parent="Porch_Deck" index="0" unique_id=1139049037 instance=ExtResource("4_dhctr")]
+transform = Transform3D(1.4744946, 0, -0.038611002, 0, 1.475, 0, 0.038611002, 0, 1.4744946, 0.12, -0.426, -0.036)
+
+[node name="Saloon_Porch_Deck2" parent="Porch_Deck" index="1" unique_id=1456686026 instance=ExtResource("4_dhctr")]
+transform = Transform3D(-1.4744946, 0, 0.038611133, 0, 1.4749999, 0, -0.038611133, 0, -1.4744946, -0.080000006, -0.426, -0.036)
+
+[node name="Saloon_Balcony_Railing" parent="." index="4" unique_id=1692652868 instance=ExtResource("5_wtmbd")]
+transform = Transform3D(-4.1482107e-08, 0, 0.73, 0, 0.874467, 0, -0.949, 0, -3.1909313e-08, -1.4901161e-08, -0.2025406, -0.5890318)
+
+[node name="Saloon_Floor" parent="." index="5" unique_id=52306475 instance=ExtResource("6_gpcyo")]
+transform = Transform3D(-4.371139e-08, 0, 1.3, 0, 1, 0, -1, 0, -5.6824803e-08, -0.00043031573, -0.39852923, 0.0061539263)
+
+[node name="Saloon_Floor2" parent="." index="6" unique_id=1436937496 instance=ExtResource("6_gpcyo")]
+transform = Transform3D(3.9340247e-08, 8.7422784e-08, -1.3000001, 3.4392337e-15, -1, -1.1364962e-07, -0.90000004, 0, -5.68248e-08, -0.00043031573, 0.113173425, 0.0061539263)
+
+[node name="Saloon_Swinging_Doors" parent="." index="7" unique_id=332526333 instance=ExtResource("7_hl5db")]
+transform = Transform3D(-7.4309354e-09, 0, 0.17, 0, 0.17, 0, -0.17, 0, -7.4309354e-09, 0.06770805, -0.016246647, -0.45902023)
+hinge_on_positive_side = true
+
+[node name="Saloon_Swinging_Doors2" parent="." index="8" unique_id=2040819050 instance=ExtResource("7_hl5db")]
+transform = Transform3D(-0.105, 0, -1.9025471e-08, 0, 0.15750001, 0, 1.5854557e-08, 0, -0.126, -0.34740436, -0.300359, 0.23167403)
+
+[node name="Saloon_Swinging_Doors3" parent="." index="9" unique_id=1955786379 instance=ExtResource("7_hl5db")]
+transform = Transform3D(-0.105, 0, -1.9025471e-08, 0, 0.15750001, 0, 1.5854557e-08, 0, -0.126, 0.34847066, -0.300359, 0.23427215)
+
+[node name="Bar" type="Node3D" parent="." index="10" unique_id=1536995018]
+
+[node name="bar_counter" parent="Bar" index="0" unique_id=668083512 instance=ExtResource("8_txxc7")]
+transform = Transform3D(0.62790006, 0, 0, 0, 0.49680012, 0, 4.016111e-15, 0, 0.48300004, -0.0018598982, -0.3066724, 0.40180752)
+
+[node name="candle5" type="MeshInstance3D" parent="Bar/bar_counter" index="1" unique_id=51166138]
+transform = Transform3D(0.16722405, 0, 0, 0, 0.31803533, 0, -1.390456e-15, 0, 0.14492752, -0.44303662, 0.1762237, -0.0025809407)
+mesh = SubResource("BoxMesh_ieixg")
+
+[node name="CandleLight" type="OmniLight3D" parent="Bar/bar_counter/candle5" index="0" unique_id=2039868085]
+transform = Transform3D(7.6190476, 0, 0, 0, 5.0632906, 0, 0, 0, 11.428571, 0, 0, 0)
+light_color = Color(1, 0.62, 0.28, 1)
+light_energy = 1.1
+light_volumetric_fog_energy = 1.6
+omni_range = 6.5
+
+[node name="candle6" type="MeshInstance3D" parent="Bar/bar_counter" index="2" unique_id=1852702806]
+transform = Transform3D(0.16722405, 0, 0, 0, 0.31803533, 0, -1.390456e-15, 0, 0.14492752, 0.45985496, 0.1762237, -0.0025809407)
+mesh = SubResource("BoxMesh_ieixg")
+
+[node name="CandleLight" type="OmniLight3D" parent="Bar/bar_counter/candle6" index="0" unique_id=340585170]
+transform = Transform3D(7.6190476, 0, 0, 0, 5.0632906, 0, 0, 0, 11.428571, 0, 0, 0)
+light_color = Color(1, 0.62, 0.28, 1)
+light_energy = 1.1
+light_volumetric_fog_energy = 1.6
+omni_range = 6.5
+
+[node name="bar_stool" parent="Bar" index="1" unique_id=1293436893 instance=ExtResource("9_xkuwa")]
+transform = Transform3D(0.110000014, 0, 0, 0, 0.110000014, 0, 0, 0, 0.10000001, -0.1894024, -0.33413234, 0.32663602)
+
+[node name="bar_stool2" parent="Bar" index="2" unique_id=747081448 instance=ExtResource("9_xkuwa")]
+transform = Transform3D(0.110000014, 0, 0, 0, 0.110000014, 0, 0, 0, 0.10000001, 0.006, -0.334, 0.32700002)
+
+[node name="bar_stool3" parent="Bar" index="3" unique_id=1828463765 instance=ExtResource("9_xkuwa")]
+transform = Transform3D(0.110000014, 0, 0, 0, 0.110000014, 0, 0, 0, 0.10000001, 0.205, -0.334, 0.32700002)
+
+[node name="Table 1" parent="." index="11" unique_id=1067301423 instance=ExtResource("10_q671t")]
+transform = Transform3D(-6.556708e-09, 0, 0.14999999, 0, 0.14999999, 0, -0.14999999, 0, -6.556708e-09, 0.246, -0.32700002, -0.296926)
+
+[node name="candle2" type="MeshInstance3D" parent="Table 1" index="4" unique_id=1954113488]
+transform = Transform3D(-3.0597974e-08, 0, -0.46666673, 0, 1.0533335, 0, 0.70000005, 0, -2.039865e-08, -0.02036333, 0.477978, 0.3088627)
+mesh = SubResource("BoxMesh_ieixg")
+
+[node name="CandleLight" type="OmniLight3D" parent="Table 1/candle2" index="0" unique_id=1719583120]
+transform = Transform3D(7.6190476, 0, 0, 0, 5.0632906, 0, 0, 0, 11.428571, 0, 0, 0)
+light_color = Color(1, 0.62, 0.28, 1)
+light_energy = 1.1
+light_volumetric_fog_energy = 1.6
+omni_range = 6.5
+
+[node name="Table 2" parent="." index="12" unique_id=305309171 instance=ExtResource("10_q671t")]
+transform = Transform3D(1.9670123e-08, 0, -0.14999999, 0, 0.14999999, 0, 0.14999999, 0, 1.9670123e-08, -0.2636589, -0.32700002, -0.025163863)
+
+[node name="candle4" type="MeshInstance3D" parent="Table 2" index="4" unique_id=2015832739]
+transform = Transform3D(9.1793915e-08, 0, 0.46666673, 0, 1.0533335, 0, -0.70000005, 0, 6.119594e-08, 0.03396259, 0.477978, 0.30185032)
+mesh = SubResource("BoxMesh_ieixg")
+
+[node name="CandleLight" type="OmniLight3D" parent="Table 2/candle4" index="0" unique_id=1114560919]
+transform = Transform3D(7.6190476, 0, 0, 0, 5.0632906, 0, 0, 0, 11.428571, 0, 0, 0)
+light_color = Color(1, 0.62, 0.28, 1)
+light_energy = 1.1
+light_volumetric_fog_energy = 1.6
+omni_range = 6.5
+
+[node name="Table 3" parent="." index="13" unique_id=1483189309 instance=ExtResource("10_q671t")]
+transform = Transform3D(1.9670123e-08, 0, -0.14999999, 0, 0.14999999, 0, 0.14999999, 0, 1.9670123e-08, -0.26682115, -0.32700002, -0.31700832)
+
+[node name="candle3" type="MeshInstance3D" parent="Table 3" index="4" unique_id=700252901]
+transform = Transform3D(9.1793915e-08, 0, 0.46666673, 0, 1.0533335, 0, -0.70000005, 0, 6.119594e-08, -0.0066957474, 0.477978, 0.27444673)
+mesh = SubResource("BoxMesh_ieixg")
+
+[node name="CandleLight" type="OmniLight3D" parent="Table 3/candle3" index="0" unique_id=1326512861]
+transform = Transform3D(7.6190476, 0, 0, 0, 5.0632906, 0, 0, 0, 11.428571, 0, 0, 0)
+light_color = Color(1, 0.62, 0.28, 1)
+light_energy = 1.1
+light_volumetric_fog_energy = 1.6
+omni_range = 6.5
+
+[node name="Table 4" parent="." index="14" unique_id=615286122 instance=ExtResource("10_q671t")]
+transform = Transform3D(-6.556708e-09, 0, 0.14999999, 0, 0.14999999, 0, -0.14999999, 0, -6.556708e-09, 0.246, -0.32700002, 2.6643277e-06)
+
+[node name="candle" type="MeshInstance3D" parent="Table 4" index="4" unique_id=1072627429]
+transform = Transform3D(-3.0597974e-08, 0, -0.46666673, 0, 1.0533335, 0, 0.70000005, 0, -2.039865e-08, -0.015411556, 0.477978, 0.3088627)
+mesh = SubResource("BoxMesh_ieixg")
+
+[node name="CandleLight" type="OmniLight3D" parent="Table 4/candle" index="0" unique_id=403754408]
+transform = Transform3D(7.6190476, 0, 0, 0, 5.0632906, 0, 0, 0, 11.428571, 0, 0, 0)
+light_color = Color(1, 0.62, 0.28, 1)
+light_energy = 1.1
+light_volumetric_fog_energy = 1.6
+omni_range = 6.5

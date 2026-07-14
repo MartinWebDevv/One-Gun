@@ -24,6 +24,7 @@
 [ext_resource type="PackedScene" uid="uid://lxicxytw7d7w" path="res://powerup.tscn" id="21_ij4eg"]
 [ext_resource type="PackedScene" uid="uid://c2x5oayflfvyy" path="res://item.tscn" id="22_fy782"]
 [ext_resource type="PackedScene" uid="uid://c4se2kvv2q2ke" path="res://bubble_gum_trap.tscn" id="23_id0bc"]
+[ext_resource type="PackedScene" path="res://grenade.tscn" id="30_grenade"]
 
 [sub_resource type="Environment" id="Environment_1djch"]
 ambient_light_source = 2
@@ -575,6 +576,15 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 14
 autowrap_mode = 2
 
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot"]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+value = 0.0
+visible = false
+
 [node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=1322452428]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
@@ -618,6 +628,68 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 14
 autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot"]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+value = 0.0
+visible = false
+
+[node name="ItemSlot2" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_tpctg")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+value = 0.0
+visible = false
 
 [node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=205256646]
 layout_mode = 0
@@ -801,6 +873,15 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 14
 autowrap_mode = 2
 
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot"]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+value = 0.0
+visible = false
+
 [node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=2054650249]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
@@ -844,6 +925,68 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 14
 autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot"]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+value = 0.0
+visible = false
+
+[node name="ItemSlot2" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("12_tpctg")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2"]
+layout_mode = 1
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+value = 0.0
+visible = false
 
 [node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=681366259]
 layout_mode = 0
@@ -915,3 +1058,6 @@ deployed_scene = ExtResource("23_id0bc")
 [node name="item2" parent="." unique_id=2047597354 instance=ExtResource("22_fy782")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.459732, 0.34999847, 28.219025)
 deployed_scene = ExtResource("23_id0bc")
+
+[node name="grenade" parent="." instance=ExtResource("30_grenade")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.1, 0.34999847, 16.2)

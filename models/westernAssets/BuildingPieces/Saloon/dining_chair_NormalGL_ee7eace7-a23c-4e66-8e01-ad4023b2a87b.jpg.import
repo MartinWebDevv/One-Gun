@@ -1,0 +1,44 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://40hqb45hhf3s"
+path.s3tc="res://.godot/imported/dining_chair_NormalGL_ee7eace7-a23c-4e66-8e01-ad4023b2a87b.jpg-5da0b9ad92c0b6f48f20a14fbd1cb07f.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "ae079cd9d0900d8b5a4c12eca46a7b3e"
+}
+
+[deps]
+
+source_file="res://models/westernAssets/BuildingPieces/Saloon/dining_chair_NormalGL_ee7eace7-a23c-4e66-8e01-ad4023b2a87b.jpg"
+dest_files=["res://.godot/imported/dining_chair_NormalGL_ee7eace7-a23c-4e66-8e01-ad4023b2a87b.jpg-5da0b9ad92c0b6f48f20a14fbd1cb07f.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/normal_map=1
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=1
+roughness/src_normal="res://models/westernAssets/BuildingPieces/Saloon/dining_chair_NormalGL_ee7eace7-a23c-4e66-8e01-ad4023b2a87b.jpg"
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

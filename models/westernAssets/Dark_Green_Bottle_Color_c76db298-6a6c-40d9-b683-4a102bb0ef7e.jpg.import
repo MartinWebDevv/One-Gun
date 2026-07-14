@@ -1,0 +1,44 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://27s5vk0f1aei"
+path.s3tc="res://.godot/imported/Dark_Green_Bottle_Color_c76db298-6a6c-40d9-b683-4a102bb0ef7e.jpg-0016c064ad833311041b08ffc52787d4.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "dc1ced2f34d8e7a1a861b3bc28609676"
+}
+
+[deps]
+
+source_file="res://models/westernAssets/Dark_Green_Bottle_Color_c76db298-6a6c-40d9-b683-4a102bb0ef7e.jpg"
+dest_files=["res://.godot/imported/Dark_Green_Bottle_Color_c76db298-6a6c-40d9-b683-4a102bb0ef7e.jpg-0016c064ad833311041b08ffc52787d4.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

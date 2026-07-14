@@ -264,7 +264,10 @@ func _add_row_cell(parent: HBoxContainer, text: String, width: int, color: Color
 func update_match_state(round_num: int, set_num: int, alive: int, _total: int, _score_data: Array = []):
 	if _round_label == null or _remaining_label == null:
 		return
-	_round_label.text = "ROUND  " + str(round_num) + "  /  " + str(int(GameConfig.rounds_per_set))
+	if NetworkManager.is_online():
+		_round_label.text = "ROUND " + str(round_num) + "   •   FIRST TO " + str(int(GameConfig.rounds_per_set))
+	else:
+		_round_label.text = "ROUND  " + str(round_num) + "  /  " + str(int(GameConfig.rounds_per_set))
 
 	if GameConfig.sets_per_match > 1:
 		_set_label.text = "Set " + str(set_num) + " of " + str(int(GameConfig.sets_per_match))

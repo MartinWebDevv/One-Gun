@@ -1,5 +1,15 @@
 extends CharacterBody3D
 
+# Online (set by round_manager's networked spawn function). Local play leaves
+# these at defaults and none of the online paths run.
+var is_online := false
+var net_authority_id := 1
+var actor_id := 1
+var owner_peer_id := 1
+var _is_local_online := true   # true for local play + local-authority online
+var _online_name_tag: Label3D = null
+var _online_crosshair_layer: CanvasLayer = null
+
 @export var input_prefix := "p1"
 @export var is_player2 := false
 @export var team_id := -1
@@ -31,16 +41,30 @@ const ADS_TRANSITION_TIME = .2
 const ADS_SPRING_LENGTH = 0.3
 const ADS_FOV_MULTIPLIER = 0.9
 const MOUSE_LOOK_BASE = 0.005
+const INTERACT_HOLD_DROP_TIME = 0.5
+# Grace window for the grounded->airborne ANIMATION switch only. is_on_floor()
+# flickers when walking over uneven Terrain3D (the body micro-bounces), which
+# would thrash the walk<->jump animation. This debounces it. Purely visual —
+# jump gameplay still uses raw is_on_floor().
+const AIRBORNE_ANIM_GRACE = 0.12
 
 var holding_gun = false
 var held_melee_weapon = null
-var held_item = null
+var held_item_1 = null
+var held_item_2 = null
 var nearby_interactables = []
-var active_slot = "none"
+var active_slot = "none"  # "none" | "weapon" | "item1" | "item2"
+
+# Tracks whether the current interact press already resolved as an instant
+# pickup/swap (in which case holding it longer does nothing) or is still
+# eligible to become a hold-to-drop (see _try_interact()).
+var interact_hold_active = false
+var interact_hold_timer = 0.0
 
 var stamina = MAX_STAMINA
 var stamina_regen_timer = 0.0
 var is_sprinting = false
+var _airborne_grace_timer = 0.0
 
 var dash_charges = 0
 var dash_recharge_timer = 0.0
@@ -102,8 +126,29 @@ var default_spring_length = 4.0
 var default_spring_position = Vector3.ZERO
 var default_camera_fov = 75.0
 
+func _enter_tree() -> void:
+	if is_online:
+		# Replication authority and synchronizer children must exist during
+		# MultiplayerSpawner's enter-tree phase. Creating them in _ready() is too
+		# late for a remote pending spawn to receive its network ID reliably.
+		set_multiplayer_authority(net_authority_id)
+		_is_local_online = is_multiplayer_authority()
+		_build_net_sync()
+
 func _ready():
-	if not use_gamepad_look:
+	if is_online:
+		# neutralize the map's root scale so online players are player-sized
+		var cs = get_tree().current_scene
+		var ms: float = cs.scale.x if cs is Node3D and cs.scale.x != 0.0 else 1.0
+		scale = Vector3.ONE / ms
+		# camera + mouse only for the local-authority player
+		$AimPivot/SpringArm3D/Camera3D.current = _is_local_online
+		# the full HUD is stripped online (Phase 2b); give the local player at
+		# least an aiming crosshair so gun combat is usable.
+		if _is_local_online:
+			_build_online_crosshair()
+		_build_online_name_tag()
+	if not use_gamepad_look and _is_local_online:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if is_player2 and not GameConfig.split_screen_enabled:
 		remove_from_group("player")
@@ -120,6 +165,7 @@ func _ready():
 	dash_charges = max_dash_charges
 	_apply_player_prefs()
 	gamepad_response_curve_exponent = max(gamepad_response_curve_exponent, 0.1)
+	GameEvents.melee_hit_landed.connect(_on_melee_hit_for_vampire)
 	ads_look_sensitivity_multiplier = clamp(ads_look_sensitivity_multiplier, 0.05, 1.0)
 	if not is_player2 and not PlayerPrefs.setting_changed.is_connected(_on_player_pref_changed):
 		PlayerPrefs.setting_changed.connect(_on_player_pref_changed)
@@ -159,13 +205,33 @@ func _get_movement_input_dir():
 	return Input.get_vector(input_prefix + "_move_left", input_prefix + "_move_right", input_prefix + "_move_forward", input_prefix + "_move_back")
 
 func _physics_process(delta):
+	if is_online and _is_local_online and _online_crosshair_layer != null:
+		_online_crosshair_layer.visible = holding_gun and active_slot == "weapon" and not is_eliminated
+	# Authoritative status timers must tick on every machine, including the
+	# host's puppet for a client-owned actor. Keeping this below the puppet
+	# early-return made a client's post-melee bullet immunity permanent on the
+	# server, so every later bullet was incorrectly ignored.
 	if bullet_immune_timer > 0.0:
-		bullet_immune_timer -= delta
+		bullet_immune_timer = maxf(bullet_immune_timer - delta, 0.0)
+	# Remote networked puppets are driven entirely by their MultiplayerSynchronizer
+	# (position/rotation/aim); skip all local input + physics so nothing fights it,
+	# but still drive their locomotion animation + model facing from the synced
+	# velocity/aim so they walk/run instead of sliding in a frozen pose.
+	if is_online and not _is_local_online:
+		_update_puppet_visuals()
+		return
 
 	if slow_timer > 0.0:
 		slow_timer -= delta
 		if slow_timer <= 0.0:
 			slow_multiplier_value = 1.0
+
+	# Refresh the animation grounded-grace timer every frame (uses last
+	# frame's floor state, which is fine for a purely-visual debounce).
+	if is_on_floor():
+		_airborne_grace_timer = AIRBORNE_ANIM_GRACE
+	else:
+		_airborne_grace_timer = max(_airborne_grace_timer - delta, 0.0)
 
 	if is_eliminated:
 		if not is_on_floor():
@@ -175,6 +241,18 @@ func _physics_process(delta):
 		velocity.x = 0
 		velocity.z = 0
 		move_and_slide()
+		return
+
+	if is_online and _is_local_online and PauseManager.is_pause_open():
+		velocity.x = move_toward(velocity.x, 0.0, SPEED * delta)
+		velocity.z = move_toward(velocity.z, 0.0, SPEED * delta)
+		if not is_on_floor():
+			velocity.y -= 9.8 * delta
+		move_and_slide()
+		_update_stamina(delta)
+		_update_dash_recharge(delta)
+		_update_new_powerups(delta)
+		_update_facing()
 		return
 
 	if use_gamepad_look:
@@ -217,7 +295,21 @@ func _physics_process(delta):
 		velocity.y = JUMP_VELOCITY
 
 	if Input.is_action_just_pressed(input_prefix + "_interact"):
-		_try_interact()
+		# A tap resolves as an instant pickup/swap if one is available right
+		# now; only if nothing happens does holding the button start counting
+		# toward a voluntary drop of the active slot (see below).
+		interact_hold_active = not _try_interact()
+		interact_hold_timer = 0.0
+
+	if interact_hold_active:
+		if Input.is_action_pressed(input_prefix + "_interact"):
+			interact_hold_timer += delta
+			if interact_hold_timer >= INTERACT_HOLD_DROP_TIME:
+				_drop_active_slot()
+				interact_hold_active = false
+		else:
+			interact_hold_active = false
+			interact_hold_timer = 0.0
 
 	if Input.is_action_just_pressed(input_prefix + "_fire"):
 		_try_primary_action()
@@ -246,6 +338,8 @@ func _physics_process(delta):
 	else:
 		var current_speed = SPRINT_SPEED if is_sprinting else SPEED
 		current_speed *= slow_multiplier_value
+		if speed_surge_timer > 0.0:
+			current_speed *= SPEED_SURGE_MULT
 
 		var input_dir = _get_movement_input_dir()
 		var direction = ($AimPivot.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -259,10 +353,89 @@ func _physics_process(delta):
 
 		_update_animation(input_dir)
 
+	var _desired_h_vel := Vector3(velocity.x, 0, velocity.z)
 	move_and_slide()
+	_try_step_up(_desired_h_vel, delta)
+	_update_footsteps(delta)
 	_update_stamina(delta)
 	_update_dash_recharge(delta)
+	_update_new_powerups(delta)
 	_update_facing()
+
+# One footstep sound per stride while grounded and moving; cadence follows
+# sprint state. silent_steps powerup mutes them without breaking cadence.
+var footstep_timer := 0.0
+var silent_steps_timer := 0.0
+
+func _update_footsteps(delta: float) -> void:
+	if silent_steps_timer > 0.0:
+		silent_steps_timer -= delta
+	var hspeed := Vector2(velocity.x, velocity.z).length()
+	if not is_on_floor() or is_dashing or hspeed < 2.0:
+		footstep_timer = 0.12  # small re-arm so the first step lands naturally
+		return
+	footstep_timer -= delta
+	if footstep_timer <= 0.0:
+		if silent_steps_timer <= 0.0:
+			AudioManager.play_sfx("footstep")
+		footstep_timer = 0.26 if is_sprinting else 0.38
+
+# Walk straight over knee-height ledges (steps, boardwalks, small rocks)
+# without jumping. Shape-casts the body up -> forward -> down; if a walkable
+# surface sits within STEP_HEIGHT, lifts the body just enough to clear it and
+# lets next frame's move_and_slide carry it forward.
+const STEP_HEIGHT := 0.55
+const STEP_FORWARD_PROBE := 0.25
+
+func _try_step_up(desired_h_vel: Vector3, delta: float) -> void:
+	if not is_on_floor():
+		return
+	var h := Vector3(desired_h_vel.x, 0, desired_h_vel.z)
+	if h.length_squared() < 0.04:
+		return
+	var dir := h.normalized()
+	# low steps (~0.2-0.4m) don't set is_on_wall on a capsule, so scan all
+	# slide collisions for any steep face opposing our travel
+	var blocked := false
+	for i in get_slide_collision_count():
+		var n := get_slide_collision(i).get_normal()
+		if n.y < 0.7 and n.dot(dir) < -0.4:
+			blocked = true
+			break
+	if not blocked:
+		return
+	var params := PhysicsTestMotionParameters3D.new()
+	var result := PhysicsTestMotionResult3D.new()
+	# 1) headroom: how far up can the body go?
+	params.from = global_transform
+	params.motion = Vector3.UP * STEP_HEIGHT
+	var up_dist := STEP_HEIGHT
+	if PhysicsServer3D.body_test_motion(get_rid(), params, result):
+		up_dist = result.get_travel().y
+	if up_dist < 0.03:
+		return
+	# 2) raised that high, does the body clear the ledge moving forward?
+	var raised := global_transform
+	raised.origin.y += up_dist
+	var fwd := dir * maxf(h.length() * delta, STEP_FORWARD_PROBE)
+	params.from = raised
+	params.motion = fwd
+	if PhysicsServer3D.body_test_motion(get_rid(), params, result):
+		if result.get_travel().length() < fwd.length() * 0.5:
+			return  # still blocked when raised: a real wall, not a step
+	# 3) measure the ledge: drop back down at the forward position
+	var fwd_pos := raised
+	fwd_pos.origin += fwd
+	params.from = fwd_pos
+	params.motion = Vector3.DOWN * (up_dist + 0.1)
+	if not PhysicsServer3D.body_test_motion(get_rid(), params, result):
+		return  # nothing to land on within step height
+	if result.get_collision_normal().angle_to(Vector3.UP) > floor_max_angle:
+		return  # landing would be on a steep face, not a walkable step
+	var step_h := up_dist + result.get_travel().y  # travel.y is negative
+	if step_h <= 0.01 or step_h > STEP_HEIGHT:
+		return
+	global_position.y += step_h + 0.02
 
 func _toggle_sprint():
 	if is_sprinting:
@@ -272,17 +445,16 @@ func _toggle_sprint():
 
 func _update_active_slot_and_visuals():
 	var has_weapon = holding_gun or held_melee_weapon != null
-	var has_item = held_item != null
+	var has_item1 = held_item_1 != null
+	var has_item2 = held_item_2 != null
 
-	if active_slot == "weapon" and not has_weapon:
-		active_slot = "item" if has_item else "none"
-	elif active_slot == "item" and not has_item:
-		active_slot = "weapon" if has_weapon else "none"
-	elif active_slot == "none":
-		if has_weapon:
-			active_slot = "weapon"
-		elif has_item:
-			active_slot = "item"
+	var active_still_valid = (
+		(active_slot == "weapon" and has_weapon)
+		or (active_slot == "item1" and has_item1)
+		or (active_slot == "item2" and has_item2)
+	)
+	if not active_still_valid:
+		active_slot = _first_occupied_slot()
 
 	var hold_point = get_hold_point()
 	if hold_point != null and hold_point.get_child_count() > 0:
@@ -292,16 +464,28 @@ func _update_active_slot_and_visuals():
 	if melee_hold_point != null and melee_hold_point.get_child_count() > 0:
 		melee_hold_point.get_child(0).visible = (active_slot == "weapon" and held_melee_weapon != null)
 
-	var item_hold_point = get_item_hold_point()
-	if item_hold_point != null and item_hold_point.get_child_count() > 0:
-		item_hold_point.get_child(0).visible = (active_slot == "item")
+	if held_item_1 != null:
+		held_item_1.visible = (active_slot == "item1")
+	if held_item_2 != null:
+		held_item_2.visible = (active_slot == "item2")
+
+func _first_occupied_slot() -> String:
+	if holding_gun or held_melee_weapon != null:
+		return "weapon"
+	if held_item_1 != null:
+		return "item1"
+	if held_item_2 != null:
+		return "item2"
+	return "none"
 
 func _try_cycle_slot(direction: int):
 	var occupied = []
 	if holding_gun or held_melee_weapon != null:
 		occupied.append("weapon")
-	if held_item != null:
-		occupied.append("item")
+	if held_item_1 != null:
+		occupied.append("item1")
+	if held_item_2 != null:
+		occupied.append("item2")
 	if occupied.size() <= 1:
 		return
 	var idx = occupied.find(active_slot)
@@ -312,6 +496,100 @@ func _try_cycle_slot(direction: int):
 	if idx < 0:
 		idx += occupied.size()
 	active_slot = occupied[idx]
+
+# Build the per-player MultiplayerSynchronizer in code (keeps online netcode
+# out of the shared player.tscn). Replicates transform + aim + velocity from
+# the authority peer to everyone else.
+func _build_net_sync() -> void:
+	var sync := MultiplayerSynchronizer.new()
+	sync.name = "NetSync"
+	var cfg := SceneReplicationConfig.new()
+	for prop in [".:position", ".:rotation", "AimPivot:rotation", "AimPivot/SpringArm3D:rotation", ".:velocity", ".:stamina"]:
+		cfg.add_property(NodePath(prop))
+	sync.replication_config = cfg
+	sync.set_multiplayer_authority(net_authority_id)
+	add_child(sync)
+	# Puppets play idle so they read as a standing character while sliding to
+	# their synced positions (walk-anim sync is a later-phase polish).
+	if not _is_local_online:
+		call_deferred("_play_puppet_idle")
+
+# Minimal center crosshair (dot + 4 short bars) for the local online player.
+# The real HUD is stripped in online free-roam; full HUD comes in Phase 2b.
+func _build_online_crosshair() -> void:
+	var layer := CanvasLayer.new()
+	_online_crosshair_layer = layer
+	layer.name = "OnlineCrosshair"
+	layer.layer = 20
+	layer.visible = false
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(root)
+	var col := Color(1, 1, 1, 0.85)
+	var gap := 5.0
+	var length := 9.0
+	var thick := 2.0
+	# center dot
+	root.add_child(_make_crosshair_bar(4.0, 4.0, 0.0, 0.0, col))
+	# four bars around the gap
+	root.add_child(_make_crosshair_bar(length, thick, -(gap + length * 0.5), 0.0, col))
+	root.add_child(_make_crosshair_bar(length, thick, gap + length * 0.5, 0.0, col))
+	root.add_child(_make_crosshair_bar(thick, length, 0.0, -(gap + length * 0.5), col))
+	root.add_child(_make_crosshair_bar(thick, length, 0.0, gap + length * 0.5, col))
+	add_child(layer)
+
+func _make_crosshair_bar(w: float, h: float, ox: float, oy: float, col: Color) -> ColorRect:
+	var r := ColorRect.new()
+	r.color = col
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.anchor_left = 0.5
+	r.anchor_top = 0.5
+	r.anchor_right = 0.5
+	r.anchor_bottom = 0.5
+	r.offset_left = ox - w * 0.5
+	r.offset_top = oy - h * 0.5
+	r.offset_right = ox + w * 0.5
+	r.offset_bottom = oy + h * 0.5
+	return r
+
+func _build_online_name_tag() -> void:
+	_online_name_tag = Label3D.new()
+	_online_name_tag.name = "OnlineNameTag"
+	_online_name_tag.position = Vector3(0.0, 2.35, 0.0)
+	_online_name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_online_name_tag.no_depth_test = true
+	_online_name_tag.font_size = 32
+	_online_name_tag.outline_size = 8
+	_online_name_tag.modulate = Color(0.9, 0.95, 1.0)
+	_online_name_tag.visible = not _is_local_online
+	add_child(_online_name_tag)
+	_update_online_name_tag()
+	if not NetworkManager.lobby_changed.is_connected(_update_online_name_tag):
+		NetworkManager.lobby_changed.connect(_update_online_name_tag)
+
+func _update_online_name_tag() -> void:
+	if _online_name_tag != null:
+		_online_name_tag.text = get_display_name()
+
+func _play_puppet_idle() -> void:
+	if model_anim_player != null and model_anim_player.has_animation(ANIM_IDLE):
+		model_anim_player.play(ANIM_IDLE)
+
+# Remote puppet: pick idle/walk/run (and pistol variants) from the synced velocity
+# so it animates while the synchronizer slides it to position; face the synced aim.
+func _update_puppet_visuals() -> void:
+	if model_anim_player != null and not is_eliminated:
+		var speed := Vector2(velocity.x, velocity.z).length()
+		if speed > (SPEED + SPRINT_SPEED) * 0.5:
+			_play_anim(ANIM_RUN_PISTOL if holding_gun else ANIM_RUN)
+		elif speed > 0.6:
+			_play_anim(ANIM_WALK_PISTOL if holding_gun else ANIM_WALK)
+		elif holding_gun:
+			_play_anim(ANIM_IDLE_PISTOL)
+		else:
+			_play_anim(ANIM_IDLE)
+	_update_facing()
 
 func _merge_animations():
 	if not model_anim_player.has_animation_library(""):
@@ -366,10 +644,14 @@ func _play_anim(anim_name: String):
 			_anim_rotation_offset = 0.0
 	model_anim_player.play(anim_name)
 
+func _is_grounded_for_anim() -> bool:
+	# Debounced grounded check for animation only — see AIRBORNE_ANIM_GRACE.
+	return _airborne_grace_timer > 0.0
+
 func _update_animation(input_dir: Vector2):
 	var is_moving = input_dir.length() > 0.1
 
-	if not is_on_floor():
+	if not _is_grounded_for_anim():
 		if is_sprinting:
 			_play_anim(ANIM_RUN_JUMPING)
 		else:
@@ -452,6 +734,8 @@ func _update_facing():
 	$CharacterModel.rotation.y = $AimPivot.rotation.y + MODEL_FACING_OFFSET + _anim_rotation_offset
 
 func get_display_name() -> String:
+	if is_online:
+		return NetworkManager.peer_name(owner_peer_id)
 	if is_player2:
 		return GameConfig.player2_name
 	return PlayerPrefs.get_setting("player_name")
@@ -531,6 +815,18 @@ func apply_slow(duration: float, multiplier: float):
 	slow_timer = duration
 	slow_multiplier_value = multiplier
 
+# --- new powerup state ---
+var speed_surge_timer := 0.0
+const SPEED_SURGE_MULT := 1.4
+var vampire_timer := 0.0
+const VAMPIRE_STAMINA_REFUND := 30.0
+var second_wind_ready := false
+var magnet_timer := 0.0
+const MAGNET_RADIUS := 4.0
+const MAGNET_PULL_SPEED := 6.0
+var _magnet_area: Area3D = null
+var _online_magnet_request_timer := 0.0
+
 func apply_powerup(power_type: String, duration: float):
 	match power_type:
 		"extra_dash":
@@ -539,6 +835,17 @@ func apply_powerup(power_type: String, duration: float):
 			dash_bonus_timer = duration
 		"extra_melee_shield":
 			melee_disarm_shields = 1
+		"speed_surge":
+			speed_surge_timer = duration
+		"silent_steps":
+			silent_steps_timer = duration
+		"vampire_touch":
+			vampire_timer = duration
+		"second_wind":
+			second_wind_ready = true
+		"magnet_hands":
+			magnet_timer = duration
+			_ensure_magnet_area()
 	active_powerup_order.erase(power_type)
 	active_powerup_order.push_front(power_type)
 
@@ -552,8 +859,72 @@ func get_active_powerups_for_display() -> Array:
 			"extra_melee_shield":
 				if melee_disarm_shields > 0:
 					result.append({"type": power_type, "timed": false, "time_left": 0.0})
+			"speed_surge":
+				if speed_surge_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": speed_surge_timer})
+			"silent_steps":
+				if silent_steps_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": silent_steps_timer})
+			"vampire_touch":
+				if vampire_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": vampire_timer})
+			"second_wind":
+				if second_wind_ready:
+					result.append({"type": power_type, "timed": false, "time_left": 0.0})
+			"magnet_hands":
+				if magnet_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": magnet_timer})
 	active_powerup_order = result.map(func(entry): return entry["type"])
 	return result
+
+func _update_new_powerups(delta: float) -> void:
+	if speed_surge_timer > 0.0:
+		speed_surge_timer -= delta
+	if vampire_timer > 0.0:
+		vampire_timer -= delta
+	if magnet_timer > 0.0:
+		magnet_timer -= delta
+		_magnet_pull(delta)
+
+func _ensure_magnet_area() -> void:
+	if _magnet_area != null:
+		return
+	_magnet_area = Area3D.new()
+	_magnet_area.name = "MagnetArea"
+	_magnet_area.collision_layer = 0
+	_magnet_area.set_collision_mask_value(3, true)  # pickups live on layer 4 (bit 3)
+	var col := CollisionShape3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = MAGNET_RADIUS
+	col.shape = shape
+	_magnet_area.add_child(col)
+	add_child(_magnet_area)
+
+func _magnet_pull(delta: float) -> void:
+	if _magnet_area == null:
+		return
+	if NetworkManager.is_online():
+		_online_magnet_request_timer -= delta
+		if _online_magnet_request_timer <= 0.0 and is_multiplayer_authority():
+			_online_magnet_request_timer = 0.1
+			var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+			if rm != null:
+				rm.request_online_magnet_pull(actor_id)
+		return
+	for body in _magnet_area.get_overlapping_bodies():
+		if body == self or not (body is RigidBody3D):
+			continue
+		if not body.has_method("get_interact_category"):
+			continue
+		if "is_held" in body and body.is_held:
+			continue
+		var to_me := global_position + Vector3(0, 0.4, 0) - body.global_position
+		if to_me.length() > 1.1:
+			body.global_position += to_me.normalized() * MAGNET_PULL_SPEED * delta
+
+func _on_melee_hit_for_vampire(hitter_name: String) -> void:
+	if vampire_timer > 0.0 and hitter_name == get_display_name():
+		stamina = minf(stamina + VAMPIRE_STAMINA_REFUND, MAX_STAMINA)
 
 func _start_dash():
 	var input_dir = _get_movement_input_dir()
@@ -609,28 +980,72 @@ func register_interactable(obj):
 func unregister_interactable(obj):
 	nearby_interactables.erase(obj)
 
-func _try_interact():
+func _try_interact() -> bool:
+	# Every pickup-able object (gun.gd, melee_weapon.gd, item.gd) now decides
+	# for itself whether this pickup is allowed to happen instantly (empty
+	# slot, or a same-category swap) and returns whether it succeeded. This
+	# is what lets e.g. melee_weapon.gd refuse a pickup while the player is
+	# holding the gun (see docs/GAME_RULES.md — gun is never tap-swapped
+	# away) without the player needing to know every object's rules.
 	for obj in nearby_interactables:
-		var category = obj.get_interact_category() if obj.has_method("get_interact_category") else "weapon"
-		if category == "item" and held_item == null:
-			obj.pick_up(self)
-			return
-		if category == "weapon" and held_melee_weapon == null and not holding_gun:
-			obj.pick_up(self)
-			return
-	if active_slot == "weapon":
-		if held_melee_weapon != null:
-			held_melee_weapon.drop()
-			return
-		if holding_gun:
-			var hold_point = get_hold_point()
-			if hold_point.get_child_count() > 0:
-				hold_point.get_child(0).drop()
-			return
-	elif active_slot == "item":
-		if held_item != null:
-			held_item.drop()
-			return
+		if not obj.has_method("pick_up"):
+			continue
+		if obj.pick_up(self):
+			return true
+	return false
+
+func _drop_active_slot():
+	match active_slot:
+		"weapon":
+			if holding_gun:
+				var hold_point = get_hold_point()
+				if hold_point.get_child_count() > 0:
+					var gun = hold_point.get_child(0)
+					if NetworkManager.is_online() and gun.has_method("request_online_drop"):
+						gun.request_online_drop()
+					else:
+						gun.drop()
+			elif held_melee_weapon != null:
+				if NetworkManager.is_online() and held_melee_weapon.has_method("request_online_drop"):
+					held_melee_weapon.request_online_drop()
+				else:
+					held_melee_weapon.drop()
+		"item1":
+			if held_item_1 != null:
+				if NetworkManager.is_online() and held_item_1.has_method("request_online_drop"):
+					held_item_1.request_online_drop()
+				else:
+					held_item_1.drop()
+		"item2":
+			if held_item_2 != null:
+				if NetworkManager.is_online() and held_item_2.has_method("request_online_drop"):
+					held_item_2.request_online_drop()
+				else:
+					held_item_2.drop()
+
+func can_pick_up_item() -> bool:
+	return held_item_1 == null or held_item_2 == null
+
+func assign_item(item_obj) -> void:
+	if held_item_1 == null:
+		held_item_1 = item_obj
+	elif held_item_2 == null:
+		held_item_2 = item_obj
+
+func clear_item_slot(item_obj) -> void:
+	if held_item_1 == item_obj:
+		held_item_1 = null
+	elif held_item_2 == item_obj:
+		held_item_2 = null
+
+func get_active_item():
+	if active_slot == "item1":
+		return held_item_1
+	if active_slot == "item2":
+		return held_item_2
+	# Active slot isn't an item slot right now (e.g. weapon is active) —
+	# default to the first item slot as the swap target.
+	return held_item_1
 
 func _try_primary_action():
 	if active_slot == "weapon":
@@ -640,12 +1055,26 @@ func _try_primary_action():
 				hold_point.get_child(0).try_fire()
 		elif held_melee_weapon != null:
 			held_melee_weapon.try_swing()
-	elif active_slot == "item":
-		if held_item != null:
-			held_item.try_throw()
+	elif active_slot == "item1":
+		if held_item_1 != null:
+			held_item_1.try_throw()
+	elif active_slot == "item2":
+		if held_item_2 != null:
+			held_item_2.try_throw()
 
 func eliminate(killer_name = "", weapon_icon = "💀"):
 	if is_eliminated:
+		return
+	# Second Wind: consume the charge, survive the hit with brief immunity.
+	# Online the SERVER resolves Second Wind (round_manager.server_eliminate →
+	# _net_consume_online_second_wind) before broadcasting the elimination; if
+	# this local branch also ran, a stale local charge could make the victim
+	# survive on their own screen while dead on every other peer.
+	if second_wind_ready and not is_online:
+		second_wind_ready = false
+		grant_bullet_immunity(2.0)
+		if has_method("flash_hit"):
+			flash_hit()
 		return
 	if holding_gun:
 		var hold_point = get_hold_point()
@@ -653,7 +1082,19 @@ func eliminate(killer_name = "", weapon_icon = "💀"):
 			hold_point.get_child(0).drop()
 	if held_melee_weapon != null:
 		held_melee_weapon.drop(true)
+	if held_item_1 != null:
+		if NetworkManager.is_online() and held_item_1.has_method("force_online_drop_at"):
+			held_item_1.force_online_drop_at(global_position + Vector3(0.3, 0.6, 0.0))
+		else:
+			held_item_1.drop()
+	if held_item_2 != null:
+		if NetworkManager.is_online() and held_item_2.has_method("force_online_drop_at"):
+			held_item_2.force_online_drop_at(global_position + Vector3(-0.3, 0.6, 0.0))
+		else:
+			held_item_2.drop()
 	is_eliminated = true
+	if _online_crosshair_layer != null:
+		_online_crosshair_layer.visible = false
 	velocity = Vector3.ZERO
 	play_death()
 	GameEvents.player_eliminated.emit(get_display_name(), killer_name, weapon_icon)
@@ -663,7 +1104,10 @@ func eliminate(killer_name = "", weapon_icon = "💀"):
 	collision_layer = 0
 	collision_mask = 0
 	set_physics_process(false)
-	if not ("is_bot" in self and self.is_bot):
+	# Only the machine that owns this player gets a spectator cam. Online, this
+	# node also exists as a puppet on every other peer — creating a spectator there
+	# would hijack that machine's camera away from its own local player.
+	if not ("is_bot" in self and self.is_bot) and _is_local_online:
 		_spectator = load("res://spectator_controller.gd").new()
 		add_child(_spectator)
 		_spectator.setup(self)
@@ -673,13 +1117,23 @@ func respawn(spawn_transform):
 		_spectator.cleanup()
 		_spectator = null
 	is_eliminated = false
+	if _online_crosshair_layer != null:
+		_online_crosshair_layer.visible = false
+	# eliminate() disabled physics processing; re-enable it or the respawned
+	# player (and its remote puppet) is frozen in place and can never move.
+	set_physics_process(true)
 	visible = true
 	collision_layer = 0
 	collision_mask = 0
 	set_collision_layer_value(2, true)
 	set_collision_mask_value(1, true)
 	set_collision_mask_value(2, true)
-	global_transform = spawn_transform
+	# Movement math (see _physics_process) assumes the BODY yaw stays 0 and all
+	# look rotation lives on AimPivot — so transfer the spawn marker's yaw to the
+	# pivot instead of the body, or WASD axes end up offset from the camera.
+	global_transform = Transform3D(Basis(), spawn_transform.origin)
+	$AimPivot.rotation = Vector3(0, spawn_transform.basis.get_euler().y, 0)
+	$AimPivot/SpringArm3D.rotation.x = 0.0
 	velocity = Vector3.ZERO
 	stamina = MAX_STAMINA
 	stamina_regen_timer = 0.0
@@ -697,8 +1151,11 @@ func respawn(spawn_transform):
 	slow_multiplier_value = 1.0
 	holding_gun = false
 	held_melee_weapon = null
-	held_item = null
+	held_item_1 = null
+	held_item_2 = null
 	active_slot = "none"
+	interact_hold_active = false
+	interact_hold_timer = 0.0
 	if ads_tween != null and ads_tween.is_valid():
 		ads_tween.kill()
 	ads_blend = 0.0

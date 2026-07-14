@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://item.gd" id="1_kv1lf"]
+[ext_resource type="PackedScene" path="res://decoy_body.tscn" id="2_ul5kp"]
+[ext_resource type="PackedScene" path="res://models/items/DecoyBag.glb" id="3_wstu7"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1uowf"]
+radius = 0.3
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_7t0tt"]
+radius = 1.6
+
+[node name="decoy" type="RigidBody3D" unique_id=299504814]
+collision_layer = 4
+script = ExtResource("1_kv1lf")
+item_type = "decoy"
+deployed_scene = ExtResource("2_ul5kp")
+deployed_lifetime = 30.0
+respawn_after_deploy_time = 16.0
+HELD_SCALE = 0.51
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1297236101]
+shape = SubResource("SphereShape3D_1uowf")
+
+[node name="Model" type="Node3D" parent="." unique_id=1556962146 instance=ExtResource("3_wstu7")]
+transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="." unique_id=305494942]
+collision_layer = 0
+collision_mask = 2
+
+[node name="@CollisionShape3D@4" type="CollisionShape3D" parent="Area3D" unique_id=2079764528]
+shape = SubResource("SphereShape3D_7t0tt")
+
+[node name="PickupLabel" type="Label3D" parent="." unique_id=1427294967]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+billboard = 1
+text = "[F]  Decoy"
+font_size = 40
+outline_size = 8

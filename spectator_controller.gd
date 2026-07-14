@@ -62,10 +62,10 @@ func _build_free_cam():
 	_free_cam_arm.add_child(_free_cam)
 	_free_cam_pivot.add_child(_free_cam_arm)
 
-	if _player != null:
-		_free_cam_pivot.global_position = _player.global_position + Vector3(0, 2.0, 0)
-
 	_player.get_tree().current_scene.add_child(_free_cam_pivot)
+	if _player != null:
+		# global_position is only valid after the new pivot enters the scene tree.
+		_free_cam_pivot.global_position = _player.global_position + Vector3(0, 2.0, 0)
 
 func _build_ui():
 	_mode_label = Label.new()
@@ -81,7 +81,9 @@ func _build_ui():
 	_mode_label.offset_top    = -40
 	_mode_label.offset_bottom = -10
 
-	var canvas = _player.get_node_or_null("../CanvasLayer")
+	var canvas = _player.get_tree().current_scene.get_node_or_null("OnlineHUD")
+	if canvas == null:
+		canvas = _player.get_node_or_null("../CanvasLayer")
 	if canvas != null:
 		canvas.add_child(_mode_label)
 	else:

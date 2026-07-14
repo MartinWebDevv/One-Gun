@@ -4,8 +4,11 @@ extends Control
 # Map list — extend this array when new maps are wired in.
 # ============================================================
 const MAPS = [
-	{"name": "Coliseum", "scene_path": "res://node_3d.tscn"},
-	{"name": "Explosion Town", "scene_path": "res://maps/test/NukeTownMap.tscn"},
+	#{"name": "Coliseum", "scene_path": "res://node_3d.tscn"},
+	#{"name": "Explosion Town", "scene_path": "res://maps/test/NukeTownMap.tscn"},
+	{"name": "Whispering Woods", "scene_path": "res://maps/test/ForestMap.tscn"},
+	{"name": "Western Town", "scene_path": "res://maps/test/WesternV2Map.tscn"},
+	{"name": "Maple & 3rd", "scene_path": "res://maps/test/CityMap.tscn"},
 ]
 
 enum MapSelectMode { VOTE, SPECIFIC, RANDOM }
@@ -35,6 +38,99 @@ func _ready():
 	$CustomizeCharacterPopup.popup_hide.connect(_on_customize_popup_closed)
 	if not $CustomizeButton.pressed.is_connected(_on_customize_button_pressed):
 		$CustomizeButton.pressed.connect(_on_customize_button_pressed)
+	_build_map_preview()
+	_setup_online_mode()
+
+# ============================================================
+# Online (network) integration — host-authoritative lobby.
+# ============================================================
+func _is_net() -> bool:
+	return NetworkManager.is_online()
+
+func _setup_online_mode():
+	if not _is_net():
+		return
+	# Phase 2b scoring is free-for-all. Online team assignment does not exist
+	# yet, so keep team rules visibly unavailable instead of silently scoring a
+	# team-configured lobby as FFA.
+	GameConfig.teams_enabled = false
+	GameConfig.friendly_fire_enabled = false
+	NetworkManager.lobby_changed.connect(_on_online_lobby_changed)
+	NetworkManager.match_config_received.connect(_on_net_config_synced)
+	NetworkManager.server_disconnected.connect(_on_net_host_left)
+	# Bots are host-configured online. Clients see the synchronized values but
+	# the normal client settings lock prevents them from editing those values.
+	var bot_btn = get_node_or_null("Settings Panel/BotSettingsButton")
+	if bot_btn: bot_btn.visible = GameConfig.bot_count > 0
+	var bots_row = get_node_or_null("Settings Panel/BotsToggleRow")
+	if bots_row: bots_row.visible = true
+	var force_play = get_node_or_null("ReadyBar/ForcePlayButton")
+	if force_play: force_play.visible = false
+	if NetworkManager.is_host():
+		_net_broadcast_config()   # seed clients with the starting config/map
+	else:
+		_apply_client_lock()
+	_refresh_lobby_list()
+
+func _max_online_bots() -> int:
+	return maxi(8 - NetworkManager.peers.size(), 0) if _is_net() else 7
+
+func _on_online_lobby_changed() -> void:
+	if NetworkManager.is_host() and GameConfig.bot_count > _max_online_bots():
+		GameConfig.set_bot_count(_max_online_bots())
+		_net_broadcast_config()
+	_build_bots_toggle_ui()
+	_refresh_lobby_list()
+
+func _net_broadcast_config():
+	if _is_net() and NetworkManager.is_host():
+		NetworkManager.broadcast_match_config(GameConfig.snapshot_for_preset(), _resolve_map_scene_path())
+
+func _on_net_config_synced():
+	# Client: reflect the host's map choice in the preview + picker.
+	var path = NetworkManager.pending_map_path
+	for i in MAPS.size():
+		if MAPS[i]["scene_path"] == path:
+			selected_map_index = i
+			var picker = get_node_or_null("Settings Panel/MapSelectionRow/MapPicker")
+			if picker: picker.select(i)
+			if _map_preview != null:
+				_map_preview.apply(MapSelectMode.SPECIFIC, i)
+			break
+	_build_bots_toggle_ui()
+	_refresh_lobby_list()
+
+func _apply_client_lock():
+	# Clients can't touch settings — host configures for everyone.
+	var panel = get_node_or_null("Settings Panel")
+	if panel: _disable_controls(panel)
+	var play = get_node_or_null("ReadyBar/PlayButton")
+	if play:
+		play.text = "Waiting for host…"
+		play.disabled = true
+	var p1_ready = get_node_or_null("ReadyBar/ReadyButton")
+	if p1_ready: p1_ready.visible = false
+
+func _disable_controls(node: Node):
+	for c in node.get_children():
+		if c is BaseButton:
+			c.disabled = true
+		elif c is LineEdit or c is SpinBox or c is Slider:
+			c.editable = false
+		_disable_controls(c)
+
+func _on_net_host_left():
+	# Host disappeared — bail back to the main menu.
+	get_tree().change_scene_to_file("res://main_menu.tscn")
+
+# Live 3D map preview behind the UI (perimeter-orbit camera).
+var _map_preview = null
+
+func _build_map_preview():
+	_map_preview = preload("res://lobby_map_preview.gd").new()
+	add_child(_map_preview)
+	_map_preview.setup(self, MAPS)
+	_map_preview.apply(map_select_mode, selected_map_index)
 
 func _setup_back_button():
 	var existing = get_node_or_null("BackButton")
@@ -62,6 +158,8 @@ func _setup_back_button():
 
 func _on_back_button_pressed():
 	AudioManager.play_click()
+	if NetworkManager.is_online():
+		NetworkManager.disconnect_net()
 	get_tree().change_scene_to_file("res://main_menu.tscn")
 
 # ------------------------------------------------------------
@@ -210,10 +308,14 @@ func _on_map_mode_selected(index: int):
 	map_select_mode = index
 	var map_picker = $"Settings Panel/MapSelectionRow/MapPicker"
 	map_picker.visible = (map_select_mode == MapSelectMode.SPECIFIC)
+	if _map_preview != null:
+		_map_preview.apply(map_select_mode, selected_map_index)
 	_reset_all_ready()
 
 func _on_map_picked(index: int):
 	selected_map_index = index
+	if _map_preview != null:
+		_map_preview.apply(map_select_mode, index)
 	_reset_all_ready()
 
 func _resolve_map_scene_path() -> String:
@@ -243,6 +345,7 @@ func _build_bots_toggle_ui():
 	var checkbox = CheckBox.new()
 	checkbox.name = "BotsEnabledCheck"
 	checkbox.button_pressed = GameConfig.bot_count > 0
+	checkbox.disabled = _is_net() and not NetworkManager.is_host()
 	checkbox.toggled.connect(_on_bots_toggled)
 	row.add_child(checkbox)
 
@@ -251,8 +354,10 @@ func _build_bots_toggle_ui():
 func _on_bots_toggled(enabled: bool):
 	if not enabled:
 		GameConfig.bot_count = 0
-	elif GameConfig.bot_count == 0:
+	elif GameConfig.bot_count == 0 and (not _is_net() or _max_online_bots() > 0):
 		GameConfig.bot_count = 1
+	if _is_net() and GameConfig.bot_count > _max_online_bots():
+		GameConfig.set_bot_count(_max_online_bots())
 	_update_bot_settings_button_visibility()
 	_reset_all_ready()
 
@@ -301,14 +406,20 @@ func _build_bot_settings_popup():
 	var plus_button = Button.new()
 	plus_button.text = "+"
 	plus_button.custom_minimum_size = Vector2(36, 36)
+	plus_button.disabled = _is_net() and GameConfig.bot_configs.size() >= _max_online_bots()
 	minus_button.pressed.connect(func():
 		GameConfig.set_bot_count(GameConfig.bot_configs.size() - 1)
+		_reset_all_ready()
 		await get_tree().process_frame
 		_build_bot_settings_popup()
 		_update_bot_settings_button_visibility()
 	)
 	plus_button.pressed.connect(func():
-		GameConfig.set_bot_count(GameConfig.bot_configs.size() + 1)
+		var requested := GameConfig.bot_configs.size() + 1
+		if _is_net():
+			requested = mini(requested, _max_online_bots())
+		GameConfig.set_bot_count(requested)
+		_reset_all_ready()
 		await get_tree().process_frame
 		_build_bot_settings_popup()
 		_update_bot_settings_button_visibility()
@@ -344,6 +455,7 @@ func _build_bot_config_row(bot_index: int) -> HBoxContainer:
 	difficulty_button.custom_minimum_size = Vector2(120, 36)
 	difficulty_button.item_selected.connect(func(idx):
 		GameConfig.bot_configs[bot_index]["difficulty"] = DIFFICULTY_OPTIONS[idx]
+		_reset_all_ready()
 	)
 	row.add_child(difficulty_button)
 	difficulty_button.get_popup().max_size = Vector2(0, 164)
@@ -406,6 +518,7 @@ func _build_settings_dropdown():
 	_add_bool_setting(settings_list, "Friendly Fire", GameConfig.friendly_fire_enabled, func(v): GameConfig.friendly_fire_enabled = v)
 	_add_bool_setting(settings_list, "Melee Eliminates Gun Holder", GameConfig.melee_eliminates_gunholder, func(v): GameConfig.melee_eliminates_gunholder = v)
 	_add_bool_setting(settings_list, "Melee Eliminates Anyone", GameConfig.melee_eliminates_anyone, func(v): GameConfig.melee_eliminates_anyone = v)
+	_add_bool_setting(settings_list, "Melee Effects Hit Anyone", GameConfig.melee_effects_hit_anyone, func(v): GameConfig.melee_effects_hit_anyone = v)
 	_add_bool_setting(settings_list, "Hazards Enabled", GameConfig.hazards_enabled, func(v): GameConfig.hazards_enabled = v)
 	_add_bool_setting(settings_list, "Consumables Enabled", GameConfig.consumables_enabled, func(v): GameConfig.consumables_enabled = v)
 	_add_enum_setting(settings_list, "Gun Spawn Mode", ["center", "random"], GameConfig.gun_spawn_mode, func(v): GameConfig.gun_spawn_mode = v)
@@ -557,10 +670,12 @@ func _on_dropdown_header_toggled(expanded: bool):
 func _add_bool_setting(parent: VBoxContainer, label_text: String, current_value: bool, on_changed: Callable):
 	var row = HBoxContainer.new()
 	var label = Label.new()
-	label.text = label_text
+	var online_forced_off := _is_net() and label_text in ["Teams Enabled", "Friendly Fire"]
+	label.text = label_text + (" (offline only)" if online_forced_off else "")
 	label.custom_minimum_size = Vector2(220, 0)
 	var checkbox = CheckBox.new()
-	checkbox.button_pressed = current_value
+	checkbox.button_pressed = false if online_forced_off else current_value
+	checkbox.disabled = online_forced_off
 	checkbox.toggled.connect(func(v):
 		on_changed.call(v)
 		_reset_all_ready()
@@ -634,6 +749,28 @@ func _refresh_lobby_list():
 	for child in list.get_children():
 		child.queue_free()
 
+	if _is_net():
+		if NetworkManager.lobby_name != "":
+			var lobby_heading := Label.new()
+			lobby_heading.text = "Lobby: %s" % NetworkManager.lobby_name
+			lobby_heading.add_theme_font_size_override("font_size", 22)
+			list.add_child(lobby_heading)
+		for id in NetworkManager.peer_ids_sorted():
+			var nm = str(NetworkManager.peers[id]["name"])
+			var is_me = (id == NetworkManager.local_id())
+			var row = HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			var label = Label.new()
+			label.text = nm + (" (Host)" if id == 1 else "") + ("  ← you" if is_me else "")
+			row.add_child(label)
+			if is_me:
+				var edit_button := Button.new()
+				edit_button.text = "Edit Name"
+				edit_button.pressed.connect(_on_edit_online_name)
+				row.add_child(edit_button)
+			list.add_child(row)
+		return
+
 	_add_lobby_entry(list, PlayerPrefs.get_setting("player_name"), player1_ready, true, _on_edit_player1_name)
 	if GameConfig.split_screen_enabled:
 		_add_lobby_entry(list, GameConfig.player2_name, player2_ready, false, _on_edit_player2_name)
@@ -665,6 +802,12 @@ func _add_lobby_entry(list: VBoxContainer, player_name: String, is_ready: bool, 
 func _on_edit_player1_name():
 	_prompt_edit_name(PlayerPrefs.get_setting("player_name"), func(new_name: String):
 		PlayerPrefs.set_setting("player_name", new_name)
+		_refresh_lobby_list()
+	)
+
+func _on_edit_online_name() -> void:
+	_prompt_edit_name(NetworkManager.local_name(), func(new_name: String):
+		NetworkManager.set_local_name(new_name)
 		_refresh_lobby_list()
 	)
 
@@ -761,6 +904,7 @@ func _reset_all_ready():
 	player2_ready = false
 	_refresh_lobby_list()
 	_refresh_ready_ui()
+	_net_broadcast_config()   # host: push settings/map changes to clients
 
 func _all_players_ready() -> bool:
 	if GameConfig.split_screen_enabled:
@@ -771,6 +915,19 @@ func _refresh_ready_ui():
 	var ready_bar = $ReadyBar
 	var play_button: Button = ready_bar.get_node("PlayButton")
 	var force_play_button: Button = ready_bar.get_node("ForcePlayButton")
+
+	# Online: host can always start; clients wait.
+	if _is_net():
+		force_play_button.visible = false
+		if NetworkManager.is_host():
+			play_button.text = "Start Match"
+			play_button.disabled = false
+			play_button.modulate = Color.GREEN
+		else:
+			play_button.text = "Waiting for host…"
+			play_button.disabled = true
+			play_button.modulate = Color.WHITE
+		return
 
 	var is_solo = not GameConfig.split_screen_enabled
 	force_play_button.visible = not is_solo
@@ -797,5 +954,10 @@ func _on_force_play_button_pressed():
 	_launch_match()
 
 func _launch_match():
+	if _is_net():
+		if NetworkManager.is_host():
+			AudioManager.stop_music(0.8)
+			NetworkManager.start_game(_resolve_map_scene_path())
+		return   # clients never launch directly
 	AudioManager.stop_music(0.8)
 	get_tree().change_scene_to_file(_resolve_map_scene_path())

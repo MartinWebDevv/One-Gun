@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://item.gd" id="1_rae5t"]
+[ext_resource type="PackedScene" path="res://bear_trap_deployed.tscn" id="2_jptci"]
+[ext_resource type="PackedScene" path="res://models/items/BearTrap-Open.glb" id="3_v1c8u"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_awcr8"]
+radius = 0.3
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_w4lm7"]
+radius = 1.6
+
+[node name="bear_trap" type="RigidBody3D" unique_id=1751783014]
+collision_layer = 4
+script = ExtResource("1_rae5t")
+item_type = "bear_trap"
+deployed_scene = ExtResource("2_jptci")
+deployed_lifetime = 25.0
+respawn_after_deploy_time = 16.0
+HELD_SCALE = 0.37
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=371844799]
+shape = SubResource("SphereShape3D_awcr8")
+
+[node name="Model" type="Node3D" parent="." unique_id=296273407 instance=ExtResource("3_v1c8u")]
+transform = Transform3D(0.07356108, 0, 0, 0, 0.07356108, 0, 0, 0, 0.07356108, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="." unique_id=454627782]
+collision_layer = 0
+collision_mask = 2
+
+[node name="@CollisionShape3D@3" type="CollisionShape3D" parent="Area3D" unique_id=1384899729]
+shape = SubResource("SphereShape3D_w4lm7")
+
+[node name="PickupLabel" type="Label3D" parent="." unique_id=1873638371]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+billboard = 1
+text = "[F]  Bear Trap"
+font_size = 40
+outline_size = 8
