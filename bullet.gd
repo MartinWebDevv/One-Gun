@@ -1,6 +1,7 @@
 extends RigidBody3D
 
-const SPEED = 60.0
+@export var projectile_speed := 200.0
+@export var emergency_lifetime := 10.0
 var shooter = null            # local play: the shooter node
 
 # Online (set by gun._net_spawn_bullet): the server owns hit detection; client
@@ -10,9 +11,11 @@ var is_server_bullet := false
 var net_round_epoch := -1
 
 func _ready():
+	continuous_cd = true
 	contact_monitor = true
 	max_contacts_reported = 1
 	body_entered.connect(_on_body_entered)
+	get_tree().create_timer(emergency_lifetime).timeout.connect(_expire)
 	if NetworkManager.is_online():
 		add_to_group("online_bullet")
 		gravity_scale = 0.0   # straight-line, deterministic across peers
@@ -20,14 +23,32 @@ func _ready():
 			# client bullet: fly through everything, purely visual
 			set_deferred("contact_monitor", false)
 			collision_mask = 0
-		get_tree().create_timer(2.5).timeout.connect(func():
-			if is_instance_valid(self):
-				queue_free()
-		)
 
 func launch(direction: Vector3, who_fired: Node):
 	shooter = who_fired
-	linear_velocity = direction * SPEED
+	if who_fired is PhysicsBody3D:
+		add_collision_exception_with(who_fired)
+	linear_velocity = direction.normalized() * projectile_speed
+
+func _expire() -> void:
+	if is_instance_valid(self):
+		queue_free()
+
+func _is_decoy(body: Node) -> bool:
+	return body != null and body.has_method("is_combat_decoy") and body.is_combat_decoy()
+
+func _hit_decoy(body: PhysicsBody3D) -> void:
+	var attacker = shooter
+	if attacker == null and NetworkManager.is_online():
+		attacker = NetworkManager.find_actor(net_shooter_id)
+	var can_pop := true
+	if body.has_method("can_be_affected_by"):
+		can_pop = body.can_be_affected_by(attacker)
+	if can_pop and body.has_method("pop_from_attack"):
+		body.pop_from_attack(attacker, "gun")
+	# Decoys are real collision targets. Whether friendly or hostile, a bullet
+	# stops at this first impact instead of receiving a pass-through exception.
+	queue_free()
 
 func _on_body_entered(body):
 	if NetworkManager.is_online():
@@ -36,7 +57,13 @@ func _on_body_entered(body):
 	# ---- local play ----
 	if body == shooter:
 		return
+	if _is_decoy(body):
+		_hit_decoy(body)
+		return
+	var shooter_name: String = shooter.get_display_name() if shooter != null else ""
 	if body.has_method("is_bullet_immune") and body.is_bullet_immune():
+		if body.is_in_group("player") and GameConfig.can_affect(shooter, body):
+			GameEvents.combat_feedback.emit(shooter_name, "gun_hit")
 		queue_free()
 		return
 	if not GameConfig.can_affect(shooter, body):
@@ -45,14 +72,20 @@ func _on_body_entered(body):
 	if body.has_method("flash_hit"):
 		body.flash_hit()
 	if body.has_method("eliminate"):
-		var killer_name = shooter.get_display_name() if shooter != null else ""
-		body.eliminate(killer_name, "🔫")
+		body.eliminate(shooter_name, "🔫")
+		# eliminate() sets is_eliminated synchronously unless Extra Life ate the
+		# hit — so this reads the true outcome for the red-vs-white marker.
+		var eliminated := bool(body.get("is_eliminated"))
+		GameEvents.combat_feedback.emit(shooter_name, "gun_elimination" if eliminated else "gun_hit")
 	queue_free()
 
 func _on_hit_online(body):
 	# Only the server resolves hits (authoritative). Clients never reach here
 	# (their bullets have contact_monitor off).
 	if not is_server_bullet:
+		return
+	if _is_decoy(body):
+		_hit_decoy(body)
 		return
 	if not body.is_in_group("player"):
 		queue_free()   # hit world geometry
@@ -64,10 +97,13 @@ func _on_hit_online(body):
 	var vid = body.get("actor_id")
 	if vid == null or vid == net_shooter_id:
 		return   # not a networked player, or the shooter — ignore
+	var rm = get_tree().current_scene.get_node_or_null("RoundManager")
 	if body.has_method("is_bullet_immune") and body.is_bullet_immune():
+		# Blocked by immunity — still confirm the connect to the shooter.
+		if rm != null and rm.has_method("server_confirm_hit"):
+			rm.server_confirm_hit(net_shooter_id, false, "gun")
 		queue_free()
 		return
-	var rm = get_tree().current_scene.get_node_or_null("RoundManager")
 	if rm != null and rm.has_method("server_eliminate"):
 		rm.server_eliminate(int(vid), net_shooter_id, net_round_epoch)
 	queue_free()

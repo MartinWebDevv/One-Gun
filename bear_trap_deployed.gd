@@ -19,7 +19,15 @@ func _ready() -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if _sprung:
 		return
-	if not body.is_in_group("player"):
+	if not body.is_in_group("combat_target"):
+		return
+	if body.is_in_group("combat_decoy"):
+		if body.has_method("can_be_affected_by") and not body.can_be_affected_by(owner_player):
+			return
+		_sprung = true
+		if body.has_method("pop_from_attack"):
+			body.pop_from_attack(owner_player, "bear_trap")
+		_trigger_visual()
 		return
 	if owner_player != null and not GameConfig.can_affect(owner_player, body):
 		return

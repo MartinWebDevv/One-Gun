@@ -12,9 +12,16 @@ func _ready():
 	set_collision_mask_value(2, true)
 
 func _on_body_entered(body):
-	if not body.is_in_group("player"):
+	if not body.is_in_group("combat_target"):
+		return
+	if body.is_in_group("combat_decoy") and body.has_method("can_be_affected_by") \
+			and not body.can_be_affected_by(owner_player):
 		return
 	if not GameConfig.can_affect(owner_player, body):
+		return
+	if body.is_in_group("combat_decoy"):
+		if body.has_method("apply_slow"):
+			body.apply_slow(slow_duration, slow_multiplier)
 		return
 	if NetworkManager.is_online():
 		if multiplayer.is_server():

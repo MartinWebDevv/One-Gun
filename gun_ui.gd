@@ -13,6 +13,12 @@ func _ready():
 	offset_top = -70
 	offset_right = -20
 	offset_bottom = -20
+	# Weapon pill styling: rounded chip, bold text.
+	alignment = BoxContainer.ALIGNMENT_END
+	var lbl = $AmmoLabel
+	lbl.add_theme_stylebox_override("normal", ThemeManager.pill(Color(0.06, 0.07, 0.12, 0.85), ThemeManager.BORDER, 1))
+	lbl.add_theme_font_size_override("font_size", 18)
+	ThemeManager.embolden(lbl)
 
 func set_player(p):
 	player = p
@@ -27,4 +33,9 @@ func _process(_delta):
 	if hold_point.get_child_count() == 0:
 		return
 	var gun = hold_point.get_child(0)
-	$AmmoLabel.text = "1/1" if gun.can_fire else "0/1"
+	if gun.can_fire:
+		$AmmoLabel.text = "GUN  •  READY"
+		$AmmoLabel.add_theme_color_override("font_color", ThemeManager.ACCENT_GOLD)
+	else:
+		$AmmoLabel.text = "GUN  •  RELOADING…"
+		$AmmoLabel.add_theme_color_override("font_color", ThemeManager.TEXT_DIM)

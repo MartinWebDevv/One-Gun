@@ -13,6 +13,10 @@ One Gun is a local (couch) arena shooter for 1–8 competitors (humans + bots), 
 - Reaching `sets_per_match` (default **3**) wins the **match**, returning everyone to the lobby.
 - Display timings: countdown before round start **3s**, round-end banner **3s**, set-end banner **4s**, match-end banner **6s** (all configurable on `RoundManager`).
 - Player/team cap: **8 total**. Solo mode allows up to 7 bots; splitscreen (2 humans) allows up to 6 bots.
+- A round defaults to a host-adjustable **5:00** limit (`round_time_limit`). It can be adjusted in one-second increments down to **1s**; **0** disables the timer. When it expires with multiple survivors, the round enters unlimited-count-up **Overtime** instead of ending.
+- OT fire begins just outside that map's authored combat footprint, starts advancing immediately, and reaches the playable edge after **5s**. It never pauses after that and fully engulfs the arena at approximately **2:00** of OT. The unsafe region is rendered continuously across the map's baked playable navigation surface, with dense, fast-rising flame particles emitted only from unsafe polygons. This keeps the effect grounded across imported meshes, CSG, Terrain3D and elevated routes. It affects players at any height above unsafe ground. The visible fire leads the lethal boundary by 0.35 units.
+- Fire exposure eliminates after **5s** in zone 1, **4s** in zone 2, and **3s** from zone 3 onward. A player must stay safe for **1s** to reset accumulated exposure. Each new zone pulses all survivors through walls for **1s**.
+- Standard OT preserves the one-gun contest. Enabling `chaos_overtime_enabled` arms every survivor and retires the original shared gun. OT time shown in the HUD uses minutes/seconds; milliseconds remain internal for simultaneous-elimination tiebreaks.
 
 ## 3. Movement
 
@@ -20,7 +24,8 @@ One Gun is a local (couch) arena shooter for 1–8 competitors (humans + bots), 
 |---|---|
 | Walk speed | 10.0 m/s |
 | Sprint speed | 18.0 m/s |
-| Jump velocity | 4.5 m/s (impulse) |
+| Jump velocity | 7.0 m/s (exported `jump_velocity`) |
+| Post-landing jump cooldown | 0.4s (exported `jump_landing_cooldown`, no HUD indicator) |
 | Max stamina | 100 |
 | Stamina drain (sprinting) | 25/sec |
 | Stamina regen (at rest) | 20/sec, after a 1.0s delay following sprint |
@@ -31,16 +36,20 @@ One Gun is a local (couch) arena shooter for 1–8 competitors (humans + bots), 
 
 **Traffic hazard (Maple & 3rd only)**: cars drive the block on loops; getting clipped applies a melee-style knockback shove (never lethal, ~1.5s per-player cooldown) via the same `apply_knockback()` path melee uses. Cars stop for the red light at the intersection.
 
+**Manhole steam boost (Maple & 3rd only)**: jumping while inside the visible steam column launches the player upward at 14.0 m/s. Walking through the steam does nothing. Normal gravity applies on ascent. Once a steam-launched player has cleared the 2.0m height gate and begins descending, gravity increases to 3× until landing so the boosted arc does not linger. Tune `lift_strength`, `descent_height_gate`, and `descent_gravity_multiplier` on `ManholeSteamBoost`; ordinary jumps and spring pads are unaffected.
+
 **Knockback / stagger** (inflicted by melee hits — see §5): freezes horizontal velocity (knockback, 0.2s) or all movement (stagger, duration scales with weapon tier) and grants temporary bullet immunity afterward so a disarmed/staggered player isn't instantly finished off.
 
 **Aiming**: ADS (aim-down-sights) transitions over 0.2s, tightens FOV by 0.9×, and pulls the camera boom in to 0.3 (from the default 4.0). ADS halves look sensitivity by default (configurable, `ads_sensitivity_multiplier`).
+
+**Camera collision**: the normal third-person camera boom retracts when layer-1 map geometry blocks it, preventing walls and floors from passing between the player and camera. It ignores players and pickups. Spectator follow cameras inherit the same behavior, while free spectator movement uses a small collision sphere against the same map-geometry layer. Opening the pause menu freezes both player-look and spectator-camera input, including online menus where the scene itself keeps running.
 
 ## 4. The Gun
 
 - **One gun spawns per match** — no ammo pickups, no second gun.
 - Semi-automatic: one shot per trigger pull, then a reload.
 - Reload time: 2.0s.
-- Bullet speed: 60 m/s, hitscan-adjacent (fast projectile, camera-aimed).
+- Bullet speed: 200 m/s, still a physically simulated projectile with a 10s emergency lifetime.
 - A bullet hit is an **instant elimination** — there is no health pool or damage falloff.
 - Getting disarmed (see below) locks the ex-holder out of re-picking up the gun for **`disarm_lock_time`** seconds (default 3.0), giving the disarmer a window to grab it.
 - Gun spawn location each round: `gun_spawn_mode` = `"center"` (fixed point) or `"random"` (from `gun_spawn_point` group markers).
@@ -119,7 +128,7 @@ Held across **two item slots** (slots 2 and 3 — see §9), separate from the we
 |---|---|---|
 | Smoke Bomb | consumable | 1.2s fuse; deploys a ~4m vision-blocking cloud for 6s. No damage. |
 | Bear Trap | hazard | Deploys where it lands, sits open up to 20s; first player in gets rooted 1.5s (stagger), trap snaps shut. One use. Owner-safe per `can_affect`. |
-| Decoy | consumable | Deploys a fake standing player where it lands; bots target it, bullets pop it in one hit. No kill credit either way. |
+| Decoy | consumable | Deploys one fake player for up to 10s. It runs straight forward by default; the owner can press **C** to toggle mirrored movement control (gamepad is unbound by default). Bots target it like a real player, while attacks and hostile traps affect or pop it. The owner and protected teammates cannot destroy it. An enemy gunshot pop briefly outlines the shooter for 0.5s; trap-triggered pops do not. It awards no kill credit. |
 | Boomerang | consumable | Flies ~10m out and returns over ~1.7s; disarms a gun holder on hit (respects melee shields, grants the victim 1s immunity), knocks back anyone else. Auto-caught on return if a slot is free. |
 | Spring Pad | hazard | Deploys where it lands, lives 30s; launches anyone who steps on (players AND bots), 0.5s per-body cooldown. |
 
@@ -129,7 +138,7 @@ Online matches use the same marker placements, item pools, two-slot inventory ru
 
 ## 8. Powerups
 
-One powerup spawns on the map (bobbing/rotating pickup). Its type **cycles every 1.5s** until collected, so players must react to grab the type they want.
+Powerups spawn at map markers as bobbing/rotating pickups. Each orb has a camera-facing world label above it showing its current name, colored to match the orb. Its type is **fixed at spawn** and changes only when that powerup respawns after collection.
 
 | Powerup | Effect |
 |---|---|
@@ -172,6 +181,8 @@ Core actions: move (WASD / stick), look (mouse / right stick), jump (Space / A/C
 ## 11. Match Settings (configurable per-lobby, save/load-able as presets)
 
 All of the following are toggled in the lobby (`game_setup.gd`) and stored on the `GameConfig` autoload; up to 5 full presets ("house rules") can be saved to disk and reloaded:
+
+The list includes the host-adjustable `round_time_limit` and `chaos_overtime_enabled` rules in addition to the combat, item, bot, and scoring settings below.
 
 `teams_enabled`, `friendly_fire_enabled`, `melee_eliminates_gunholder`, `melee_eliminates_anyone`, `melee_effects_hit_anyone` (default **true** — see §5), `melee_spawn_delay`, `gun_spawn_mode`, `disarm_lock_time`, `max_dash_charges`, `dropped_melee_despawn_time`, `melee_weapon_breaking`, `rounds_per_set`, `sets_per_match`, `hazards_enabled`, `consumables_enabled`, `item_registry`, `bot_configs` (per-bot difficulty + team).
 

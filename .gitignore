@@ -5,3 +5,10 @@
 # Local tool config / machine-specific files
 .claude/
 *.lnk
+
+# Machine-generated runtime and editor artifacts
+Godot/app_userdata/
+**/__pycache__/
+*.py[cod]
+*.blend1
+addons/terrain_3d/bin/~*

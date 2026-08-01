@@ -13,6 +13,11 @@ func _ready():
 	offset_top = -70
 	offset_right = -20
 	offset_bottom = -20
+	# Weapon pill styling: rounded chip, bold text.
+	alignment = BoxContainer.ALIGNMENT_END
+	$NameLabel.add_theme_stylebox_override("normal", ThemeManager.pill(Color(0.06, 0.07, 0.12, 0.85), ThemeManager.BORDER, 1))
+	$NameLabel.add_theme_font_size_override("font_size", 18)
+	ThemeManager.embolden($NameLabel)
 
 func set_player(p):
 	player = p

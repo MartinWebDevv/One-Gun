@@ -8,7 +8,7 @@ extends Control
 var player = null
 
 const RADIUS       = 28.0    # just outside the crosshair
-const THICKNESS    = 5.0
+const THICKNESS    = 6.0
 const SIZE         = (RADIUS + THICKNESS + 2.0) * 2.0
 const ARC_SEGMENTS = 64
 const COLOR_RELOAD = Color(0.95, 0.75, 0.2, 0.92)   # amber while reloading
@@ -31,23 +31,41 @@ func _ready():
 func set_player(p):
 	player = p
 
-func _process(_delta):
+var _was_reloading := false
+var _flash := 0.0   # 1 → reload just completed, decays to 0
+
+func _process(delta):
+	if _flash > 0.0:
+		_flash = maxf(_flash - delta * 3.0, 0.0)
 	if player == null or not player.holding_gun:
 		visible = false
+		_was_reloading = false
 		return
 	var weapon_active = not ("active_slot" in player) or player.active_slot == "weapon"
 	if not weapon_active:
 		visible = false
+		_was_reloading = false
 		return
 	var hold_point = player.get_hold_point()
 	if hold_point.get_child_count() == 0:
 		visible = false
 		return
 	var gun = hold_point.get_child(0)
-	visible = not gun.can_fire
+	var reloading: bool = not gun.can_fire
+	# One-shot "ready!" ring flash the instant the reload completes.
+	if _was_reloading and not reloading:
+		_flash = 1.0
+	_was_reloading = reloading
+	visible = reloading or _flash > 0.0
 	queue_redraw()
 
 func _draw():
+	var center = Vector2(SIZE / 2.0, SIZE / 2.0)
+	# One-shot completion flash: gold ring that expands and fades.
+	if _flash > 0.0:
+		var flash_radius = RADIUS + (1.0 - _flash) * 8.0
+		draw_arc(center, flash_radius, 0.0, TAU, ARC_SEGMENTS,
+			Color(1.0, 0.718, 0.0, _flash * 0.9), THICKNESS, true)
 	if player == null or not player.holding_gun:
 		return
 	var weapon_active = not ("active_slot" in player) or player.active_slot == "weapon"
@@ -57,8 +75,9 @@ func _draw():
 	if hold_point.get_child_count() == 0:
 		return
 	var gun = hold_point.get_child(0)
+	if gun.can_fire:
+		return
 	var t = gun.get_reload_progress()
-	var center = Vector2(SIZE / 2.0, SIZE / 2.0)
 
 	# Dim background track — full circle so you see the extent
 	draw_arc(center, RADIUS, 0.0, TAU, ARC_SEGMENTS, Color(1.0, 1.0, 1.0, 0.15), THICKNESS, true)

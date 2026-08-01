@@ -27,6 +27,10 @@ var _round_label: Label
 var _set_label: Label
 var _remaining_label: Label
 var _notification_label: Label
+var _timer_label: Label
+var _fire_warning_panel: PanelContainer
+var _fire_warning_label: Label
+var _fire_warning_active := false
 var _scoreboard_overlay: Control
 var _scoreboard_content: VBoxContainer
 var _pulse_tween: Tween = null
@@ -35,34 +39,58 @@ var _tab_open := false
 
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if not NetworkManager.is_online():
+		if GameConfig.split_screen_enabled:
+			anchor_left = 0.5 if is_second_screen else 0.0
+			anchor_right = 1.0 if is_second_screen else 0.5
+		elif is_second_screen:
+			visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	# -- Top-center: Round / Set counter --
+	# -- Top-center: Round / Set counter on a rounded "plate" --
+	var plate = PanelContainer.new()
+	plate.anchor_left   = 0.5
+	plate.anchor_right  = 0.5
+	plate.anchor_top    = 0.0
+	plate.anchor_bottom = 0.0
+	plate.offset_left   = -160
+	plate.offset_right  = 160
+	plate.offset_top    = 8
+	plate.offset_bottom = 8   # grows to fit content
+	var plate_style = ThemeManager.panel(Color(0.06, 0.07, 0.12, 0.85), ThemeManager.ACCENT_GOLD, 12, 2)
+	plate_style.content_margin_left = 22
+	plate_style.content_margin_right = 22
+	plate_style.content_margin_top = 6
+	plate_style.content_margin_bottom = 8
+	plate.add_theme_stylebox_override("panel", plate_style)
+	add_child(plate)
+
 	var center_container = VBoxContainer.new()
-	center_container.anchor_left   = 0.5
-	center_container.anchor_right  = 0.5
-	center_container.anchor_top    = 0.0
-	center_container.anchor_bottom = 0.0
-	center_container.offset_left   = -250
-	center_container.offset_right  = 250
-	center_container.offset_top    = 10
-	center_container.offset_bottom = 80
-	center_container.alignment     = BoxContainer.ALIGNMENT_CENTER
-	center_container.add_theme_constant_override("separation", 2)
-	add_child(center_container)
+	center_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	center_container.add_theme_constant_override("separation", 0)
+	plate.add_child(center_container)
 
 	_round_label = Label.new()
 	_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_round_label.add_theme_font_size_override("font_size", 22)
-	_round_label.modulate = Color(1.0, 1.0, 1.0, 0.95)
+	_round_label.add_theme_font_size_override("font_size", 20)
+	_round_label.add_theme_color_override("font_color", ThemeManager.ACCENT_GOLD)
+	ThemeManager.embolden(_round_label)
 	center_container.add_child(_round_label)
 
 	_set_label = Label.new()
 	_set_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_set_label.add_theme_font_size_override("font_size", 14)
-	_set_label.modulate = Color(0.75, 0.75, 0.75, 0.9)
+	_set_label.add_theme_font_size_override("font_size", 12)
+	_set_label.modulate = Color(0.75, 0.78, 0.9, 0.9)
 	_set_label.visible = false
 	center_container.add_child(_set_label)
+
+	_timer_label = Label.new()
+	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_timer_label.add_theme_font_size_override("font_size", 16)
+	_timer_label.add_theme_color_override("font_color", ThemeManager.TEXT_WHITE)
+	ThemeManager.embolden(_timer_label)
+	center_container.add_child(_timer_label)
+	_build_fire_warning()
 
 	# Notification label — sits below the round/set counter, center screen
 	_notification_label = Label.new()
@@ -100,6 +128,65 @@ func _ready():
 	GameEvents.gun_picked_up.connect(_on_gun_picked_up)
 	GameEvents.gun_dropped.connect(_on_gun_dropped)
 
+func update_round_timer(text: String, overtime: bool = false) -> void:
+	if _timer_label == null:
+		return
+	_timer_label.text = text
+	_timer_label.visible = text != ""
+	_timer_label.add_theme_color_override(
+		"font_color", ThemeManager.DANGER if overtime else ThemeManager.TEXT_WHITE)
+
+func _build_fire_warning() -> void:
+	_fire_warning_panel = PanelContainer.new()
+	_fire_warning_panel.name = "FireExposureWarning"
+	_fire_warning_panel.anchor_left = 0.5
+	_fire_warning_panel.anchor_right = 0.5
+	_fire_warning_panel.offset_left = -190.0
+	_fire_warning_panel.offset_right = 190.0
+	_fire_warning_panel.offset_top = 164.0
+	_fire_warning_panel.offset_bottom = 226.0
+	_fire_warning_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var warning_style := ThemeManager.panel(
+		Color(0.18, 0.015, 0.005, 0.94), Color(1.0, 0.22, 0.02), 12, 3)
+	warning_style.content_margin_left = 18.0
+	warning_style.content_margin_right = 18.0
+	warning_style.content_margin_top = 7.0
+	warning_style.content_margin_bottom = 7.0
+	_fire_warning_panel.add_theme_stylebox_override("panel", warning_style)
+	_fire_warning_panel.visible = false
+	add_child(_fire_warning_panel)
+
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 0)
+	_fire_warning_panel.add_child(column)
+	_fire_warning_label = Label.new()
+	_fire_warning_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_fire_warning_label.add_theme_font_size_override("font_size", 28)
+	_fire_warning_label.add_theme_color_override("font_color", Color(1.0, 0.32, 0.05))
+	ThemeManager.embolden(_fire_warning_label)
+	column.add_child(_fire_warning_label)
+	var instruction := Label.new()
+	instruction.text = "GET BACK INSIDE THE SAFE AREA"
+	instruction.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	instruction.add_theme_font_size_override("font_size", 11)
+	instruction.add_theme_color_override("font_color", Color(1.0, 0.82, 0.68))
+	ThemeManager.embolden(instruction)
+	column.add_child(instruction)
+
+func update_fire_warning(state: Dictionary) -> void:
+	if _fire_warning_panel == null:
+		return
+	var active := bool(state.get("active", false))
+	_fire_warning_panel.visible = active
+	_fire_warning_panel.set_meta("fire_warning_active", active)
+	if active:
+		var remaining := maxf(float(state.get("remaining", 0.0)), 0.0)
+		_fire_warning_label.text = "IN FIRE  -  %.1fs" % remaining
+		if not _fire_warning_active:
+			ThemeManager.punch(_fire_warning_panel, 1.18, 0.2)
+	_fire_warning_active = active
+
 func _build_scoreboard_overlay():
 	_scoreboard_overlay = Control.new()
 	_scoreboard_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -107,8 +194,8 @@ func _build_scoreboard_overlay():
 	_scoreboard_overlay.visible = false
 	add_child(_scoreboard_overlay)
 
-	# Semi-transparent dark background panel
-	var bg = ColorRect.new()
+	# Kit panel background (rounded, gold border)
+	var bg = Panel.new()
 	bg.anchor_left   = 0.5
 	bg.anchor_right  = 0.5
 	bg.anchor_top    = 0.5
@@ -117,12 +204,12 @@ func _build_scoreboard_overlay():
 	bg.offset_right  = 340
 	bg.offset_top    = -260
 	bg.offset_bottom = 260
-	bg.color = Color(0.05, 0.05, 0.08, 0.88)
+	bg.add_theme_stylebox_override("panel",
+		ThemeManager.panel(Color(0.04, 0.05, 0.09, 0.92), ThemeManager.ACCENT_GOLD, 14, 2))
 	_scoreboard_overlay.add_child(bg)
 
 	# Title
-	var title = Label.new()
-	title.text = "SCOREBOARD"
+	var title = ThemeManager.heading("SCOREBOARD", 20)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.anchor_left   = 0.5
 	title.anchor_right  = 0.5
@@ -132,8 +219,6 @@ func _build_scoreboard_overlay():
 	title.offset_right  = 320
 	title.offset_top    = -248
 	title.offset_bottom = -210
-	title.add_theme_font_size_override("font_size", 18)
-	title.modulate = Color(0.9, 0.85, 0.6)
 	_scoreboard_overlay.add_child(title)
 
 	# Column headers — anchored to match bg panel left edge
@@ -203,7 +288,8 @@ func _add_header_cell(parent: HBoxContainer, text: String, width: int):
 	label.text = text
 	label.custom_minimum_size = Vector2(width, 0)
 	label.add_theme_font_size_override("font_size", 11)
-	label.modulate = Color(0.6, 0.7, 0.9)
+	label.add_theme_color_override("font_color", ThemeManager.ACCENT_GOLD)
+	ThemeManager.embolden(label)
 	parent.add_child(label)
 
 func _process(_delta):
@@ -230,6 +316,13 @@ func _refresh_scoreboard():
 	if round_manager == null or not round_manager.has_method("get_scoreboard_data"):
 		return
 
+	# Online: highlight the row belonging to this machine's player.
+	var local_name := ""
+	if NetworkManager.is_online():
+		var lp = NetworkManager.find_net_player(NetworkManager.local_id())
+		if lp != null and lp.has_method("get_display_name"):
+			local_name = lp.get_display_name()
+
 	var data = round_manager.get_scoreboard_data()
 	for i in data.size():
 		var entry = data[i]
@@ -251,7 +344,23 @@ func _refresh_scoreboard():
 		_add_row_cell(row, str(entry["pickups"]),  COL_PICKUPS, row_color)
 		_add_row_cell(row, str(entry["melee"]),    COL_MELEE,   row_color)
 
-		_scoreboard_content.add_child(row)
+		# Zebra striping + gold left edge on your own row.
+		var row_panel = PanelContainer.new()
+		var is_you: bool = local_name != "" and str(entry["name"]) == local_name
+		var zebra_bg := Color(1, 1, 1, 0.04) if i % 2 == 0 else Color(0, 0, 0, 0.0)
+		var row_style = ThemeManager.panel(zebra_bg, Color.TRANSPARENT, 4, 0)
+		row_style.shadow_size = 0
+		row_style.content_margin_left = 6
+		row_style.content_margin_right = 6
+		row_style.content_margin_top = 2
+		row_style.content_margin_bottom = 2
+		if is_you:
+			row_style.border_width_left = 3
+			row_style.border_color = ThemeManager.ACCENT_GOLD
+			row_style.bg_color = Color(1.0, 0.718, 0.0, 0.08)
+		row_panel.add_theme_stylebox_override("panel", row_style)
+		row_panel.add_child(row)
+		_scoreboard_content.add_child(row_panel)
 
 func _add_row_cell(parent: HBoxContainer, text: String, width: int, color: Color, bold: bool = false):
 	var label = Label.new()
@@ -358,3 +467,4 @@ func _show_notification(message: String, color: Color):
 	_notification_tween.tween_property(_notification_label, "modulate:a", 1.0, 0.2)
 	_notification_tween.tween_interval(2.5)
 	_notification_tween.tween_property(_notification_label, "modulate:a", 0.0, 0.4)
+	ThemeManager.punch(_notification_label, 1.2)

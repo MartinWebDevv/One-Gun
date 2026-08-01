@@ -49,7 +49,7 @@ var is_swinging       := false
 var is_in_flight      := false
 var online_active     := true
 var online_candidate_id := -1
-var deficit_swing_count := 0
+var _break_after_swing := false
 var pickup_locked     := false
 var swing_tween: Tween = null
 
@@ -67,6 +67,7 @@ var _custom_hitbox_applied := false
 var _default_hitbox_shape: Shape3D = null
 var _default_hitbox_transform := Transform3D.IDENTITY
 var _online_hit_actor_ids: Dictionary = {}
+var overtime_disabled := false
 
 # ============================================================
 # Initialisation
@@ -326,6 +327,8 @@ func _local_pickup(p) -> bool:
 	is_held      = true
 	is_in_flight = false
 	freeze       = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
 	var hold_point = p.get_melee_hold_point()
@@ -388,10 +391,10 @@ func drop(is_death_drop: bool = false):
 	hold_point.remove_child(self)
 	world.add_child(self)
 	global_transform = drop_transform
-	freeze = NetworkManager.is_online()
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
 	is_held = false
+	_enable_loose_physics()
 	if p != null and p.held_melee_weapon == self:
 		p.held_melee_weapon = null
 	_update_pickup_label()
@@ -460,7 +463,14 @@ func _net_do_drop(drop_pos: Vector3) -> void:
 	global_position = drop_pos
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
-	freeze = true
+	_enable_loose_physics()
+
+
+func _enable_loose_physics() -> void:
+	# A held rigid body may still be sleeping after it is unfrozen. Explicitly
+	# wake it so synchronized online drops and local drops both fall naturally.
+	freeze = false
+	sleeping = false
 
 func throw():
 	var p = player_ref
@@ -479,7 +489,7 @@ func throw():
 		flat_forward = flat_forward.normalized()
 	global_position = p.global_position + flat_forward * 0.6 + Vector3.UP * 1.0
 	global_rotation = p.global_rotation
-	freeze = false
+	_enable_loose_physics()
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = false
 	is_held = false
@@ -531,7 +541,7 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 	angular_velocity = Vector3.ZERO
 	# Every peer launches the same approved visual trajectory. Only the server
 	# resolves impacts, then broadcasts the authoritative landing transform.
-	freeze = false
+	_enable_loose_physics()
 	if multiplayer.is_server():
 		call_deferred("_online_enable_throw_player_collision")
 
@@ -542,6 +552,11 @@ func _online_enable_throw_player_collision() -> void:
 
 func _on_flight_body_entered(body):
 	if not is_in_flight:
+		return
+	if body.is_in_group("combat_decoy"):
+		if body.has_method("pop_from_attack"):
+			body.pop_from_attack(player_ref, "thrown_melee")
+		add_collision_exception_with(body)
 		return
 	if NetworkManager.is_online():
 		if not multiplayer.is_server():
@@ -555,9 +570,7 @@ func _on_flight_body_entered(body):
 	is_in_flight = false
 	set_collision_mask_value(2, false)
 	if body.is_in_group("player") and GameConfig.can_affect(player_ref, body):
-		if body.has_method("flash_hit"):
-			body.flash_hit()
-		_apply_hit_effects(body, true, body.holding_gun)
+		_resolve_local_hit(body, true)
 	_update_pickup_label()
 	_start_landed_cooldown()
 
@@ -633,36 +646,23 @@ func _server_try_swing(sender_id: int, epoch: int) -> void:
 	if player_ref == null or player_ref.is_eliminated:
 		return
 	var was_in_deficit: bool = not player_ref.has_stamina()
-	var next_deficit_count := deficit_swing_count + 1 if was_in_deficit else 0
-	var should_break := next_deficit_count >= 2 and GameConfig.melee_weapon_breaking
+	var should_break := was_in_deficit and GameConfig.melee_weapon_breaking
 	rm.broadcast_online_melee_action(online_candidate_id, "swing", {
-		"deficit_count": next_deficit_count,
 		"should_break": should_break,
 	})
 
-func _net_do_swing(authoritative_deficit_count: int, should_break: bool) -> void:
-	swing(authoritative_deficit_count, should_break)
+func _net_do_swing(should_break: bool) -> void:
+	swing(should_break)
 
-func swing(authoritative_deficit_count: int = -1, should_break: bool = false):
+func swing(should_break: bool = false):
 	var p = player_ref
 	if p == null:
 		return
 
 	var was_already_in_deficit = not p.has_stamina()
 	p.drain_stamina(_stamina_cost)
-
-	if NetworkManager.is_online() and authoritative_deficit_count >= 0:
-		deficit_swing_count = authoritative_deficit_count
-		if should_break:
-			_break_weapon()
-			return
-	elif was_already_in_deficit:
-		deficit_swing_count += 1
-		if deficit_swing_count >= 2 and GameConfig.melee_weapon_breaking:
-			_break_weapon()
-			return
-	else:
-		deficit_swing_count = 0
+	_break_after_swing = should_break if NetworkManager.is_online() \
+		else was_already_in_deficit and GameConfig.melee_weapon_breaking
 
 	is_swinging = true
 	_online_hit_actor_ids.clear()
@@ -688,6 +688,9 @@ func swing(authoritative_deficit_count: int = -1, should_break: bool = false):
 
 	await swing_tween.finished
 	is_swinging = false
+	if _break_after_swing:
+		_break_after_swing = false
+		_break_weapon()
 
 const HIT_SOUND_KEYS = {
 	"Sword": "hit_sword",
@@ -703,7 +706,6 @@ func _play_hit_sound():
 
 func _break_weapon():
 	is_swinging = false
-	deficit_swing_count = 0
 	if is_held:
 		drop()
 	visible = false
@@ -744,6 +746,10 @@ func _get_weapon_icon() -> String:
 func _on_hit_landed(body):
 	if body == player_ref:
 		return
+	if body.is_in_group("combat_decoy"):
+		if body.has_method("pop_from_attack"):
+			body.pop_from_attack(player_ref, "melee")
+		return
 	if not body.is_in_group("player"):
 		return
 	if NetworkManager.is_online():
@@ -752,46 +758,53 @@ func _on_hit_landed(body):
 		return
 	if not GameConfig.can_affect(player_ref, body):
 		return
+	_resolve_local_hit(body, false)
 
+func _resolve_local_hit(body, is_thrown: bool) -> void:
 	if body.has_method("flash_hit"):
 		body.flash_hit()
-
 	_play_hit_sound()
-
-	var was_holding_gun = body.holding_gun
-	var killer = player_ref.get_display_name() if player_ref != null else ""
-	var icon = _get_weapon_icon()
-
-	# Only count as a meaningful melee hit if we hit the gun holder,
-	# or if melee_effects_hit_anyone is on (melee is relevant to everyone).
-	if player_ref != null and (was_holding_gun or GameConfig.melee_effects_hit_anyone):
+	var was_holding_gun := bool(body.holding_gun)
+	var killer: String = player_ref.get_display_name() if player_ref != null else ""
+	var icon: String = _get_weapon_icon()
+	var will_eliminate := (GameConfig.melee_eliminates_anyone
+		or (was_holding_gun and GameConfig.melee_eliminates_gunholder))
+	if player_ref != null:
 		GameEvents.melee_hit_landed.emit(player_ref.get_display_name())
+		if not will_eliminate:
+			GameEvents.combat_feedback.emit(killer, "melee_hit")
 
-	if GameConfig.melee_eliminates_anyone:
-		if body.has_method("eliminate"):
-			body.eliminate(killer, icon)
-		return
-
+	# Sticky Hands is independent from Extra Life. A lethal swing can consume
+	# both: Sticky prevents the disarm and Extra Life prevents the elimination.
+	var sticky_consumed: bool = false
 	if was_holding_gun:
-		if GameConfig.melee_eliminates_gunholder:
-			if body.has_method("eliminate"):
-				body.eliminate(killer, icon)
-			return
-		var has_shield = "melee_disarm_shields" in body and body.melee_disarm_shields > 0
-		if has_shield:
+		if body.has_method("consume_sticky_hands"):
+			sticky_consumed = body.consume_sticky_hands()
+		elif "melee_disarm_shields" in body and body.melee_disarm_shields > 0:
 			body.melee_disarm_shields -= 1
-		else:
-			var gun_hold_point = body.get_hold_point()
-			if gun_hold_point.get_child_count() > 0:
-				var gun_node = gun_hold_point.get_child(0)
-				if gun_node.has_method("force_disarm"):
-					gun_node.force_disarm()
-				else:
-					gun_node.drop()
-				var victim = body.get_display_name() if body.has_method("get_display_name") else body.name
-				GameEvents.player_disarmed.emit(victim, killer, icon)
+			sticky_consumed = true
+		if not sticky_consumed:
+			_disarm_local_target(body, killer, icon)
 
-	_apply_hit_effects(body, false, was_holding_gun)
+	if will_eliminate and body.has_method("eliminate"):
+		body.eliminate(killer, icon, "weapon")
+		var eliminated := bool(body.get("is_eliminated"))
+		GameEvents.combat_feedback.emit(killer, "melee_elimination" if eliminated else "melee_hit")
+		if eliminated:
+			return
+
+	_apply_hit_effects(body, is_thrown, was_holding_gun)
+
+func _disarm_local_target(body, killer: String, icon: String) -> void:
+	var gun_hold_point = body.get_hold_point()
+	if gun_hold_point != null and gun_hold_point.get_child_count() > 0:
+		var gun_node = gun_hold_point.get_child(0)
+		if gun_node.has_method("force_disarm"):
+			gun_node.force_disarm()
+		else:
+			gun_node.drop()
+		var victim = body.get_display_name() if body.has_method("get_display_name") else body.name
+		GameEvents.player_disarmed.emit(victim, killer, icon)
 
 func _server_resolve_hit(body, is_thrown: bool) -> void:
 	if not multiplayer.is_server() or not online_active or player_ref == null or body == player_ref:
@@ -812,14 +825,15 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 	_online_hit_actor_ids[target_id] = true
 
 	var was_holding_gun := bool(body.holding_gun)
-	var meaningful_hit := was_holding_gun or GameConfig.melee_effects_hit_anyone
+	var meaningful_hit := true
 	var will_eliminate := GameConfig.melee_eliminates_anyone or (was_holding_gun and GameConfig.melee_eliminates_gunholder)
+	var survives_lethal := will_eliminate and bool(body.get("second_wind_ready"))
 	var shield_consumed := false
 	var did_disarm := false
 	var gun_node = null
-	if was_holding_gun and not will_eliminate:
+	if was_holding_gun:
 		shield_consumed = "melee_disarm_shields" in body and body.melee_disarm_shields > 0
-		if not shield_consumed:
+		if not shield_consumed and (not will_eliminate or survives_lethal):
 			var gun_hold_point = body.get_hold_point()
 			if gun_hold_point != null and gun_hold_point.get_child_count() > 0:
 				gun_node = gun_hold_point.get_child(0)
@@ -835,6 +849,7 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 		"shield_consumed": shield_consumed,
 		"is_thrown": is_thrown,
 		"will_eliminate": will_eliminate,
+		"survives_lethal": survives_lethal,
 		"source_position": global_position,
 	})
 	if did_disarm and gun_node != null:
@@ -843,7 +858,7 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 		else:
 			gun_node.net_force_drop()
 	if will_eliminate:
-		rm.server_eliminate(target_id, attacker_id, _online_round_epoch(), _get_weapon_icon())
+		rm.server_eliminate(target_id, attacker_id, _online_round_epoch(), _get_weapon_icon(), "melee")
 
 func _net_apply_melee_hit(
 	target_id: int,
@@ -853,6 +868,7 @@ func _net_apply_melee_hit(
 	shield_consumed: bool,
 	is_thrown: bool,
 	will_eliminate: bool,
+	survives_lethal: bool,
 	source_position: Vector3
 ) -> void:
 	var body = NetworkManager.find_actor(target_id)
@@ -866,26 +882,33 @@ func _net_apply_melee_hit(
 	var victim_name: String = body.get_display_name() if body.has_method("get_display_name") else body.name
 	if meaningful_hit and attacker_name != "":
 		GameEvents.melee_hit_landed.emit(attacker_name)
-	if shield_consumed and "melee_disarm_shields" in body:
-		body.melee_disarm_shields = maxi(body.melee_disarm_shields - 1, 0)
+		# Ordinary melee feedback for the attacker's own machine; an elimination
+		# comes through round_manager's typed server-confirmed path instead.
+		if not will_eliminate and attacker != null \
+				and not ("is_bot" in attacker and attacker.is_bot) \
+				and int(attacker.get("owner_peer_id")) == NetworkManager.local_id():
+			GameEvents.combat_feedback.emit(attacker_name, "melee_hit")
+	if shield_consumed:
+		if body.has_method("consume_sticky_hands"):
+			body.consume_sticky_hands()
+		elif "melee_disarm_shields" in body:
+			body.melee_disarm_shields = maxi(body.melee_disarm_shields - 1, 0)
 	if did_disarm:
 		GameEvents.player_disarmed.emit(victim_name, attacker_name, _get_weapon_icon())
-	if not will_eliminate:
+	if not will_eliminate or survives_lethal:
 		_apply_hit_effects(body, is_thrown, bool(body.holding_gun) or did_disarm, source_position)
 
 func _apply_hit_effects(body, is_thrown: bool, was_holding_gun: bool = false, source_position: Vector3 = Vector3.INF):
 	if effect_category == "normal":
 		return
-	# Effects only apply to gun holders unless melee_effects_hit_anyone is on.
 	if not GameConfig.melee_effects_hit_anyone and not was_holding_gun:
 		return
 
-	var magnitude         = _get_effect_magnitude()
-	var immunity_duration = _get_bullet_immunity_duration()
-	if is_thrown:
-		magnitude *= 0.5
-		if effect_category == "stagger":
-			immunity_duration *= 0.5
+	# A thrown hit is harder to land and earns the complete effect. A wide,
+	# multi-target swing applies half duration/distance to each person hit.
+	var effect_scale := 1.0 if is_thrown else 0.5
+	var magnitude         = _get_effect_magnitude() * effect_scale
+	var immunity_duration = _get_bullet_immunity_duration() * effect_scale
 
 	if effect_category == "knockback" and body.has_method("apply_knockback"):
 		var hit_origin := global_position if not source_position.is_finite() else source_position
@@ -932,6 +955,8 @@ func set_online_pickup_locked(value: bool) -> void:
 	_update_pickup_label()
 
 func reset_to_spawn(randomize_identity: bool = true):
+	overtime_disabled = false
+	online_active = true
 	if is_held:
 		drop()
 	despawn_timer_generation += 1
@@ -940,7 +965,6 @@ func reset_to_spawn(randomize_identity: bool = true):
 		swing_tween.kill()
 	is_in_flight    = false
 	is_swinging     = false
-	deficit_swing_count = 0
 	visible         = true
 	scale           = Vector3.ONE
 	set_collision_mask_value(2, false)
@@ -957,6 +981,20 @@ func reset_to_spawn(randomize_identity: bool = true):
 	# Re-randomise the weapon identity on each respawn.
 	if randomize_identity and not NetworkManager.is_online():
 		randomize_attributes()
+
+func disable_for_overtime() -> void:
+	overtime_disabled = true
+	online_active = false
+	if is_held:
+		drop()
+	is_in_flight = false
+	is_swinging = false
+	visible = false
+	$HitBox.monitoring = false
+	$CollisionShape3D.disabled = true
+	$Area3D.monitoring = false
+	$Area3D/CollisionShape3D.disabled = true
+	freeze = true
 
 func get_interact_category():
 	return "weapon"

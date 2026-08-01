@@ -23,6 +23,8 @@ var spawn_rotation = Vector3.ZERO
 var online_item_id := -1
 var online_spawn_id := -1
 var online_owner_actor_id := -1
+var overtime_disabled := false
+var deployment_forward := Vector3.FORWARD
 
 func get_interact_category():
 	return "item"
@@ -167,6 +169,34 @@ func force_online_drop_at(drop_position: Vector3) -> void:
 	else:
 		_do_drop(drop_position)
 
+# Death consumes held items instead of creating extra loose pickups. The item
+# disappears immediately and then follows the same respawn/reroll path as a
+# normally used item.
+func discard_on_owner_death() -> void:
+	_drop_token += 1
+	var holder = player_ref
+	var scene_tree := get_tree()
+	var world := scene_tree.current_scene if scene_tree != null else null
+	if is_held and world != null and get_parent() != world:
+		reparent(world, true)
+	if holder != null:
+		if holder.has_method("clear_item_slot"):
+			holder.clear_item_slot(self)
+		elif "held_item" in holder and holder.held_item == self:
+			holder.held_item = null
+	player_ref = null
+	is_held = false
+	is_in_flight = false
+	_hide_after_use()
+	if NetworkManager.is_online():
+		if multiplayer.is_server():
+			var rm = _online_round_manager()
+			if rm != null:
+				rm.server_consume_online_item(
+					online_item_id, respawn_after_deploy_time, _online_round_epoch())
+	else:
+		_schedule_respawn()
+
 # Dropped items that nobody grabs within 2s return to their spawn point.
 const DROPPED_RETURN_TIME := 2.0
 var _drop_token := 0
@@ -293,10 +323,11 @@ func _net_do_pickup(holder_actor_id: int) -> void:
 	if player != null:
 		_do_pickup(player)
 
-func _net_do_throw(start_position: Vector3, start_rotation: Vector3, velocity: Vector3, _direction: Vector3, owner_actor_id: int) -> void:
+func _net_do_throw(start_position: Vector3, start_rotation: Vector3, velocity: Vector3, direction: Vector3, owner_actor_id: int) -> void:
 	var p = player_ref
 	if p == null or not is_held:
 		return
+	_remember_deployment_forward(direction)
 	var world = get_tree().current_scene
 	get_parent().remove_child(self)
 	world.add_child(self)
@@ -328,6 +359,7 @@ func throw():
 		return
 
 	var forward = p.get_aim_direction()
+	_remember_deployment_forward(forward)
 
 	var world = get_tree().current_scene
 	var hold_point = get_parent()
@@ -426,6 +458,10 @@ func _spawn_deployed(deploy_pos: Vector3, deployed_id: int, owner_actor_id: int)
 			deployed.add_to_group("online_deployed", true)
 		if "owner_player" in deployed:
 			deployed.owner_player = NetworkManager.find_actor(owner_actor_id) if NetworkManager.is_online() else player_ref
+		if "initial_forward" in deployed:
+			deployed.initial_forward = deployment_forward
+		if "lifetime_seconds" in deployed:
+			deployed.lifetime_seconds = deployed_lifetime
 		var world = get_tree().current_scene
 		# Set the future parent-local position before _ready() runs. One-shot
 		# deployables such as grenades resolve their effect immediately in _ready.
@@ -441,7 +477,17 @@ func _spawn_deployed(deploy_pos: Vector3, deployed_id: int, owner_actor_id: int)
 		if pscale.x != 0.0 and pscale.y != 0.0 and pscale.z != 0.0:
 			deployed.scale = Vector3(1.0 / pscale.x, 1.0 / pscale.y, 1.0 / pscale.z)
 		deployed.add_to_group("deployed_trap")
-		_schedule_deployed_cleanup(deployed)
+		# Most deployables use the generic item lifetime. The decoy owns an
+		# authoritative lifetime so its final pop is synchronized and cannot race
+		# a second queue_free timer on each peer.
+		if not (deployed.has_method("manages_deployed_lifetime") \
+				and deployed.manages_deployed_lifetime()):
+			_schedule_deployed_cleanup(deployed)
+
+func _remember_deployment_forward(direction: Vector3) -> void:
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	if flat.length() > 0.01:
+		deployment_forward = flat.normalized()
 
 func _hide_after_use() -> void:
 	visible = false
@@ -480,6 +526,8 @@ func _schedule_respawn():
 	if NetworkManager.is_online():
 		return
 	await get_tree().create_timer(respawn_after_deploy_time).timeout
+	if overtime_disabled:
+		return
 	if reroll_on_respawn and _respawn_as_random_item():
 		return  # replaced by a fresh random item; this node is freed
 	global_position = spawn_position
@@ -522,6 +570,7 @@ func _update_pickup_label():
 		$PickupLabel.visible = not is_held and not is_in_flight and visible
 
 func reset_to_spawn():
+	overtime_disabled = false
 	if is_held:
 		drop()
 	is_in_flight = false
@@ -536,3 +585,24 @@ func reset_to_spawn():
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	_update_pickup_label()
+
+func disable_for_overtime() -> void:
+	overtime_disabled = true
+	_drop_token += 1
+	if is_held:
+		var holder = player_ref
+		var scene_tree := get_tree()
+		var world := scene_tree.current_scene if scene_tree != null else null
+		if world != null and get_parent() != world:
+			reparent(world, true)
+		if holder != null and holder.has_method("clear_item_slot"):
+			holder.clear_item_slot(self)
+	player_ref = null
+	is_held = false
+	is_in_flight = false
+	_hide_after_use()
+
+func preserve_held_for_standard_overtime() -> void:
+	# The held item stays usable, but consuming or dropping it must never start
+	# another ground-spawn cycle during this overtime.
+	overtime_disabled = true

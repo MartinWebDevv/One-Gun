@@ -24,3 +24,10 @@ shape = SubResource("CapsuleShape3D_vcqqu")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1034187409]
 mesh = SubResource("SphereMesh_wh0le")
 surface_material_override/0 = SubResource("StandardMaterial3D_6cuax")
+
+[node name="PowerupName" type="Label3D" parent="."]
+position = Vector3(0, 0.72, 0)
+billboard = 1
+text = "Extra Dash"
+font_size = 40
+outline_size = 10

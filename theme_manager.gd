@@ -28,28 +28,47 @@ const TEXT_WHITE   = Color(1.000, 1.000, 1.000)
 const TEXT_DIM     = Color(0.608, 0.639, 0.761)
 const BORDER       = Color(0.200, 0.220, 0.380)
 
+# Menu-redesign semantic colors (docs/design/menu_redesign concepts).
+const ACCENT_PURPLE = Color(0.541, 0.310, 0.847)  # secondary selection / Player Settings
+const INFO_BLUE     = Color(0.180, 0.435, 0.816)  # informational / network states
+const TEXT_CREAM    = Color(0.953, 0.914, 0.812)  # primary text on cabinet faces
+const GOLD_EDGE     = Color(0.478, 0.322, 0.000)  # dark edge of layered gold rims
+
 var game_theme: Theme = null
 
+# Font weights built from the Fredoka VARIABLE font (the old code looked for
+# Fredoka-Bold.ttf, which doesn't exist — so no custom weighting ever loaded).
+var font_med: FontVariation = null    # wght 500 — body/UI default
+var font_bold: FontVariation = null   # wght 700 — headings, values, names
+
+const FONT_PATH := "res://fonts/Fredoka-VariableFont_wdth,wght.ttf"
+
 func _ready():
+	_build_fonts()
 	game_theme = _build_theme()
-	var err = ResourceSaver.save(game_theme, "res://one_gun_theme.tres")
-	if err != OK:
-		push_warning("ThemeManager: could not save theme — " + str(err))
+	# Packaged builds only need the in-memory theme; res:// is commonly read-only.
+	if Engine.is_editor_hint():
+		var err = ResourceSaver.save(game_theme, "res://one_gun_theme.tres")
+		if err != OK:
+			push_warning("ThemeManager: could not save generated theme: " + str(err))
+
+func _build_fonts():
+	if not ResourceLoader.exists(FONT_PATH):
+		push_warning("ThemeManager: font not found: " + FONT_PATH)
+		return
+	var base: Font = load(FONT_PATH)
+	font_med = FontVariation.new()
+	font_med.base_font = base
+	font_med.variation_opentype = {"wght": 500}
+	font_bold = FontVariation.new()
+	font_bold.base_font = base
+	font_bold.variation_opentype = {"wght": 700}
 
 func _build_theme() -> Theme:
 	var t = Theme.new()
 
-	# -- Load font --
-	# Drop a .ttf into res://fonts/ and update this path.
-	# Falls back to Godot default font if not found.
-	var font: Font = null
-	if ResourceLoader.exists("res://fonts/Fredoka-Bold.ttf"):
-		font = load("res://fonts/Fredoka-Bold.ttf")
-	elif ResourceLoader.exists("res://fonts/Nunito-ExtraBold.ttf"):
-		font = load("res://fonts/Nunito-ExtraBold.ttf")
-
-	if font != null:
-		t.default_font = font
+	if font_med != null:
+		t.default_font = font_med
 	t.default_font_size = 15
 
 	# ---- Label ----
@@ -58,12 +77,12 @@ func _build_theme() -> Theme:
 	t.set_constant("shadow_offset_x", "Label", 1)
 	t.set_constant("shadow_offset_y", "Label", 1)
 
-	# ---- Button ----
-	var btn_normal   = _make_stylebox_flat(BG_PANEL,                  BORDER,      6, 2)
-	var btn_hover    = _make_stylebox_flat(BG_PANEL.lightened(0.12),  ACCENT_GOLD, 6, 2)
-	var btn_pressed  = _make_stylebox_flat(ACCENT_GOLD.darkened(0.2), ACCENT_GOLD, 6, 2)
-	var btn_focus    = _make_stylebox_flat(BG_PANEL,                  ACCENT_CYAN, 6, 2)
-	var btn_disabled = _make_stylebox_flat(BG_DARK.darkened(0.1),     BORDER,      6, 1)
+	# ---- Button ---- (chunky playful-arcade: bigger radius, brighter hover)
+	var btn_normal   = _make_stylebox_flat(BG_PANEL,                  BORDER,      10, 2)
+	var btn_hover    = _make_stylebox_flat(BG_PANEL.lightened(0.18),  ACCENT_GOLD, 10, 2)
+	var btn_pressed  = _make_stylebox_flat(ACCENT_GOLD.darkened(0.2), ACCENT_GOLD, 10, 2)
+	var btn_focus    = _make_stylebox_flat(BG_PANEL,                  ACCENT_CYAN, 10, 2)
+	var btn_disabled = _make_stylebox_flat(BG_DARK.darkened(0.1),     BORDER,      10, 1)
 
 	t.set_stylebox("normal",   "Button", btn_normal)
 	t.set_stylebox("hover",    "Button", btn_hover)
@@ -159,3 +178,65 @@ static func cyan()     -> Color: return Color(0.000, 0.898, 1.000)
 static func danger()   -> Color: return Color(1.000, 0.294, 0.294)
 static func positive() -> Color: return Color(0.478, 1.000, 0.431)
 static func dim()      -> Color: return Color(0.608, 0.639, 0.761)
+
+# ============================================================
+# UI kit — the shared building blocks every HUD widget and menu
+# uses so the whole game speaks one visual language.
+# ============================================================
+
+# Chunky rounded panel with a soft drop shadow.
+func panel(bg: Color, border_col: Color, radius: int = 10, border_w: int = 2) -> StyleBoxFlat:
+	var s = _make_stylebox_flat(bg, border_col, radius, border_w)
+	s.shadow_color = Color(0, 0, 0, 0.35)
+	s.shadow_size = 4
+	s.shadow_offset = Vector2(0, 2)
+	return s
+
+# Fully-rounded pill (feed entries, status chips, weapon readouts).
+func pill(bg: Color, border_col: Color = Color.TRANSPARENT, border_w: int = 0) -> StyleBoxFlat:
+	var s = _make_stylebox_flat(bg, border_col, 999, border_w)
+	s.content_margin_left = 12
+	s.content_margin_right = 12
+	s.content_margin_top = 4
+	s.content_margin_bottom = 4
+	return s
+
+# Bold heading label with shadow, in the accent color.
+func heading(text: String, size: int, color: Color = ACCENT_GOLD) -> Label:
+	var l = Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	if font_bold != null:
+		l.add_theme_font_override("font", font_bold)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	l.add_theme_constant_override("shadow_offset_x", 2)
+	l.add_theme_constant_override("shadow_offset_y", 2)
+	return l
+
+# Make an existing label bold (values, names).
+func embolden(l: Label) -> Label:
+	if font_bold != null:
+		l.add_theme_font_override("font", font_bold)
+	return l
+
+# The standard "pop" — scale-punch from the node's center. All HUD juice goes
+# through this so motion feels consistent everywhere.
+func punch(node: CanvasItem, amount: float = 1.25, dur: float = 0.18) -> void:
+	if node == null or not is_instance_valid(node) or not node.is_inside_tree():
+		return
+	if node is Control:
+		node.pivot_offset = node.size * 0.5
+	node.scale = Vector2.ONE * amount
+	var tw = node.create_tween()
+	tw.tween_property(node, "scale", Vector2.ONE, dur).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+# The standard blink — modulate flash to a color and back.
+func flash(node: CanvasItem, color: Color, dur: float = 0.25) -> void:
+	if node == null or not is_instance_valid(node) or not node.is_inside_tree():
+		return
+	var accessibility = get_node_or_null("/root/AccessibilityManager")
+	if accessibility != null and not accessibility.allow_flash(): return
+	node.modulate = color
+	var tw = node.create_tween()
+	tw.tween_property(node, "modulate", Color.WHITE, dur)

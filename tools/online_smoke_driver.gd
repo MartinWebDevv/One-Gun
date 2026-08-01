@@ -33,6 +33,9 @@ func _detach_and_run() -> void:
 	GameConfig.rounds_per_set = 2
 	GameConfig.sets_per_match = 1
 	GameConfig.bot_configs = [{"difficulty": "hard", "team_id": -1}] if test_mode == "online_bots" else []
+	if test_mode == "overtime":
+		GameConfig.round_time_limit = 0.25
+		GameConfig.chaos_overtime_enabled = false
 	if test_mode == "join_timeout":
 		await _run_join_timeout_smoke()
 		return
@@ -66,6 +69,9 @@ func _detach_and_run() -> void:
 		return
 	if test_mode == "online_bots":
 		await _run_online_bot_checks()
+		return
+	if test_mode == "overtime":
+		await _run_online_overtime_checks()
 		return
 	if role == "host":
 		await _run_host_checks()
@@ -206,6 +212,35 @@ func _online_bot():
 		if "is_bot" in actor and actor.is_bot:
 			return actor
 	return null
+
+func _run_online_overtime_checks() -> void:
+	var scene := get_tree().current_scene
+	var rm = scene.get_node_or_null("RoundManager") if scene != null else null
+	if rm == null or not await _wait_for(func(): return rm.overtime_active, "online overtime transition"):
+		return
+	if rm._storm_wall == null or rm._storm_wall.name != "OvertimeFireField":
+		_fail("online overtime did not create the filled fire field")
+		return
+	var local_actor = NetworkManager.find_net_player(NetworkManager.local_id())
+	if local_actor == null:
+		_fail("online overtime has no local actor for warning validation")
+		return
+	local_actor.global_position = rm._overtime_center + Vector3(rm._current_storm_radius() + 2.0, 25.0, 0.0)
+	if not await _wait_for(func():
+		var warning: Dictionary = rm.get_fire_warning(local_actor)
+		return bool(warning.get("active", false))
+	, "height-independent online fire warning"):
+		return
+	var online_hud = scene.get_node_or_null("OnlineHUD")
+	var warning_panel = online_hud.match_hud.get_node_or_null("FireExposureWarning") \
+		if online_hud != null else null
+	if warning_panel == null or not await _wait_for(
+			func(): return warning_panel.visible,
+			"online HUD local fire countdown"):
+		return
+	local_actor.global_position = rm._overtime_center
+	print("ONLINE_OVERTIME_PASS " + role)
+	get_tree().quit()
 
 func _run_online_bot_checks() -> void:
 	var bot = _online_bot()
@@ -449,7 +484,13 @@ func _run_host_checks() -> void:
 	gun._server_try_pickup(1, rm.online_round_epoch)
 	await get_tree().create_timer(0.35).timeout
 	if not gun.is_held or gun.player_ref != host_player:
-		_fail("authoritative pickup did not replicate locally")
+		_fail("authoritative pickup did not replicate locally "
+			+ "(distance=%.2f gun=%s player=%s lock_timer=%.2f)" % [
+				host_player.global_position.distance_to(gun.global_position),
+				gun.global_position,
+				host_player.global_position,
+				float(gun.disarm_lock_timer),
+			])
 		return
 	host_player.get_node("AimPivot/SpringArm3D").rotation.x = -1.2
 	victim.grant_bullet_immunity(5.0)
@@ -542,7 +583,7 @@ func _run_host_item_powerup_checks(rm, host_player, victim) -> bool:
 	var test_spawn_position: Vector3 = original.spawn_position
 	var test_spawn_rotation: Vector3 = original.spawn_rotation
 	rm._net_replace_online_item.rpc(test_item_id, "smoke_bomb", test_spawn_position, test_spawn_rotation, test_spawn_id)
-	rm._net_respawn_online_powerup.rpc(int(powerups[0].online_powerup_id), "second_wind")
+	rm._net_respawn_online_powerup.rpc(int(powerups[0].online_powerup_id), "extra_life")
 	await get_tree().create_timer(0.2).timeout
 	var item = rm._online_item(test_item_id)
 	var powerup = rm._online_powerup(int(powerups[0].online_powerup_id))
@@ -603,7 +644,7 @@ func _run_host_item_powerup_checks(rm, host_player, victim) -> bool:
 		await get_tree().create_timer(0.15).timeout
 		var loose_item = loose_items[0]
 		var magnet_start: Vector3 = host_player.global_position + Vector3(3.0, 0.0, 0.0)
-		rm.broadcast_online_item_action(int(loose_item.online_item_id), "move", {"position": magnet_start})
+		rm.broadcast_online_item_move(int(loose_item.online_item_id), magnet_start)
 		var before_distance: float = loose_item.global_position.distance_to(host_player.global_position)
 		rm._server_online_magnet_pull(1, int(host_player.actor_id))
 		await get_tree().process_frame
@@ -662,7 +703,14 @@ func _run_client_checks() -> void:
 				saw_powerup_collect = saw_powerup_collect or online_powerup.collected
 		var local_player = NetworkManager.find_net_player(NetworkManager.local_id())
 		if local_player != null:
-			saw_second_wind_survival = saw_second_wind_survival or local_player.bullet_immune_timer > 1.0
+			saw_second_wind_survival = saw_second_wind_survival or local_player.lethal_immunity_timer > 0.0
+			var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+			var local_state: Dictionary = rm.online_actor_state.get(int(local_player.actor_id), {}) if rm != null else {}
+			if bool(local_state.get("alive", false)) and not local_player.is_eliminated:
+				var local_camera: Camera3D = local_player.get_node("AimPivot/SpringArm3D/Camera3D")
+				if not local_player.visible or local_player.get("_spectator") != null or not local_camera.current:
+					_fail("client actor was authoritative-alive but remained hidden or in spectator camera state")
+					return
 		if local_player != null and scene != null and scene.scene_file_path == test_map:
 			var hud = scene.get_node_or_null("OnlineHUD")
 			if hud == null or hud.player != local_player:
@@ -699,7 +747,7 @@ func _verify_online_pause_menu(expect_return_to_lobby: bool) -> bool:
 	return true
 
 func _has_button_text(node: Node, button_text: String) -> bool:
-	if node is Button and node.text == button_text:
+	if node is Button and str(node.text).to_lower().contains(button_text.to_lower()):
 		return true
 	for child in node.get_children():
 		if _has_button_text(child, button_text):

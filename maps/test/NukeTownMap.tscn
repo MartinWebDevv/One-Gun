@@ -259,16 +259,18 @@ size = Vector3(0.2, 0.49798584, 0.2)
 [node name="Gun" parent="." unique_id=1257422070 instance=ExtResource("1_2jrbx")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 
-[node name="MeleeWeapon" parent="." unique_id=1665878362 instance=ExtResource("2_id0bc")]
+[node name="MeleeSpawnPoints" type="Node3D" parent="."]
+
+[node name="MeleeSpawn0" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1665878362 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.577026, 0.23999846, 24.220407)
 
-[node name="MeleeWeapon2" parent="." unique_id=1064956204 instance=ExtResource("2_id0bc")]
+[node name="MeleeSpawn1" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1064956204 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -37.489902, 0.24000037, -6.742014)
 
-[node name="MeleeWeapon3" parent="." unique_id=1891981213 instance=ExtResource("2_id0bc")]
+[node name="MeleeSpawn2" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1891981213 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.755626, 0.24000037, 33.734978)
 
-[node name="MeleeWeapon4" parent="." unique_id=1177120052 instance=ExtResource("2_id0bc")]
+[node name="MeleeSpawn3" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1177120052 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.078432, 0.23999846, -11.4604225)
 
 [node name="player1" parent="." unique_id=1526157025 instance=ExtResource("1_1djch")]
@@ -280,29 +282,35 @@ input_prefix = "p2"
 is_player2 = true
 use_gamepad_look = true
 
-[node name="SpawnPoint1" type="Marker3D" parent="." unique_id=1340477506 groups=["bot_spawn_point"]]
+[node name="SpawnPoint1" type="Marker3D" parent="." unique_id=1340477506 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36.903, 0, 53.52887)
 
-[node name="SpawnPoint2" type="Marker3D" parent="." unique_id=960840662 groups=["bot_spawn_point"]]
+[node name="SpawnPoint2" type="Marker3D" parent="." unique_id=960840662 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36.903, 0, -19.336723)
 
-[node name="SpawnPoint3" type="Marker3D" parent="." unique_id=167749315 groups=["bot_spawn_point"]]
+[node name="SpawnPoint3" type="Marker3D" parent="." unique_id=167749315 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.102215, 0, 53.52887)
 
-[node name="SpawnPoint4" type="Marker3D" parent="." unique_id=1840129162 groups=["bot_spawn_point"]]
+[node name="SpawnPoint4" type="Marker3D" parent="." unique_id=1840129162 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.611038, 0, -6.7269783)
 
-[node name="SpawnPoint5" type="Marker3D" parent="." unique_id=1550421411 groups=["bot_spawn_point"]]
+[node name="SpawnPoint5" type="Marker3D" parent="." unique_id=1550421411 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.636335, 0, -27.816208)
 
-[node name="SpawnPoint6" type="Marker3D" parent="." unique_id=1211565870 groups=["bot_spawn_point"]]
+[node name="SpawnPoint6" type="Marker3D" parent="." unique_id=1211565870 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44.970543, 0, 14.6473465)
 
-[node name="SpawnPoint7" type="Marker3D" parent="." unique_id=1268981872 groups=["bot_spawn_point"]]
+[node name="SpawnPoint7" type="Marker3D" parent="." unique_id=1268981872 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.83651, 0, 44.281673)
 
-[node name="SpawnPoint8" type="Marker3D" parent="." unique_id=1332148172 groups=["bot_spawn_point"]]
+[node name="SpawnPoint8" type="Marker3D" parent="." unique_id=1332148172 groups=["bot_spawn_point", "spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33.59548, 0, 49.581783)
+
+[node name="SpawnPoint9" type="Marker3D" parent="." groups=["bot_spawn_point", "spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0, 0, 48.0)
+
+[node name="SpawnPoint10" type="Marker3D" parent="." groups=["bot_spawn_point", "spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.0, 0, -24.0)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=665257488]
 

@@ -112,6 +112,19 @@ func _physics_process(delta: float) -> void:
 
 func _check_hits() -> void:
 	for body in $Area3D.get_overlapping_bodies():
+		if body.is_in_group("combat_decoy"):
+			if _hit_bodies.has(body):
+				continue
+			if body.has_method("can_be_affected_by") and not body.can_be_affected_by(_thrower):
+				continue
+			_hit_bodies[body] = true
+			if body.has_method("pop_from_attack"):
+				body.pop_from_attack(_thrower, "boomerang")
+			if NetworkManager.is_online():
+				_server_consume_online()
+			else:
+				_consume()
+			return
 		if not body.is_in_group("player"):
 			continue
 		if body == _thrower:
@@ -138,7 +151,10 @@ func _strike(body: Node3D) -> void:
 	if "holding_gun" in body and body.holding_gun:
 		var has_shield: bool = "melee_disarm_shields" in body and body.melee_disarm_shields > 0
 		if has_shield:
-			body.melee_disarm_shields -= 1
+			if body.has_method("consume_sticky_hands"):
+				body.consume_sticky_hands()
+			else:
+				body.melee_disarm_shields -= 1
 		else:
 			var hold = body.get_hold_point()
 			if hold.get_child_count() > 0:

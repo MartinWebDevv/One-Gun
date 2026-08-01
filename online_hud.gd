@@ -13,6 +13,8 @@ var ammo_label: Label = null
 var local_state_label: Label = null
 var inventory_slots: HBoxContainer = null
 var powerup_status: VBoxContainer = null
+var _hit_marker: Control = null
+var _last_banner_text := ""
 
 func _ready() -> void:
 	layer = 10
@@ -42,11 +44,7 @@ func _ready() -> void:
 
 	dash_display = HBoxContainer.new()
 	dash_display.name = "DashCharges"
-	var pip := ColorRect.new()
-	pip.custom_minimum_size = Vector2(97, 14)
-	pip.color = Color.CYAN
-	dash_display.add_child(pip)
-	dash_display.set_script(load("res://dash_charges.gd"))
+	dash_display.set_script(load("res://dash_charges.gd"))   # builds its own styled pips
 	add_child(dash_display)
 
 	banner = Label.new()
@@ -57,11 +55,12 @@ func _ready() -> void:
 	banner.anchor_right = 0.85
 	banner.anchor_top = 0.34
 	banner.anchor_bottom = 0.54
-	banner.add_theme_font_size_override("font_size", 42)
+	banner.add_theme_font_size_override("font_size", 46)
 	banner.add_theme_color_override("font_color", Color(1.0, 0.85, 0.28))
 	banner.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.9))
-	banner.add_theme_constant_override("shadow_offset_x", 3)
-	banner.add_theme_constant_override("shadow_offset_y", 3)
+	banner.add_theme_constant_override("shadow_offset_x", 4)
+	banner.add_theme_constant_override("shadow_offset_y", 4)
+	ThemeManager.embolden(banner)
 	add_child(banner)
 
 	ammo_label = Label.new()
@@ -75,7 +74,9 @@ func _ready() -> void:
 	ammo_label.offset_top = -82
 	ammo_label.offset_bottom = -25
 	ammo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	ammo_label.add_theme_font_size_override("font_size", 25)
+	ammo_label.add_theme_font_size_override("font_size", 18)
+	ammo_label.add_theme_stylebox_override("normal", ThemeManager.pill(Color(0.06, 0.07, 0.12, 0.85), ThemeManager.BORDER, 1))
+	ThemeManager.embolden(ammo_label)
 	add_child(ammo_label)
 
 	local_state_label = Label.new()
@@ -88,8 +89,10 @@ func _ready() -> void:
 	local_state_label.offset_right = 360
 	local_state_label.offset_top = -112
 	local_state_label.offset_bottom = -84
-	local_state_label.add_theme_font_size_override("font_size", 14)
+	local_state_label.add_theme_font_size_override("font_size", 13)
 	local_state_label.modulate = Color(0.85, 0.9, 1.0)
+	local_state_label.add_theme_stylebox_override("normal", ThemeManager.pill(Color(0.06, 0.07, 0.12, 0.7), Color.TRANSPARENT, 0))
+	ThemeManager.embolden(local_state_label)
 	add_child(local_state_label)
 
 	inventory_slots = HBoxContainer.new()
@@ -109,6 +112,18 @@ func _ready() -> void:
 	pause_overlay.name = "PauseMenu"
 	pause_overlay.set_script(load("res://pause_menu.gd"))
 	add_child(pause_overlay)
+
+	# Combat-feedback emissions are already filtered to this machine's own
+	# attacker, so the marker can consume every validated event it hears.
+	var marker_holder := Control.new()
+	marker_holder.name = "HitMarkerHolder"
+	marker_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	marker_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(marker_holder)
+	_hit_marker = Control.new()
+	_hit_marker.name = "HitMarker"
+	_hit_marker.set_script(load("res://hit_marker.gd"))
+	marker_holder.add_child(_hit_marker)   # self-subscribes; filter empty = all
 
 func _make_inventory_slot(slot_name: String) -> Control:
 	var slot := Control.new()
@@ -166,6 +181,22 @@ func _process(_delta: float) -> void:
 		if bool(rm.online_actor_state[actor_id].get("alive", false)):
 			alive += 1
 	match_hud.update_match_state(rm.round_number, rm.set_number, alive, rm.online_actor_state.size())
+	if match_hud.has_method("update_round_timer"):
+		match_hud.update_round_timer(rm.get_round_timer_text(), rm.overtime_active)
+	if match_hud.has_method("update_fire_warning"):
+		match_hud.update_fire_warning(rm.get_fire_warning(player))
+	# Slam the banner in whenever the announcement changes (countdown ticks,
+	# GO!, round winners) — color-coded: GO green, countdown white, rest gold.
+	if rm.online_announcement != _last_banner_text:
+		_last_banner_text = rm.online_announcement
+		if _last_banner_text != "":
+			if _last_banner_text == "GO!":
+				banner.add_theme_color_override("font_color", ThemeManager.POSITIVE)
+			elif _last_banner_text.is_valid_int():
+				banner.add_theme_color_override("font_color", ThemeManager.TEXT_WHITE)
+			else:
+				banner.add_theme_color_override("font_color", Color(1.0, 0.85, 0.28))
+			ThemeManager.punch(banner, 1.5, 0.28)
 	banner.text = rm.online_announcement
 	banner.visible = rm.online_announcement != ""
 
@@ -185,8 +216,15 @@ func _process(_delta: float) -> void:
 			gun = hold_point.get_child(0)
 	ammo_label.visible = gun != null or melee != null or active_item != null
 	if gun != null:
-		ammo_label.text = "1 / 1" if gun.can_fire else "RELOADING"
+		if gun.can_fire:
+			ammo_label.text = "GUN  •  READY"
+			ammo_label.add_theme_color_override("font_color", ThemeManager.ACCENT_GOLD)
+		else:
+			ammo_label.text = "GUN  •  RELOADING…"
+			ammo_label.add_theme_color_override("font_color", ThemeManager.TEXT_DIM)
 	elif melee != null:
 		ammo_label.text = melee.get_display_name()
+		ammo_label.add_theme_color_override("font_color", ThemeManager.TEXT_WHITE)
 	elif active_item != null:
 		ammo_label.text = active_item.get_display_name() + "  •  THROW"
+		ammo_label.add_theme_color_override("font_color", ThemeManager.ACCENT_CYAN)

@@ -2,11 +2,20 @@ extends HBoxContainer
 
 const PIP_GAP := 6
 const TOTAL_WIDTH := 200.0
+const PIP_HEIGHT := 14.0
 
 var player = null
-var pip_template: ColorRect = null
+var _prev_charges := -1
+var _style_on: StyleBoxFlat = null
+var _style_off: StyleBoxFlat = null
+var _style_extra: StyleBoxFlat = null
 
 func _ready():
+	_style_on = _pip_style(true)
+	_style_off = _pip_style(false)
+	_style_extra = ThemeManager.panel(
+		ThemeManager.ACCENT_GOLD, ThemeManager.ACCENT_GOLD.lightened(0.35), 6, 1)
+	_style_extra.shadow_size = 0
 	anchor_left = 0
 	anchor_top = 1
 	anchor_right = 0
@@ -16,46 +25,92 @@ func _ready():
 	offset_right = 220
 	offset_bottom = -45
 	add_theme_constant_override("separation", PIP_GAP)
-	if get_child_count() > 0 and get_child(0) is ColorRect:
-		pip_template = get_child(0).duplicate()
+	# Any scene-baked / template ColorRect pips are replaced by styled panels.
+	for child in get_children():
+		child.queue_free()
 
 func set_player(p):
 	player = p
+	_prev_charges = -1
 	_rebuild_pips()
+
+func _make_pip() -> Panel:
+	var pip := Panel.new()
+	pip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pip.clip_contents = true
+	pip.add_theme_stylebox_override("panel", _style_off)
+	var fill := ColorRect.new()
+	fill.name = "RechargeFill"
+	fill.color = ThemeManager.ACCENT_CYAN
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fill.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	pip.add_child(fill)
+	return pip
+
+func _pip_style(charged: bool) -> StyleBoxFlat:
+	var s: StyleBoxFlat
+	if charged:
+		s = ThemeManager.panel(ThemeManager.ACCENT_CYAN, ThemeManager.ACCENT_CYAN.lightened(0.4), 6, 1)
+	else:
+		s = ThemeManager.panel(Color(0.05, 0.06, 0.10, 0.6), ThemeManager.BORDER, 6, 1)
+	s.shadow_size = 0
+	return s
 
 func _rebuild_pips():
 	if player == null or not ("max_dash_charges" in player):
 		return
-	if pip_template == null or not is_instance_valid(pip_template):
-		return
-	var target_count = player.max_dash_charges
+	var target_count: int = player.max_dash_charges
+	if "extra_dash_charge" in player:
+		target_count += int(player.extra_dash_charge)
 	while get_child_count() < target_count:
-		var pip = pip_template.duplicate()
-		add_child(pip)
+		add_child(_make_pip())
 	while get_child_count() > target_count:
 		var extra = get_child(get_child_count() - 1)
 		remove_child(extra)
 		extra.queue_free()
-	_resize_pips()
-
-func _resize_pips() -> void:
 	var count := get_child_count()
 	if count <= 0:
 		return
 	var pip_width: float = (TOTAL_WIDTH - float(PIP_GAP * maxi(count - 1, 0))) / float(count)
 	for pip in get_children():
-		if pip is ColorRect:
-			pip.custom_minimum_size = Vector2(pip_width, 14.0)
-			pip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pip.custom_minimum_size = Vector2(pip_width, PIP_HEIGHT)
 
 func _process(_delta):
 	if player == null:
 		return
-	if get_child_count() != player.max_dash_charges:
+	var target_count: int = player.max_dash_charges + int(player.extra_dash_charge if "extra_dash_charge" in player else 0)
+	if get_child_count() != target_count:
 		_rebuild_pips()
+	var charges: int = player.dash_charges
 	for i in get_child_count():
 		var pip = get_child(i)
-		if i < player.dash_charges:
-			pip.color = Color.CYAN
-		else:
-			pip.color = Color(0.2, 0.2, 0.2)
+		if not (pip is Panel):
+			continue
+		var fill := pip.get_node_or_null("RechargeFill") as ColorRect
+		var is_extra: bool = i >= player.max_dash_charges
+		var is_full := i < charges or is_extra
+		var fill_amount := 0.0
+		# Only the first empty base pip receives recharge progress. All later
+		# pips stay empty until it locks in, producing a left-to-right sequence.
+		if not is_full and i == charges and charges < player.max_dash_charges:
+			if player.has_method("get_dash_recharge_progress"):
+				fill_amount = player.get_dash_recharge_progress()
+			else:
+				fill_amount = clampf(float(player.dash_recharge_timer) / 3.0, 0.0, 1.0)
+		pip.add_theme_stylebox_override(
+			"panel", _style_extra if is_extra else (_style_on if is_full else _style_off))
+		pip.set_meta("recharge_fill", 1.0 if is_full else fill_amount)
+		if fill != null:
+			# A fully loaded pip uses its persistent charged panel style. The
+			# overlay exists only for the one partially recharging pip.
+			fill.visible = not is_full and fill_amount > 0.0
+			fill.color = ThemeManager.ACCENT_CYAN
+			fill.position = Vector2.ZERO
+			fill.size = Vector2(pip.size.x * fill_amount, pip.size.y)
+	# Pop the newly-refilled pip; quick flash on the one just spent.
+	if _prev_charges >= 0 and charges != _prev_charges:
+		if charges > _prev_charges and charges - 1 < get_child_count() and charges >= 1:
+			ThemeManager.punch(get_child(charges - 1), 1.45)
+		elif charges < _prev_charges and charges < get_child_count():
+			ThemeManager.flash(get_child(charges), Color(1, 1, 1, 0.3), 0.2)
+	_prev_charges = charges

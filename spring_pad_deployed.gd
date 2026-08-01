@@ -16,12 +16,17 @@ func _ready() -> void:
 	queue_free()
 
 func _on_body_entered(body: Node3D) -> void:
-	if not body.is_in_group("player"):
+	if not body.is_in_group("combat_target"):
 		return
 	var now := Time.get_ticks_msec()
 	if _cooldowns.has(body) and now - _cooldowns[body] < 500:
 		return
 	_cooldowns[body] = now
+	if body.is_in_group("combat_decoy"):
+		if body.has_method("apply_launch"):
+			body.apply_launch(launch_velocity)
+		_play_bounce_visual()
+		return
 	if NetworkManager.is_online():
 		if multiplayer.is_server():
 			var rm = get_tree().current_scene.get_node_or_null("RoundManager")

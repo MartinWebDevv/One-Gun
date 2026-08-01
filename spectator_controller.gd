@@ -18,6 +18,7 @@ enum Mode { FOLLOW, FREE }
 const FREE_CAM_SPEED     = 12.0
 const FREE_CAM_FAST_MULT = 3.0
 const FREE_CAM_SENS      = 0.003
+const FREE_CAM_COLLISION_RADIUS = 0.25
 
 var _player: CharacterBody3D = null
 var _input_prefix: String = "p1"
@@ -110,7 +111,19 @@ func _set_mode(mode: Mode):
 		if _follow_targets.size() > 0:
 			var target = _follow_targets[_follow_index]
 			_free_cam_pivot.global_position = target.global_position + Vector3(0, 2.5, 0)
+	_activate_camera_online()
 	_update_ui()
+
+# Online has no splitscreen manager polling get_camera() to drive the viewport,
+# so the spectator must make its own camera current — otherwise the view stays
+# frozen on the dead player's camera. Local play is untouched (the splitscreen
+# manager keeps owning viewport cameras there).
+func _activate_camera_online():
+	if not NetworkManager.is_online():
+		return
+	var cam := get_spectator_camera()
+	if cam != null and is_instance_valid(cam) and not cam.current:
+		cam.make_current()
 
 func _update_ui():
 	if _mode_label == null:
@@ -137,7 +150,7 @@ func get_spectator_camera() -> Camera3D:
 	return _free_cam
 
 func _input(event):
-	if _player == null:
+	if _player == null or PauseManager.is_pause_open():
 		return
 
 	if event.is_action_pressed(_input_prefix + "_jump"):
@@ -171,14 +184,19 @@ func _cycle_target(direction: int):
 	_follow_index = (_follow_index + direction) % _follow_targets.size()
 	if _follow_index < 0:
 		_follow_index += _follow_targets.size()
+	_activate_camera_online()
 	_update_ui()
 
 func _process(delta):
-	if _player == null:
+	if _player == null or PauseManager.is_pause_open():
 		return
 
 	if _mode == Mode.FOLLOW:
 		_refresh_follow_targets()
+		# Re-activate every frame online: the followed target may have died and
+		# the refreshed index now points at a different player's camera. No-op
+		# when the right camera is already current.
+		_activate_camera_online()
 		_update_ui()
 		return
 
@@ -222,11 +240,34 @@ func _process(delta):
 		move.y -= 1.0
 
 	if move.length() > 0.01:
-		_free_cam_pivot.global_position += move.normalized() * speed * delta
+		_move_free_camera(move.normalized() * speed * delta)
+
+func _move_free_camera(motion: Vector3) -> void:
+	if _free_cam_pivot == null or motion.is_zero_approx():
+		return
+	var sphere := SphereShape3D.new()
+	sphere.radius = FREE_CAM_COLLISION_RADIUS
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.transform = Transform3D(Basis(), _free_cam_pivot.global_position)
+	query.motion = motion
+	query.collision_mask = 1
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	var cast_result := _free_cam_pivot.get_world_3d().direct_space_state.cast_motion(query)
+	var safe_fraction := float(cast_result[0]) if cast_result.size() > 0 else 1.0
+	_free_cam_pivot.global_position += motion * clampf(safe_fraction, 0.0, 1.0)
 
 func cleanup():
+	# Stop immediately rather than waiting for queue_free() at frame end. Without
+	# this, one final spectator _process() can make the followed host camera
+	# current again after respawn() has reclaimed the local player's camera.
+	set_process(false)
+	set_process_input(false)
+	_player = null
 	if _free_cam_pivot != null and is_instance_valid(_free_cam_pivot):
 		_free_cam_pivot.queue_free()
 	if _mode_label != null and is_instance_valid(_mode_label):
+		_mode_label.visible = false
 		_mode_label.queue_free()
 	queue_free()

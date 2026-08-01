@@ -2,14 +2,15 @@ extends HBoxContainer
 
 var player = null
 
-const COLOR_ACTIVE = Color(0.2, 1.0, 1.0, 1.0)
-const COLOR_OWNED_INACTIVE = Color(0.5, 0.5, 0.2, 0.8)
-const COLOR_EMPTY = Color(0.15, 0.15, 0.15, 0.6)
-
 # Mirrors character_body_3d.gd's INTERACT_HOLD_DROP_TIME — GDScript consts
 # aren't reliably readable via "in"/get() on an instance, so this is kept in
 # sync by hand. Update both if the hold duration changes.
 const INTERACT_HOLD_DROP_TIME = 0.5
+
+var _style_active: StyleBoxFlat = null
+var _style_owned: StyleBoxFlat = null
+var _style_empty: StyleBoxFlat = null
+var _slot_active_state := {}   # slot node -> bool (for pop-on-activate)
 
 func _ready():
 	anchor_left = 0.5
@@ -21,9 +22,38 @@ func _ready():
 	offset_top = -90
 	offset_bottom = -20
 	add_theme_constant_override("separation", 12)
-	$WeaponSlot/Icon.visible = false
-	$ItemSlot/Icon.visible = false
-	$ItemSlot2/Icon.visible = false
+
+	# Kit card styles: gold-bordered when active, subtle when owned, faint when empty.
+	_style_active = ThemeManager.panel(Color(0.14, 0.16, 0.27, 0.92), ThemeManager.ACCENT_GOLD, 10, 2)
+	_style_owned = ThemeManager.panel(Color(0.10, 0.11, 0.19, 0.85), ThemeManager.BORDER, 10, 1)
+	_style_empty = ThemeManager.panel(Color(0.05, 0.06, 0.10, 0.45), Color(ThemeManager.BORDER.r, ThemeManager.BORDER.g, ThemeManager.BORDER.b, 0.35), 10, 1)
+
+	for slot in [$WeaponSlot, $ItemSlot, $ItemSlot2]:
+		slot.get_node("Icon").visible = false
+		# Swap the flat ColorRect background for a styled rounded card.
+		var bg = slot.get_node_or_null("Background")
+		if bg != null:
+			bg.visible = false
+		var card = Panel.new()
+		card.name = "StyledBg"
+		card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		card.add_theme_stylebox_override("panel", _style_empty)
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(card)
+		slot.move_child(card, 0)
+		var name_label = slot.get_node_or_null("NameLabel")
+		if name_label != null:
+			name_label.add_theme_font_size_override("font_size", 13)
+			ThemeManager.embolden(name_label)
+		var hold_bar = slot.get_node_or_null("HoldBar")
+		if hold_bar != null:
+			var hb_bg = ThemeManager.panel(Color(0, 0, 0, 0.5), Color.TRANSPARENT, 3, 0)
+			hb_bg.shadow_size = 0
+			var hb_fill = ThemeManager.panel(ThemeManager.ACCENT_GOLD, Color.TRANSPARENT, 3, 0)
+			hb_fill.shadow_size = 0
+			hold_bar.add_theme_stylebox_override("background", hb_bg)
+			hold_bar.add_theme_stylebox_override("fill", hb_fill)
+		_slot_active_state[slot] = false
 
 func set_player(p):
 	player = p
@@ -63,12 +93,20 @@ func _process(_delta):
 		$ItemSlot2/NameLabel.text = ""
 
 func _update_slot(slot: Control, has_item: bool, is_active: bool):
-	if has_item and is_active:
-		slot.get_node("Background").color = COLOR_ACTIVE
-	elif has_item:
-		slot.get_node("Background").color = COLOR_OWNED_INACTIVE
-	else:
-		slot.get_node("Background").color = COLOR_EMPTY
+	var card = slot.get_node_or_null("StyledBg")
+	if card != null:
+		if has_item and is_active:
+			card.add_theme_stylebox_override("panel", _style_active)
+		elif has_item:
+			card.add_theme_stylebox_override("panel", _style_owned)
+		else:
+			card.add_theme_stylebox_override("panel", _style_empty)
+	# Pop the slot when it becomes the active one.
+	var was_active: bool = _slot_active_state.get(slot, false)
+	var now_active := has_item and is_active
+	if now_active and not was_active:
+		ThemeManager.punch(slot, 1.15)
+	_slot_active_state[slot] = now_active
 
 	var hold_bar = slot.get_node_or_null("HoldBar")
 	if hold_bar == null:

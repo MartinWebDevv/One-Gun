@@ -20,7 +20,8 @@ shape = SubResource("CapsuleShape3D_r3fl7")
 
 [node name="SpringArm3D" type="SpringArm3D" parent="AimPivot" unique_id=1000966572]
 transform = Transform3D(1, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0.6596317, 1.6743513, -0.5467267)
-collision_mask = 0
+collision_mask = 1
+margin = 0.15
 spring_length = 4.0
 
 [node name="Camera3D" type="Camera3D" parent="AimPivot/SpringArm3D" unique_id=1994487957]

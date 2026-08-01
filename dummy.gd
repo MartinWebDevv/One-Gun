@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const ProtectionIconFactory = preload("res://protection_icon_factory.gd")
+
 # Online bots are spawned on every peer, but only peer 1 (the host) runs AI
 # and physics.  Clients receive a lightweight puppet through NetSync.
 var is_online := false
@@ -9,12 +11,16 @@ var owner_peer_id := 1
 var online_display_name := "Bot"
 var _is_online_authority := true
 var _online_name_tag: Label3D = null
+var _extra_life_icon: Sprite3D = null
+var _sticky_hands_icon: Sprite3D = null
+var _friendly_indicator: Label3D = null
 
 @export_enum("easy", "medium", "hard", "expert") var ai_difficulty := "easy"
 @export var arrive_distance := 1.0
 @export var melee_range := 2.0
 @export var is_bot := true
 @export var team_id := -1
+@export var dash_recharge_time := 3.0
 
 const KNOCKBACK_DURATION = 0.2
 const BASE_MOVE_SPEED := 3.0
@@ -29,6 +35,8 @@ const DASH_SPEED := 28.0
 const DASH_DURATION := 0.18
 const DASH_RECHARGE_TIME := 3.0
 const MAX_DASH_CHARGES := 2
+const BASE_GRAVITY := 9.8
+const NAV_PATH_HEIGHT_OFFSET := 1.0
 
 const ITEM_THROW_RANGE_EASY    := 999.0
 const ITEM_THROW_RANGE_MEDIUM  := 12.0
@@ -142,6 +150,7 @@ var knockback_velocity = Vector3.ZERO
 var knockback_timer = 0.0
 var stagger_timer = 0.0
 var bullet_immune_timer = 0.0
+var lethal_immunity_timer = 0.0
 
 var melee_disarm_shields = 0
 var slow_timer = 0.0
@@ -153,11 +162,22 @@ var is_dashing := false
 var dash_timer := 0.0
 var dash_velocity := Vector3.ZERO
 var dash_cooldown := 0.0
+var extra_dash_charge := 0
 
 var item_throw_cooldown := 0.0
 
 var active_powerup_order: Array = []
 var magnet_timer := 0.0
+var silent_steps_timer := 0.0
+const MAGNET_RADIUS := 4.0
+const MAGNET_PULL_SPEED := 6.0
+var _magnet_area: Area3D = null
+var _online_magnet_request_timer := 0.0
+var _steam_boost_active := false
+var _steam_fast_fall_started := false
+var _steam_boost_origin_y := 0.0
+var _steam_descent_height_gate := 0.0
+var _steam_descent_gravity_multiplier := 1.0
 
 func _enter_tree() -> void:
 	if is_online:
@@ -166,13 +186,19 @@ func _enter_tree() -> void:
 		_build_net_sync()
 
 func _ready():
+	add_to_group("combat_target")
 	_apply_tier_profile()
 	GameEvents.melee_hit_landed.connect(func(hitter_name):
 		if vampire_timer > 0.0 and hitter_name == get_display_name():
 			stamina = minf(stamina + 30.0, MAX_STAMINA)
 	)
-	$NavigationAgent3D.path_desired_distance = 0.8
-	$NavigationAgent3D.target_desired_distance = arrive_distance
+	var nav_agent: NavigationAgent3D = $NavigationAgent3D
+	nav_agent.path_desired_distance = 0.8
+	# Baked floor points sit roughly one metre above the CharacterBody origin.
+	# Offset returned path points to the body's movement plane so the agent can
+	# recognize reached waypoints and continue through the complete path.
+	nav_agent.path_height_offset = NAV_PATH_HEIGHT_OFFSET
+	nav_agent.target_desired_distance = arrive_distance
 	var model_node = get_node_or_null("new guy one gun model orange running")
 	if model_node != null:
 		model_anim_player = model_node.find_child("AnimationPlayer", true, false)
@@ -203,16 +229,65 @@ func _build_net_sync() -> void:
 	add_child(sync)
 
 func _build_online_name_tag() -> void:
+	var viewer = NetworkManager.find_net_player(NetworkManager.local_id())
+	var friendly := viewer != null and GameConfig.teams_enabled \
+		and int(viewer.get("team_id")) >= 0 and int(viewer.get("team_id")) == team_id
 	_online_name_tag = Label3D.new()
 	_online_name_tag.name = "OnlineNameTag"
 	_online_name_tag.position = Vector3(0.0, 2.6, 0.0)
 	_online_name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_online_name_tag.no_depth_test = true
-	_online_name_tag.font_size = 32
+	_online_name_tag.no_depth_test = false
+	_online_name_tag.font_size = 32 if friendly else 38
 	_online_name_tag.outline_size = 8
-	_online_name_tag.modulate = Color(1.0, 0.78, 0.35)
+	_online_name_tag.modulate = Color(0.25, 0.85, 1.0) if friendly else Color(1.0, 0.2, 0.2)
+	_online_name_tag.visibility_range_end = 50.0
+	_online_name_tag.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	_online_name_tag.text = get_display_name()
 	add_child(_online_name_tag)
+	_friendly_indicator = Label3D.new()
+	_friendly_indicator.text = "◆"
+	_friendly_indicator.position = Vector3(0.0, 2.87, 0.0)
+	_friendly_indicator.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_friendly_indicator.no_depth_test = true
+	_friendly_indicator.font_size = 22
+	_friendly_indicator.outline_size = 7
+	_friendly_indicator.modulate = Color(0.2, 0.95, 1.0)
+	_friendly_indicator.visible = friendly
+	add_child(_friendly_indicator)
+	_extra_life_icon = _make_protection_icon(
+		"res://UI/icons/extra_life.svg", Vector3(-0.28, 3.03, 0.0))
+	_sticky_hands_icon = _make_protection_icon(
+		"res://UI/icons/sticky_hands.svg", Vector3(0.28, 3.03, 0.0))
+
+func _make_protection_icon(texture_path: String, at: Vector3) -> Sprite3D:
+	var icon := Sprite3D.new()
+	icon.texture = ProtectionIconFactory.texture_from_svg(texture_path)
+	icon.position = at
+	icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	icon.no_depth_test = false
+	icon.pixel_size = 0.0025
+	icon.visibility_range_end = 50.0
+	icon.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	icon.visible = false
+	add_child(icon)
+	return icon
+
+func _pref_color(key: String, fallback: Color) -> Color:
+	var value = PlayerPrefs.get_setting(key)
+	if value is Array and value.size() >= 4:
+		return Color(float(value[0]), float(value[1]), float(value[2]), float(value[3]))
+	return fallback
+
+func _update_protection_icons() -> void:
+	if _extra_life_icon == null or _sticky_hands_icon == null:
+		return
+	var icon_size := clampf(float(PlayerPrefs.get_setting("protection_icon_size")), 0.5, 2.0)
+	_extra_life_icon.scale = Vector3.ONE * icon_size
+	_sticky_hands_icon.scale = Vector3.ONE * icon_size
+	_extra_life_icon.modulate = _pref_color("extra_life_icon_color", Color(1.0, 0.72, 0.18))
+	_sticky_hands_icon.modulate = _pref_color("sticky_hands_icon_color", Color(0.2, 1.0, 0.35))
+	_extra_life_icon.visible = second_wind_ready and not is_eliminated
+	_sticky_hands_icon.visible = melee_disarm_shields > 0 and not is_eliminated
 
 func _apply_tier_profile():
 	var profile = TIER_PROFILES.get(ai_difficulty, TIER_PROFILES["easy"])
@@ -302,18 +377,28 @@ func _stop_movement_animation():
 # ============================================================
 
 func _physics_process(delta):
+	# Before the puppet early-return so remote copies also show the outline.
+	_update_gun_holder_outline()
+	_update_protection_icons()
 	if bullet_immune_timer > 0.0:
-		bullet_immune_timer -= delta
+		bullet_immune_timer = maxf(bullet_immune_timer - delta, 0.0)
+	if lethal_immunity_timer > 0.0:
+		lethal_immunity_timer = maxf(lethal_immunity_timer - delta, 0.0)
 	if speed_surge_timer > 0.0:
 		speed_surge_timer -= delta
 	if vampire_timer > 0.0:
 		vampire_timer -= delta
 	if magnet_timer > 0.0:
 		magnet_timer = maxf(magnet_timer - delta, 0.0)
+		_magnet_pull(delta)
+	if silent_steps_timer > 0.0:
+		silent_steps_timer = maxf(silent_steps_timer - delta, 0.0)
 
 	if is_online and not _is_online_authority:
 		_update_online_puppet_visuals()
 		return
+	if _steam_boost_active and is_on_floor():
+		_clear_steam_boost()
 
 	if slow_timer > 0.0:
 		slow_timer -= delta
@@ -329,7 +414,7 @@ func _physics_process(delta):
 	_update_dash_recharge(delta)
 
 	if not is_on_floor():
-		velocity.y -= 9.8 * delta
+		_apply_air_gravity(delta)
 	else:
 		velocity.y = 0
 
@@ -371,6 +456,31 @@ func _physics_process(delta):
 	var _desired_h_vel := Vector3(velocity.x, 0, velocity.z)
 	move_and_slide()
 	_try_step_up(_desired_h_vel, delta)
+
+
+func apply_steam_boost(launch_velocity: float, launch_origin_y: float,
+		descent_height_gate: float, descent_gravity_multiplier: float) -> void:
+	velocity.y = maxf(velocity.y, launch_velocity)
+	_steam_boost_active = true
+	_steam_fast_fall_started = false
+	_steam_boost_origin_y = launch_origin_y
+	_steam_descent_height_gate = maxf(descent_height_gate, 0.0)
+	_steam_descent_gravity_multiplier = maxf(descent_gravity_multiplier, 1.0)
+
+
+func _apply_air_gravity(delta: float) -> void:
+	if (_steam_boost_active and not _steam_fast_fall_started
+			and velocity.y <= 0.0
+			and global_position.y >= _steam_boost_origin_y + _steam_descent_height_gate):
+		_steam_fast_fall_started = true
+	var gravity_multiplier: float = (
+		_steam_descent_gravity_multiplier if _steam_fast_fall_started else 1.0)
+	velocity.y -= BASE_GRAVITY * gravity_multiplier * delta
+
+
+func _clear_steam_boost() -> void:
+	_steam_boost_active = false
+	_steam_fast_fall_started = false
 
 # Walk straight over knee-height ledges without jumping - kept in sync by hand
 # with character_body_3d.gd's _try_step_up (bots are a separate controller).
@@ -435,8 +545,7 @@ func _update_stamina(delta):
 		stamina = min(stamina + STAMINA_REGEN_RATE * delta, MAX_STAMINA)
 
 func drain_stamina(amount):
-	stamina -= amount
-	stamina = max(stamina, -999.0)
+	stamina = clampf(stamina - amount, 0.0, MAX_STAMINA)
 	stamina_regen_timer = STAMINA_REGEN_DELAY
 
 func has_stamina():
@@ -451,12 +560,17 @@ func _update_dash_recharge(delta):
 		dash_cooldown -= delta
 	if dash_charges < MAX_DASH_CHARGES:
 		dash_recharge_timer += delta
-		if dash_recharge_timer >= DASH_RECHARGE_TIME:
+		if dash_recharge_timer >= dash_recharge_time:
 			dash_charges += 1
 			dash_recharge_timer = 0.0
 
+func get_dash_recharge_progress() -> float:
+	if dash_charges >= MAX_DASH_CHARGES:
+		return 1.0
+	return clampf(dash_recharge_timer / maxf(dash_recharge_time, 0.01), 0.0, 1.0)
+
 func _update_dash_behavior(delta):
-	if dash_charges <= 0 or dash_cooldown > 0.0 or target_player == null:
+	if (dash_charges <= 0 and extra_dash_charge <= 0) or dash_cooldown > 0.0 or target_player == null:
 		return
 
 	var to_target = target_player.global_position - global_position
@@ -488,8 +602,11 @@ func _execute_dash(direction: Vector3):
 		return
 	dash_velocity = direction.normalized() * DASH_SPEED
 	dash_timer = DASH_DURATION
-	dash_charges -= 1
-	dash_recharge_timer = 0.0
+	if dash_charges > 0:
+		dash_charges -= 1
+	else:
+		extra_dash_charge = 0
+		active_powerup_order.erase("extra_dash")
 	dash_cooldown = 0.8
 	is_dashing = true
 
@@ -537,13 +654,17 @@ func _update_item_behavior(delta):
 # ============================================================
 
 func _update_target():
-	var players = get_tree().get_nodes_in_group("player")
+	var players = get_tree().get_nodes_in_group("combat_target")
 	var closest = null
 	var closest_dist = INF
 	for p in players:
 		if p == self:
 			continue
 		if "is_eliminated" in p and p.is_eliminated:
+			continue
+		if not GameConfig.can_affect(self, p):
+			continue
+		if p.has_method("can_be_affected_by") and not p.can_be_affected_by(self):
 			continue
 		var dist = global_position.distance_to(p.global_position)
 		if dist < closest_dist:
@@ -589,11 +710,13 @@ func _decide_objective(delta):
 				elif best_powerup != null:
 					new_target_pos = best_powerup.global_position
 					new_type = "get_powerup"
+			elif held_item != null and target_player != null:
+				new_target_pos = _get_approach_position(target_player.global_position)
+				new_type = "use_item"
 			elif held_melee_weapon != null:
-				var holder = gun_node.player_ref
-				if holder != null and holder != self:
-					new_target_pos = _get_approach_position(holder.global_position)
-					new_type = "chase_holder"
+				if target_player != null:
+					new_target_pos = _get_approach_position(target_player.global_position)
+					new_type = "chase_target"
 
 	if new_type != current_objective_type:
 		current_objective_type = new_type
@@ -610,7 +733,7 @@ func _find_nearest_powerup() -> Node:
 	var closest = null
 	var closest_dist = INF
 	for pu in powerups:
-		if "is_active" in pu and not pu.is_active:
+		if not pu.visible or bool(pu.get("collected")):
 			continue
 		var dist = global_position.distance_to(pu.global_position)
 		if dist < closest_dist:
@@ -935,25 +1058,122 @@ const SPEED_SURGE_MULT := 1.4
 var vampire_timer := 0.0
 var second_wind_ready := false
 
-func apply_powerup(power_type: String, duration: float):
+func _canonical_powerup_type(power_type: String) -> String:
+	match power_type:
+		"extra_melee_shield":
+			return "sticky_hands"
+		"second_wind":
+			return "extra_life"
+		_:
+			return power_type
+
+func can_collect_powerup(power_type: String) -> bool:
+	match _canonical_powerup_type(power_type):
+		"sticky_hands":
+			return melee_disarm_shields <= 0
+		"extra_life":
+			return not second_wind_ready
+		"extra_dash":
+			return extra_dash_charge <= 0
+		_:
+			return true
+
+func _extend_timed_powerup(current: float, base_duration: float) -> float:
+	if current <= 0.0:
+		return base_duration
+	return minf(current + base_duration * 0.5, base_duration * 2.0)
+
+func apply_powerup(power_type: String, duration: float) -> bool:
+	power_type = _canonical_powerup_type(power_type)
+	if not can_collect_powerup(power_type):
+		return false
 	active_powerup_order.erase(power_type)
 	active_powerup_order.push_front(power_type)
 	match power_type:
-		"extra_melee_shield":
+		"sticky_hands":
 			melee_disarm_shields = 1
 		"extra_dash":
-			if can_dash:
-				dash_charges += 1
+			extra_dash_charge = 1
 		"speed_surge":
-			speed_surge_timer = duration
+			speed_surge_timer = _extend_timed_powerup(speed_surge_timer, duration)
 		"vampire_touch":
-			vampire_timer = duration
-		"second_wind":
+			vampire_timer = _extend_timed_powerup(vampire_timer, duration)
+		"extra_life":
 			second_wind_ready = true
 		"magnet_hands":
-			magnet_timer = duration
+			magnet_timer = _extend_timed_powerup(magnet_timer, duration)
+			_ensure_magnet_area()
+		"silent_steps":
+			silent_steps_timer = _extend_timed_powerup(silent_steps_timer, duration)
 		_:
-			pass  # silent_steps is intentionally a no-op for bots
+			active_powerup_order.erase(power_type)
+			return false
+	return true
+
+func clear_all_powerups() -> void:
+	speed_surge_timer = 0.0
+	vampire_timer = 0.0
+	magnet_timer = 0.0
+	silent_steps_timer = 0.0
+	second_wind_ready = false
+	melee_disarm_shields = 0
+	extra_dash_charge = 0
+	active_powerup_order.clear()
+
+func _ensure_magnet_area() -> void:
+	if _magnet_area != null:
+		return
+	_magnet_area = Area3D.new()
+	_magnet_area.name = "MagnetArea"
+	_magnet_area.collision_layer = 0
+	_magnet_area.set_collision_mask_value(3, true)
+	var collision := CollisionShape3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = MAGNET_RADIUS
+	collision.shape = shape
+	_magnet_area.add_child(collision)
+	add_child(_magnet_area)
+
+func _magnet_pull(delta: float) -> void:
+	if _magnet_area == null:
+		return
+	if NetworkManager.is_online():
+		_online_magnet_request_timer -= delta
+		if _online_magnet_request_timer <= 0.0 and multiplayer.is_server():
+			_online_magnet_request_timer = 0.1
+			var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+			if rm != null:
+				rm.request_online_magnet_pull(actor_id)
+		return
+	for body in _magnet_area.get_overlapping_bodies():
+		if not body is RigidBody3D or not body.has_method("get_interact_category"):
+			continue
+		if "is_held" in body and body.is_held:
+			continue
+		var to_bot := global_position + Vector3.UP * 0.4 - body.global_position
+		if to_bot.length() > 1.1:
+			body.global_position += to_bot.normalized() * MAGNET_PULL_SPEED * delta
+
+func clear_overtime_protections() -> void:
+	second_wind_ready = false
+	melee_disarm_shields = 0
+	active_powerup_order.erase("extra_life")
+	active_powerup_order.erase("sticky_hands")
+
+func consume_sticky_hands() -> bool:
+	if melee_disarm_shields <= 0:
+		return false
+	melee_disarm_shields = 0
+	active_powerup_order.erase("sticky_hands")
+	return true
+
+func consume_extra_life() -> bool:
+	if not second_wind_ready:
+		return false
+	second_wind_ready = false
+	active_powerup_order.erase("extra_life")
+	lethal_immunity_timer = maxf(lethal_immunity_timer, 1.0)
+	return true
 
 func can_pick_up_item() -> bool:
 	return held_item == null
@@ -972,7 +1192,76 @@ func get_active_item():
 # Visual
 # ============================================================
 
+# Red inverted-hull outline while this bot holds the gun (matches the player
+# version in character_body_3d.gd — material_overlay, depth-tested, no wallhack).
+var _gun_outline_active := false
+var _decoy_outline_generation := 0
+
+func _update_gun_holder_outline():
+	if holding_gun == _gun_outline_active:
+		return
+	_gun_outline_active = holding_gun
+	var mat: StandardMaterial3D = null
+	if holding_gun:
+		mat = StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = Color(0.95, 0.12, 0.12)
+		mat.grow = true
+		mat.grow_amount = 0.02
+		mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	# Scope to the character model only — _find_mesh_instances(self) would also
+	# sweep the held gun's meshes and leave a stale overlay on it after a drop.
+	var model = get_node_or_null("new guy one gun model orange running")
+	for mesh in _find_mesh_instances(model if model != null else self):
+		mesh.material_overlay = mat
+
+func show_decoy_destroyer_outline(duration: float, decoy_owner = null) -> void:
+	if NetworkManager.is_online() and decoy_owner != null:
+		var viewer = NetworkManager.find_net_player(NetworkManager.local_id())
+		var viewer_is_owner: bool = viewer == decoy_owner
+		var viewer_is_teammate := (viewer != null and GameConfig.teams_enabled
+			and int(viewer.get("team_id")) >= 0
+			and int(viewer.get("team_id")) == int(decoy_owner.get("team_id")))
+		if not viewer_is_owner and not viewer_is_teammate:
+			return
+	_decoy_outline_generation += 1
+	var generation := _decoy_outline_generation
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(1.0, 0.05, 0.05)
+	mat.grow = true
+	mat.grow_amount = 0.025
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	mat.no_depth_test = true
+	var model = get_node_or_null("new guy one gun model orange running")
+	for mesh in _find_mesh_instances(model if model != null else self):
+		mesh.material_overlay = mat
+	await get_tree().create_timer(duration).timeout
+	if generation == _decoy_outline_generation:
+		_gun_outline_active = not holding_gun
+		_update_gun_holder_outline()
+
+func show_overtime_pulse(duration: float = 1.0) -> void:
+	_decoy_outline_generation += 1
+	var generation := _decoy_outline_generation
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(1.0, 0.03, 0.03)
+	mat.grow = true
+	mat.grow_amount = 0.03
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	mat.no_depth_test = true
+	var model = get_node_or_null("new guy one gun model orange running")
+	for mesh in _find_mesh_instances(model if model != null else self):
+		mesh.material_overlay = mat
+	await get_tree().create_timer(duration).timeout
+	if generation == _decoy_outline_generation:
+		_gun_outline_active = not holding_gun
+		_update_gun_holder_outline()
+
 func flash_hit():
+	if not AccessibilityManager.allow_flash():
+		return
 	var meshes = _find_mesh_instances(self)
 	var entries = []
 	for mesh in meshes:
@@ -1009,33 +1298,38 @@ func _find_mesh_instances(node: Node) -> Array:
 # Round lifecycle
 # ============================================================
 
-func eliminate(killer_name = "", weapon_icon = "💀"):
+func eliminate(killer_name = "", weapon_icon = "💀", lethal_kind := "weapon"):
 	if is_eliminated:
 		return
-	if second_wind_ready and not is_online:
-		second_wind_ready = false
-		grant_bullet_immunity(2.0)
+	_clear_steam_boost()
+	if lethal_kind == "weapon" and lethal_immunity_timer > 0.0:
+		return
+	if lethal_kind == "weapon" and second_wind_ready and not is_online:
+		consume_extra_life()
 		if has_method("flash_hit"):
 			flash_hit()
 		return
 	if holding_gun:
 		var hold_point = get_hold_point()
 		if hold_point != null and hold_point.get_child_count() > 0:
-			hold_point.get_child(0).drop()
+			var held_gun = hold_point.get_child(0)
+			if bool(held_gun.get("is_overtime_gun")):
+				holding_gun = false
+				held_gun.queue_free()
+			else:
+				held_gun.drop()
 	if held_melee_weapon != null:
 		held_melee_weapon.drop(true)
 	if held_item != null:
-		if NetworkManager.is_online() and held_item.has_method("force_online_drop_at"):
-			held_item.force_online_drop_at(global_position + Vector3(0.3, 0.6, 0.0))
+		if held_item.has_method("discard_on_owner_death"):
+			held_item.discard_on_owner_death()
 		else:
-			held_item.drop()
+			held_item.queue_free()
+	held_item = null
+	clear_all_powerups()
 	is_eliminated = true
 	_current_anim = ""
-	if model_anim_player != null:
-		if model_anim_player.has_animation(ANIM_DEATH):
-			model_anim_player.play(ANIM_DEATH)
-		else:
-			model_anim_player.stop()
+	CombatPop.spawn(get_tree().current_scene, global_position)
 	visible = false
 	collision_layer = 0
 	collision_mask = 0
@@ -1055,6 +1349,7 @@ func respawn(spawn_transform):
 	set_collision_mask_value(2, true)
 	global_transform = spawn_transform
 	velocity = Vector3.ZERO
+	_clear_steam_boost()
 	stamina = MAX_STAMINA
 	stamina_regen_timer = 0.0
 	holding_gun = false
@@ -1070,13 +1365,12 @@ func respawn(spawn_transform):
 	knockback_timer = 0.0
 	stagger_timer = 0.0
 	bullet_immune_timer = 0.0
-	melee_disarm_shields = 0
-	second_wind_ready = false
-	active_powerup_order.clear()
-	magnet_timer = 0.0
+	lethal_immunity_timer = 0.0
+	clear_all_powerups()
 	slow_timer = 0.0
 	slow_multiplier_value = 1.0
 	dash_charges = MAX_DASH_CHARGES
+	extra_dash_charge = 0
 	dash_recharge_timer = 0.0
 	is_dashing = false
 	dash_cooldown = 0.0

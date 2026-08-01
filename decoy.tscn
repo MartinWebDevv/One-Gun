@@ -15,7 +15,7 @@ collision_layer = 4
 script = ExtResource("1_kv1lf")
 item_type = "decoy"
 deployed_scene = ExtResource("2_ul5kp")
-deployed_lifetime = 30.0
+deployed_lifetime = 10.0
 respawn_after_deploy_time = 16.0
 HELD_SCALE = 0.51
 

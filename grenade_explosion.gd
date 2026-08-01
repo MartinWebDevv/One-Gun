@@ -25,8 +25,14 @@ func _ready():
 	queue_free()
 
 func _apply_blast():
-	for body in get_tree().get_nodes_in_group("player"):
+	for body in get_tree().get_nodes_in_group("combat_target"):
 		if global_position.distance_to(body.global_position) > radius:
+			continue
+		if body.is_in_group("combat_decoy"):
+			if body.has_method("can_be_affected_by") and not body.can_be_affected_by(owner_player):
+				continue
+			if body.has_method("pop_from_attack"):
+				body.pop_from_attack(owner_player, "grenade")
 			continue
 		if not GameConfig.can_affect(owner_player, body):
 			continue
@@ -37,6 +43,24 @@ func _apply_blast():
 		if direction.length() < 0.01:
 			direction = Vector3.FORWARD
 		body.apply_knockback(direction.normalized(), knockback_distance)
+		if bool(body.get("holding_gun")):
+			var blocked := false
+			if body.has_method("consume_sticky_hands"):
+				blocked = body.consume_sticky_hands()
+			elif "melee_disarm_shields" in body and body.melee_disarm_shields > 0:
+				body.melee_disarm_shields -= 1
+				blocked = true
+			if not blocked:
+				var hold_point = body.get_hold_point()
+				if hold_point != null and hold_point.get_child_count() > 0:
+					var gun = hold_point.get_child(0)
+					if gun.has_method("force_disarm"):
+						gun.force_disarm()
+					else:
+						gun.drop()
+					var victim: String = body.get_display_name()
+					var attacker: String = owner_player.get_display_name() if owner_player != null else ""
+					GameEvents.player_disarmed.emit(victim, attacker, "💥")
 
 func _flash():
 	var mesh_instance = get_node_or_null("MeshInstance3D")

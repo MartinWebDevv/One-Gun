@@ -1,5 +1,10 @@
 extends Node
 
+# Emitted after a map finishes loading into the preview viewport. The lobby
+# uses this to capture live thumbnails for the map carousel cards.
+signal map_shown(index: int)
+signal map_failed(index: int, reason: String)
+
 # ============================================================
 # LobbyMapPreview
 # Live 3D map preview behind the lobby UI. A camera slowly orbits the
@@ -14,13 +19,14 @@ extends Node
 # Node names removed from a map before it becomes a preview (gameplay + audio).
 const STRIP_NAMES = [
 	"RoundManager", "player1", "player2", "CanvasLayer", "SplitScreenLayer",
-	"Gun", "MeleeWeapon", "MeleeWeaponSpawnp", "SpawnPoints", "ItemSpawnPoints",
+	"Gun", "MeleeWeapon", "MeleeWeaponSpawn", "MeleeWeaponSpawnp", "Melee Weapons",
+	"Power Ups", "Powerups", "Items", "SpawnPoints", "ItemSpawnPoints",
 	"gun_spawn_point", "NavigationRegion3D", "ForestAmbience",
 ]
 
 const ORBIT_SPEED := 0.14         # rad/sec — full circle ~45s
 const MAP_VIEW_SECONDS := 10.0    # clear-viewing window per map in cycle mode
-const FADE_TIME := 0.6
+const FADE_HALF_TIME := OneGunUI.TIME_MAP_FADE * 0.5
 
 var _maps: Array = []             # the MAPS array from game_setup
 var _mode: int = 1                # MapSelectMode (1 = SPECIFIC by default)
@@ -30,17 +36,21 @@ var _viewport: SubViewport = null
 var _camera: Camera3D = null
 var _preview_root: Node3D = null
 var _fade_rect: ColorRect = null
+var _status: OneGunStatusPanel = null
 
 var _current_index := -1
 var _current_map: Node3D = null
 var _orbit_angle := 0.0
 var _orbit_center := Vector3.ZERO
 var _orbit_radius := 20.0
+var _orbit_height_ratio := 0.6
+var _orbit_target_height_ratio := 0.1
 
 var _cycling := false
 var _cycle_timer := 0.0
 var _fade_tween: Tween = null
 var _swapping := false
+var _requested_index := -1
 
 # ------------------------------------------------------------
 
@@ -78,7 +88,7 @@ func setup(host: Control, maps: Array) -> void:
 	var tint := ColorRect.new()
 	tint.name = "PreviewTint"
 	tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	tint.color = Color(0.04, 0.05, 0.09, 0.28)
+	tint.color = Color(0.04, 0.05, 0.09, 0.10)
 	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	host.add_child(tint)
 
@@ -90,14 +100,39 @@ func setup(host: Control, maps: Array) -> void:
 	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	host.add_child(_fade_rect)
 
-	# Push all three behind the .tscn's existing UI panels.
+	_status = OneGunStatusPanel.new()
+	_status.name = "PreviewStatus"
+	_status.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host.add_child(_status)
+
+	# Push preview layers behind the lobby's interactive cabinets.
 	host.move_child(vpc, 0)
 	host.move_child(tint, 1)
 	host.move_child(_fade_rect, 2)
+	host.move_child(_status, 3)
+	if _maps.is_empty():
+		_status.show_empty("NO MAPS AVAILABLE", "Add a valid map entry to the map registry.")
+
+func current_index() -> int:
+	return _current_index
+
+
+# Live snapshot of the 3D preview (no UI), for carousel thumbnails.
+func capture_image() -> Image:
+	if _viewport == null or DisplayServer.get_name() == "headless":
+		return null   # the dummy renderer has no texture to read back
+	return _viewport.get_texture().get_image()
+
 
 # Called by game_setup on init and whenever mode/selection changes.
 func apply(mode: int, index: int) -> void:
 	_mode = mode
+	if _maps.is_empty():
+		_cycling = false
+		_status.visible = true
+		_status.show_empty("NO MAPS AVAILABLE", "Add a valid map entry to the map registry.")
+		return
 	if mode == MODE_SPECIFIC:
 		_cycling = false
 		if index != _current_index:
@@ -114,8 +149,13 @@ func _process(delta: float) -> void:
 		return
 	_orbit_angle += ORBIT_SPEED * delta
 	var r := _orbit_radius * 1.2
-	_camera.position = _orbit_center + Vector3(cos(_orbit_angle) * r, _orbit_radius * 0.6, sin(_orbit_angle) * r)
-	_camera.look_at(_orbit_center + Vector3(0, _orbit_radius * 0.1, 0), Vector3.UP)
+	_camera.position = _orbit_center + Vector3(
+		cos(_orbit_angle) * r,
+		_orbit_radius * _orbit_height_ratio,
+		sin(_orbit_angle) * r)
+	_camera.look_at(
+		_orbit_center + Vector3(0, _orbit_radius * _orbit_target_height_ratio, 0),
+		Vector3.UP)
 
 	if _cycling and not _swapping and _maps.size() > 1:
 		_cycle_timer -= delta
@@ -129,42 +169,85 @@ func _process(delta: float) -> void:
 func _fade_swap_to(index: int) -> void:
 	if index < 0 or index >= _maps.size():
 		return
+	_requested_index = index
 	if _current_map == null:
 		# First load: no fade, just show it.
 		_load_map(index)
 		return
 	if _swapping:
+		# Preserve the latest carousel request. The current transition completes,
+		# then immediately continues to the newest requested map.
 		return
 	_swapping = true
 	if _fade_tween != null and _fade_tween.is_valid():
 		_fade_tween.kill()
 	_fade_tween = create_tween()
-	_fade_tween.tween_property(_fade_rect, "color:a", 1.0, FADE_TIME)
+	_fade_tween.tween_property(_fade_rect, "color:a", 1.0, FADE_HALF_TIME)
 	_fade_tween.tween_callback(func(): _load_map(index))
-	_fade_tween.tween_property(_fade_rect, "color:a", 0.0, FADE_TIME)
-	_fade_tween.tween_callback(func(): _swapping = false)
+	_fade_tween.tween_property(_fade_rect, "color:a", 0.0, FADE_HALF_TIME)
+	_fade_tween.tween_callback(_finish_swap)
+
+
+func _finish_swap() -> void:
+	_swapping = false
+	if _requested_index >= 0 and _requested_index != _current_index:
+		_fade_swap_to(_requested_index)
 
 func _load_map(index: int) -> void:
-	if _current_map != null and is_instance_valid(_current_map):
-		_current_map.queue_free()
-		_current_map = null
-	var path: String = _maps[index]["scene_path"]
+	_status.visible = true
+	_status.show_loading("Loading live map preview…")
+	var path := str(_maps[index].get("scene_path", ""))
 	if not ResourceLoader.exists(path):
+		_fail_map_load(index, "The map scene could not be found.")
 		return
-	var packed = load(path)
+	var packed := load(path) as PackedScene
 	if packed == null:
+		_fail_map_load(index, "The map scene could not be loaded.")
 		return
-	var map: Node3D = packed.instantiate()
+	var instance := packed.instantiate()
+	var map := instance as Node3D
+	if map == null:
+		instance.free()
+		_fail_map_load(index, "The map preview root must be a Node3D.")
+		return
 	# Strip gameplay/audio BEFORE the map enters the tree so their _ready
 	# never runs (no bot spawn, no music hijack).
 	for child in map.get_children():
 		if child.name in STRIP_NAMES:
 			child.free()
+	var map_data: Dictionary = _maps[index]
+	for node_path in map_data.get("preview_hide_paths", []):
+		var preview_only_hidden := map.get_node_or_null(NodePath(str(node_path))) as Node3D
+		if preview_only_hidden != null:
+			preview_only_hidden.visible = false
+	_clear_current_map()
 	_preview_root.add_child(map)
 	_current_map = map
 	_current_index = index
-	_orbit_angle = 0.0
 	_compute_orbit(map)
+	_orbit_angle = float(map_data.get("preview_angle", 0.0))
+	_orbit_height_ratio = float(map_data.get("preview_height_ratio", 0.6))
+	_orbit_target_height_ratio = float(map_data.get("preview_target_height_ratio", 0.1))
+	if map_data.has("preview_center"):
+		_orbit_center = map_data["preview_center"]
+	if map_data.has("preview_radius"):
+		_orbit_radius = float(map_data["preview_radius"])
+	_status.visible = false
+	map_shown.emit(index)
+
+
+func _fail_map_load(index: int, reason: String) -> void:
+	_clear_current_map()
+	_current_index = index
+	_status.visible = true
+	_status.show_unavailable("PREVIEW UNAVAILABLE", reason)
+	map_failed.emit(index, reason)
+
+
+func _clear_current_map() -> void:
+	if _current_map != null and is_instance_valid(_current_map):
+		_current_map.free()
+	_current_map = null
 
 func _compute_orbit(map: Node3D) -> void:
 	# Frame the play area using the Ground mesh only (ignores giant skyline /

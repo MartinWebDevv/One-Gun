@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/menu_phase3_4_smoke.gd" id="1_smoke"]
+
+[node name="MenuPhase3And4Smoke" type="Node"]
+script = ExtResource("1_smoke")

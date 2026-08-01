@@ -2,66 +2,11 @@
 
 [ext_resource type="Script" uid="uid://ds02d102l2fer" path="res://game_setup.gd" id="1_wdvon"]
 
-[node name="GameSetup" type="Control" unique_id=1793660674]
+[node name="GameSetup" type="Control"]
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_wdvon")
-
-[node name="Settings Panel" type="Control" parent="." unique_id=1303534550]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="MapSelectionRow" type="HBoxContainer" parent="Settings Panel" unique_id=183256289]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="BotsToggleRow" type="HBoxContainer" parent="Settings Panel" unique_id=1770223533]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="BotSettingsButton" type="Button" parent="Settings Panel" unique_id=1658718096]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="ToggleDropdown" type="VBoxContainer" parent="Settings Panel" unique_id=445974910]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="LobbyQueuePanel" type="Control" parent="." unique_id=350837125]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="LobbyList" type="VBoxContainer" parent="LobbyQueuePanel" unique_id=1539789541]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="CustomizeButton" type="Button" parent="." unique_id=1944922607]
-layout_mode = 0
-offset_right = 8.0
-offset_bottom = 8.0
-
-[node name="ReadyBar" type="HBoxContainer" parent="." unique_id=1120967918]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="ReadyButton" type="Button" parent="ReadyBar" unique_id=826377237]
-layout_mode = 2
-
-[node name="PlayButton" type="Button" parent="ReadyBar" unique_id=880925978]
-layout_mode = 2
-
-[node name="ForcePlayButton" type="Button" parent="ReadyBar" unique_id=1299310550]
-layout_mode = 2
-
-[node name="BotSettingsPopup" type="PopupPanel" parent="." unique_id=182139485]
-oversampling_override = 1.0
-
-[node name="CustomizeCharacterPopup" type="PopupPanel" parent="." unique_id=228713007]

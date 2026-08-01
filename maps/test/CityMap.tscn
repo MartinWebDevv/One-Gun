@@ -64,6 +64,8 @@
 [ext_resource type="Script" uid="uid://bigaqrmy6p743" path="res://pause_menu.gd" id="65_6tjpv"]
 [ext_resource type="Script" uid="uid://dm7m7cqa3abt0" path="res://round_manager.gd" id="66_xdqgi"]
 [ext_resource type="Script" uid="uid://cd1gvr838772b" path="res://splitscreen_manager.gd" id="67_5rek6"]
+[ext_resource type="Script" uid="uid://bmlgdff6d23c4" path="res://manhole_steam_boost.gd" id="68_steam"]
+[ext_resource type="NavigationMesh" path="res://navigation/CityMapNavigation.tres" id="nav_city"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_8vcf1"]
 size = Vector3(76, 1, 54)
@@ -892,6 +894,10 @@ billboard_mode = 1
 material = SubResource("StandardMaterial3D_v2gmm")
 size = Vector2(0.7, 0.7)
 
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_steam_boost"]
+height = 2.8
+radius = 0.7
+
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_y84qt"]
 emission_shape = 3
 emission_box_extents = Vector3(30, 0.2, 3.5)
@@ -936,13 +942,6 @@ glow_intensity = 0.25
 fog_enabled = true
 fog_light_color = Color(0.75, 0.8, 0.88, 1)
 fog_density = 0.0012
-
-[sub_resource type="NavigationMesh" id="NavigationMesh_xbyv6"]
-geometry_parsed_geometry_type = 1
-agent_height = 2.5
-agent_radius = 0.45
-agent_max_climb = 0.8
-agent_max_slope = 48.0
 
 [node name="CityMap" type="Node3D" unique_id=1190598066]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
@@ -2290,6 +2289,17 @@ preprocess = 3.2
 process_material = SubResource("ParticleProcessMaterial_dd05m")
 draw_pass_1 = SubResource("QuadMesh_qffv2")
 
+[node name="ManholeSteamBoost" type="Area3D" parent="Effects" unique_id=1666201799]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.1, 7)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("68_steam")
+lift_strength = 14.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Effects/ManholeSteamBoost" unique_id=742259158]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+shape = SubResource("CylinderShape3D_steam_boost")
+
 [node name="PaperLitter" type="GPUParticles3D" parent="Effects" unique_id=1344682386]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
 amount = 30
@@ -2335,7 +2345,7 @@ light_energy = 1.3
 shadow_enabled = true
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=563760578]
-navigation_mesh = SubResource("NavigationMesh_xbyv6")
+navigation_mesh = ExtResource("nav_city")
 
 [node name="SpawnPoints" type="Node3D" parent="." unique_id=722636404]
 
@@ -2363,30 +2373,36 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.152121, 1.6126121, -19.778
 [node name="SpawnPoint9" type="Marker3D" parent="SpawnPoints" unique_id=120938293 groups=["spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.690541, 1.6126121, -19.778856)
 
+[node name="SpawnPoint10" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.9, 1.62, 1.8)
+
+[node name="SpawnPoint11" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31.2, 1.62, 0.5)
+
 [node name="Gun" parent="." unique_id=1257422070 instance=ExtResource("45_cxjt1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 
-[node name="MeleeWeaponSpawnp" type="Node3D" parent="." unique_id=1907034463]
+[node name="MeleeSpawnPoints" type="Node3D" parent="." unique_id=1907034463]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.5, 0.6, 13)
 
-[node name="MeleeWeapon" parent="MeleeWeaponSpawnp" unique_id=1665878362 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn0" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1665878362 groups=["melee_spawn_point"]]
 
-[node name="MeleeWeapon2" parent="MeleeWeaponSpawnp" unique_id=1558236134 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn1" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1558236134 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.985525, 0, 2.1066093)
 
-[node name="MeleeWeapon3" parent="MeleeWeaponSpawnp" unique_id=763891259 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn2" type="Marker3D" parent="MeleeSpawnPoints" unique_id=763891259 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.985525, 0, -18.470459)
 
-[node name="MeleeWeapon4" parent="MeleeWeaponSpawnp" unique_id=1762057580 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn3" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1762057580 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.34453297, 0.7065325, -23.255217)
 
-[node name="MeleeWeapon5" parent="MeleeWeaponSpawnp" unique_id=1637131750 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn4" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1637131750 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.789642, -0.29697704, -23.255217)
 
-[node name="MeleeWeapon6" parent="MeleeWeaponSpawnp" unique_id=1593452647 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn5" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1593452647 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.67283, -0.29697704, -23.255217)
 
-[node name="MeleeWeapon7" parent="MeleeWeaponSpawnp" unique_id=44344037 instance=ExtResource("47_io08q")]
+[node name="MeleeSpawn6" type="Marker3D" parent="MeleeSpawnPoints" unique_id=44344037 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.67283, -0.29697704, 6.3714123)
 
 [node name="player1" parent="." unique_id=1526157025 groups=["local_player"] instance=ExtResource("49_ctnmt")]

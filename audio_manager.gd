@@ -64,10 +64,20 @@ const SFX_PATHS = {
 # Volume — adjust these or wire to sliders later
 # ============================================================
 
-var MUSIC_VOLUME_DB  = -30.0
-var SFX_VOLUME_DB    = 0.0
-var HOVER_VOLUME_DB  = -6.0
+# Authored base levels (what the sliders' 100% means). User slider values are
+# added on top as dB offsets so the authored mix is preserved at full volume.
+const MUSIC_BASE_DB   := -5.0
+const HOVER_OFFSET_DB := -6.0   # hover sits this much under the SFX level
+
+var MUSIC_VOLUME_DB  = MUSIC_BASE_DB  # current effective music level (base + user)
+var SFX_VOLUME_DB    = 0.0            # current effective sfx level (user)
 var AMBIENT_OFFSET_DB = -10.0  # ambience sits this much under the SFX level
+
+# Squared perceptual curve: raw linear_to_db leaves most of the slider's travel
+# nearly inaudible (0.5 → only -6 dB); squaring makes mid-slider clearly quieter.
+func _user_db(linear: float) -> float:
+	linear = clampf(linear, 0.0, 1.0)
+	return linear_to_db(maxf(linear * linear, 0.0001))
 
 # ============================================================
 # Internal nodes
@@ -93,10 +103,7 @@ func _apply_saved_volumes():
 	var master = PlayerPrefs.get_setting("master_volume")
 	var music  = PlayerPrefs.get_setting("music_volume")
 	var sfx    = PlayerPrefs.get_setting("sfx_volume")
-	AudioServer.set_bus_volume_db(
-		AudioServer.get_bus_index("Master"),
-		linear_to_db(max(master, 0.0001))
-	)
+	set_master_volume(master)
 	set_music_volume(music)
 	set_sfx_volume(sfx)
 
@@ -222,7 +229,7 @@ func stop_ambient():
 # SFX
 # ============================================================
 
-func play_sfx(key: String):
+func play_sfx(key: String, pitch_scale: float = 1.0, volume_scale: float = 1.0):
 	if not SFX_PATHS.has(key):
 		push_warning("AudioManager: no sfx key '%s'" % key)
 		return
@@ -235,7 +242,8 @@ func play_sfx(key: String):
 		return
 	var player = _get_next_sfx_player()
 	player.stream = stream
-	player.volume_db = SFX_VOLUME_DB
+	player.volume_db = SFX_VOLUME_DB + (-80.0 if volume_scale <= 0.0 else linear_to_db(clampf(volume_scale, 0.0, 1.0)))
+	player.pitch_scale = pitch_scale
 	player.play()
 
 func play_hover():
@@ -246,7 +254,10 @@ func play_hover():
 		return
 	var player = _get_next_sfx_player()
 	player.stream = load(path)
-	player.volume_db = HOVER_VOLUME_DB
+	# Follows the SFX slider (offset quieter) — was a fixed level that made
+	# menu sounds ignore the volume setting entirely.
+	player.volume_db = SFX_VOLUME_DB + HOVER_OFFSET_DB
+	player.pitch_scale = 1.0   # pool players are shared; clear any sfx pitch
 	player.play()
 
 func play_click():
@@ -262,13 +273,17 @@ func _get_next_sfx_player() -> AudioStreamPlayer:
 # Volume control — called by settings sliders later
 # ============================================================
 
+func set_master_volume(linear: float):
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), _user_db(linear))
+
 func set_music_volume(linear: float):
-	# linear: 0.0 to 1.0
-	MUSIC_VOLUME_DB = linear_to_db(max(linear, 0.0001))
+	# linear: 0.0 to 1.0. Preserve the authored music base level — the old code
+	# replaced it outright, which played music 30 dB louder than designed.
+	MUSIC_VOLUME_DB = MUSIC_BASE_DB + _user_db(linear)
 	_music_player.volume_db = MUSIC_VOLUME_DB
 
 func set_sfx_volume(linear: float):
-	SFX_VOLUME_DB = linear_to_db(max(linear, 0.0001))
+	SFX_VOLUME_DB = _user_db(linear)
 	for p in _sfx_players:
 		p.volume_db = SFX_VOLUME_DB
 	if _ambient_player:

@@ -1,7 +1,7 @@
 param(
     [string]$Map = "res://node_3d.tscn",
     [int]$TimeoutMilliseconds = 30000,
-    [ValidateSet("match", "lobby", "named_lobby", "exit_flow", "client_exit", "online_bots")]
+    [ValidateSet("match", "lobby", "named_lobby", "exit_flow", "client_exit", "online_bots", "overtime")]
     [string]$Mode = "match",
     [switch]$Rendered
 )
@@ -40,7 +40,8 @@ $clientOutput = (Get-Content -Raw $clientOut), (Get-Content -Raw $clientErr) -jo
 $hostOutput
 $clientOutput
 
-$passPrefix = if ($Mode -eq "lobby") { "ONLINE_LOBBY_PASS" } elseif ($Mode -eq "named_lobby") { "ONLINE_NAMED_LOBBY_PASS" } elseif ($Mode -eq "exit_flow") { "ONLINE_EXIT_FLOW_PASS" } elseif ($Mode -eq "client_exit") { "ONLINE_CLIENT_EXIT_PASS" } elseif ($Mode -eq "online_bots") { "ONLINE_BOTS_PASS" } else { "ONLINE_SMOKE_PASS" }
+$passPrefix = if ($Mode -eq "lobby") { "ONLINE_LOBBY_PASS" } elseif ($Mode -eq "named_lobby") { "ONLINE_NAMED_LOBBY_PASS" } elseif ($Mode -eq "exit_flow") { "ONLINE_EXIT_FLOW_PASS" } elseif ($Mode -eq "client_exit") { "ONLINE_CLIENT_EXIT_PASS" } elseif ($Mode -eq "online_bots") { "ONLINE_BOTS_PASS" } elseif ($Mode -eq "overtime") { "ONLINE_OVERTIME_PASS" } else { "ONLINE_SMOKE_PASS" }
 if ($hostOutput -notmatch "$passPrefix host" -or $clientOutput -notmatch "$passPrefix client") {
 	exit 1
 }
+exit 0

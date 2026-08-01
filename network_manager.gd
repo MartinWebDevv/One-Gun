@@ -14,22 +14,29 @@ extends Node
 
 const DEFAULT_PORT := 24545
 const DISCOVERY_PORT := 24546
-const MAX_PEERS := 8
+const MAX_PEERS := 10
 const JOIN_TIMEOUT_SECONDS := 12.0
 const DISCOVERY_TIMEOUT_SECONDS := 3.0
 const DISCOVERY_REQUEST_PREFIX := "ONEGUN_DISCOVER:"
 const DISCOVERY_RESPONSE_PREFIX := "ONEGUN_LOBBY:"
 
 signal lobby_changed                     # roster added/removed/renamed
+signal lobby_readiness_changed           # host-authoritative pre-match ready state
+signal lobby_notice(message: String)     # readiness reset / lobby status explanation
 signal connection_succeeded              # client connected to host
 signal connection_failed                 # client couldn't connect
 signal server_disconnected               # host went away
 signal match_config_received             # client got host's settings/map
 signal match_readiness_changed            # a peer finished building the match scene
 signal lobby_discovery_failed(message: String)
+signal lobby_list_updated(lobbies: Array)
+signal lobby_list_failed(message: String)
 
 # peer_id -> { "name": String }
 var peers: Dictionary = {}
+# peer_id -> bool. The host is always ready because its primary lobby action
+# is Start/Force Start; guests explicitly toggle their own state.
+var lobby_ready: Dictionary = {}
 var pending_map_path: String = ""
 var pending_match_id := 0
 var _online := false
@@ -37,6 +44,10 @@ var _match_ready_peers: Dictionary = {}
 var _joining := false
 var _connection_attempt := 0
 var lobby_name := ""
+var lobby_privacy := "public"
+var lobby_share_code := ""
+var lobby_max_players := MAX_PEERS
+var lobby_in_progress := false
 var _discovery_responder: PacketPeerUDP = null
 var _discovery_attempt := 0
 var _host_port := DEFAULT_PORT
@@ -58,8 +69,28 @@ func _process(_delta: float) -> void:
 		var sender_port := _discovery_responder.get_packet_port()
 		if not packet_text.begins_with(DISCOVERY_REQUEST_PREFIX):
 			continue
-		var nonce := packet_text.trim_prefix(DISCOVERY_REQUEST_PREFIX)
-		var payload := JSON.stringify({"nonce": nonce, "name": lobby_name, "port": _host_port})
+		var request_body := packet_text.trim_prefix(DISCOVERY_REQUEST_PREFIX)
+		var request = JSON.parse_string(request_body) if request_body.begins_with("{") else null
+		var nonce := request_body
+		var request_kind := "name"
+		var requested_code := ""
+		if request is Dictionary:
+			nonce = str(request.get("nonce", ""))
+			request_kind = str(request.get("kind", "list"))
+			requested_code = _clean_share_code(str(request.get("code", "")))
+		if nonce == "":
+			continue
+		var should_respond := false
+		match request_kind:
+			"list":
+				should_respond = lobby_privacy == "public"
+			"code":
+				should_respond = requested_code != "" and requested_code == lobby_share_code
+			_:
+				should_respond = lobby_privacy == "public"
+		if not should_respond:
+			continue
+		var payload := JSON.stringify(_discovery_payload(nonce))
 		_discovery_responder.set_dest_address(sender_ip, sender_port)
 		_discovery_responder.put_packet((DISCOVERY_RESPONSE_PREFIX + payload).to_utf8_buffer())
 
@@ -67,10 +98,19 @@ func _process(_delta: float) -> void:
 # Hosting / joining
 # ------------------------------------------------------------
 
-func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "") -> bool:
+func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "",
+		options: Dictionary = {}) -> bool:
 	_reset_session(false)
+	lobby_privacy = str(options.get("privacy", "public")).to_lower()
+	if lobby_privacy not in ["public", "private"]:
+		lobby_privacy = "public"
+	lobby_max_players = clampi(int(options.get("max_players", MAX_PEERS)), 2, MAX_PEERS)
+	lobby_share_code = _clean_share_code(str(options.get("share_code", "")))
+	if lobby_share_code == "":
+		lobby_share_code = _generate_share_code()
+	lobby_in_progress = false
 	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_server(port, MAX_PEERS)
+	var err := peer.create_server(port, lobby_max_players - 1)
 	if err != OK:
 		_net_log("host failed on UDP %d (error %d)" % [port, err])
 		push_warning("NetworkManager: create_server failed (%d)" % err)
@@ -81,6 +121,8 @@ func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "") -> b
 	_host_port = port
 	peers.clear()
 	peers[1] = {"name": local_name()}   # host is always peer id 1
+	lobby_ready.clear()
+	lobby_ready[1] = true
 	lobby_name = _clean_lobby_name(requested_lobby_name)
 	if lobby_name == "":
 		lobby_name = "%s's Lobby" % local_name()
@@ -96,6 +138,32 @@ func join_lobby_by_name(requested_name: String) -> bool:
 	_discovery_attempt += 1
 	_discover_lobby_and_join(cleaned, _discovery_attempt)
 	return true
+
+
+func join_lobby_by_code(requested_code: String) -> bool:
+	var cleaned := _clean_share_code(requested_code)
+	if cleaned == "":
+		return false
+	_discovery_attempt += 1
+	_discover_code_and_join(cleaned, _discovery_attempt)
+	return true
+
+
+func join_discovered_lobby(lobby: Dictionary) -> bool:
+	var address := str(lobby.get("address", ""))
+	var port := int(lobby.get("port", DEFAULT_PORT))
+	if address == "":
+		return false
+	var selected_name := _clean_lobby_name(str(lobby.get("name", "")))
+	if not join_game(address, port):
+		return false
+	lobby_name = selected_name
+	return true
+
+
+func discover_lobbies() -> void:
+	_discovery_attempt += 1
+	_discover_lobby_list(_discovery_attempt)
 
 func _discover_lobby_and_join(requested_name: String, attempt: int) -> void:
 	# Tailscale's CLI can occasionally take a few seconds to answer on Windows;
@@ -146,6 +214,138 @@ func _discover_lobby_and_join(requested_name: String, attempt: int) -> void:
 	if attempt == _discovery_attempt:
 		lobby_discovery_failed.emit("No Tailscale lobby named '%s' was found." % requested_name)
 
+
+func _discover_code_and_join(requested_code: String, attempt: int) -> void:
+	var targets := await _discovery_targets(attempt)
+	if attempt != _discovery_attempt:
+		return
+	var socket := PacketPeerUDP.new()
+	if socket.bind(0, "*") != OK:
+		lobby_discovery_failed.emit("Could not open the lobby discovery socket.")
+		return
+	var nonce := "%d-%d" % [Time.get_ticks_msec(), randi()]
+	var request_body := JSON.stringify({"nonce": nonce, "kind": "code", "code": requested_code})
+	var request := (DISCOVERY_REQUEST_PREFIX + request_body).to_utf8_buffer()
+	var result := await _probe_for_first_lobby(socket, targets, request, nonce, attempt)
+	socket.close()
+	if attempt != _discovery_attempt:
+		return
+	if not result.is_empty():
+		if join_discovered_lobby(result):
+			return
+		lobby_discovery_failed.emit("The lobby answered, but the connection could not start.")
+		return
+	lobby_discovery_failed.emit("No Tailscale lobby accepted code '%s'." % requested_code)
+
+
+func _discover_lobby_list(attempt: int) -> void:
+	var targets := await _discovery_targets(attempt)
+	if attempt != _discovery_attempt:
+		return
+	var socket := PacketPeerUDP.new()
+	if socket.bind(0, "*") != OK:
+		lobby_list_failed.emit("Could not open the lobby discovery socket.")
+		return
+	var nonce := "%d-%d" % [Time.get_ticks_msec(), randi()]
+	var request_body := JSON.stringify({"nonce": nonce, "kind": "list"})
+	var request := (DISCOVERY_REQUEST_PREFIX + request_body).to_utf8_buffer()
+	var deadline := Time.get_ticks_msec() + int(DISCOVERY_TIMEOUT_SECONDS * 1000.0)
+	var next_probe_time := 0
+	var found: Dictionary = {}
+	while Time.get_ticks_msec() < deadline and attempt == _discovery_attempt:
+		if Time.get_ticks_msec() >= next_probe_time:
+			for target in targets:
+				socket.set_dest_address(str(target), DISCOVERY_PORT)
+				socket.put_packet(request)
+			next_probe_time = Time.get_ticks_msec() + 500
+		while socket.get_available_packet_count() > 0:
+			var response_text := socket.get_packet().get_string_from_utf8()
+			var response_ip := socket.get_packet_ip()
+			var lobby := _parse_discovery_response(response_text, response_ip, nonce)
+			if lobby.is_empty():
+				continue
+			found["%s:%d" % [response_ip, int(lobby.get("port", DEFAULT_PORT))]] = lobby
+		await get_tree().create_timer(0.05).timeout
+	socket.close()
+	if attempt != _discovery_attempt:
+		return
+	var lobbies: Array = found.values()
+	lobbies.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return str(a.get("name", "")).nocasecmp_to(str(b.get("name", ""))) < 0)
+	lobby_list_updated.emit(lobbies)
+
+
+func _discovery_targets(attempt: int) -> Array:
+	var lookup_thread := Thread.new()
+	var targets: Array = []
+	if lookup_thread.start(_tailscale_peer_ips) == OK:
+		while lookup_thread.is_alive() and attempt == _discovery_attempt:
+			await get_tree().process_frame
+		targets = lookup_thread.wait_to_finish()
+	else:
+		targets = _tailscale_peer_ips()
+	if not targets.has("127.0.0.1"):
+		targets.append("127.0.0.1")
+	return targets
+
+
+func _probe_for_first_lobby(socket: PacketPeerUDP, targets: Array, request: PackedByteArray,
+		nonce: String, attempt: int) -> Dictionary:
+	var deadline := Time.get_ticks_msec() + int(DISCOVERY_TIMEOUT_SECONDS * 1000.0)
+	var next_probe_time := 0
+	while Time.get_ticks_msec() < deadline and attempt == _discovery_attempt:
+		if Time.get_ticks_msec() >= next_probe_time:
+			for target in targets:
+				socket.set_dest_address(str(target), DISCOVERY_PORT)
+				socket.put_packet(request)
+			next_probe_time = Time.get_ticks_msec() + 500
+		while socket.get_available_packet_count() > 0:
+			var response_text := socket.get_packet().get_string_from_utf8()
+			var response_ip := socket.get_packet_ip()
+			var lobby := _parse_discovery_response(response_text, response_ip, nonce)
+			if not lobby.is_empty():
+				return lobby
+		await get_tree().create_timer(0.05).timeout
+	return {}
+
+
+func _parse_discovery_response(response_text: String, response_ip: String,
+		nonce: String) -> Dictionary:
+	if not response_text.begins_with(DISCOVERY_RESPONSE_PREFIX):
+		return {}
+	var payload = JSON.parse_string(response_text.trim_prefix(DISCOVERY_RESPONSE_PREFIX))
+	if not (payload is Dictionary) or str(payload.get("nonce", "")) != nonce:
+		return {}
+	var current_players := maxi(int(payload.get("players", 1)), 1)
+	var maximum_players := clampi(int(payload.get("max_players", MAX_PEERS)), 2, MAX_PEERS)
+	var in_progress := bool(payload.get("in_progress", false))
+	var joinability := "in_progress" if in_progress else ("full" if current_players >= maximum_players else "joinable")
+	return {
+		"address": response_ip,
+		"port": int(payload.get("port", DEFAULT_PORT)),
+		"name": _clean_lobby_name(str(payload.get("name", "Lobby"))),
+		"privacy": str(payload.get("privacy", "public")),
+		"players": current_players,
+		"max_players": maximum_players,
+		"mode": str(payload.get("mode", "One Gun")),
+		"in_progress": in_progress,
+		"joinability": joinability,
+	}
+
+
+func _discovery_payload(nonce: String) -> Dictionary:
+	return {
+		"nonce": nonce,
+		"name": lobby_name,
+		"port": _host_port,
+		"privacy": lobby_privacy,
+		"players": peers.size(),
+		"max_players": lobby_max_players,
+		"mode": "One Gun",
+		"in_progress": lobby_in_progress,
+		"version": str(ProjectSettings.get_setting("application/config/version", "")),
+	}
+
 func _start_discovery_responder() -> void:
 	if _discovery_responder != null:
 		_discovery_responder.close()
@@ -157,6 +357,22 @@ func _start_discovery_responder() -> void:
 
 func _clean_lobby_name(value: String) -> String:
 	return value.strip_edges().replace("|", "").substr(0, 32)
+
+
+func _clean_share_code(value: String) -> String:
+	var cleaned := ""
+	for character in value.strip_edges().to_upper():
+		if character in "ABCDEFGHJKLMNPQRSTUVWXYZ23456789":
+			cleaned += character
+	return cleaned.substr(0, 12)
+
+
+func _generate_share_code() -> String:
+	const ALPHABET := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	var code := ""
+	for _index in 6:
+		code += ALPHABET[randi_range(0, ALPHABET.length() - 1)]
+	return code
 
 func _tailscale_peer_ips() -> Array:
 	var executable := "tailscale"
@@ -215,10 +431,12 @@ func disconnect_net() -> void:
 func host_return_everyone_to_lobby() -> void:
 	if not is_host():
 		return
+	reset_lobby_readiness("Returned to lobby — ready up again")
 	_net_return_everyone_to_lobby.rpc()
 
 @rpc("authority", "reliable", "call_local")
 func _net_return_everyone_to_lobby() -> void:
+	lobby_in_progress = false
 	set_accepting_new_peers(true)
 	PauseManager.reset_pause_state()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -264,10 +482,15 @@ func _reset_session(emit_change: bool) -> void:
 	if old_peer != null:
 		old_peer.close()
 	peers.clear()
+	lobby_ready.clear()
 	pending_map_path = ""
 	pending_match_id = 0
 	_match_ready_peers.clear()
 	lobby_name = ""
+	lobby_privacy = "public"
+	lobby_share_code = ""
+	lobby_max_players = MAX_PEERS
+	lobby_in_progress = false
 	_host_port = DEFAULT_PORT
 	if _discovery_responder != null:
 		_discovery_responder.close()
@@ -317,7 +540,7 @@ func set_local_name(new_name: String) -> bool:
 	if is_host():
 		peers[id] = {"name": cleaned}
 		lobby_changed.emit()
-		_send_roster.rpc(peers, lobby_name)
+		_broadcast_lobby_state()
 	else:
 		_register_name.rpc_id(1, cleaned)
 	return true
@@ -331,6 +554,81 @@ func peer_ids_sorted() -> Array:
 	var ids := peers.keys()
 	ids.sort()
 	return ids
+
+
+func is_peer_lobby_ready(peer_id: int) -> bool:
+	# The host's start controls replace a separate Ready Up action.
+	return peer_id == 1 or bool(lobby_ready.get(peer_id, false))
+
+
+func are_all_lobby_guests_ready() -> bool:
+	if not is_online():
+		return false
+	for peer_id in peers:
+		if int(peer_id) != 1 and not is_peer_lobby_ready(int(peer_id)):
+			return false
+	return true
+
+
+func set_local_lobby_ready(ready: bool) -> void:
+	if not is_online() or local_id() == 1:
+		return
+	var id := local_id()
+	# Optimistic local feedback is reconciled by the host's authoritative
+	# broadcast immediately after it validates the sender.
+	lobby_ready[id] = ready
+	lobby_readiness_changed.emit()
+	_set_lobby_ready.rpc_id(1, ready)
+
+
+@rpc("any_peer", "reliable")
+func _set_lobby_ready(ready: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	if sender == 1 or not peers.has(sender):
+		return
+	lobby_ready[sender] = ready
+	lobby_readiness_changed.emit()
+	_broadcast_lobby_state()
+
+
+func reset_lobby_readiness(reason: String = "Lobby settings changed") -> void:
+	if not is_host():
+		return
+	lobby_ready.clear()
+	lobby_ready[1] = true
+	for peer_id in peers:
+		if int(peer_id) != 1:
+			lobby_ready[peer_id] = false
+	lobby_readiness_changed.emit()
+	if reason != "":
+		lobby_notice.emit(reason)
+	_broadcast_lobby_state(reason)
+
+
+func set_lobby_privacy(privacy: String) -> bool:
+	if not is_host():
+		return false
+	var cleaned := privacy.to_lower()
+	if cleaned not in ["public", "private"]:
+		return false
+	if cleaned == lobby_privacy:
+		return true
+	lobby_privacy = cleaned
+	lobby_changed.emit()
+	_broadcast_lobby_state("Lobby privacy changed")
+	return true
+
+
+func kick_peer(peer_id: int) -> bool:
+	if not is_host() or peer_id == 1 or not peers.has(peer_id):
+		return false
+	var peer = multiplayer.multiplayer_peer
+	if not peer is ENetMultiplayerPeer:
+		return false
+	peer.disconnect_peer(peer_id)
+	return true
 
 # Find the in-map networked player node for a given peer id (spawned under
 # NetPlayers by round_manager). Returns null if not present.
@@ -389,15 +687,19 @@ func _on_peer_connected(id: int) -> void:
 		# push the roster here — reliable RPCs sent in the first ~1s after
 		# connect can be dropped by ENet. The client pulls it instead.
 		peers[id] = {"name": "Player %d" % id}
+		lobby_ready[id] = false
 		lobby_changed.emit()
+		lobby_readiness_changed.emit()
 
 func _on_peer_disconnected(id: int) -> void:
 	_net_log("peer %d disconnected" % id)
 	if peers.has(id):
 		peers.erase(id)
+		lobby_ready.erase(id)
 		lobby_changed.emit()
+		lobby_readiness_changed.emit()
 		if multiplayer.is_server():
-			_send_roster.rpc(peers, lobby_name)
+			_broadcast_lobby_state()
 	match_readiness_changed.emit()
 
 func _on_connected_to_server() -> void:
@@ -426,7 +728,10 @@ func _pull_roster() -> void:
 func _request_roster() -> void:
 	if not multiplayer.is_server():
 		return
-	_send_roster.rpc_id(multiplayer.get_remote_sender_id(), peers, lobby_name)
+	var sender := multiplayer.get_remote_sender_id()
+	_send_roster.rpc_id(sender, peers, lobby_name,
+		lobby_ready, _lobby_metadata(), "")
+	_send_current_match_config(sender)
 
 func _on_connection_failed() -> void:
 	if not _joining:
@@ -453,15 +758,49 @@ func _register_name(pname: String) -> void:
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	peers[sender] = {"name": cleaned}
+	if not lobby_ready.has(sender):
+		lobby_ready[sender] = false
 	lobby_changed.emit()
-	_send_roster.rpc(peers, lobby_name)   # rebroadcast the updated roster to everyone
+	_broadcast_lobby_state()   # rebroadcast the updated roster to everyone
+	_send_current_match_config(sender)
 
 @rpc("authority", "reliable")
-func _send_roster(roster: Dictionary, session_name: String = "") -> void:
+func _send_roster(roster: Dictionary, session_name: String = "",
+		ready_state: Dictionary = {}, metadata: Dictionary = {}, notice := "") -> void:
 	peers = roster.duplicate(true)
+	lobby_ready = ready_state.duplicate(true)
 	if session_name != "":
 		lobby_name = session_name
+	if not metadata.is_empty():
+		lobby_privacy = str(metadata.get("privacy", lobby_privacy))
+		lobby_share_code = str(metadata.get("share_code", lobby_share_code))
+		lobby_max_players = clampi(int(metadata.get("max_players", lobby_max_players)), 2, MAX_PEERS)
+		lobby_in_progress = bool(metadata.get("in_progress", lobby_in_progress))
 	lobby_changed.emit()
+	lobby_readiness_changed.emit()
+	if notice != "":
+		lobby_notice.emit(notice)
+
+
+func _lobby_metadata() -> Dictionary:
+	return {
+		"privacy": lobby_privacy,
+		"share_code": lobby_share_code,
+		"max_players": lobby_max_players,
+		"in_progress": lobby_in_progress,
+	}
+
+
+func _broadcast_lobby_state(notice := "") -> void:
+	if not is_host():
+		return
+	_send_roster.rpc(peers, lobby_name, lobby_ready, _lobby_metadata(), notice)
+
+
+func _send_current_match_config(peer_id: int) -> void:
+	if not is_host() or pending_map_path == "" or not peers.has(peer_id):
+		return
+	_apply_match_config.rpc_id(peer_id, GameConfig.snapshot_for_preset(), pending_map_path)
 
 # ------------------------------------------------------------
 # Match config + map sync (host -> clients)
@@ -487,6 +826,7 @@ func start_game(map_path: String) -> void:
 	if not is_host():
 		return
 	pending_map_path = map_path
+	lobby_in_progress = true
 	pending_match_id += 1
 	_match_ready_peers.clear()
 	_net_log("starting match %d on %s for %d peers" % [pending_match_id, map_path, peers.size()])

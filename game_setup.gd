@@ -1,51 +1,107 @@
 extends Control
 
 # ============================================================
-# Map list — extend this array when new maps are wired in.
+# Local Play lobby (menu redesign Phase 2) with connected Phase 3 settings.
+#
+# Layout: left cabinet (map/mode/settings/back), full-screen live map
+# preview, top map-info banner + stat card, bottom map carousel, right
+# roster (up to 10 slots), gold PLAY action.
+#
+# Local play has NO ready states (locked behavior). Bot count/difficulty
+# live in transactional Bot Settings and Match Settings slide-outs.
+#
+# Online (host-authoritative) reuses this scene until Phase 5: clients get
+# locked controls and a "waiting for host" Play action.
 # ============================================================
-const MAPS = [
-	#{"name": "Coliseum", "scene_path": "res://node_3d.tscn"},
-	#{"name": "Explosion Town", "scene_path": "res://maps/test/NukeTownMap.tscn"},
-	{"name": "Whispering Woods", "scene_path": "res://maps/test/ForestMap.tscn"},
-	{"name": "Western Town", "scene_path": "res://maps/test/WesternV2Map.tscn"},
-	{"name": "Maple & 3rd", "scene_path": "res://maps/test/CityMap.tscn"},
-]
 
+# Map metadata single source of truth (see map_registry.gd). Re-exported so
+# existing consumers (menu_map_cycler, lobby_map_preview) keep reading
+# game_setup.MAPS unchanged.
+const MAPS = preload("res://map_registry.gd").MAPS
+const LOBBY_SETTINGS_SLIDEOUT = preload("res://UI/lobby_settings_slideout.gd")
+const CONFIRM_BUTTON = preload("res://UI/components/one_gun_confirm_button.gd")
+
+# Order matters: lobby_map_preview.MODE_SPECIFIC assumes SPECIFIC == 1.
 enum MapSelectMode { VOTE, SPECIFIC, RANDOM }
+
+const RANDOM_ITEM_ID := 1000
+const LOCAL_SLOT_CAP := 10
+const ONLINE_SLOT_CAP := NetworkManager.MAX_PEERS
 
 var map_select_mode: int = MapSelectMode.SPECIFIC
 var selected_map_index: int = 0
 
-# ============================================================
-# Lobby / ready state (local-only for now; not yet a separate
-# autoload since there's no networked session to share it with).
-# ============================================================
-var player1_ready := false
-var player2_ready := false
+# Live 3D map preview behind the UI (perimeter-orbit camera).
+var _map_preview = null
+
+# UI references (built procedurally in _build_lobby_ui).
+var _map_dropdown: OptionButton
+var _mode_dropdown: OptionButton
+var _bot_settings_button: OneGunButton
+var _match_settings_button: OneGunButton
+var _back_button: OneGunButton
+var _play_button: OneGunButton
+var _banner_name: Label
+var _banner_desc: Label
+var _info_labels := {}          # stat key -> value Label
+var _roster_title: Label
+var _roster_list: VBoxContainer
+var _map_cards: Array = []      # OneGunMapCard per map
+var _carousel_prev: OneGunButton
+var _carousel_next: OneGunButton
+var _thumbnails := {}           # map index -> ImageTexture captured from live preview
+var _settings_slideout = null
+var _match_settings_popup: PopupPanel # legacy builder retained only for old saved scene compatibility
+var _settings_layer: CanvasLayer
+var _settings_target_position := Vector2.ZERO
+var _settings_tween: Tween
+var _left_cabinet: OneGunCabinet
+var _top_strip: HBoxContainer
+var _info_card: OneGunCabinet
+var _roster_cabinet: OneGunCabinet
+var _carousel_cabinet: OneGunCabinet
+var _cards_row: HBoxContainer
+var _lobby_code_label: Label
+var _privacy_dropdown: OptionButton
+var _lobby_notice_label: Label
+
+const LAYOUT_MARGIN := 24.0
+const LAYOUT_GAP := 20.0
+const COMPACT_MARGIN := 16.0
+const COMPACT_GAP := 12.0
+const LEFT_WIDTH := 360.0
+const RIGHT_WIDTH := 340.0
+const COMPACT_LEFT_WIDTH := 310.0
+const COMPACT_RIGHT_WIDTH := 330.0
+const TOP_STRIP_HEIGHT := 190.0
+const CAROUSEL_HEIGHT := 148.0
+const PLAY_HEIGHT := 84.0
+
 
 func _ready():
-	_setup_layout()
-	_setup_back_button()
-	_build_map_selection_ui()
-	_build_bots_toggle_ui()
-	_build_settings_dropdown()
-	_setup_ready_buttons()
-	_refresh_lobby_list()
-	_refresh_ready_ui()
-	$BotSettingsPopup.hide()
-	$CustomizeCharacterPopup.hide()
-	$BotSettingsPopup.popup_hide.connect(_on_bot_settings_popup_closed)
-	$CustomizeCharacterPopup.popup_hide.connect(_on_customize_popup_closed)
-	if not $CustomizeButton.pressed.is_connected(_on_customize_button_pressed):
-		$CustomizeButton.pressed.connect(_on_customize_button_pressed)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_map_preview()
+	_build_lobby_ui()
 	_setup_online_mode()
+	_clamp_bot_count_to_capacity()
+	_refresh_roster()
+	_update_map_info()
+	_sync_carousel()
+	_apply_responsive_layout()
+	resized.connect(_apply_responsive_layout)
+	_configure_focus_navigation.call_deferred()
+	_open_capture_state.call_deferred()
+	var capture_state := OS.get_environment("ONEGUN_UI_CAPTURE_STATE")
+	var capture_name := capture_state if capture_state in ["bot_settings", "match_settings", "lobby_host", "lobby_guest"] else "local_lobby"
+	UICapture.maybe_capture(self, capture_name, 2.5)
+
 
 # ============================================================
 # Online (network) integration — host-authoritative lobby.
 # ============================================================
 func _is_net() -> bool:
 	return NetworkManager.is_online()
+
 
 func _setup_online_mode():
 	if not _is_net():
@@ -56,328 +112,914 @@ func _setup_online_mode():
 	GameConfig.teams_enabled = false
 	GameConfig.friendly_fire_enabled = false
 	NetworkManager.lobby_changed.connect(_on_online_lobby_changed)
+	NetworkManager.lobby_readiness_changed.connect(_on_lobby_readiness_changed)
+	NetworkManager.lobby_notice.connect(_on_lobby_notice)
 	NetworkManager.match_config_received.connect(_on_net_config_synced)
 	NetworkManager.server_disconnected.connect(_on_net_host_left)
-	# Bots are host-configured online. Clients see the synchronized values but
-	# the normal client settings lock prevents them from editing those values.
-	var bot_btn = get_node_or_null("Settings Panel/BotSettingsButton")
-	if bot_btn: bot_btn.visible = GameConfig.bot_count > 0
-	var bots_row = get_node_or_null("Settings Panel/BotsToggleRow")
-	if bots_row: bots_row.visible = true
-	var force_play = get_node_or_null("ReadyBar/ForcePlayButton")
-	if force_play: force_play.visible = false
 	if NetworkManager.is_host():
 		_net_broadcast_config()   # seed clients with the starting config/map
 	else:
 		_apply_client_lock()
-	_refresh_lobby_list()
+
 
 func _max_online_bots() -> int:
-	return maxi(8 - NetworkManager.peers.size(), 0) if _is_net() else 7
+	return maxi(ONLINE_SLOT_CAP - NetworkManager.peers.size(), 0) if _is_net() else LOCAL_SLOT_CAP - _local_human_count()
+
+
+func _local_human_count() -> int:
+	return 2 if GameConfig.split_screen_enabled else 1
+
+
+func _clamp_bot_count_to_capacity() -> void:
+	# Never let a stale preset or a splitscreen toggle create more actors than
+	# the lobby can render/start. Online clients only display host-owned state.
+	if _is_net() and not NetworkManager.is_host():
+		return
+	var capacity := _max_online_bots()
+	if GameConfig.bot_configs.size() > capacity:
+		GameConfig.set_bot_count(capacity)
+
 
 func _on_online_lobby_changed() -> void:
 	if NetworkManager.is_host() and GameConfig.bot_count > _max_online_bots():
 		GameConfig.set_bot_count(_max_online_bots())
 		_net_broadcast_config()
-	_build_bots_toggle_ui()
-	_refresh_lobby_list()
+	_refresh_roster()
+	_refresh_online_session_ui()
+	_update_lobby_action()
+	_reset_force_start_confirmation()
+
+
+func _on_lobby_readiness_changed() -> void:
+	_refresh_roster()
+	_update_lobby_action()
+	_reset_force_start_confirmation()
+
+
+func _on_lobby_notice(message: String) -> void:
+	if _lobby_notice_label != null:
+		_lobby_notice_label.text = message
+
 
 func _net_broadcast_config():
 	if _is_net() and NetworkManager.is_host():
 		NetworkManager.broadcast_match_config(GameConfig.snapshot_for_preset(), _resolve_map_scene_path())
 
+
 func _on_net_config_synced():
-	# Client: reflect the host's map choice in the preview + picker.
-	var path = NetworkManager.pending_map_path
-	for i in MAPS.size():
-		if MAPS[i]["scene_path"] == path:
-			selected_map_index = i
-			var picker = get_node_or_null("Settings Panel/MapSelectionRow/MapPicker")
-			if picker: picker.select(i)
-			if _map_preview != null:
-				_map_preview.apply(MapSelectMode.SPECIFIC, i)
-			break
-	_build_bots_toggle_ui()
-	_refresh_lobby_list()
+	# Client: reflect the host's map choice in the preview + picker + carousel.
+	var index := MapRegistry.find_index_by_path(NetworkManager.pending_map_path)
+	if index >= 0:
+		selected_map_index = index
+		map_select_mode = MapSelectMode.SPECIFIC
+		if _map_dropdown != null:
+			_map_dropdown.select(index)
+		if _map_preview != null:
+			_map_preview.apply(MapSelectMode.SPECIFIC, index)
+		_sync_carousel()
+		_update_map_info()
+	_refresh_roster()
+
 
 func _apply_client_lock():
-	# Clients can't touch settings — host configures for everyone.
-	var panel = get_node_or_null("Settings Panel")
-	if panel: _disable_controls(panel)
-	var play = get_node_or_null("ReadyBar/PlayButton")
-	if play:
-		play.text = "Waiting for host…"
-		play.disabled = true
-	var p1_ready = get_node_or_null("ReadyBar/ReadyButton")
-	if p1_ready: p1_ready.visible = false
+	# Clients can't touch host-owned lobby state — host configures for everyone.
+	for control in [_map_dropdown, _mode_dropdown, _bot_settings_button,
+			_match_settings_button, _carousel_prev, _carousel_next]:
+		if control != null:
+			control.disabled = true
+	for card in _map_cards:
+		card.disabled = true
+	_update_lobby_action()
 
-func _disable_controls(node: Node):
-	for c in node.get_children():
-		if c is BaseButton:
-			c.disabled = true
-		elif c is LineEdit or c is SpinBox or c is Slider:
-			c.editable = false
-		_disable_controls(c)
 
 func _on_net_host_left():
 	# Host disappeared — bail back to the main menu.
 	get_tree().change_scene_to_file("res://main_menu.tscn")
 
-# Live 3D map preview behind the UI (perimeter-orbit camera).
-var _map_preview = null
 
+# ============================================================
+# Live map preview + carousel thumbnails
+# ============================================================
 func _build_map_preview():
 	_map_preview = preload("res://lobby_map_preview.gd").new()
 	add_child(_map_preview)
 	_map_preview.setup(self, MAPS)
+	# Connect before apply(): the first map load emits map_shown synchronously.
+	_map_preview.map_shown.connect(_on_preview_map_shown)
 	_map_preview.apply(map_select_mode, selected_map_index)
 
-func _setup_back_button():
-	var existing = get_node_or_null("BackButton")
-	var back_button: Button
-	if existing == null:
-		back_button = Button.new()
-		back_button.name = "BackButton"
-		add_child(back_button)
-	else:
-		back_button = existing
-	back_button.text = "← Back"
-	back_button.anchor_left = 0.0
-	back_button.anchor_top = 1.0
-	back_button.anchor_right = 0.0
-	back_button.anchor_bottom = 1.0
-	back_button.offset_left = 40
-	back_button.offset_top = -76
-	back_button.offset_right = 40 + 100
-	back_button.offset_bottom = -40
-	back_button.custom_minimum_size = Vector2(100, 36)
-	if not back_button.pressed.is_connected(_on_back_button_pressed):
-		back_button.pressed.connect(_on_back_button_pressed)
-	if not back_button.mouse_entered.is_connected(func(): AudioManager.play_hover()):
-		back_button.mouse_entered.connect(func(): AudioManager.play_hover())
 
-func _on_back_button_pressed():
-	AudioManager.play_click()
-	if NetworkManager.is_online():
-		NetworkManager.disconnect_net()
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+func _on_preview_map_shown(index: int) -> void:
+	if _thumbnails.has(index):
+		return
+	# Let the freshly loaded map render a few frames before snapshotting.
+	await get_tree().create_timer(0.5).timeout
+	if _map_preview == null or _map_preview.current_index() != index:
+		return
+	var image: Image = _map_preview.capture_image()
+	if image == null:
+		return
+	image.resize(320, 180, Image.INTERPOLATE_BILINEAR)
+	_thumbnails[index] = ImageTexture.create_from_image(image)
+	if index < _map_cards.size():
+		_map_cards[index].set_map(index, MAPS[index]["name"], _thumbnails[index], MAPS[index]["tint"])
 
-# ------------------------------------------------------------
-# Layout — anchors/offsets for every top-level panel, plus
-# spacing inside the containers that hold dynamically-built rows.
-# ------------------------------------------------------------
-func _setup_layout():
-	# Make sure this whole screen fills the viewport, not just its default size.
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	var settings_panel = $"Settings Panel"
-	settings_panel.anchor_left = 0.0
-	settings_panel.anchor_top = 0.0
-	settings_panel.anchor_right = 0.0
-	settings_panel.anchor_bottom = 0.0
-	settings_panel.offset_left = 16
-	settings_panel.offset_top = 16
-	settings_panel.offset_right = 16 + 700
-	settings_panel.offset_bottom = -140
+# ============================================================
+# UI construction
+# ============================================================
+func _build_lobby_ui() -> void:
+	_build_left_cabinet()
+	_build_top_strip()
+	_build_roster_panel()
+	_build_carousel()
+	_build_play_action()
+	_settings_layer = CanvasLayer.new()
+	_settings_layer.name = "SettingsSlideoutLayer"
+	_settings_layer.layer = 20
+	add_child(_settings_layer)
 
-	# Settings Panel is a plain Control, not a layout container, so it has
-	# no automatic child-stacking. Each child's vertical position is set
-	# explicitly here, in order, with a consistent gap between rows.
-	var next_y := 0
-	var row_gap := 16
 
-	for row_name in ["MapSelectionRow", "BotsToggleRow"]:
-		var row = settings_panel.get_node(row_name)
-		row.add_theme_constant_override("separation", 12)
-		row.anchor_left = 0.0
-		row.anchor_top = 0.0
-		row.anchor_right = 1.0
-		row.anchor_bottom = 0.0
-		row.offset_left = 0
-		row.offset_right = 0
-		row.offset_top = next_y
-		row.custom_minimum_size = Vector2(0, 36)
-		row.offset_bottom = next_y + 36
-		next_y += 36 + row_gap
+func _build_left_cabinet() -> void:
+	_left_cabinet = OneGunCabinet.new()
+	_left_cabinet.name = "LeftCabinet"
+	_left_cabinet.variant = OneGunCabinet.Variant.CABINET
+	_left_cabinet.anchor_left = 0.0
+	_left_cabinet.anchor_top = 0.0
+	_left_cabinet.anchor_right = 0.0
+	_left_cabinet.anchor_bottom = 1.0
+	add_child(_left_cabinet)
 
-	var bot_settings_button = $"Settings Panel/BotSettingsButton"
-	bot_settings_button.anchor_left = 0.0
-	bot_settings_button.anchor_top = 0.0
-	bot_settings_button.anchor_right = 0.0
-	bot_settings_button.anchor_bottom = 0.0
-	bot_settings_button.offset_left = 0
-	bot_settings_button.offset_top = next_y
-	bot_settings_button.custom_minimum_size = Vector2(180, 36)
-	bot_settings_button.offset_right = 180
-	bot_settings_button.offset_bottom = next_y + 36
-	next_y += 36 + row_gap
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	_left_cabinet.get_content().add_child(column)
 
-	var toggle_dropdown = settings_panel.get_node("ToggleDropdown")
-	toggle_dropdown.add_theme_constant_override("separation", 8)
-	toggle_dropdown.anchor_left = 0.0
-	toggle_dropdown.anchor_top = 0.0
-	toggle_dropdown.anchor_right = 1.0
-	toggle_dropdown.anchor_bottom = 0.0
-	toggle_dropdown.offset_left = 0
-	toggle_dropdown.offset_right = 0
-	toggle_dropdown.offset_top = next_y
-	toggle_dropdown.offset_bottom = next_y + 320  # fixed height; settings column scrolls within it
-	next_y += 320 + row_gap
+	var logo := TextureRect.new()
+	# The source logo is intentionally padded for the main-menu composition.
+	# Crop that transparent staging area here so the lobby gets the large,
+	# cabinet-mounted logo from the approved composition.
+	var logo_crop := AtlasTexture.new()
+	logo_crop.atlas = preload("res://UI/MainMenu/OneGunLogoV1.png")
+	logo_crop.region = Rect2(320, 170, 920, 560)
+	logo.texture = logo_crop
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.custom_minimum_size = Vector2(0, 132)
+	column.add_child(logo)
 
-	var lobby_panel = $LobbyQueuePanel
-	lobby_panel.anchor_left = 1.0
-	lobby_panel.anchor_top = 0.0
-	lobby_panel.anchor_right = 1.0
-	lobby_panel.anchor_bottom = 0.0
-	lobby_panel.offset_left = -420
-	lobby_panel.offset_top = 16
-	lobby_panel.offset_right = -16
-	lobby_panel.offset_bottom = 376
-	var lobby_list = $LobbyQueuePanel/LobbyList
-	lobby_list.add_theme_constant_override("separation", 10)
-	lobby_list.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var mode_title := "ONLINE LOBBY" if _is_net() else "LOCAL PLAY"
+	var title := OneGunUI.make_heading(mode_title, OneGunUI.TEXT_L)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(title)
+	if _is_net() and NetworkManager.lobby_name != "":
+		var lobby_label := OneGunUI.make_label(NetworkManager.lobby_name, OneGunUI.TEXT_S, "cyan")
+		lobby_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		column.add_child(lobby_label)
+	if _is_net():
+		_build_online_session_controls(column)
 
-	var customize_button = $CustomizeButton
-	customize_button.anchor_left = 0.0
-	customize_button.anchor_top = 0.0
-	customize_button.anchor_right = 0.0
-	customize_button.anchor_bottom = 0.0
-	customize_button.offset_left = 40
-	customize_button.offset_top = -180
-	customize_button.offset_right = 40 + 240
-	customize_button.offset_bottom = -180 + 44
-	customize_button.text = "Customize Your Character"
-
-	var ready_bar = $ReadyBar
-	ready_bar.anchor_left = 0.0
-	ready_bar.anchor_top = 1.0
-	ready_bar.anchor_right = 1.0
-	ready_bar.anchor_bottom = 1.0
-	ready_bar.offset_left = 40
-	ready_bar.offset_top = -100
-	ready_bar.offset_right = -40
-	ready_bar.offset_bottom = -40
-	ready_bar.add_theme_constant_override("separation", 20)
-	ready_bar.alignment = BoxContainer.ALIGNMENT_END
-	for button_path in ["ReadyButton", "PlayButton", "ForcePlayButton"]:
-		var button = ready_bar.get_node(button_path)
-		button.custom_minimum_size = Vector2(200, 50)
-
-# ------------------------------------------------------------
-# Map selection
-# ------------------------------------------------------------
-func _build_map_selection_ui():
-	var row = $"Settings Panel/MapSelectionRow"
-	for child in row.get_children():
-		child.queue_free()
-
-	var label = Label.new()
-	label.text = "Map:"
-	row.add_child(label)
-
-	var mode_button = OptionButton.new()
-	mode_button.add_item("Vote", MapSelectMode.VOTE)
-	mode_button.add_item("Specific Map", MapSelectMode.SPECIFIC)
-	mode_button.add_item("Random", MapSelectMode.RANDOM)
-	mode_button.select(map_select_mode)
-	mode_button.item_selected.connect(_on_map_mode_selected)
-	mode_button.custom_minimum_size = Vector2(160, 36)
-	mode_button.fit_to_longest_item = true
-	row.add_child(mode_button)
-	mode_button.get_popup().max_size = Vector2(0, 124)
-	mode_button.get_popup().about_to_popup.connect(func():
-		mode_button.get_popup().max_size = Vector2(mode_button.size.x, 124)
-	)
-
-	var map_picker = OptionButton.new()
-	map_picker.name = "MapPicker"
+	column.add_child(OneGunUI.make_label("MAP", OneGunUI.TEXT_XS, "muted", true))
+	_map_dropdown = OneGunUI.make_dropdown()
 	for i in MAPS.size():
-		map_picker.add_item(MAPS[i]["name"], i)
-	map_picker.select(selected_map_index)
-	map_picker.item_selected.connect(_on_map_picked)
-	map_picker.visible = (map_select_mode == MapSelectMode.SPECIFIC)
-	map_picker.custom_minimum_size = Vector2(180, 36)
-	map_picker.fit_to_longest_item = true
-	row.add_child(map_picker)
-	map_picker.get_popup().max_size = Vector2(0, 124)
-	map_picker.get_popup().about_to_popup.connect(func():
-		map_picker.get_popup().max_size = Vector2(map_picker.size.x, 124)
-	)
+		_map_dropdown.add_item(str(MAPS[i].get("name", "Unnamed Map")), i)
+	if MAPS.is_empty():
+		_map_dropdown.add_item("No maps available", -1)
+		_map_dropdown.disabled = true
+	else:
+		_map_dropdown.add_item("Random Map", RANDOM_ITEM_ID)
+		_map_dropdown.select(clampi(selected_map_index, 0, MAPS.size() - 1))
+	_map_dropdown.item_selected.connect(_on_map_dropdown_selected)
+	column.add_child(_map_dropdown)
 
-func _on_map_mode_selected(index: int):
-	map_select_mode = index
-	var map_picker = $"Settings Panel/MapSelectionRow/MapPicker"
-	map_picker.visible = (map_select_mode == MapSelectMode.SPECIFIC)
+	column.add_child(OneGunUI.make_label("GAME MODE", OneGunUI.TEXT_XS, "muted", true))
+	_mode_dropdown = OneGunUI.make_dropdown(PackedStringArray(["ONE GUN"]))
+	_mode_dropdown.disabled = true   # single mode today; honest lock, not decoration
+	_mode_dropdown.tooltip_text = "One Gun is the only game mode for now."
+	column.add_child(_mode_dropdown)
+
+	# Purple SETTINGS badge (locked: reads SETTINGS, not BOTS).
+	var badge := PanelContainer.new()
+	var badge_style := OneGunUI.style_box(
+		OneGunUI.color("purple").darkened(0.3), OneGunUI.color("purple").lightened(0.05),
+		OneGunUI.RADIUS_INPUT, OneGunUI.BORDER_THIN)
+	badge_style.content_margin_left = 12
+	badge_style.content_margin_right = 12
+	badge_style.content_margin_top = 4
+	badge_style.content_margin_bottom = 4
+	badge.add_theme_stylebox_override("panel", badge_style)
+	badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	badge.add_child(OneGunUI.make_label("SETTINGS", OneGunUI.TEXT_S, "text_bright", true))
+	column.add_child(badge)
+
+	_bot_settings_button = _make_cabinet_button("BOT SETTINGS")
+	_bot_settings_button.pressed.connect(_on_bot_settings_button_pressed)
+	column.add_child(_bot_settings_button)
+
+	_match_settings_button = _make_cabinet_button("MATCH SETTINGS")
+	_match_settings_button.pressed.connect(_on_match_settings_button_pressed)
+	column.add_child(_match_settings_button)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(spacer)
+
+	_back_button = OneGunButton.new()
+	_back_button.variant = "navy"
+	_back_button.text = "LEAVE LOBBY" if _is_net() and not NetworkManager.is_host() else "BACK"
+	var back_icon := OneGunIcon.new()
+	back_icon.kind = OneGunIcon.Kind.CHEVRON_LEFT
+	back_icon.icon_color = OneGunUI.color("text")
+	back_icon.custom_minimum_size = Vector2(18, 18)
+	back_icon.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+	back_icon.position = Vector2(14, 0)
+	_back_button.add_child(back_icon)
+	_back_button.pressed.connect(_on_back_button_pressed)
+	column.add_child(_back_button)
+
+
+func _build_online_session_controls(column: VBoxContainer) -> void:
+	var session := OneGunCabinet.new()
+	session.variant = OneGunCabinet.Variant.SECTION
+	session.content_padding = OneGunUI.SPACE_S
+	column.add_child(session)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	session.get_content().add_child(box)
+
+	var code_row := HBoxContainer.new()
+	code_row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_lobby_code_label = OneGunUI.make_label("CODE: --", OneGunUI.TEXT_S, "cyan", true)
+	_lobby_code_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	code_row.add_child(_lobby_code_label)
+	var copy := OneGunButton.new()
+	copy.variant = "navy"
+	copy.text = "COPY"
+	copy.custom_minimum_size = Vector2(76, 38)
+	copy.pressed.connect(_copy_lobby_code)
+	code_row.add_child(copy)
+	box.add_child(code_row)
+
+	var invite := OneGunButton.new()
+	invite.variant = "navy"
+	invite.text = "INVITE UNAVAILABLE"
+	invite.disabled = true
+	invite.tooltip_text = "Platform invites are not available in this build. Share the lobby code instead."
+	box.add_child(invite)
+
+	var privacy_row := HBoxContainer.new()
+	privacy_row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	privacy_row.add_child(OneGunUI.make_label("PRIVACY", OneGunUI.TEXT_XS, "muted", true))
+	_privacy_dropdown = OneGunUI.make_dropdown(PackedStringArray(["PUBLIC", "PRIVATE"]))
+	_privacy_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_privacy_dropdown.disabled = not NetworkManager.is_host()
+	_privacy_dropdown.item_selected.connect(_on_privacy_selected)
+	privacy_row.add_child(_privacy_dropdown)
+	box.add_child(privacy_row)
+
+	_lobby_notice_label = OneGunUI.make_label("", OneGunUI.TEXT_XS, "muted")
+	_lobby_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_lobby_notice_label)
+	_refresh_online_session_ui()
+
+
+func _refresh_online_session_ui() -> void:
+	if not _is_net():
+		return
+	if _lobby_code_label != null:
+		_lobby_code_label.text = "CODE: %s" % (NetworkManager.lobby_share_code if NetworkManager.lobby_share_code != "" else "--")
+	if _privacy_dropdown != null:
+		_privacy_dropdown.select(1 if NetworkManager.lobby_privacy == "private" else 0)
+		_privacy_dropdown.disabled = not NetworkManager.is_host()
+
+
+func _copy_lobby_code() -> void:
+	if NetworkManager.lobby_share_code == "":
+		return
+	DisplayServer.clipboard_set(NetworkManager.lobby_share_code)
+	_on_lobby_notice("Lobby code copied")
+
+
+func _on_privacy_selected(index: int) -> void:
+	if not NetworkManager.is_host():
+		_refresh_online_session_ui()
+		return
+	NetworkManager.set_lobby_privacy("private" if index == 1 else "public")
+
+
+func _make_cabinet_button(text: String) -> OneGunButton:
+	var button := OneGunButton.new()
+	button.variant = "navy"
+	button.text = text
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var chevron := OneGunIcon.new()
+	chevron.kind = OneGunIcon.Kind.CHEVRON_RIGHT
+	chevron.icon_color = OneGunUI.color("gold")
+	chevron.custom_minimum_size = Vector2(16, 16)
+	chevron.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	chevron.position = Vector2(-30, 0)
+	button.add_child(chevron)
+	return button
+
+
+func _build_top_strip() -> void:
+	# Banner + stat card share one anchored strip so narrow viewports shrink
+	# the banner instead of letting the two panels overlap.
+	_top_strip = HBoxContainer.new()
+	_top_strip.name = "TopStrip"
+	_top_strip.add_theme_constant_override("separation", 16)
+	_top_strip.anchor_left = 0.0
+	_top_strip.anchor_right = 1.0
+	add_child(_top_strip)
+
+	var banner := OneGunCabinet.new()
+	banner.name = "MapBanner"
+	banner.variant = OneGunCabinet.Variant.SECTION
+	banner.content_padding = OneGunUI.SPACE_M
+	banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	banner.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_top_strip.add_child(banner)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	banner.get_content().add_child(box)
+	_banner_name = OneGunUI.make_heading("", OneGunUI.TEXT_XL, "text_bright")
+	_banner_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	box.add_child(_banner_name)
+	_banner_desc = OneGunUI.make_label("", OneGunUI.TEXT_S, "muted")
+	_banner_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_banner_desc)
+
+	_info_card = OneGunCabinet.new()
+	_info_card.name = "MapInfoCard"
+	_info_card.variant = OneGunCabinet.Variant.SECTION
+	_info_card.content_padding = OneGunUI.SPACE_M
+	_info_card.custom_minimum_size = Vector2(230, 0)
+	_info_card.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_top_strip.add_child(_info_card)
+
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_info_card.get_content().add_child(rows)
+	for stat in [["size", "SIZE"], ["recommended_players", "RECOMMENDED"],
+			["playstyle", "PLAYSTYLE"], ["hazards", "HAZARDS"]]:
+		var row := VBoxContainer.new()
+		row.add_theme_constant_override("separation", 0)
+		row.add_child(OneGunUI.make_label(stat[1], OneGunUI.TEXT_XS, "muted", true))
+		var value := OneGunUI.make_label("", OneGunUI.TEXT_M, "gold", true)
+		_info_labels[stat[0]] = value
+		row.add_child(value)
+		rows.add_child(row)
+
+
+func _build_roster_panel() -> void:
+	_roster_cabinet = OneGunCabinet.new()
+	_roster_cabinet.name = "RosterCabinet"
+	_roster_cabinet.variant = OneGunCabinet.Variant.CABINET
+	_roster_cabinet.content_padding = OneGunUI.SPACE_M
+	_roster_cabinet.anchor_left = 1.0
+	_roster_cabinet.anchor_top = 0.0
+	_roster_cabinet.anchor_right = 1.0
+	_roster_cabinet.anchor_bottom = 1.0
+	add_child(_roster_cabinet)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_roster_cabinet.get_content().add_child(column)
+
+	_roster_title = OneGunUI.make_heading("LOCAL ROSTER", OneGunUI.TEXT_M)
+	_roster_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_roster_title)
+
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.follow_focus = true
+	column.add_child(scroll)
+
+	_roster_list = VBoxContainer.new()
+	_roster_list.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_roster_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_roster_list)
+
+
+func _build_carousel() -> void:
+	_carousel_cabinet = OneGunCabinet.new()
+	_carousel_cabinet.name = "MapCarousel"
+	_carousel_cabinet.variant = OneGunCabinet.Variant.SECTION
+	_carousel_cabinet.content_padding = OneGunUI.SPACE_S
+	_carousel_cabinet.anchor_left = 0.0
+	_carousel_cabinet.anchor_top = 1.0
+	_carousel_cabinet.anchor_right = 1.0
+	_carousel_cabinet.anchor_bottom = 1.0
+	add_child(_carousel_cabinet)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_carousel_cabinet.get_content().add_child(row)
+
+	_carousel_prev = _make_chevron_button(OneGunIcon.Kind.CHEVRON_LEFT)
+	_carousel_prev.pressed.connect(func(): _step_map(-1))
+	_carousel_prev.disabled = MAPS.is_empty()
+	row.add_child(_carousel_prev)
+
+	var cards_scroll := ScrollContainer.new()
+	cards_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	cards_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	cards_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cards_scroll.follow_focus = true
+	row.add_child(cards_scroll)
+
+	_cards_row = HBoxContainer.new()
+	_cards_row.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	_cards_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_cards_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cards_scroll.add_child(_cards_row)
+
+	_map_cards.clear()
+	if MAPS.is_empty():
+		var empty_state := OneGunStatusPanel.new()
+		empty_state.custom_minimum_size = Vector2(360, 104)
+		_cards_row.add_child(empty_state)
+		empty_state.show_empty.call_deferred("NO MAPS AVAILABLE", "Add a valid map entry to the map registry.")
+	else:
+		for i in MAPS.size():
+			var card := OneGunMapCard.new()
+			_cards_row.add_child(card)
+			var thumbnail := MapRegistry.load_thumbnail(i)
+			if thumbnail != null:
+				_thumbnails[i] = thumbnail
+			card.set_map(i, str(MAPS[i].get("name", "Unnamed Map")), thumbnail,
+					MAPS[i].get("tint", OneGunUI.color("face")))
+			card.card_selected.connect(_on_map_card_selected)
+			_map_cards.append(card)
+
+	_carousel_next = _make_chevron_button(OneGunIcon.Kind.CHEVRON_RIGHT)
+	_carousel_next.pressed.connect(func(): _step_map(1))
+	_carousel_next.disabled = MAPS.is_empty()
+	row.add_child(_carousel_next)
+
+
+func _make_chevron_button(icon_kind: OneGunIcon.Kind) -> OneGunButton:
+	var button := OneGunButton.new()
+	button.variant = "navy"
+	button.custom_minimum_size = Vector2(44, 104)
+	var icon := OneGunIcon.new()
+	icon.kind = icon_kind
+	icon.icon_color = OneGunUI.color("gold")
+	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	button.add_child(icon)
+	return button
+
+
+func _build_play_action() -> void:
+	_play_button = CONFIRM_BUTTON.new() if _is_net() and NetworkManager.is_host() else OneGunButton.new()
+	_play_button.name = "PlayButton"
+	_play_button.variant = "gold"
+	_play_button.text = "PLAY"
+	_play_button.font_size = 30
+	_play_button.anchor_left = 1.0
+	_play_button.anchor_top = 1.0
+	_play_button.anchor_right = 1.0
+	_play_button.anchor_bottom = 1.0
+	_play_button.offset_left = -(24 + 340)
+	_play_button.offset_top = -(24 + 84)
+	_play_button.offset_right = -24
+	_play_button.offset_bottom = -24
+	_play_button.pressed.connect(_on_play_button_pressed)
+	if _play_button is OneGunConfirmButton:
+		(_play_button as OneGunConfirmButton).confirm_text = "CONFIRM FORCE START"
+		(_play_button as OneGunConfirmButton).confirmed.connect(_launch_match)
+	add_child(_play_button)
+	if _is_net():
+		_update_lobby_action()
+	_update_play_availability()
+
+
+func _apply_responsive_layout() -> void:
+	if _left_cabinet == null:
+		return
+	# Always lay out against the viewport. An anchored connected slide-out must
+	# never be allowed to feed its own minimum size back into this root Control.
+	var layout_size := get_viewport_rect().size
+	var safe_width := minf(layout_size.x, layout_size.y * (16.0 / 9.0))
+	var safe_left := maxf((layout_size.x - safe_width) * 0.5, 0.0)
+	var compact := safe_width < 1500.0
+	var margin := COMPACT_MARGIN if compact else LAYOUT_MARGIN
+	var gap := COMPACT_GAP if compact else LAYOUT_GAP
+	var left_width := COMPACT_LEFT_WIDTH if compact else LEFT_WIDTH
+	var right_width := COMPACT_RIGHT_WIDTH if compact else RIGHT_WIDTH
+	var left_edge := safe_left + margin
+	var right_edge := safe_left + safe_width - margin
+	var center_left := left_edge + left_width + gap
+	var center_right := right_edge - right_width - gap
+
+	_left_cabinet.offset_left = left_edge
+	_left_cabinet.offset_top = margin
+	_left_cabinet.offset_right = left_edge + left_width
+	_left_cabinet.offset_bottom = -margin
+	_left_cabinet.z_index = 20
+
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		var slideout_left := left_edge + left_width - 10.0
+		var slideout_right := center_right
+		var slideout_width := clampf(slideout_right - slideout_left, 480.0, 640.0)
+		_settings_slideout.anchor_left = 0.0
+		_settings_slideout.anchor_top = 0.0
+		_settings_slideout.anchor_right = 0.0
+		_settings_slideout.anchor_bottom = 0.0
+		_settings_slideout.position = Vector2(slideout_left, margin)
+		_settings_slideout.size = Vector2(slideout_width, layout_size.y - margin * 2.0)
+		_settings_target_position = _settings_slideout.position
+
+	_top_strip.offset_left = center_left
+	_top_strip.offset_top = margin
+	_top_strip.offset_right = -(layout_size.x - center_right)
+	_top_strip.offset_bottom = margin + TOP_STRIP_HEIGHT
+	_top_strip.add_theme_constant_override("separation", gap)
+	_info_card.custom_minimum_size.x = 208.0 if compact else 230.0
+
+	_roster_cabinet.offset_left = -(layout_size.x - (right_edge - right_width))
+	_roster_cabinet.offset_top = margin
+	_roster_cabinet.offset_right = -(layout_size.x - right_edge)
+	_roster_cabinet.offset_bottom = -(margin + PLAY_HEIGHT + gap)
+
+	_carousel_cabinet.offset_left = center_left
+	_carousel_cabinet.offset_top = -(margin + CAROUSEL_HEIGHT)
+	_carousel_cabinet.offset_right = -(layout_size.x - center_right)
+	_carousel_cabinet.offset_bottom = -margin
+
+	_play_button.offset_left = -(layout_size.x - (right_edge - right_width))
+	_play_button.offset_top = -(margin + PLAY_HEIGHT)
+	_play_button.offset_right = -(layout_size.x - right_edge)
+	_play_button.offset_bottom = -margin
+
+	if _cards_row != null and not _map_cards.is_empty():
+		var center_width := maxf(center_right - center_left, 1.0)
+		var outer_space := 176.0 if compact else 152.0
+		var card_width := clampf(
+			(center_width - outer_space - OneGunUI.SPACE_S * (_map_cards.size() - 1))
+				/ float(_map_cards.size()),
+			138.0, 240.0)
+		_cards_row.add_theme_constant_override("separation", OneGunUI.SPACE_S if compact else OneGunUI.SPACE_M)
+		for card in _map_cards:
+			card.custom_minimum_size = Vector2(card_width, 112.0)
+
+
+func _configure_focus_navigation() -> void:
+	var left_controls: Array = [_map_dropdown, _bot_settings_button,
+			_match_settings_button, _back_button]
+	OneGunUI.chain_focus_vertical(left_controls)
+	var carousel_controls: Array = [_carousel_prev]
+	carousel_controls.append_array(_map_cards)
+	carousel_controls.append(_carousel_next)
+	for index in carousel_controls.size():
+		var control := carousel_controls[index] as Control
+		var previous := carousel_controls[wrapi(index - 1, 0, carousel_controls.size())] as Control
+		var next := carousel_controls[wrapi(index + 1, 0, carousel_controls.size())] as Control
+		control.focus_neighbor_left = control.get_path_to(previous)
+		control.focus_neighbor_right = control.get_path_to(next)
+		control.focus_neighbor_top = control.get_path_to(_map_dropdown)
+		control.focus_neighbor_bottom = control.get_path_to(_play_button)
+	_play_button.focus_neighbor_left = _play_button.get_path_to(_carousel_next)
+	_play_button.focus_neighbor_top = _play_button.get_path_to(_carousel_next)
+	_back_button.focus_neighbor_right = _back_button.get_path_to(_carousel_prev)
+	for control in left_controls:
+		if not control.disabled:
+			control.grab_focus()
+			break
+
+
+# ============================================================
+# Map selection
+# ============================================================
+func _on_map_dropdown_selected(item_index: int) -> void:
+	if MAPS.is_empty():
+		return
+	var id := _map_dropdown.get_item_id(item_index)
+	if id == RANDOM_ITEM_ID:
+		map_select_mode = MapSelectMode.RANDOM
+	else:
+		map_select_mode = MapSelectMode.SPECIFIC
+		selected_map_index = id
 	if _map_preview != null:
 		_map_preview.apply(map_select_mode, selected_map_index)
-	_reset_all_ready()
+	_sync_carousel()
+	_update_map_info()
+	_on_settings_changed()
 
-func _on_map_picked(index: int):
-	selected_map_index = index
+
+func _on_map_card_selected(map_index: int) -> void:
+	if _is_net() and not NetworkManager.is_host():
+		return
+	if map_index < 0 or map_index >= MAPS.size():
+		return
+	map_select_mode = MapSelectMode.SPECIFIC
+	selected_map_index = map_index
+	_map_dropdown.select(map_index)
 	if _map_preview != null:
-		_map_preview.apply(map_select_mode, index)
-	_reset_all_ready()
+		_map_preview.apply(map_select_mode, selected_map_index)
+	_sync_carousel()
+	_update_map_info()
+	_on_settings_changed()
+
+
+func _step_map(direction: int) -> void:
+	if MAPS.is_empty():
+		return
+	var next := wrapi(selected_map_index + direction, 0, MAPS.size())
+	_on_map_card_selected(next)
+
+
+func _sync_carousel() -> void:
+	for i in _map_cards.size():
+		_map_cards[i].set_selected(
+			map_select_mode == MapSelectMode.SPECIFIC and i == selected_map_index)
+
+
+func _update_map_info() -> void:
+	if _banner_name == null:
+		return
+	if MAPS.is_empty():
+		_banner_name.text = "NO MAPS AVAILABLE"
+		_banner_desc.text = "Add a playable map to the shared map registry."
+		for key in _info_labels:
+			_info_labels[key].text = "—"
+		_update_play_availability()
+		return
+	if map_select_mode == MapSelectMode.RANDOM:
+		_banner_name.text = "RANDOM ROTATION"
+		_banner_desc.text = "A different battlefield every match — previews cycle below."
+		for key in _info_labels:
+			_info_labels[key].text = "—"
+		_update_play_availability()
+		return
+	selected_map_index = clampi(selected_map_index, 0, MAPS.size() - 1)
+	var map_data: Dictionary = MAPS[selected_map_index]
+	_banner_name.text = str(map_data.get("name", "Unnamed Map")).to_upper()
+	_banner_desc.text = str(map_data.get("description", "No description is available."))
+	_info_labels["size"].text = str(map_data.get("size", "Unknown")).to_upper()
+	_info_labels["recommended_players"].text = str(map_data.get("recommended_players", "—")) + " PLAYERS"
+	_info_labels["playstyle"].text = str(map_data.get("playstyle", "Unknown")).to_upper()
+	var hazards_text := "NONE"
+	if bool(map_data.get("hazards", false)):
+		hazards_text = "AVAILABLE" if GameConfig.hazards_enabled else "DISABLED"
+	_info_labels["hazards"].text = hazards_text
+	_update_play_availability()
+
+
+func _selected_map_available() -> bool:
+	if MAPS.is_empty():
+		return false
+	if map_select_mode == MapSelectMode.RANDOM:
+		return not MapRegistry.available_indices().is_empty()
+	return MapRegistry.is_scene_available(selected_map_index)
+
+
+func _update_play_availability() -> void:
+	if _play_button == null:
+		return
+	if _is_net() and not NetworkManager.is_host():
+		_play_button.disabled = false
+		return
+	_play_button.disabled = not _selected_map_available()
+	_play_button.tooltip_text = "" if not _play_button.disabled else "No playable map is available for this selection."
+
 
 func _resolve_map_scene_path() -> String:
+	if MAPS.is_empty():
+		return ""
 	match map_select_mode:
 		MapSelectMode.RANDOM:
-			return MAPS[randi() % MAPS.size()]["scene_path"]
+			var available := MapRegistry.available_indices()
+			if available.is_empty():
+				return ""
+			return str(MAPS[available.pick_random()].get("scene_path", ""))
 		MapSelectMode.VOTE:
 			# Voting requires a real lobby/network layer to collect votes from
 			# multiple players. Until that exists, vote mode falls back to
 			# the host's specific-map pick so the game can still launch.
-			return MAPS[selected_map_index]["scene_path"]
+			return str(MAPS[clampi(selected_map_index, 0, MAPS.size() - 1)].get("scene_path", ""))
 		_:
-			return MAPS[selected_map_index]["scene_path"]
+			return str(MAPS[clampi(selected_map_index, 0, MAPS.size() - 1)].get("scene_path", ""))
 
-# ------------------------------------------------------------
-# Bots toggle + Bot Settings popup launcher
-# ------------------------------------------------------------
-func _build_bots_toggle_ui():
-	var row = $"Settings Panel/BotsToggleRow"
-	for child in row.get_children():
+
+# ============================================================
+# Roster (no ready states in local play — locked behavior)
+# ============================================================
+func _refresh_roster() -> void:
+	if _roster_list == null:
+		return
+	for child in _roster_list.get_children():
+		_roster_list.remove_child(child)
 		child.queue_free()
 
-	var label = Label.new()
-	label.text = "Bots:"
-	row.add_child(label)
+	var slot_cap := ONLINE_SLOT_CAP if _is_net() else LOCAL_SLOT_CAP
+	var used := 0
 
-	var checkbox = CheckBox.new()
-	checkbox.name = "BotsEnabledCheck"
-	checkbox.button_pressed = GameConfig.bot_count > 0
-	checkbox.disabled = _is_net() and not NetworkManager.is_host()
-	checkbox.toggled.connect(_on_bots_toggled)
-	row.add_child(checkbox)
+	if _is_net():
+		_roster_title.text = "LOBBY ROSTER"
+		for id in NetworkManager.peer_ids_sorted():
+			var row := OneGunRosterRow.new()
+			_roster_list.add_child(row)
+			var peer_name := str(NetworkManager.peers[id]["name"])
+			var is_me: bool = id == NetworkManager.local_id()
+			var ready_state := OneGunRosterRow.ReadyState.NONE
+			if id != 1:
+				ready_state = OneGunRosterRow.ReadyState.READY if NetworkManager.is_peer_lobby_ready(id) else OneGunRosterRow.ReadyState.NOT_READY
+			row.set_human(peer_name, id == 1, is_me, ready_state)
+			if is_me:
+				row.enable_name_editing(_on_edit_online_name)
+				row.add_trailing(_make_edit_name_button(_on_edit_online_name))
+			if NetworkManager.is_host() and id != 1:
+				row.add_trailing(_make_kick_button(id, peer_name))
+			used += 1
+	else:
+		_roster_title.text = "LOCAL ROSTER"
+		var p1 := OneGunRosterRow.new()
+		_roster_list.add_child(p1)
+		p1.set_human(str(PlayerPrefs.get_setting("player_name")), true, false)
+		p1.add_trailing(_make_edit_name_button(_on_edit_player1_name))
+		used += 1
+		if GameConfig.split_screen_enabled:
+			var p2 := OneGunRosterRow.new()
+			_roster_list.add_child(p2)
+			p2.set_human(str(GameConfig.player2_name), false, false)
+			p2.add_trailing(_make_edit_name_button(_on_edit_player2_name))
+			used += 1
 
-	_update_bot_settings_button_visibility()
+	for i in GameConfig.bot_configs.size():
+		if used >= slot_cap:
+			break
+		var bot_row := OneGunRosterRow.new()
+		_roster_list.add_child(bot_row)
+		var difficulty := str(GameConfig.bot_configs[i].get("difficulty", "easy"))
+		bot_row.set_bot("Bot %d" % (i + 1), difficulty, _is_net())
+		used += 1
 
-func _on_bots_toggled(enabled: bool):
-	if not enabled:
-		GameConfig.bot_count = 0
-	elif GameConfig.bot_count == 0 and (not _is_net() or _max_online_bots() > 0):
-		GameConfig.bot_count = 1
-	if _is_net() and GameConfig.bot_count > _max_online_bots():
-		GameConfig.set_bot_count(_max_online_bots())
-	_update_bot_settings_button_visibility()
-	_reset_all_ready()
+	for slot in range(used + 1, slot_cap + 1):
+		var empty_row := OneGunRosterRow.new()
+		_roster_list.add_child(empty_row)
+		empty_row.set_empty(slot)
 
-func _update_bot_settings_button_visibility():
-	var button = $"Settings Panel/BotSettingsButton"
-	button.text = "Bot Settings"
-	button.visible = GameConfig.bot_count > 0
-	if not button.pressed.is_connected(_on_bot_settings_button_pressed):
-		button.pressed.connect(_on_bot_settings_button_pressed)
 
-func _on_bot_settings_button_pressed():
-	AudioManager.play_click()
+func _make_edit_name_button(callback: Callable) -> OneGunButton:
+	var button := OneGunButton.new()
+	button.variant = "navy"
+	button.text = ""
+	button.custom_minimum_size = Vector2(40, 36)
+	button.tooltip_text = "Edit player name"
+	var edit_icon := OneGunIcon.new()
+	edit_icon.kind = OneGunIcon.Kind.EDIT
+	edit_icon.icon_color = OneGunUI.color("gold")
+	edit_icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	edit_icon.offset_left = 8
+	edit_icon.offset_top = 8
+	edit_icon.offset_right = -8
+	edit_icon.offset_bottom = -8
+	button.add_child(edit_icon)
+	button.pressed.connect(callback)
+	return button
+
+
+func _make_kick_button(peer_id: int, peer_name: String) -> OneGunConfirmButton:
+	var button := OneGunConfirmButton.new()
+	button.variant = "navy"
+	button.text = "KICK"
+	button.confirm_text = "CONFIRM"
+	button.custom_minimum_size = Vector2(72, 36)
+	button.tooltip_text = "Remove %s from the lobby" % peer_name
+	button.confirmed.connect(func(): NetworkManager.kick_peer(peer_id))
+	return button
+
+
+# Settings/roster-affecting change: mark the lobby dirty and (online host)
+# push the new config to clients. Local play has no ready states to reset.
+func _on_settings_changed() -> void:
+	GameConfig.lobby_settings_dirty = true
+	_clamp_bot_count_to_capacity()
+	_refresh_roster()
+	_update_map_info()
+	if _is_net() and NetworkManager.is_host():
+		NetworkManager.reset_lobby_readiness("Map or match rules changed — ready up again")
+	_net_broadcast_config()
+
+
+# ============================================================
+# Connected transactional settings slide-outs (Phase 3)
+# ============================================================
+func _on_bot_settings_button_pressed() -> void:
+	_open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.BOT)
+
+
+func _on_match_settings_button_pressed() -> void:
+	_open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH)
+
+
+func _open_settings_slideout(kind: int) -> void:
+	if _is_net() and not NetworkManager.is_host():
+		return
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		if _settings_slideout.panel_kind == kind:
+			_close_settings_slideout()
+			return
+		# Switching panels follows the same contract as Cancel: pending values are
+		# discarded, never silently committed.
+		_discard_settings_slideout_immediately()
+	_settings_slideout = LOBBY_SETTINGS_SLIDEOUT.new()
+	_settings_slideout.name = "BotSettingsSlideout" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.BOT else "MatchSettingsSlideout"
+	_settings_slideout.panel_kind = kind
+	_settings_slideout.maximum_bots = _max_online_bots()
+	_settings_slideout.online_mode = _is_net()
+	_settings_slideout.z_index = 15
+	_settings_slideout.applied.connect(_on_settings_slideout_applied)
+	_settings_slideout.closed.connect(_close_settings_slideout)
+	_settings_layer.add_child(_settings_slideout)
+	_set_settings_button_state(kind)
+	_apply_responsive_layout()
+	if not _reduced_motion_enabled():
+		_settings_slideout.position = _settings_target_position - Vector2(34.0, 0.0)
+		_settings_slideout.modulate.a = 0.0
+		_settings_tween = create_tween().set_parallel(true)
+		_settings_tween.tween_property(_settings_slideout, "position", _settings_target_position, OneGunUI.TIME_SLIDEOUT).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+		_settings_tween.tween_property(_settings_slideout, "modulate:a", 1.0, OneGunUI.TIME_SLIDEOUT * 0.7)
+	_settings_slideout.focus_first()
+	_constrain_settings_slideout.call_deferred()
+
+
+func _constrain_settings_slideout() -> void:
+	if _settings_slideout == null or not is_instance_valid(_settings_slideout):
+		return
+	var viewport_size := get_viewport_rect().size
+	var margin := COMPACT_MARGIN if minf(viewport_size.x, viewport_size.y * (16.0 / 9.0)) < 1500.0 else LAYOUT_MARGIN
+	_settings_slideout.size.y = viewport_size.y - margin * 2.0
+
+
+func _on_settings_slideout_applied(values: Dictionary) -> void:
+	GameConfig.apply_preset_values(values)
+	_on_settings_changed()
+	_close_settings_slideout()
+
+
+func _close_settings_slideout() -> void:
+	if _settings_slideout == null or not is_instance_valid(_settings_slideout):
+		return
+	if _settings_tween != null and _settings_tween.is_valid():
+		_settings_tween.kill()
+	var closing: Control = _settings_slideout
+	_settings_slideout = null
+	_set_settings_button_state(-1)
+	if _reduced_motion_enabled():
+		closing.queue_free()
+		_configure_focus_navigation.call_deferred()
+		return
+	_settings_tween = create_tween().set_parallel(true)
+	_settings_tween.tween_property(closing, "position:x", closing.position.x - 34.0, OneGunUI.TIME_SLIDEOUT * 0.65).set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_IN)
+	_settings_tween.tween_property(closing, "modulate:a", 0.0, OneGunUI.TIME_SLIDEOUT * 0.55)
+	_settings_tween.chain().tween_callback(closing.queue_free)
+	_configure_focus_navigation.call_deferred()
+
+
+func _discard_settings_slideout_immediately() -> void:
+	if _settings_tween != null and _settings_tween.is_valid():
+		_settings_tween.kill()
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		_settings_slideout.queue_free()
+	_settings_slideout = null
+	_set_settings_button_state(-1)
+
+
+func _set_settings_button_state(kind: int) -> void:
+	_bot_settings_button.variant = "purple" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.BOT else "navy"
+	_match_settings_button.variant = "purple" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH else "navy"
+
+
+func _open_capture_state() -> void:
+	if OS.get_environment("ONEGUN_UI_CAPTURE") == "":
+		return
+	match OS.get_environment("ONEGUN_UI_CAPTURE_STATE"):
+		"bot_settings": _open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.BOT)
+		"match_settings": _open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH)
+
+
+func _reduced_motion_enabled() -> bool:
+	var preference = PlayerPrefs.get_setting("reduced_motion")
+	return bool(preference) if preference != null else false
+
+
+# ============================================================
+# Bot Settings popup (interim until the Phase 3 slide-out)
+# ============================================================
+const DIFFICULTY_OPTIONS = ["easy", "medium", "hard", "expert"]
+
+func _legacy_on_bot_settings_button_pressed():
 	_build_bot_settings_popup()
 	$BotSettingsPopup.popup_centered()
-	_reset_all_ready()
+
 
 func _on_bot_settings_popup_closed():
-	_build_bots_toggle_ui()
+	_on_settings_changed()
 
-const DIFFICULTY_OPTIONS = ["easy", "medium", "hard", "expert"]
 
 func _build_bot_settings_popup():
 	var popup = $BotSettingsPopup
@@ -388,9 +1030,9 @@ func _build_bot_settings_popup():
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_theme_constant_override("separation", 12)
 	popup.add_child(root)
-	popup.size = Vector2(420, 80 + 48 * max(GameConfig.bot_configs.size(), 1))
+	popup.size = Vector2(420, 100 + 48 * max(GameConfig.bot_configs.size(), 1))
 
-	# -- Count adjuster --
+	# -- Count adjuster (stepper — locked behavior: never a slider) --
 	var count_row = HBoxContainer.new()
 	count_row.add_theme_constant_override("separation", 12)
 	var count_label = Label.new()
@@ -406,23 +1048,18 @@ func _build_bot_settings_popup():
 	var plus_button = Button.new()
 	plus_button.text = "+"
 	plus_button.custom_minimum_size = Vector2(36, 36)
-	plus_button.disabled = _is_net() and GameConfig.bot_configs.size() >= _max_online_bots()
+	plus_button.disabled = GameConfig.bot_configs.size() >= _max_online_bots()
 	minus_button.pressed.connect(func():
 		GameConfig.set_bot_count(GameConfig.bot_configs.size() - 1)
-		_reset_all_ready()
+		_on_settings_changed()
 		await get_tree().process_frame
 		_build_bot_settings_popup()
-		_update_bot_settings_button_visibility()
 	)
 	plus_button.pressed.connect(func():
-		var requested := GameConfig.bot_configs.size() + 1
-		if _is_net():
-			requested = mini(requested, _max_online_bots())
-		GameConfig.set_bot_count(requested)
-		_reset_all_ready()
+		GameConfig.set_bot_count(mini(GameConfig.bot_configs.size() + 1, _max_online_bots()))
+		_on_settings_changed()
 		await get_tree().process_frame
 		_build_bot_settings_popup()
-		_update_bot_settings_button_visibility()
 	)
 	count_row.add_child(count_label)
 	count_row.add_child(minus_button)
@@ -435,6 +1072,8 @@ func _build_bot_settings_popup():
 	# -- Per-bot rows --
 	for i in GameConfig.bot_configs.size():
 		root.add_child(_build_bot_config_row(i))
+	_bump_fonts_recursive(root)
+
 
 func _build_bot_config_row(bot_index: int) -> HBoxContainer:
 	var row = HBoxContainer.new()
@@ -455,7 +1094,7 @@ func _build_bot_config_row(bot_index: int) -> HBoxContainer:
 	difficulty_button.custom_minimum_size = Vector2(120, 36)
 	difficulty_button.item_selected.connect(func(idx):
 		GameConfig.bot_configs[bot_index]["difficulty"] = DIFFICULTY_OPTIONS[idx]
-		_reset_all_ready()
+		_on_settings_changed()
 	)
 	row.add_child(difficulty_button)
 	difficulty_button.get_popup().max_size = Vector2(0, 164)
@@ -477,41 +1116,40 @@ func _build_bot_config_row(bot_index: int) -> HBoxContainer:
 
 	return row
 
-# ------------------------------------------------------------
-# Collapsible gameplay/match settings dropdown
-# ------------------------------------------------------------
-var _dropdown_expanded := false
 
-func _build_settings_dropdown():
-	var container = $"Settings Panel/ToggleDropdown"
-	for child in container.get_children():
+# ============================================================
+# Match Settings popup (interim until the Phase 3 slide-out).
+# Exposes every existing GameConfig rule + the preset slots.
+# ============================================================
+func _legacy_on_match_settings_button_pressed():
+	if _match_settings_popup == null:
+		_match_settings_popup = PopupPanel.new()
+		_match_settings_popup.name = "MatchSettingsPopup"
+		add_child(_match_settings_popup)
+	_build_match_settings_popup()
+	_match_settings_popup.popup_centered()
+
+
+func _build_match_settings_popup():
+	for child in _match_settings_popup.get_children():
 		child.queue_free()
-
-	var header_button = Button.new()
-	header_button.name = "DropdownHeader"
-	header_button.text = "▶ Match Settings"
-	header_button.toggle_mode = true
-	header_button.button_pressed = _dropdown_expanded
-	header_button.toggled.connect(_on_dropdown_header_toggled)
-	container.add_child(header_button)
+	_match_settings_popup.size = Vector2(800, 560)
 
 	var columns = HBoxContainer.new()
-	columns.name = "DropdownContent"
-	columns.visible = _dropdown_expanded
+	columns.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	columns.add_theme_constant_override("separation", 16)
-	container.add_child(columns)
+	_match_settings_popup.add_child(columns)
 
-	# -- Left column: settings, in a fixed-height scroll box --
+	# -- Left column: settings, in a scroll box --
 	var scroll = ScrollContainer.new()
-	scroll.name = "SettingsScroll"
-	scroll.custom_minimum_size = Vector2(420, 280)
+	scroll.custom_minimum_size = Vector2(470, 520)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	columns.add_child(scroll)
 
 	var settings_list = VBoxContainer.new()
 	settings_list.name = "SettingsList"
 	settings_list.add_theme_constant_override("separation", 8)
-	settings_list.custom_minimum_size = Vector2(400, 0)
+	settings_list.custom_minimum_size = Vector2(450, 0)
 	scroll.add_child(settings_list)
 
 	_add_bool_setting(settings_list, "Teams Enabled", GameConfig.teams_enabled, func(v): GameConfig.teams_enabled = v)
@@ -524,6 +1162,7 @@ func _build_settings_dropdown():
 	_add_enum_setting(settings_list, "Gun Spawn Mode", ["center", "random"], GameConfig.gun_spawn_mode, func(v): GameConfig.gun_spawn_mode = v)
 	_add_float_setting(settings_list, "Disarm Lock Time (s)", GameConfig.disarm_lock_time, 0.0, 10.0, func(v): GameConfig.disarm_lock_time = v)
 	_add_float_setting(settings_list, "Melee Spawn Delay (s)", GameConfig.melee_spawn_delay, 0.0, 15.0, func(v): GameConfig.melee_spawn_delay = v)
+	_add_float_setting(settings_list, "OT Fire Exposure (s)", GameConfig.overtime_fire_exposure_time, 0.5, 15.0, func(v): GameConfig.overtime_fire_exposure_time = v)
 	_add_int_setting(settings_list, "Max Dash Charges", GameConfig.max_dash_charges, 0, 6, func(v): GameConfig.max_dash_charges = v)
 	_add_float_setting(settings_list, "Melee Despawn Time (s)", GameConfig.dropped_melee_despawn_time, 0.0, 30.0, func(v): GameConfig.dropped_melee_despawn_time = v)
 	_add_bool_setting(settings_list, "Melee Weapon Breaking", GameConfig.melee_weapon_breaking, func(v): GameConfig.melee_weapon_breaking = v)
@@ -540,11 +1179,8 @@ func _build_settings_dropdown():
 	default_button.custom_minimum_size = Vector2(0, 36)
 	default_button.pressed.connect(func():
 		GameConfig.reset_match_settings_to_defaults()
-		_build_bots_toggle_ui()
-		_build_settings_dropdown()
-		_dropdown_expanded = true
-		_on_dropdown_header_toggled(true)
-		_reset_all_ready()
+		_build_match_settings_popup()
+		_on_settings_changed()
 	)
 	settings_list.add_child(default_button)
 
@@ -552,9 +1188,11 @@ func _build_settings_dropdown():
 	var presets_section = VBoxContainer.new()
 	presets_section.name = "PresetsSection"
 	presets_section.add_theme_constant_override("separation", 6)
-	presets_section.custom_minimum_size = Vector2(260, 0)
+	presets_section.custom_minimum_size = Vector2(280, 0)
 	columns.add_child(presets_section)
 	_populate_preset_section(presets_section)
+	_bump_fonts_recursive(columns)
+
 
 func _populate_preset_section(section: VBoxContainer):
 	for child in section.get_children():
@@ -567,12 +1205,15 @@ func _populate_preset_section(section: VBoxContainer):
 	for i in GameConfig.MAX_PRESET_SLOTS:
 		section.add_child(_build_preset_slot_row(i))
 
+
 func _refresh_preset_section():
-	if not _dropdown_expanded:
+	if _match_settings_popup == null or not _match_settings_popup.visible:
 		return
-	var section = $"Settings Panel/ToggleDropdown".get_node_or_null("DropdownContent/PresetsSection")
+	var section = _match_settings_popup.find_child("PresetsSection", true, false)
 	if section != null:
 		_populate_preset_section(section)
+		_bump_fonts_recursive(section)
+
 
 func _build_preset_slot_row(slot_index: int) -> VBoxContainer:
 	var row = VBoxContainer.new()
@@ -607,9 +1248,8 @@ func _build_preset_slot_row(slot_index: int) -> VBoxContainer:
 	load_button.custom_minimum_size = Vector2(0, 32)
 	load_button.pressed.connect(func():
 		GameConfig.load_preset_slot(slot_index)
-		_build_bots_toggle_ui()
-		_build_settings_dropdown()
-		_reset_all_ready()
+		_build_match_settings_popup()
+		_on_settings_changed()
 	)
 	button_row.add_child(load_button)
 
@@ -632,6 +1272,7 @@ func _build_preset_slot_row(slot_index: int) -> VBoxContainer:
 	button_row.add_child(delete_button)
 
 	return row
+
 
 func _prompt_save_preset_slot(slot_index: int):
 	var dialog = AcceptDialog.new()
@@ -658,14 +1299,19 @@ func _prompt_save_preset_slot(slot_index: int):
 		dialog.queue_free()
 	)
 
-func _on_dropdown_header_toggled(expanded: bool):
-	_dropdown_expanded = expanded
-	var header = $"Settings Panel/ToggleDropdown".get_node_or_null("DropdownHeader")
-	if header != null:
-		header.text = ("▼ " if expanded else "▶ ") + "Match Settings"
-	var content = $"Settings Panel/ToggleDropdown".get_node_or_null("DropdownContent")
-	if content != null:
-		content.visible = expanded
+
+# ============================================================
+# Shared setting-row builders (used by the match settings popup)
+# ============================================================
+const SETTINGS_FONT_SIZE := 18
+
+func _bump_fonts_recursive(node: Node):
+	if node is Label or node is Button or node is OptionButton \
+			or node is CheckBox or node is LineEdit or node is SpinBox:
+		node.add_theme_font_size_override("font_size", SETTINGS_FONT_SIZE)
+	for child in node.get_children():
+		_bump_fonts_recursive(child)
+
 
 func _add_bool_setting(parent: VBoxContainer, label_text: String, current_value: bool, on_changed: Callable):
 	var row = HBoxContainer.new()
@@ -678,11 +1324,12 @@ func _add_bool_setting(parent: VBoxContainer, label_text: String, current_value:
 	checkbox.disabled = online_forced_off
 	checkbox.toggled.connect(func(v):
 		on_changed.call(v)
-		_reset_all_ready()
+		_on_settings_changed()
 	)
 	row.add_child(label)
 	row.add_child(checkbox)
 	parent.add_child(row)
+
 
 func _add_enum_setting(parent: VBoxContainer, label_text: String, options: Array, current_value: String, on_changed: Callable):
 	var row = HBoxContainer.new()
@@ -698,12 +1345,13 @@ func _add_enum_setting(parent: VBoxContainer, label_text: String, options: Array
 	option_button.custom_minimum_size = Vector2(120, 36)
 	option_button.item_selected.connect(func(idx):
 		on_changed.call(options[idx])
-		_reset_all_ready()
+		_on_settings_changed()
 	)
 	row.add_child(label)
 	row.add_child(option_button)
 	parent.add_child(row)
 	option_button.get_popup().max_size = Vector2(0, 124)
+
 
 func _add_float_setting(parent: VBoxContainer, label_text: String, current_value: float, min_value: float, max_value: float, on_changed: Callable):
 	var row = HBoxContainer.new()
@@ -717,11 +1365,12 @@ func _add_float_setting(parent: VBoxContainer, label_text: String, current_value
 	spinbox.value = current_value
 	spinbox.value_changed.connect(func(v):
 		on_changed.call(v)
-		_reset_all_ready()
+		_on_settings_changed()
 	)
 	row.add_child(label)
 	row.add_child(spinbox)
 	parent.add_child(row)
+
 
 func _add_int_setting(parent: VBoxContainer, label_text: String, current_value: int, min_value: int, max_value: int, on_changed: Callable):
 	var row = HBoxContainer.new()
@@ -735,87 +1384,36 @@ func _add_int_setting(parent: VBoxContainer, label_text: String, current_value: 
 	spinbox.value = current_value
 	spinbox.value_changed.connect(func(v):
 		on_changed.call(int(v))
-		_reset_all_ready()
+		_on_settings_changed()
 	)
 	row.add_child(label)
 	row.add_child(spinbox)
 	parent.add_child(row)
 
-# ------------------------------------------------------------
-# Lobby queue
-# ------------------------------------------------------------
-func _refresh_lobby_list():
-	var list = $LobbyQueuePanel/LobbyList
-	for child in list.get_children():
-		child.queue_free()
 
-	if _is_net():
-		if NetworkManager.lobby_name != "":
-			var lobby_heading := Label.new()
-			lobby_heading.text = "Lobby: %s" % NetworkManager.lobby_name
-			lobby_heading.add_theme_font_size_override("font_size", 22)
-			list.add_child(lobby_heading)
-		for id in NetworkManager.peer_ids_sorted():
-			var nm = str(NetworkManager.peers[id]["name"])
-			var is_me = (id == NetworkManager.local_id())
-			var row = HBoxContainer.new()
-			row.add_theme_constant_override("separation", 10)
-			var label = Label.new()
-			label.text = nm + (" (Host)" if id == 1 else "") + ("  ← you" if is_me else "")
-			row.add_child(label)
-			if is_me:
-				var edit_button := Button.new()
-				edit_button.text = "Edit Name"
-				edit_button.pressed.connect(_on_edit_online_name)
-				row.add_child(edit_button)
-			list.add_child(row)
-		return
-
-	_add_lobby_entry(list, PlayerPrefs.get_setting("player_name"), player1_ready, true, _on_edit_player1_name)
-	if GameConfig.split_screen_enabled:
-		_add_lobby_entry(list, GameConfig.player2_name, player2_ready, false, _on_edit_player2_name)
-
-func _add_lobby_entry(list: VBoxContainer, player_name: String, is_ready: bool, is_host: bool, on_edit_name: Callable):
-	var row = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-
-	var label = Label.new()
-	label.text = player_name + (" (Host)" if is_host else "")
-	row.add_child(label)
-
-	var status = Label.new()
-	status.text = "Ready" if is_ready else "Not Ready"
-	status.modulate = Color.GREEN if is_ready else Color(0.6, 0.6, 0.6)
-	row.add_child(status)
-
-	# Edit Name is only meaningful for your own entry. Locally, both seats
-	# at this screen are "yours" (you control both controllers), so both
-	# get the button. Once online play exists, this should only show next
-	# to the entry that belongs to the player actually viewing this screen.
-	var edit_button = Button.new()
-	edit_button.text = "Edit Name"
-	edit_button.pressed.connect(on_edit_name)
-	row.add_child(edit_button)
-
-	list.add_child(row)
-
+# ============================================================
+# Name editing
+# ============================================================
 func _on_edit_player1_name():
 	_prompt_edit_name(PlayerPrefs.get_setting("player_name"), func(new_name: String):
 		PlayerPrefs.set_setting("player_name", new_name)
-		_refresh_lobby_list()
+		_refresh_roster()
 	)
+
 
 func _on_edit_online_name() -> void:
 	_prompt_edit_name(NetworkManager.local_name(), func(new_name: String):
 		NetworkManager.set_local_name(new_name)
-		_refresh_lobby_list()
+		_refresh_roster()
 	)
+
 
 func _on_edit_player2_name():
 	_prompt_edit_name(GameConfig.player2_name, func(new_name: String):
 		GameConfig.player2_name = new_name
-		_refresh_lobby_list()
+		_refresh_roster()
 	)
+
 
 func _prompt_edit_name(current_name: String, on_confirmed: Callable):
 	var dialog = AcceptDialog.new()
@@ -842,122 +1440,76 @@ func _prompt_edit_name(current_name: String, on_confirmed: Callable):
 		dialog.queue_free()
 	)
 
-# ------------------------------------------------------------
-# Customize Character popup launcher
-# ------------------------------------------------------------
-func _on_customize_button_pressed():
-	AudioManager.play_click()
-	$CustomizeCharacterPopup.popup_centered()
-	_reset_all_ready()
 
-func _on_customize_popup_closed():
-	pass
-
-# ------------------------------------------------------------
-# Ready / Play / Force Play
-# ------------------------------------------------------------
-func _setup_ready_buttons():
-	var ready_bar = $ReadyBar
-	var player1_button: Button = ready_bar.get_node("ReadyButton")
-	player1_button.text = "Player 1 Ready"
-	if not player1_button.pressed.is_connected(_on_player1_ready_pressed):
-		player1_button.pressed.connect(_on_player1_ready_pressed)
-
-	var play_button: Button = ready_bar.get_node("PlayButton")
-	play_button.text = "Play"
-	if not play_button.pressed.is_connected(_on_play_button_pressed):
-		play_button.pressed.connect(_on_play_button_pressed)
-
-	var force_play_button: Button = ready_bar.get_node("ForcePlayButton")
-	force_play_button.text = "Force Play"
-	if not force_play_button.pressed.is_connected(_on_force_play_button_pressed):
-		force_play_button.pressed.connect(_on_force_play_button_pressed)
-
-	var existing_p2_button = ready_bar.get_node_or_null("Player2ReadyButton")
-	if GameConfig.split_screen_enabled:
-		if existing_p2_button == null:
-			var p2_button = Button.new()
-			p2_button.name = "Player2ReadyButton"
-			p2_button.text = "Player 2 Ready"
-			p2_button.custom_minimum_size = Vector2(200, 50)
-			p2_button.pressed.connect(_on_player2_ready_pressed)
-			ready_bar.add_child(p2_button)
-			ready_bar.move_child(p2_button, player1_button.get_index() + 1)
-	elif existing_p2_button != null:
-		existing_p2_button.queue_free()
-
-func _on_player1_ready_pressed():
-	AudioManager.play_click()
-	player1_ready = not player1_ready
-	_refresh_lobby_list()
-	_refresh_ready_ui()
-
-func _on_player2_ready_pressed():
-	AudioManager.play_click()
-	player2_ready = not player2_ready
-	_refresh_lobby_list()
-	_refresh_ready_ui()
-
-func _reset_all_ready():
-	GameConfig.lobby_settings_dirty = true
-	player1_ready = false
-	player2_ready = false
-	_refresh_lobby_list()
-	_refresh_ready_ui()
-	_net_broadcast_config()   # host: push settings/map changes to clients
-
-func _all_players_ready() -> bool:
-	if GameConfig.split_screen_enabled:
-		return player1_ready and player2_ready
-	return player1_ready
-
-func _refresh_ready_ui():
-	var ready_bar = $ReadyBar
-	var play_button: Button = ready_bar.get_node("PlayButton")
-	var force_play_button: Button = ready_bar.get_node("ForcePlayButton")
-
-	# Online: host can always start; clients wait.
-	if _is_net():
-		force_play_button.visible = false
-		if NetworkManager.is_host():
-			play_button.text = "Start Match"
-			play_button.disabled = false
-			play_button.modulate = Color.GREEN
-		else:
-			play_button.text = "Waiting for host…"
-			play_button.disabled = true
-			play_button.modulate = Color.WHITE
+# ============================================================
+# Back / Play
+# ============================================================
+func _on_back_button_pressed():
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		_close_settings_slideout()
 		return
+	if NetworkManager.is_online():
+		NetworkManager.disconnect_net()
+	get_tree().change_scene_to_file("res://main_menu.tscn")
 
-	var is_solo = not GameConfig.split_screen_enabled
-	force_play_button.visible = not is_solo
-	force_play_button.modulate = Color(1.0, 0.35, 0.35)
-
-	var all_ready = _all_players_ready()
-	play_button.modulate = Color.GREEN if all_ready else Color.WHITE
-	play_button.disabled = not all_ready and not is_solo
-
-	var p1_button: Button = ready_bar.get_node("ReadyButton")
-	p1_button.modulate = Color.GREEN if player1_ready else Color.WHITE
-	var p2_button = ready_bar.get_node_or_null("Player2ReadyButton")
-	if p2_button != null:
-		p2_button.modulate = Color.GREEN if player2_ready else Color.WHITE
 
 func _on_play_button_pressed():
-	if GameConfig.split_screen_enabled and not _all_players_ready():
+	if not _is_net():
+		_launch_match()
 		return
-	AudioManager.play_click()
-	_launch_match()
+	if NetworkManager.is_host():
+		# OneGunConfirmButton handles the two-click FORCE START path. When all
+		# guests are ready, this same button launches immediately in one click.
+		if NetworkManager.are_all_lobby_guests_ready():
+			_launch_match()
+		return
+	NetworkManager.set_local_lobby_ready(
+		not NetworkManager.is_peer_lobby_ready(NetworkManager.local_id()))
 
-func _on_force_play_button_pressed():
-	AudioManager.play_click()
-	_launch_match()
+
+func _update_lobby_action() -> void:
+	if _play_button == null or not _is_net():
+		return
+	if NetworkManager.is_host():
+		var all_ready := NetworkManager.are_all_lobby_guests_ready()
+		if _play_button is OneGunConfirmButton:
+			(_play_button as OneGunConfirmButton).set_idle(
+				"START MATCH" if all_ready else "FORCE START",
+				"gold" if all_ready else "red")
+		_play_button.disabled = not _selected_map_available()
+		_play_button.tooltip_text = "" if all_ready else "One or more guests are not ready. Press twice to force start."
+	else:
+		var ready := NetworkManager.is_peer_lobby_ready(NetworkManager.local_id())
+		_play_button.text = "READY" if ready else "READY UP"
+		_play_button.variant = "green" if ready else "red"
+		_play_button.disabled = false
+		_play_button.tooltip_text = "Click to mark not ready" if ready else "Click when you are ready to play"
+
+
+func _reset_force_start_confirmation() -> void:
+	if _play_button is OneGunConfirmButton:
+		(_play_button as OneGunConfirmButton).notify_state_changed()
+
 
 func _launch_match():
+	var map_path := _resolve_map_scene_path()
+	if map_path == "" or not ResourceLoader.exists(map_path):
+		_update_play_availability()
+		push_warning("GameSetup: cannot start; selected map is unavailable: %s" % map_path)
+		return
 	if _is_net():
 		if NetworkManager.is_host():
 			AudioManager.stop_music(0.8)
-			NetworkManager.start_game(_resolve_map_scene_path())
+			NetworkManager.start_game(map_path)
 		return   # clients never launch directly
 	AudioManager.stop_music(0.8)
-	get_tree().change_scene_to_file(_resolve_map_scene_path())
+	get_tree().change_scene_to_file(map_path)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		if _settings_slideout != null and is_instance_valid(_settings_slideout):
+			_close_settings_slideout()
+		else:
+			_on_back_button_pressed()

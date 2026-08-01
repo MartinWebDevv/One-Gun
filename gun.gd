@@ -5,6 +5,9 @@ const ONLINE_PICKUP_MAX_DISTANCE := 2.25
 const ONLINE_FIRE_MIN_AIM_DOT := 0.25
 
 @export var HELD_SCALE := 1.0
+@export var projectile_speed := 200.0
+@export var reload_time := 2.0
+@export var loose_return_time := 5.0
 
 var player_ref = null
 var is_held = false
@@ -15,6 +18,10 @@ var spawn_rotation = Vector3.ZERO
 
 var disarm_lock_player = null
 var disarm_lock_timer = 0.0
+var _loose_generation := 0
+var is_overtime_gun := false
+var overtime_owner_id := -1
+var overtime_disabled := false
 
 func _ready():
 	add_to_group("weapon")
@@ -22,15 +29,42 @@ func _ready():
 	$Area3D.body_entered.connect(_on_body_entered)
 	$Area3D.body_exited.connect(_on_body_exited)
 	$ReloadTimer.timeout.connect(_on_reload_finished)
+	$ReloadTimer.wait_time = reload_time
 	spawn_position = global_position
 	spawn_rotation = global_rotation
+	_build_locator_arrow()
 	_update_pickup_label()
+
+# Floating "▼" above the loose gun, visible through walls, so players can
+# always find the one gun. Hidden while held (the holder gets an outline
+# instead — see character_body_3d/dummy _set_gun_holder_outline).
+var _locator_arrow: Label3D = null
+var _locator_bob_time := 0.0
+
+func _build_locator_arrow():
+	_locator_arrow = Label3D.new()
+	_locator_arrow.name = "LocatorArrow"
+	_locator_arrow.text = "▼"
+	_locator_arrow.font_size = 120
+	_locator_arrow.modulate = Color(1.0, 0.72, 0.1)          # warm gold
+	_locator_arrow.outline_size = 16
+	_locator_arrow.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
+	_locator_arrow.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_locator_arrow.no_depth_test = true                       # visible through walls
+	_locator_arrow.render_priority = 10
+	_locator_arrow.position = Vector3(0.0, 1.2, 0.0)
+	add_child(_locator_arrow)
 
 func _process(delta):
 	if disarm_lock_timer > 0.0:
 		disarm_lock_timer -= delta
 		if disarm_lock_timer <= 0.0:
 			disarm_lock_player = null
+	if _locator_arrow != null:
+		_locator_arrow.visible = not is_held
+		if not is_held:
+			_locator_bob_time += delta * 3.0
+			_locator_arrow.position.y = 1.2 + sin(_locator_bob_time) * 0.12
 	if not is_held:
 		_update_pickup_label()
 
@@ -43,7 +77,7 @@ func _on_body_exited(body):
 		body.unregister_interactable(self)
 
 func try_fire():
-	if not is_held or not can_fire:
+	if overtime_disabled or not is_held or not can_fire:
 		return
 	if NetworkManager.is_online():
 		# Only the local-authority holder may fire; ask the server to spawn the
@@ -92,8 +126,7 @@ func _server_try_fire(sender_id: int, dir: Vector3, epoch: int) -> void:
 	var shot_dir := dir.normalized()
 	if server_aim.dot(shot_dir) < ONLINE_FIRE_MIN_AIM_DOT:
 		return
-	var muzzle = get_node_or_null("WaterGun/MuzzlePoint")
-	var origin: Vector3 = muzzle.global_position if muzzle != null else global_position
+	var origin := _calculate_fire_origin(shot_dir)
 	_net_spawn_bullet.rpc(origin, shot_dir, _holder_actor_id(), epoch)
 
 @rpc("authority", "reliable", "call_local")
@@ -101,12 +134,13 @@ func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: in
 	can_fire = false
 	$ReloadTimer.start()
 	var bullet = BulletScene.instantiate()
+	bullet.set("projectile_speed", projectile_speed)
 	bullet.set("net_shooter_id", shooter_id)
 	bullet.set("is_server_bullet", multiplayer.is_server())
 	bullet.set("net_round_epoch", epoch)
 	get_tree().current_scene.add_child(bullet)
 	bullet.global_position = origin
-	bullet.launch(dir, null)
+	bullet.launch(dir, NetworkManager.find_actor(shooter_id))
 	AudioManager.play_sfx("gun_shot")
 
 @rpc("any_peer", "reliable")
@@ -114,7 +148,7 @@ func _net_request_pickup(epoch: int) -> void:
 	_server_try_pickup(multiplayer.get_remote_sender_id(), epoch)
 
 func _server_try_pickup(sender_id: int, epoch: int) -> void:
-	if not multiplayer.is_server() or is_held:
+	if not multiplayer.is_server() or overtime_disabled or is_held:
 		return
 	var rm = _online_round_manager()
 	if rm == null or not rm.can_accept_online_combat(epoch):
@@ -150,6 +184,7 @@ func _net_do_drop(drop_pos: Vector3) -> void:
 	global_position = drop_pos
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
+	_enable_loose_physics()
 
 func request_online_drop() -> void:
 	if not NetworkManager.is_online() or not is_held or player_ref == null:
@@ -200,19 +235,17 @@ func _net_do_force_disarm(drop_pos: Vector3, holder_actor_id: int) -> void:
 	global_position = drop_pos
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
+	_enable_loose_physics()
 	disarm_lock_player = holder
 	disarm_lock_timer = GameConfig.disarm_lock_time
 
 func fire():
 	can_fire = false
 	var bullet = BulletScene.instantiate()
+	bullet.set("projectile_speed", projectile_speed)
 	get_tree().current_scene.add_child(bullet)
-	var muzzle = get_node_or_null("WaterGun/MuzzlePoint")
-	if muzzle != null:
-		bullet.global_transform = muzzle.global_transform
-	else:
-		bullet.global_transform = global_transform
 	var fire_direction = _calculate_fire_direction()
+	bullet.global_position = _calculate_fire_origin(fire_direction)
 	bullet.launch(fire_direction, player_ref)
 	AudioManager.play_sfx("gun_shot")
 	$ReloadTimer.start()
@@ -222,26 +255,31 @@ func get_reload_progress():
 		return 1.0
 	return 1.0 - ($ReloadTimer.time_left / $ReloadTimer.wait_time)
 
-func _calculate_fire_direction():
-	var cam = player_ref.get_camera()
+func _calculate_fire_direction() -> Vector3:
+	var cam: Camera3D = player_ref.get_camera()
 	if cam == null:
 		if player_ref.has_method("get_gun_fire_direction"):
 			return player_ref.get_gun_fire_direction()
 		return player_ref.get_aim_direction()
-	var from = cam.global_transform.origin
-	var to = from + (-cam.global_transform.basis.z) * 1000.0
-	var space_state = get_world_3d().direct_space_state
-	var query = PhysicsRayQueryParameters3D.create(from, to)
-	query.exclude = [player_ref.get_rid(), get_rid()]
-	var result = space_state.intersect_ray(query)
-	var target_point = to
-	if result:
-		target_point = result.position
-	# Direction from muzzle tip toward crosshair target point — eliminates
-	# the upward bullet arc caused by computing from the lower gun root origin.
-	var muzzle = get_node_or_null("WaterGun/MuzzlePoint")
-	var fire_origin = muzzle.global_position if muzzle != null else global_position
-	return (target_point - fire_origin).normalized()
+	var viewport_rect: Rect2 = cam.get_viewport().get_visible_rect()
+	var crosshair_position: Vector2 = viewport_rect.position + viewport_rect.size * 0.5
+	return cam.project_ray_normal(crosshair_position).normalized()
+
+func _calculate_fire_origin(direction: Vector3) -> Vector3:
+	var muzzle: Node3D = get_node_or_null("WaterGun/MuzzlePoint")
+	var muzzle_origin: Vector3 = muzzle.global_position if muzzle != null else global_position
+	var cam: Camera3D = player_ref.get_camera()
+	if cam == null or direction.is_zero_approx():
+		return muzzle_origin
+	var viewport_rect: Rect2 = cam.get_viewport().get_visible_rect()
+	var crosshair_position: Vector2 = viewport_rect.position + viewport_rect.size * 0.5
+	var ray_origin: Vector3 = cam.project_ray_origin(crosshair_position)
+	# The model's muzzle is shoulder-offset from the reticle. Start the gameplay
+	# projectile on the reticle ray at the muzzle's forward depth so it remains
+	# dead-center instead of converging diagonally from the left or right.
+	var muzzle_depth: float = (muzzle_origin - ray_origin).dot(direction)
+	var spawn_depth: float = maxf(muzzle_depth, cam.near + 0.05)
+	return ray_origin + direction * spawn_depth
 
 func _on_reload_finished():
 	if NetworkManager.is_online():
@@ -260,7 +298,7 @@ func _update_pickup_label():
 	if not has_node("PickupLabel"):
 		return
 	var label = $PickupLabel
-	label.visible = not is_held
+	label.visible = not is_held and visible and $Area3D.monitoring
 	if not label.visible:
 		return
 	var bodies = $Area3D.get_overlapping_bodies()
@@ -273,7 +311,7 @@ func _update_pickup_label():
 	label.text = button_prompt + "  Gun"
 
 func pick_up(p = null) -> bool:
-	if is_held:
+	if overtime_disabled or is_held:
 		return false
 	if p == null:
 		p = player_ref
@@ -296,6 +334,7 @@ func pick_up(p = null) -> bool:
 func _local_pickup(p) -> bool:
 	if is_held or p == null:
 		return false
+	_cancel_loose_return()
 	# Picking up the gun is always an instant swap, even from a melee weapon —
 	# only giving up the gun requires the deliberate hold (see character_body_3d.gd).
 	var swap_position = global_position
@@ -305,6 +344,8 @@ func _local_pickup(p) -> bool:
 		old_weapon.global_position = swap_position
 	is_held = true
 	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
 	var hold_point = p.get_hold_point()
@@ -317,6 +358,8 @@ func _local_pickup(p) -> bool:
 	scale = Vector3.ONE * HELD_SCALE
 	p.holding_gun = true
 	player_ref = p
+	if is_overtime_gun:
+		overtime_owner_id = int(p.get("actor_id")) if "actor_id" in p else p.get_instance_id()
 	_update_pickup_label()
 	var pname = p.get_display_name() if p.has_method("get_display_name") else p.name
 	GameEvents.gun_picked_up.emit(pname)
@@ -332,21 +375,25 @@ func drop():
 	hold_point.remove_child(self)
 	world.add_child(self)
 	global_transform = drop_transform
-	freeze = false
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
 	is_held = false
+	_enable_loose_physics()
 	if p != null:
 		p.holding_gun = false
 		if not NetworkManager.is_online():
 			apply_impulse(p.get_aim_direction() * 8.0)
-	if NetworkManager.is_online():
-		# freeze at the drop spot so it rests identically on every peer
-		freeze = true
-		linear_velocity = Vector3.ZERO
-		angular_velocity = Vector3.ZERO
 	_update_pickup_label()
 	GameEvents.gun_dropped.emit()
+	_start_loose_return()
+
+
+func _enable_loose_physics() -> void:
+	# Held weapons are frozen long enough for the rigid body to enter a sleeping
+	# state. Unfreezing alone is not sufficient on every physics backend, so
+	# explicitly wake it and let gravity/world collision resolve the drop.
+	freeze = false
+	sleeping = false
 
 func force_disarm():
 	var holder = player_ref
@@ -354,9 +401,47 @@ func force_disarm():
 	disarm_lock_player = holder
 	disarm_lock_timer = GameConfig.disarm_lock_time
 
+func _cancel_loose_return() -> void:
+	_loose_generation += 1
+
+func _start_loose_return() -> void:
+	_loose_generation += 1
+	var generation := _loose_generation
+	if NetworkManager.is_online() and not multiplayer.is_server():
+		return
+	_finish_loose_return_after_delay(generation)
+
+func _finish_loose_return_after_delay(generation: int) -> void:
+	await get_tree().create_timer(loose_return_time).timeout
+	if generation != _loose_generation or is_held:
+		return
+	if NetworkManager.is_online():
+		_net_return_loose_to_spawn.rpc()
+	else:
+		_return_loose_to_spawn()
+
+@rpc("authority", "reliable", "call_local")
+func _net_return_loose_to_spawn() -> void:
+	if not is_held:
+		_return_loose_to_spawn()
+
+func _return_loose_to_spawn() -> void:
+	_cancel_loose_return()
+	global_position = spawn_position
+	global_rotation = spawn_rotation
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	_enable_loose_physics()
+	_update_pickup_label()
+
 func reset_to_spawn():
+	overtime_disabled = false
+	_cancel_loose_return()
 	if is_held:
 		drop()
+	is_held = false
+	player_ref = null
+	visible = true
 	scale = Vector3.ONE
 	global_position = spawn_position
 	global_rotation = spawn_rotation
@@ -366,4 +451,27 @@ func reset_to_spawn():
 	$ReloadTimer.stop()
 	disarm_lock_player = null
 	disarm_lock_timer = 0.0
+	$CollisionShape3D.disabled = false
+	$Area3D.monitoring = true
+	_enable_loose_physics()
 	_update_pickup_label()
+
+func disable_for_overtime() -> void:
+	overtime_disabled = true
+	if is_held:
+		var holder = player_ref
+		# Cache the destination while this node still belongs to the SceneTree.
+		# Calling get_tree() after remove_child() returns null and used to crash
+		# the match at the exact frame overtime began.
+		var scene_tree := get_tree()
+		var world := scene_tree.current_scene if scene_tree != null else null
+		if world != null and get_parent() != world:
+			reparent(world, true)
+		if holder != null:
+			holder.holding_gun = false
+	is_held = false
+	player_ref = null
+	visible = false
+	$CollisionShape3D.disabled = true
+	$Area3D.monitoring = false
+	freeze = true

@@ -19,10 +19,10 @@ var bot_count: int:
 
 func set_bot_count(count: int):
 	count = max(0, count)
-	# Hard cap: bots + human players can never exceed 8 total.
-	# Split screen has 2 humans so max 6 bots; solo has 1 human so max 7.
+	# Hard cap: bots + human players can never exceed 10 total (menu redesign
+	# capacity). Split screen has 2 humans so max 8 bots; solo allows 9.
 	var human_count = 2 if split_screen_enabled else 1
-	var max_bots = 8 - human_count
+	var max_bots = 10 - human_count
 	count = min(count, max_bots)
 	while bot_configs.size() < count:
 		bot_configs.append({"difficulty": "easy", "team_id": -1})
@@ -36,13 +36,15 @@ var friendly_fire_enabled = false
 # -- Round rules --
 var melee_eliminates_gunholder = false
 var melee_eliminates_anyone = false
-var round_time_limit = 0.0  # 0 = no limit
+var round_time_limit = 300.0  # host-adjustable; 0 keeps the legacy unlimited option
+var chaos_overtime_enabled = false  # everyone armed + guns-only OT; off preserves the one-gun loop
+var overtime_fire_exposure_time = 5.0  # zone-1 seconds allowed in OT fire before elimination
 var melee_spawn_delay = 0.0  # seconds after round start before melee weapons can be picked up
 var gun_spawn_mode = "center"  # "center" or "random" — read by whatever spawns the gun each round
 var disarm_lock_time = 3.0
 var max_dash_charges = 2  # clamped 0-6 at spawn time by character_body_3d.gd
 var dropped_melee_despawn_time = 3.0  # seconds after a death-drop before the weapon despawns and returns to spawn; <= 0 disables this (weapon stays where dropped, forever)
-var melee_weapon_breaking = true  # when true, swinging with zero stamina twice breaks the weapon temporarily
+var melee_weapon_breaking = true  # when true, the first swing begun at zero stamina breaks the weapon afterward
 
 # -- Win conditions --
 var rounds_per_set = 3  # rounds a player/team must win to take a set
@@ -132,6 +134,9 @@ const MAX_PRESET_SLOTS := 5
 const PRESET_FIELDS := [
 	"teams_enabled",
 	"friendly_fire_enabled",
+	"round_time_limit",
+	"chaos_overtime_enabled",
+	"overtime_fire_exposure_time",
 	"melee_eliminates_gunholder",
 	"melee_eliminates_anyone",
 	"melee_effects_hit_anyone",
@@ -155,6 +160,9 @@ const PRESET_FIELDS := [
 const DEFAULT_VALUES := {
 	"teams_enabled": false,
 	"friendly_fire_enabled": false,
+	"round_time_limit": 300.0,
+	"chaos_overtime_enabled": false,
+	"overtime_fire_exposure_time": 5.0,
 	"melee_eliminates_gunholder": false,
 	"melee_eliminates_anyone": false,
 	"melee_effects_hit_anyone": true,
@@ -171,6 +179,11 @@ const DEFAULT_VALUES := {
 	"item_registry": {
 		"bubble_gum": {"enabled": true, "category": "hazard"},
 		"grenade": {"enabled": true, "category": "hazard"},
+		"bear_trap": {"enabled": true, "category": "hazard"},
+		"spring_pad": {"enabled": true, "category": "hazard"},
+		"smoke_bomb": {"enabled": true, "category": "consumable"},
+		"decoy": {"enabled": true, "category": "consumable"},
+		"boomerang": {"enabled": true, "category": "consumable"},
 	},
 	"bot_configs": [{"difficulty": "easy", "team_id": -1}],
 }
@@ -178,6 +191,12 @@ const DEFAULT_VALUES := {
 func reset_match_settings_to_defaults():
 	apply_preset_values(DEFAULT_VALUES)
 	lobby_settings_dirty = false
+
+
+func default_match_settings() -> Dictionary:
+	# Transactional settings panels need a detached default snapshot. Returning
+	# the constant directly would let nested item/bot dictionaries be mutated.
+	return DEFAULT_VALUES.duplicate(true)
 
 # preset_slots[slot_index] = {"name": String, "values": Dictionary} or null.
 var preset_slots: Array = []
@@ -206,14 +225,22 @@ func apply_preset_values(values: Dictionary):
 			value = value.duplicate(true)
 		set(field, value)
 
-func save_preset_slot(slot_index: int, preset_name: String):
+func save_preset_slot(slot_index: int, preset_name: String) -> bool:
+	return save_preset_values(slot_index, preset_name, snapshot_for_preset())
+
+
+func save_preset_values(slot_index: int, preset_name: String, values: Dictionary) -> bool:
 	if slot_index < 0 or slot_index >= MAX_PRESET_SLOTS:
-		return
+		return false
+	var cleaned_name := preset_name.strip_edges().substr(0, 24)
+	if cleaned_name == "":
+		return false
 	preset_slots[slot_index] = {
-		"name": preset_name,
-		"values": snapshot_for_preset(),
+		"name": cleaned_name,
+		"values": _normalized_preset_values(values),
 	}
 	_save_presets_to_disk()
+	return true
 
 func load_preset_slot(slot_index: int) -> bool:
 	if slot_index < 0 or slot_index >= MAX_PRESET_SLOTS:
@@ -223,6 +250,15 @@ func load_preset_slot(slot_index: int) -> bool:
 		return false
 	apply_preset_values(slot["values"])
 	return true
+
+
+func get_preset_slot_values(slot_index: int) -> Dictionary:
+	if slot_index < 0 or slot_index >= MAX_PRESET_SLOTS:
+		return {}
+	var slot = preset_slots[slot_index]
+	if slot == null or not (slot is Dictionary) or not (slot.get("values") is Dictionary):
+		return {}
+	return _normalized_preset_values(slot["values"])
 
 func delete_preset_slot(slot_index: int):
 	if slot_index < 0 or slot_index >= MAX_PRESET_SLOTS:
@@ -268,4 +304,30 @@ func _load_presets_from_disk():
 
 	preset_slots.resize(MAX_PRESET_SLOTS)
 	for i in min(parsed.size(), MAX_PRESET_SLOTS):
-		preset_slots[i] = parsed[i]
+		var slot = parsed[i]
+		if slot == null:
+			preset_slots[i] = null
+		elif slot is Dictionary and slot.get("values") is Dictionary:
+			preset_slots[i] = {
+				"name": str(slot.get("name", "Preset %d" % (i + 1))).strip_edges().substr(0, 24),
+				"values": _normalized_preset_values(slot["values"]),
+			}
+
+
+func _normalized_preset_values(values: Dictionary) -> Dictionary:
+	# Old preset files are intentionally forward-compatible: newly introduced
+	# rules receive current defaults while every known saved value is retained.
+	var normalized := default_match_settings()
+	for field in PRESET_FIELDS:
+		if not values.has(field):
+			continue
+		var value = values[field]
+		if field == "item_registry" and value is Dictionary:
+			var merged_registry: Dictionary = normalized[field]
+			for item_name in value:
+				if merged_registry.has(item_name) and value[item_name] is Dictionary:
+					merged_registry[item_name].merge(value[item_name], true)
+			normalized[field] = merged_registry
+		else:
+			normalized[field] = value.duplicate(true) if value is Dictionary or value is Array else value
+	return normalized
