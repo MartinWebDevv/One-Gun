@@ -1,15 +1,17 @@
 extends Node
 
+const MatchLimitsData = preload("res://match_limits.gd")
+const CombatVisibility = preload("res://combat_visibility.gd")
+const OneOfUsIntroData = preload("res://one_of_us_intro.gd")
+
 @export var countdown_time := 3
 @export var round_end_display_time := 3
 @export var set_end_display_time := 4
 @export var match_end_display_time := 6
 
-const MAX_TOTAL_PLAYERS := 10
-const MAX_BOTS_SOLO := 9
-const MAX_BOTS_SPLIT := 8
 const ONLINE_BOT_ACTOR_ID_BASE := 10000
-const ONLINE_POWERUP_TYPES := ["extra_dash", "sticky_hands", "speed_surge", "silent_steps", "vampire_touch", "extra_life", "magnet_hands"]
+const MELEE_MARKER_REFILL_TIME := 5.0
+const PICKUP_MARKER_REFILL_TIME := 8.0
 
 const DummyScene = preload("res://DummyModel.tscn")
 const GunScene = preload("res://gun.tscn")
@@ -32,6 +34,7 @@ const OVERTIME_FIRE_BASE_INTENSITY := 0.12
 var players = []
 var spawn_transforms = {}
 var round_state = "countdown"
+var practice_mode := false
 var round_number = 1
 var set_number = 1
 
@@ -64,6 +67,7 @@ var _round_kills := {}
 var _last_overtime_pulse_zone := -1
 var _online_previous_alive_ids: Array = []
 var _local_round_generation := 0
+var _gun_center_position := Vector3.ZERO
 
 # -- Match stats (accumulate across all rounds, reset when match ends) --
 var stat_kills    := {}
@@ -93,10 +97,17 @@ var online_match_over := false
 var _online_transitioning := false
 var _online_hud = null
 var _next_online_deployed_id := 1
+var _next_online_melee_candidate_id := 1
+var _next_online_item_id := 0
 var _online_overtime_sync_timer := 0.0
+var one_of_us_roles: Dictionary = {}
+var one_of_us_first_actor_id := -1
+var _one_of_us_respawn_generation: Dictionary = {}
+var _one_of_us_round_finishing := false
 
 func _setup_online_freeroam() -> void:
 	var root := get_tree().current_scene
+	_capture_gun_center()
 	# Free the baked local players + local HUD nodes (online = one view per
 	# machine). Runtime strip only — no map .tscn is edited.
 	for n in ["player1", "player2", "SplitScreenLayer", "CanvasLayer"]:
@@ -104,7 +115,8 @@ func _setup_online_freeroam() -> void:
 		if node:
 			node.free()
 	# Remove legacy baked pickup/weapon instances, but preserve every authored
-	# marker. Each round spawns one synchronized melee from melee_spawn_point.
+	# marker. Every melee_spawn_point receives synchronized round supply and
+	# independently schedules a fresh randomized instance after each pickup.
 	for melee in get_tree().get_nodes_in_group("melee"):
 		melee.free()
 	# Remove legacy baked pickup instances, but preserve every authored marker.
@@ -128,9 +140,15 @@ func _setup_online_freeroam() -> void:
 	_player_spawner.spawn_function = Callable(self, "_net_spawn_player")
 	root.add_child(_player_spawner)
 	_build_online_hud(root)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if not NetworkManager.server_disconnected.is_connected(_on_online_host_left):
 		NetworkManager.server_disconnected.connect(_on_online_host_left)
+	if NetworkManager.local_match_role == "spectator":
+		_setup_late_online_spectator(root)
+		return
+	var load_overlay := preload("res://online_load_overlay.gd").new()
+	load_overlay.name = "OnlineLoadOverlay"
+	root.add_child(load_overlay)
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	NetworkManager.report_match_scene_ready()
 	if NetworkManager.is_host():
 		# Wait for every connected peer to build the identical spawner path.
@@ -139,20 +157,37 @@ func _setup_online_freeroam() -> void:
 		while not NetworkManager.are_all_match_peers_ready():
 			await NetworkManager.match_readiness_changed
 		var markers := get_tree().get_nodes_in_group("spawn_point")
-		var ids := NetworkManager.peer_ids_sorted()
+		var ids := NetworkManager.participant_peer_ids()
+		var available_bot_slots := MatchLimitsData.max_bots_for_humans(ids.size())
+		var online_bot_count := mini(GameConfig.bot_configs.size(), available_bot_slots)
+		var required_spawns := ids.size() + online_bot_count
+		if markers.size() < required_spawns:
+			push_error("RoundManager: map has %d player spawns for %d online actors; returning to lobby." \
+				% [markers.size(), required_spawns])
+			NetworkManager.host_return_everyone_to_lobby()
+			return
 		for i in ids.size():
-			var m = markers[i % max(markers.size(), 1)] if markers.size() > 0 else null
+			var m = markers[i]
 			var pos := Vector3.ZERO
 			var yaw := 0.0
 			if m != null:
 				pos = m.position
 				yaw = m.rotation.y
-			_player_spawner.spawn({"kind": "human", "id": ids[i], "pos": pos, "yaw": yaw})
-		var available_bot_slots := maxi(MAX_TOTAL_PLAYERS - ids.size(), 0)
-		var online_bot_count := mini(GameConfig.bot_configs.size(), available_bot_slots)
+			var peer_id := int(ids[i])
+			var peer_entry: Dictionary = NetworkManager.peers.get(peer_id, {})
+			_player_spawner.spawn({
+				"kind": "human",
+				"id": int(peer_entry.get("actor_id", -1)),
+				"owner_peer_id": peer_id,
+				"team_id": int(peer_entry.get("team_id", 0)),
+				"skin_id": str(peer_entry.get("skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID)),
+				"name": str(peer_entry.get("name", "Player")),
+				"pos": pos,
+				"yaw": yaw,
+			})
 		for i in online_bot_count:
 			var marker_index := ids.size() + i
-			var m = markers[marker_index % max(markers.size(), 1)] if markers.size() > 0 else null
+			var m = markers[marker_index]
 			var pos: Vector3 = m.position if m != null else Vector3.ZERO
 			var yaw: float = m.rotation.y if m != null else 0.0
 			var config: Dictionary = GameConfig.bot_configs[i]
@@ -173,7 +208,32 @@ func _setup_online_freeroam() -> void:
 func _build_online_hud(root: Node) -> void:
 	_online_hud = load("res://online_hud.gd").new()
 	_online_hud.name = "OnlineHUD"
+	_online_hud.set("pure_spectator", NetworkManager.local_match_role == "spectator")
 	root.add_child(_online_hud)
+
+
+func _setup_late_online_spectator(root: Node) -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if _online_hud != null:
+		_online_hud.set("pure_spectator", true)
+	var spectator := preload("res://spectator_controller.gd").new()
+	spectator.name = "LateSpectatorController"
+	spectator.set("pure_online_spectator", true)
+	root.add_child(spectator)
+	NetworkManager.report_spectator_scene_ready.call_deferred()
+
+
+func server_set_peer_actor_visibility(peer_id: int, actor_visible: bool) -> void:
+	if not NetworkManager.is_host():
+		return
+	var net_players := get_tree().current_scene.get_node_or_null("NetPlayers")
+	if net_players == null:
+		return
+	for actor in net_players.get_children():
+		var synchronizer := actor.get_node_or_null("SpawnVisibility") as MultiplayerSynchronizer
+		if synchronizer != null:
+			synchronizer.set_visibility_for(peer_id, actor_visible)
+			synchronizer.update_visibility(peer_id)
 
 # Runs on host AND every client (via the spawner) with identical data, so
 # authority + starting transform are consistent everywhere.
@@ -193,16 +253,28 @@ func _net_spawn_player(data: Dictionary) -> Node:
 		bot.set("team_id", int(data.get("team_id", -1)))
 		bot.set_multiplayer_authority(1)
 		return bot
-	var peer_id := actor_spawn_id
+	var peer_id := int(data.get("owner_peer_id", actor_spawn_id))
 	var p = preload("res://player.tscn").instantiate()
-	p.name = "NP%d" % peer_id
+	p.name = "NP%d" % actor_spawn_id
 	p.position = data["pos"]
-	p.rotation.y = data["yaw"]
+	# Human movement is camera-relative and keeps all yaw on AimPivot. Putting
+	# the authored spawn yaw on the body as well rotates WASD a second time,
+	# which was most visible on Playpen's angled spawn markers.
+	p.rotation.y = 0.0
+	var aim_pivot := p.get_node_or_null("AimPivot") as Node3D
+	if aim_pivot != null:
+		aim_pivot.rotation.y = float(data["yaw"])
+
 	p.set("is_online", true)
 	p.set("net_authority_id", peer_id)
-	p.set("actor_id", peer_id)
+	p.set("actor_id", actor_spawn_id)
 	p.set("owner_peer_id", peer_id)
-	p.set_multiplayer_authority(peer_id)
+	p.set("team_id", int(data.get("team_id", 0)))
+	p.set("character_skin_id", PlayerSkinRegistry.sanitize_skin_id(
+		str(data.get("skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID))))
+	# The player root stays host-authoritative for safe spawn visibility. Its
+	# NetSync child is assigned to peer_id inside character_body_3d.gd.
+	p.set_multiplayer_authority(1)
 	return p
 
 func can_accept_online_combat(epoch: int) -> bool:
@@ -271,6 +343,7 @@ func _build_online_item_assignments() -> Array:
 	if enabled.is_empty():
 		return assignments
 	var markers := _sorted_online_markers("item_spawn_point")
+	_next_online_item_id = markers.size()
 	for i in markers.size():
 		var marker = markers[i]
 		assignments.append({
@@ -284,12 +357,15 @@ func _build_online_item_assignments() -> Array:
 
 func _build_online_powerup_assignments() -> Array:
 	var assignments: Array = []
+	var enabled_types := GameConfig.enabled_powerup_types()
+	if enabled_types.is_empty():
+		return assignments
 	var markers := _sorted_online_markers("powerup_spawn_point")
 	for i in markers.size():
 		var marker = markers[i]
 		assignments.append({
 			"powerup_id": i,
-			"power_type": str(ONLINE_POWERUP_TYPES[randi() % ONLINE_POWERUP_TYPES.size()]),
+			"power_type": str(enabled_types[randi() % enabled_types.size()]),
 			"position": marker.global_position,
 			"rotation": marker.global_rotation,
 		})
@@ -300,13 +376,13 @@ func _build_online_powerup_assignments() -> Array:
 # on which parent the weapon currently has on a given peer.
 func request_online_melee_action(candidate_id: int, action: String, epoch: int) -> void:
 	if NetworkManager.is_host():
-		_server_route_online_melee_action(NetworkManager.local_id(), candidate_id, action, epoch)
+		_server_route_online_melee_action(NetworkManager.local_actor_id(), candidate_id, action, epoch)
 	else:
 		_net_request_online_melee_action.rpc_id(1, candidate_id, action, epoch)
 
 @rpc("any_peer", "reliable")
 func _net_request_online_melee_action(candidate_id: int, action: String, epoch: int) -> void:
-	_server_route_online_melee_action(multiplayer.get_remote_sender_id(), candidate_id, action, epoch)
+	_server_route_online_melee_action(NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), candidate_id, action, epoch)
 
 func _server_route_online_melee_action(sender_id: int, candidate_id: int, action: String, epoch: int) -> void:
 	if not multiplayer.is_server():
@@ -322,7 +398,42 @@ func _server_route_online_melee_action(sender_id: int, candidate_id: int, action
 
 func broadcast_online_melee_action(candidate_id: int, action: String, data: Dictionary = {}) -> void:
 	if multiplayer.is_server():
-		_net_apply_online_melee_action.rpc(candidate_id, action, data)
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_melee_action",
+			[candidate_id, action, data])
+
+func server_schedule_online_melee_refill(melee, epoch: int) -> void:
+	if not can_accept_online_combat(epoch) or melee == null \
+			or bool(melee.get("marker_refill_requested")):
+		return
+	melee.marker_refill_requested = true
+	_schedule_online_melee_marker_refill(
+		melee.spawn_position, melee.spawn_rotation, epoch,
+		bool(melee.get("overtime_marker_supply")))
+
+func _schedule_online_melee_marker_refill(
+		spawn_position: Vector3, spawn_rotation: Vector3, epoch: int,
+		overtime_supply: bool = false) -> void:
+	await get_tree().create_timer(MELEE_MARKER_REFILL_TIME).timeout
+	if not NetworkManager.is_host() or epoch != online_round_epoch \
+			or online_match_over or not online_combat_live \
+			or overtime_active != overtime_supply:
+		return
+	var candidate_id := _next_online_melee_candidate_id
+	_next_online_melee_candidate_id += 1
+	NetworkManager.broadcast_match_rpc(self, &"_net_spawn_online_melee_refill", [{
+		"candidate_id": candidate_id,
+		"position": spawn_position,
+		"rotation": spawn_rotation,
+		"identity": MeleeWeaponRegistry.get_random_identity(),
+		"pickup_locked": false,
+		"overtime_supply": overtime_supply,
+	}])
+
+@rpc("authority", "reliable", "call_local")
+func _net_spawn_online_melee_refill(assignment: Dictionary) -> void:
+	if overtime_active != bool(assignment.get("overtime_supply", false)):
+		return
+	_spawn_online_melee(assignment)
 
 @rpc("authority", "reliable", "call_local")
 func _net_apply_online_melee_action(candidate_id: int, action: String, data: Dictionary) -> void:
@@ -336,6 +447,7 @@ func _net_apply_online_melee_action(candidate_id: int, action: String, data: Dic
 		"throw": melee._net_do_throw(data.get("position", Vector3.ZERO), data.get("rotation", Vector3.ZERO), data.get("velocity", Vector3.ZERO))
 		"land": melee._net_land_throw(data.get("position", Vector3.ZERO), data.get("rotation", Vector3.ZERO))
 		"despawn_reset": melee._net_reset_existing_identity()
+		"retire": melee._net_retire_playpen_drop()
 		"hit":
 			melee._net_apply_melee_hit(
 				int(data.get("target_id", -1)),
@@ -353,13 +465,13 @@ func _net_apply_online_melee_action(candidate_id: int, action: String, data: Dic
 # stable coordinator rather than RPCs on the moving item nodes themselves.
 func request_online_item_action(item_id: int, action: String, epoch: int, direction: Vector3 = Vector3.ZERO) -> void:
 	if NetworkManager.is_host():
-		_server_route_online_item_action(NetworkManager.local_id(), item_id, action, epoch, direction)
+		_server_route_online_item_action(NetworkManager.local_actor_id(), item_id, action, epoch, direction)
 	else:
 		_net_request_online_item_action.rpc_id(1, item_id, action, epoch, direction)
 
 @rpc("any_peer", "reliable")
 func _net_request_online_item_action(item_id: int, action: String, epoch: int, direction: Vector3) -> void:
-	_server_route_online_item_action(multiplayer.get_remote_sender_id(), item_id, action, epoch, direction)
+	_server_route_online_item_action(NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), item_id, action, epoch, direction)
 
 func _server_route_online_item_action(sender_id: int, item_id: int, action: String, epoch: int, direction: Vector3) -> void:
 	if not multiplayer.is_server():
@@ -370,18 +482,53 @@ func _server_route_online_item_action(sender_id: int, item_id: int, action: Stri
 	match action:
 		"pickup": item._server_try_pickup(sender_id, epoch)
 		"drop": item._server_try_drop(sender_id, epoch)
+		"prime": item._server_try_prime(sender_id, epoch)
 		"throw": item._server_try_throw(sender_id, epoch, direction)
+		"photo": item._server_try_photo(sender_id, epoch)
+		"activate_shoes": item._server_try_activate(sender_id, epoch)
 
 func broadcast_online_item_action(item_id: int, action: String, data: Dictionary = {}) -> void:
 	if multiplayer.is_server():
-		_net_apply_online_item_action.rpc(item_id, action, data)
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_item_action",
+			[item_id, action, data])
 
-# Magnet pulls stream position nudges at 10 Hz per player; keep them off the
-# reliable ordered channel so they can't queue behind (or delay) combat RPCs.
-# A dropped move packet is harmless — the next tick supersedes it.
+
+func request_online_double_jump(epoch: int) -> void:
+	if NetworkManager.is_host():
+		_server_request_online_double_jump(NetworkManager.local_actor_id(), epoch)
+	else:
+		_net_request_online_double_jump.rpc_id(1, epoch)
+
+
+@rpc("any_peer", "reliable")
+func _net_request_online_double_jump(epoch: int) -> void:
+	_server_request_online_double_jump(
+		NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), epoch)
+
+
+func _server_request_online_double_jump(actor_id: int, epoch: int) -> void:
+	if not multiplayer.is_server() or not can_accept_online_combat(epoch):
+		return
+	var actor = NetworkManager.find_actor(actor_id)
+	if actor == null or bool(actor.get("is_eliminated")) \
+			or not bool(actor.get("double_jump_shoes_active")) or actor.is_on_floor():
+		return
+	NetworkManager.broadcast_match_rpc(self, &"_net_confirm_online_double_jump", [actor_id])
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_confirm_online_double_jump(actor_id: int) -> void:
+	var actor = NetworkManager.find_actor(actor_id)
+	if actor != null and actor.has_method("confirm_online_double_jump_shoes"):
+		actor.confirm_online_double_jump_shoes()
+
+# Lightweight loose-item position replication remains on the unreliable
+# channel for validators and any future world-item motion. A dropped packet is
+# harmless because the next position supersedes it.
 func broadcast_online_item_move(item_id: int, position: Vector3) -> void:
 	if multiplayer.is_server():
-		_net_apply_online_item_move.rpc(item_id, position)
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_item_move",
+			[item_id, position])
 
 @rpc("authority", "unreliable_ordered", "call_local")
 func _net_apply_online_item_move(item_id: int, position: Vector3) -> void:
@@ -397,13 +544,19 @@ func _net_apply_online_item_action(item_id: int, action: String, data: Dictionar
 	match action:
 		"pickup": item._net_do_pickup(int(data.get("holder_actor_id", -1)))
 		"drop": item._net_do_drop(data.get("position", Vector3.ZERO))
+		"prime": item._net_do_prime(float(data.get("fuse_time", 0.0)))
 		"throw": item._net_do_throw(
 			data.get("position", Vector3.ZERO),
 			data.get("rotation", Vector3.ZERO),
 			data.get("velocity", Vector3.ZERO),
 			data.get("direction", Vector3.FORWARD),
-			int(data.get("owner_actor_id", -1))
+			int(data.get("owner_actor_id", -1)),
+			float(data.get("fuse_remaining", 0.0))
 		)
+		"in_hand_deploy": item._net_deploy_from_hand(
+			data.get("position", Vector3.ZERO),
+			int(data.get("deployed_id", -1)),
+			int(data.get("owner_actor_id", -1)))
 		"return": item._net_return_to_spawn(data.get("position", Vector3.ZERO), data.get("rotation", Vector3.ZERO))
 		"deploy": item._net_do_deploy(
 			data.get("position", Vector3.ZERO),
@@ -411,6 +564,9 @@ func _net_apply_online_item_action(item_id: int, action: String, data: Dictionar
 			int(data.get("owner_actor_id", -1))
 		)
 		"consume": item._net_consume()
+		"activate_shoes": item._net_do_activate(int(data.get("holder_actor_id", -1)))
+	if bool(data.get("retire", false)):
+		item.call_deferred("queue_free")
 
 func server_deploy_online_item(item_id: int, position: Vector3, owner_actor_id: int, respawn_delay: float, epoch: int) -> void:
 	if not can_accept_online_combat(epoch):
@@ -424,14 +580,74 @@ func server_deploy_online_item(item_id: int, position: Vector3, owner_actor_id: 
 		"position": position,
 		"deployed_id": deployed_id,
 		"owner_actor_id": owner_actor_id,
+		"retire": bool(item.get("marker_refill_requested")),
 	})
-	_schedule_online_item_respawn(item_id, respawn_delay, epoch)
+	if not bool(item.get("marker_refill_requested")):
+		_schedule_online_item_respawn(item_id, respawn_delay, epoch)
+
+
+func server_deploy_online_held_item(item_id: int, owner_actor_id: int, respawn_delay: float, epoch: int) -> void:
+	if not can_accept_online_combat(epoch):
+		return
+	var item = _online_item(item_id)
+	var holder = NetworkManager.find_actor(owner_actor_id)
+	if item == null or holder == null or not item.is_held:
+		return
+	var deployed_id := _next_online_deployed_id
+	_next_online_deployed_id += 1
+	broadcast_online_item_action(item_id, "in_hand_deploy", {
+		"position": holder.global_position + Vector3.UP * 0.55,
+		"deployed_id": deployed_id,
+		"owner_actor_id": owner_actor_id,
+		"retire": bool(item.get("marker_refill_requested")),
+	})
+	if not bool(item.get("marker_refill_requested")):
+		_schedule_online_item_respawn(item_id, respawn_delay, epoch)
 
 func server_consume_online_item(item_id: int, respawn_delay: float, epoch: int) -> void:
 	if not can_accept_online_combat(epoch):
 		return
-	broadcast_online_item_action(item_id, "consume")
-	_schedule_online_item_respawn(item_id, respawn_delay, epoch)
+	var item = _online_item(item_id)
+	if item == null:
+		return
+	var retire := bool(item.get("marker_refill_requested"))
+	broadcast_online_item_action(item_id, "consume", {"retire": retire})
+	if not retire:
+		_schedule_online_item_respawn(item_id, respawn_delay, epoch)
+
+func server_schedule_online_item_refill(item, epoch: int) -> void:
+	if not can_accept_online_combat(epoch) or item == null \
+			or bool(item.get("marker_refill_requested")):
+		return
+	item.marker_refill_requested = true
+	_schedule_online_item_marker_refill(
+		item.spawn_position, item.spawn_rotation, int(item.online_spawn_id), epoch)
+
+func _schedule_online_item_marker_refill(
+		spawn_position: Vector3, spawn_rotation: Vector3,
+		spawn_id: int, epoch: int) -> void:
+	await get_tree().create_timer(PICKUP_MARKER_REFILL_TIME).timeout
+	if not NetworkManager.is_host() or epoch != online_round_epoch \
+			or online_match_over or overtime_active or not online_combat_live:
+		return
+	var replacement_type := _random_online_item_type()
+	if replacement_type == "":
+		return
+	var item_id := _next_online_item_id
+	_next_online_item_id += 1
+	NetworkManager.broadcast_match_rpc(self, &"_net_spawn_online_item_refill", [{
+		"item_id": item_id,
+		"spawn_id": spawn_id,
+		"item_type": replacement_type,
+		"position": spawn_position,
+		"rotation": spawn_rotation,
+	}])
+
+@rpc("authority", "reliable", "call_local")
+func _net_spawn_online_item_refill(assignment: Dictionary) -> void:
+	if overtime_active:
+		return
+	_spawn_online_item(assignment)
 
 func _schedule_online_item_respawn(item_id: int, delay: float, epoch: int) -> void:
 	await get_tree().create_timer(delay).timeout
@@ -443,7 +659,9 @@ func _schedule_online_item_respawn(item_id: int, delay: float, epoch: int) -> vo
 	var replacement_type := _random_online_item_type()
 	if replacement_type == "":
 		return
-	_net_replace_online_item.rpc(item_id, replacement_type, item.spawn_position, item.spawn_rotation, int(item.online_spawn_id))
+	NetworkManager.broadcast_match_rpc(self, &"_net_replace_online_item", [
+		item_id, replacement_type, item.spawn_position, item.spawn_rotation,
+		int(item.online_spawn_id)])
 
 @rpc("authority", "reliable", "call_local")
 func _net_replace_online_item(item_id: int, item_type: String, position: Vector3, rotation: Vector3, spawn_id: int) -> void:
@@ -467,13 +685,19 @@ func server_collect_online_powerup(powerup_id: int, actor_id: int, epoch: int) -
 	var actor = NetworkManager.find_actor(actor_id)
 	if powerup == null or actor == null or powerup.collected or actor.is_eliminated:
 		return
-	if actor.global_position.distance_to(powerup.global_position) > 3.0:
+	var max_distance := GameConfig.REACH_POWERUP_DISTANCE if actor.has_method("has_active_reach") and actor.has_active_reach() else 3.0
+	if actor.global_position.distance_to(powerup.global_position) > max_distance:
+		return
+	if max_distance > 3.0 and not CombatVisibility.has_visual_contact(actor, powerup):
 		return
 	var collected_type := str(powerup.power_type)
+	if not GameConfig.is_powerup_enabled(collected_type):
+		return
 	if actor.has_method("can_collect_powerup") and not actor.can_collect_powerup(collected_type):
 		return
-	_net_collect_online_powerup.rpc(powerup_id, actor_id, collected_type)
-	_schedule_online_powerup_respawn(powerup_id, powerup.respawn_time, epoch)
+	NetworkManager.broadcast_match_rpc(self, &"_net_collect_online_powerup",
+		[powerup_id, actor_id, collected_type])
+	_schedule_online_powerup_respawn(powerup_id, PICKUP_MARKER_REFILL_TIME, epoch)
 
 @rpc("authority", "reliable", "call_local")
 func _net_collect_online_powerup(powerup_id: int, actor_id: int, power_type: String) -> void:
@@ -488,8 +712,12 @@ func _schedule_online_powerup_respawn(powerup_id: int, delay: float, epoch: int)
 	var powerup = _online_powerup(powerup_id)
 	if powerup == null or not powerup.collected:
 		return
-	var new_type := str(ONLINE_POWERUP_TYPES[randi() % ONLINE_POWERUP_TYPES.size()])
-	_net_respawn_online_powerup.rpc(powerup_id, new_type)
+	var enabled_types := GameConfig.enabled_powerup_types()
+	if enabled_types.is_empty():
+		return
+	var new_type := str(enabled_types[randi() % enabled_types.size()])
+	NetworkManager.broadcast_match_rpc(self, &"_net_respawn_online_powerup",
+		[powerup_id, new_type])
 
 @rpc("authority", "reliable", "call_local")
 func _net_respawn_online_powerup(powerup_id: int, power_type: String) -> void:
@@ -497,49 +725,26 @@ func _net_respawn_online_powerup(powerup_id: int, power_type: String) -> void:
 	if powerup != null:
 		powerup._net_respawn(power_type)
 
-func _schedule_online_magnet_expiry(actor_id: int, duration: float, epoch: int) -> void:
-	await get_tree().create_timer(duration).timeout
-	if NetworkManager.is_host() and epoch == online_round_epoch:
-		_net_clear_online_magnet.rpc(actor_id)
-
-@rpc("authority", "reliable", "call_local")
-func _net_clear_online_magnet(actor_id: int) -> void:
-	var actor = NetworkManager.find_actor(actor_id)
-	if actor != null:
-		actor.magnet_timer = 0.0
-		actor.active_powerup_order.erase("magnet_hands")
-
-func request_online_magnet_pull(actor_id: int) -> void:
+func request_online_powerup_collect(powerup_id: int, requested_actor_id := -1) -> void:
+	var acting_id := requested_actor_id if requested_actor_id >= 0 else NetworkManager.local_actor_id()
 	if NetworkManager.is_host():
-		_server_online_magnet_pull(NetworkManager.local_id(), actor_id)
+		server_collect_online_powerup(powerup_id, acting_id, online_round_epoch)
 	else:
-		_net_request_online_magnet_pull.rpc_id(1, actor_id)
+		_net_request_online_powerup_collect.rpc_id(1, powerup_id, online_round_epoch)
 
-@rpc("any_peer", "unreliable")
-func _net_request_online_magnet_pull(actor_id: int) -> void:
-	_server_online_magnet_pull(multiplayer.get_remote_sender_id(), actor_id)
 
-func _server_online_magnet_pull(sender_id: int, actor_id: int) -> void:
-	if not multiplayer.is_server() or not online_combat_live:
-		return
-	var actor = NetworkManager.find_actor(actor_id)
-	if actor == null or int(actor.owner_peer_id) != sender_id or actor.magnet_timer <= 0.0:
-		return
-	for item in get_tree().get_nodes_in_group("online_item"):
-		if item.is_held or item.is_in_flight or not item.visible:
-			continue
-		var to_actor: Vector3 = actor.global_position + Vector3(0.0, 0.4, 0.0) - item.global_position
-		if to_actor.length() <= 1.1 or to_actor.length() > 4.0:
-			continue
-		var new_position: Vector3 = item.global_position + to_actor.normalized() * 6.0 * 0.1
-		broadcast_online_item_move(int(item.online_item_id), new_position)
+@rpc("any_peer", "reliable")
+func _net_request_online_powerup_collect(powerup_id: int, epoch: int) -> void:
+	server_collect_online_powerup(powerup_id,
+		NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), epoch)
 
 func server_apply_online_item_effect(effect: String, target_id: int, data: Dictionary = {}) -> void:
 	if not NetworkManager.is_host() or not online_combat_live:
 		return
 	if not online_actor_state.has(target_id) or not bool(online_actor_state[target_id].get("alive", false)):
 		return
-	_net_apply_online_item_effect.rpc(effect, target_id, data)
+	NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_item_effect",
+		[effect, target_id, data])
 
 @rpc("authority", "reliable", "call_local")
 func _net_apply_online_item_effect(effect: String, target_id: int, data: Dictionary) -> void:
@@ -550,7 +755,17 @@ func _net_apply_online_item_effect(effect: String, target_id: int, data: Diction
 		"slow": target.apply_slow(float(data.get("duration", 2.0)), float(data.get("multiplier", 0.5)))
 		"stagger": target.apply_stagger(float(data.get("duration", 1.5)))
 		"knockback": target.apply_knockback(data.get("direction", Vector3.FORWARD), float(data.get("distance", 3.0)))
-		"launch": target.velocity.y = float(data.get("velocity", 11.0))
+		"flash_blind":
+			if target.has_method("apply_flash_blind"):
+				target.apply_flash_blind(float(data.get("duration", 3.0)))
+		"launch":
+			if target.has_method("apply_spring_launch"):
+				target.apply_spring_launch(
+					float(data.get("velocity", 13.0)),
+					float(data.get("horizontal_boost", 4.0)),
+					float(data.get("direction_window", 1.0)))
+			else:
+				target.velocity.y = float(data.get("velocity", 13.0))
 		"steam_launch":
 			if target.has_method("apply_steam_boost"):
 				target.apply_steam_boost(
@@ -560,6 +775,12 @@ func _net_apply_online_item_effect(effect: String, target_id: int, data: Diction
 					float(data.get("gravity_multiplier", 3.0)))
 			else:
 				target.velocity.y = float(data.get("velocity", 12.0))
+		"directional_launch":
+			var launch_velocity: Vector3 = data.get("velocity", Vector3.ZERO)
+			if target.has_method("apply_directional_launch"):
+				target.apply_directional_launch(launch_velocity)
+			else:
+				target.velocity = launch_velocity
 		"immunity": target.grant_bullet_immunity(float(data.get("duration", 1.0)))
 
 func server_online_radial_knockback(position: Vector3, owner_actor_id: int, radius: float, distance: float) -> void:
@@ -573,13 +794,17 @@ func server_online_radial_knockback(position: Vector3, owner_actor_id: int, radi
 		if not GameConfig.can_affect(owner, target):
 			continue
 		var direction: Vector3 = target.global_position - position
+		var distance_to_blast: float = direction.length()
 		direction.y = 0.0
 		if direction.length() < 0.01:
 			direction = Vector3.FORWARD
-		server_apply_online_item_effect("knockback", int(actor_id), {"direction": direction.normalized(), "distance": distance})
+		var falloff_strength := lerpf(distance, distance * 0.5,
+			clampf(distance_to_blast / radius, 0.0, 1.0))
+		server_apply_online_item_effect("knockback", int(actor_id), {"direction": direction.normalized(), "distance": falloff_strength})
 		if bool(target.get("holding_gun")):
 			if int(target.get("melee_disarm_shields")) > 0:
-				_net_consume_online_shield.rpc(int(actor_id))
+				NetworkManager.broadcast_match_rpc(self,
+					&"_net_consume_online_shield", [int(actor_id)])
 			else:
 				var hold_point = target.get_hold_point()
 				if hold_point != null and hold_point.get_child_count() > 0:
@@ -596,13 +821,14 @@ func server_online_radial_knockback(position: Vector3, owner_actor_id: int, radi
 
 func broadcast_online_deployed_action(deployed_id: int, action: String, data: Dictionary = {}) -> void:
 	if multiplayer.is_server():
-		_net_apply_online_deployed_action.rpc(deployed_id, action, data)
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_deployed_action",
+			[deployed_id, action, data])
 
 func broadcast_online_decoy_transform(
 		deployed_id: int, transform: Transform3D, velocity: Vector3) -> void:
 	if multiplayer.is_server():
-		_net_apply_online_decoy_transform.rpc(
-			deployed_id, transform, velocity, online_round_epoch)
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_decoy_transform",
+			[deployed_id, transform, velocity, online_round_epoch], false)
 
 @rpc("authority", "unreliable_ordered", "call_remote")
 func _net_apply_online_decoy_transform(
@@ -621,7 +847,8 @@ func _record_online_item_disarm(disarmer_id: int, victim_id: int, icon: String) 
 		var entry: Dictionary = online_actor_state[disarmer_id]
 		entry["disarms"] = int(entry.get("disarms", 0)) + 1
 		online_actor_state[disarmer_id] = entry
-	_net_announce_online_disarm.rpc(victim_id, disarmer_id, icon)
+	NetworkManager.broadcast_match_rpc(self, &"_net_announce_online_disarm",
+		[victim_id, disarmer_id, icon])
 	_broadcast_online_state()
 
 @rpc("authority", "reliable", "call_local")
@@ -633,11 +860,12 @@ func _net_announce_online_disarm(victim_id: int, disarmer_id: int, icon: String)
 			victim.get_display_name(),
 			disarmer.get_display_name() if disarmer != null else "",
 			icon)
+		GameEvents.actor_disarmed.emit(victim_id, disarmer_id, icon)
 
 func request_online_decoy_control_toggle(deployed_id: int, actor_id: int) -> void:
 	if NetworkManager.is_host():
 		_server_online_decoy_control_toggle(
-			deployed_id, actor_id, NetworkManager.local_id(), online_round_epoch)
+			deployed_id, actor_id, NetworkManager.local_actor_id(), online_round_epoch)
 	else:
 		_net_request_online_decoy_control_toggle.rpc_id(
 			1, deployed_id, actor_id, online_round_epoch)
@@ -646,7 +874,7 @@ func request_online_decoy_control_toggle(deployed_id: int, actor_id: int) -> voi
 func _net_request_online_decoy_control_toggle(
 		deployed_id: int, actor_id: int, epoch: int) -> void:
 	_server_online_decoy_control_toggle(
-		deployed_id, actor_id, multiplayer.get_remote_sender_id(), epoch)
+		deployed_id, actor_id, NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), epoch)
 
 func _server_online_decoy_control_toggle(
 		deployed_id: int, actor_id: int, sender_peer: int, epoch: int) -> void:
@@ -676,9 +904,13 @@ func server_online_boomerang_hit(item_id: int, owner_actor_id: int, target_id: i
 		return
 	if target.holding_gun:
 		if target.melee_disarm_shields > 0:
-			_net_consume_online_shield.rpc(target_id)
+			NetworkManager.broadcast_match_rpc(self,
+				&"_net_consume_online_shield", [target_id])
 		else:
-			var gun = get_tree().get_nodes_in_group("gun")[0] if not get_tree().get_nodes_in_group("gun").is_empty() else null
+			var gun = null
+			var hold_point = target.get_hold_point()
+			if hold_point != null and hold_point.get_child_count() > 0:
+				gun = hold_point.get_child(0)
 			if gun != null and gun.is_held and gun.player_ref == target:
 				gun.net_force_disarm()
 				server_record_online_melee_hit(owner_actor_id, false, true)
@@ -719,6 +951,7 @@ func _initialize_online_match() -> void:
 			"actor_id": id,
 			"owner_peer_id": int(p.owner_peer_id),
 			"name": p.get_display_name(),
+			"team_id": int(p.get("team_id")),
 			"alive": true,
 			"rounds": 0,
 			"sets": 0,
@@ -730,6 +963,7 @@ func _initialize_online_match() -> void:
 			"round_kills": 0,
 			"storm_time": 0.0,
 			"eliminated_at_ms": -1,
+			"hearts": GameConfig.ALL_GUN_MAX_HEARTS if GameConfig.game_mode == GameConfig.MODE_ALL_GUN else 0,
 		}
 	if not GameEvents.gun_picked_up.is_connected(_on_online_gun_picked_up):
 		GameEvents.gun_picked_up.connect(_on_online_gun_picked_up)
@@ -742,14 +976,21 @@ func _initialize_online_match() -> void:
 func _online_start_round() -> void:
 	if not NetworkManager.is_host() or online_match_over:
 		return
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		_server_prepare_one_of_us_roles()
 	_online_transitioning = true
-	_net_set_online_combat.rpc(false, online_round_epoch)
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_combat",
+		[false, online_round_epoch])
 	online_announcement = "NEW ROUND"
 	var assignments := _build_online_spawn_assignments()
 	var melee_assignments := _build_online_melee_assignments()
 	var item_assignments := _build_online_item_assignments()
 	var powerup_assignments := _build_online_powerup_assignments()
-	_net_reset_online_round.rpc(assignments, melee_assignments, item_assignments, powerup_assignments)
+	var gun_assignment := _build_online_gun_assignment()
+	NetworkManager.broadcast_match_rpc(self, &"_net_reset_online_round", [
+		assignments, melee_assignments, item_assignments, powerup_assignments,
+		gun_assignment])
+	_refresh_one_of_us_final_us_bonus()
 	_online_unlock_melee_after_delay(online_round_epoch)
 	for actor_id in online_actor_state:
 		var entry: Dictionary = online_actor_state[actor_id]
@@ -757,17 +998,31 @@ func _online_start_round() -> void:
 		entry["round_kills"] = 0
 		entry["storm_time"] = 0.0
 		entry["eliminated_at_ms"] = -1
+		entry["hearts"] = GameConfig.ALL_GUN_MAX_HEARTS \
+			if GameConfig.game_mode == GameConfig.MODE_ALL_GUN else 0
 		online_actor_state[actor_id] = entry
 	_online_previous_alive_ids = online_actor_state.keys()
 	_broadcast_online_state()
-	for count in range(countdown_time, 0, -1):
-		online_announcement = str(count)
-		_broadcast_online_state()
-		await get_tree().create_timer(1.0).timeout
+	var skip_countdown := false
+	if round_number == 1 and set_number == 1:
+		if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+			NetworkManager.broadcast_match_rpc(self, &"_net_play_one_of_us_intro",
+				[one_of_us_first_actor_id])
+			await get_tree().create_timer(OneOfUsIntroData.TOTAL_TIME + 0.05).timeout
+			skip_countdown = true
+		else:
+			NetworkManager.broadcast_match_rpc(self, &"_net_play_first_round_intro", [_intro_authored_position()])
+			await get_tree().create_timer(3.0).timeout
+	if not skip_countdown:
+		for count in range(countdown_time, 0, -1):
+			online_announcement = str(count)
+			_broadcast_online_state()
+			await get_tree().create_timer(1.0).timeout
 	online_announcement = "GO!"
 	round_elapsed = 0.0
-	_net_set_online_combat.rpc(true, online_round_epoch)
-	_net_set_online_players_enabled.rpc(true)
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_combat",
+		[true, online_round_epoch])
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_players_enabled", [true])
 	_broadcast_online_state()
 	_online_transitioning = false
 	await get_tree().create_timer(0.7).timeout
@@ -794,19 +1049,41 @@ func _build_online_spawn_assignments() -> Array:
 
 func _build_online_melee_assignments() -> Array:
 	var markers := _sorted_online_markers("melee_spawn_point")
+	if GameConfig.game_mode in [GameConfig.MODE_ALL_GUN, GameConfig.MODE_ONE_OF_US]:
+		_next_online_melee_candidate_id = 0
+		return []
 	if markers.is_empty():
 		push_warning("RoundManager: map has no melee_spawn_point markers.")
 		return []
-	var marker = markers[randi() % markers.size()]
-	return [{
-		"candidate_id": 0,
-		"position": marker.global_position,
-		"rotation": marker.global_rotation,
-		"identity": MeleeWeaponRegistry.get_random_identity(),
-	}]
+	var assignments: Array = []
+	_next_online_melee_candidate_id = markers.size()
+	for i in markers.size():
+		var marker = markers[i]
+		assignments.append({
+			"candidate_id": i,
+			"position": marker.global_position,
+			"rotation": marker.global_rotation,
+			"identity": MeleeWeaponRegistry.get_random_identity(),
+			"pickup_locked": GameConfig.melee_spawn_delay > 0.0,
+		})
+	return assignments
+
+
+func _build_online_gun_assignment() -> Dictionary:
+	if GameConfig.game_mode != GameConfig.MODE_ONE_GUN:
+		return {}
+	var guns := get_tree().get_nodes_in_group("gun")
+	if guns.is_empty():
+		return {}
+	var position: Vector3 = _gun_center_position
+	if GameConfig.gun_spawn_mode == "random":
+		var markers := _sorted_online_markers("gun_spawn_point")
+		if not markers.is_empty():
+			position = markers[randi() % markers.size()].global_position
+	return {"position": position}
 
 @rpc("authority", "reliable", "call_local")
-func _net_reset_online_round(assignments: Array, melee_assignments: Array, item_assignments: Array, powerup_assignments: Array) -> void:
+func _net_reset_online_round(assignments: Array, melee_assignments: Array, item_assignments: Array, powerup_assignments: Array, gun_assignment: Dictionary = {}) -> void:
 	_clear_overtime_state()
 	for bullet in get_tree().get_nodes_in_group("online_bullet"):
 		bullet.queue_free()
@@ -815,8 +1092,16 @@ func _net_reset_online_round(assignments: Array, melee_assignments: Array, item_
 			node.free()
 	for melee in get_tree().get_nodes_in_group("online_spawned_melee"):
 		melee.free()
+	_clear_personal_mode_guns()
+	_clear_personal_mode_melees()
 	for gun in get_tree().get_nodes_in_group("gun"):
-		gun.reset_to_spawn()
+		if GameConfig.game_mode == GameConfig.MODE_ONE_GUN:
+			gun.reset_to_spawn()
+			if not gun_assignment.is_empty():
+				gun.global_position = gun_assignment.get("position", gun.global_position)
+				gun.spawn_position = gun.global_position
+		elif gun.has_method("disable_for_overtime"):
+			gun.disable_for_overtime()
 	for melee_assignment in melee_assignments:
 		_spawn_online_melee(melee_assignment)
 	for item_assignment in item_assignments:
@@ -827,12 +1112,363 @@ func _net_reset_online_round(assignments: Array, melee_assignments: Array, item_
 		var actor = NetworkManager.find_actor(int(assignment["actor_id"]))
 		if actor != null:
 			actor.respawn(Transform3D(Basis(Vector3.UP, float(assignment["yaw"])), assignment["pos"]))
+			if _actor_uses_personal_mode_gun(actor):
+				_grant_personal_mode_gun(actor)
+			elif GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+				_grant_one_of_us_sword(actor)
 	_net_set_online_players_enabled(false)
 
+func _actor_uses_personal_mode_gun(actor) -> bool:
+	if GameConfig.game_mode == GameConfig.MODE_ALL_GUN:
+		return true
+	return GameConfig.game_mode == GameConfig.MODE_ONE_OF_US \
+		and one_of_us_role_for_actor(int(actor.get("actor_id"))) == "us"
+
+
+func _clear_personal_mode_guns() -> void:
+	for gun in get_tree().get_nodes_in_group("gun"):
+		if not bool(gun.get("personal_mode_gun")):
+			continue
+		var holder = gun.get("player_ref")
+		if holder != null:
+			holder.holding_gun = false
+		gun.free()
+
+
+func _grant_personal_mode_gun(actor) -> void:
+	if actor == null or not _actor_uses_personal_mode_gun(actor):
+		return
+	if bool(actor.get("holding_gun")):
+		return
+	var gun = GunScene.instantiate()
+	gun.name = "ModeGun%d" % int(actor.get("actor_id"))
+	gun.personal_mode_gun = true
+	gun.is_overtime_gun = true
+	gun.overtime_owner_id = int(actor.get("actor_id"))
+	get_tree().current_scene.add_child(gun)
+	gun.global_position = actor.global_position
+	gun.spawn_position = actor.global_position
+	gun._local_pickup(actor, true)
+
+func _prepare_local_mode_loadouts() -> void:
+	for actor in players:
+		actor.all_gun_hearts = GameConfig.ALL_GUN_MAX_HEARTS \
+			if GameConfig.game_mode == GameConfig.MODE_ALL_GUN else 0
+	if GameConfig.game_mode not in [GameConfig.MODE_ALL_GUN, GameConfig.MODE_ONE_OF_US]:
+		return
+	_clear_personal_mode_guns()
+	_clear_personal_mode_melees()
+	for gun in get_tree().get_nodes_in_group("gun"):
+		if gun.has_method("disable_for_overtime"):
+			gun.disable_for_overtime()
+	for actor in players:
+		if _actor_uses_personal_mode_gun(actor):
+			_grant_personal_mode_gun(actor)
+		elif GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+			_grant_one_of_us_sword(actor)
+
+
+
+func one_of_us_role_for_actor(actor_id: int) -> String:
+	return str(one_of_us_roles.get(actor_id, ""))
+
+
+func _server_prepare_one_of_us_roles() -> void:
+	if not NetworkManager.is_host() or online_actor_state.is_empty():
+		return
+	var actor_ids: Array = online_actor_state.keys()
+	actor_ids.sort()
+	var volunteer_ids: Array[int] = []
+	for volunteer_actor_id in NetworkManager.one_of_us_volunteer_actor_ids():
+		if actor_ids.has(volunteer_actor_id):
+			volunteer_ids.append(volunteer_actor_id)
+	var selection_pool: Array = volunteer_ids if not volunteer_ids.is_empty() else actor_ids
+	one_of_us_first_actor_id = int(selection_pool[randi() % selection_pool.size()])
+	one_of_us_roles.clear()
+	_one_of_us_round_finishing = false
+	for actor_id_value in actor_ids:
+		var actor_id := int(actor_id_value)
+		var role := "them" if actor_id == one_of_us_first_actor_id else "us"
+		one_of_us_roles[actor_id] = role
+		var entry: Dictionary = online_actor_state[actor_id]
+		entry["one_of_us_role"] = role
+		online_actor_state[actor_id] = entry
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_one_of_us_roles",
+		[one_of_us_roles, one_of_us_first_actor_id])
+
+
+func _prepare_local_one_of_us_roles() -> void:
+	if players.is_empty():
+		return
+	var candidates := players.filter(func(actor): return is_instance_valid(actor))
+	if candidates.is_empty():
+		return
+	var volunteer_candidates: Array = []
+	for actor in candidates:
+		if actor.get("is_bot") == true:
+			continue
+		var player_index := 1 if actor.get("is_player2") == true else 0
+		if player_index < GameConfig.local_one_of_us_volunteers.size() \
+				and GameConfig.local_one_of_us_volunteers[player_index]:
+			volunteer_candidates.append(actor)
+	var selection_pool: Array = volunteer_candidates if not volunteer_candidates.is_empty() else candidates
+	var first = selection_pool[randi() % selection_pool.size()]
+	one_of_us_first_actor_id = int(first.get("actor_id"))
+	one_of_us_roles.clear()
+	_one_of_us_round_finishing = false
+	for actor in candidates:
+		var actor_id := int(actor.get("actor_id"))
+		var role := "them" if actor_id == one_of_us_first_actor_id else "us"
+		one_of_us_roles[actor_id] = role
+		actor.set_one_of_us_role(role)
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_set_one_of_us_roles(roles: Dictionary, first_actor_id: int) -> void:
+	one_of_us_roles = roles.duplicate(true)
+	one_of_us_first_actor_id = first_actor_id
+	_one_of_us_round_finishing = false
+	for actor_id_value in one_of_us_roles:
+		var actor_id := int(actor_id_value)
+		var actor = NetworkManager.find_actor(actor_id)
+		if actor != null and actor.has_method("set_one_of_us_role"):
+			actor.set_one_of_us_role(str(one_of_us_roles[actor_id_value]))
+
+
+func _clear_personal_mode_melees() -> void:
+	for melee in get_tree().get_nodes_in_group("melee"):
+		if not bool(melee.get("personal_mode_melee")):
+			continue
+		var holder = melee.get("player_ref")
+		if holder != null:
+			holder.held_melee_weapon = null
+		melee.free()
+
+
+func _grant_one_of_us_sword(actor) -> void:
+	if actor == null or GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
+		return
+	if one_of_us_role_for_actor(int(actor.get("actor_id"))) != "them":
+		return
+	if actor.get("held_melee_weapon") != null:
+		return
+	var melee = MeleeScene.instantiate()
+	melee.name = "ThemSword%d" % int(actor.get("actor_id"))
+	melee.online_candidate_id = -200000 - int(actor.get("actor_id"))
+	melee.personal_mode_melee = true
+	get_tree().current_scene.add_child(melee)
+	melee.set_online_active(true)
+	melee.apply_network_identity({"weapon_name": "Sword", "effect": "normal", "tier": 3})
+	melee.global_position = actor.global_position
+	melee.spawn_position = actor.global_position
+	melee._local_pickup(actor)
+
+
+func try_resolve_local_one_of_us_gun_hit(target, killer_name: String,
+		killer_actor_id: int) -> bool:
+	if GameConfig.game_mode != GameConfig.MODE_ONE_OF_US or target == null:
+		return false
+	var target_id := int(target.get("actor_id"))
+	if one_of_us_role_for_actor(target_id) != "them":
+		return true
+	_clear_actor_personal_loadout(target)
+	target.set_meta("one_of_us_elimination_resolution", true)
+	target.eliminate(killer_name, "GUN", "weapon", killer_actor_id)
+	target.remove_meta("one_of_us_elimination_resolution")
+	if target.has_method("set_transient_spectator_filter"):
+		target.set_transient_spectator_filter("them")
+	var generation := int(_one_of_us_respawn_generation.get(target_id, 0)) + 1
+	_one_of_us_respawn_generation[target_id] = generation
+	_finish_local_one_of_us_conversion(target, target_id, generation,
+		GameConfig.ONE_OF_US_THEM_RESPAWN_TIME)
+	return true
+
+func try_resolve_one_of_us_melee(attacker, target) -> bool:
+	if practice_mode or GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
+		return false
+	if attacker == null or target == null:
+		return true
+	var attacker_id := int(attacker.get("actor_id"))
+	var target_id := int(target.get("actor_id"))
+	if one_of_us_role_for_actor(attacker_id) != "them" \
+			or one_of_us_role_for_actor(target_id) != "us":
+		return true
+	if NetworkManager.is_online():
+		if multiplayer.is_server():
+			_server_begin_one_of_us_respawn(target_id, attacker_id,
+				GameConfig.ONE_OF_US_CONVERSION_TIME, true)
+	else:
+		_begin_local_one_of_us_conversion(target, attacker)
+	return true
+
+
+func _clear_actor_personal_loadout(actor) -> void:
+	if actor == null:
+		return
+	var gun_hold = actor.get_hold_point() if actor.has_method("get_hold_point") else null
+	if gun_hold != null:
+		for child in gun_hold.get_children():
+			if bool(child.get("personal_mode_gun")):
+				child.queue_free()
+	actor.holding_gun = false
+	var melee = actor.get("held_melee_weapon")
+	if melee != null and bool(melee.get("personal_mode_melee")):
+		melee.queue_free()
+		actor.held_melee_weapon = null
+
+
+func _begin_local_one_of_us_conversion(target, attacker) -> void:
+	var target_id := int(target.get("actor_id"))
+	one_of_us_roles[target_id] = "them"
+	target.set_one_of_us_role("them")
+	_clear_actor_personal_loadout(target)
+	var killer_name: String = attacker.get_display_name() if attacker != null else "THEM"
+	var killer_id := int(attacker.get("actor_id")) if attacker != null else -1
+	target.set_meta("one_of_us_elimination_resolution", true)
+	target.eliminate(killer_name, "ONE", "weapon", killer_id)
+	target.remove_meta("one_of_us_elimination_resolution")
+	if target.has_method("set_transient_spectator_filter"):
+		target.set_transient_spectator_filter("them")
+	_refresh_one_of_us_final_us_bonus()
+	var generation := int(_one_of_us_respawn_generation.get(target_id, 0)) + 1
+	_one_of_us_respawn_generation[target_id] = generation
+	_finish_local_one_of_us_conversion(target, target_id, generation)
+
+
+func _finish_local_one_of_us_conversion(target, actor_id: int, generation: int,
+		delay := GameConfig.ONE_OF_US_CONVERSION_TIME) -> void:
+	await get_tree().create_timer(delay).timeout
+	if generation != int(_one_of_us_respawn_generation.get(actor_id, 0)) \
+			or round_state != "live" or _one_of_us_round_finishing:
+		return
+	var spawn_transform := _one_of_us_safe_spawn_transform(actor_id)
+	target.respawn(spawn_transform)
+	target.set_one_of_us_role("them")
+	_grant_one_of_us_sword(target)
+
+
+func _server_begin_one_of_us_respawn(victim_id: int, attacker_id: int,
+		delay: float, converting: bool) -> void:
+	if not NetworkManager.is_host() or not online_actor_state.has(victim_id):
+		return
+	var entry: Dictionary = online_actor_state[victim_id]
+	if not bool(entry.get("alive", false)):
+		return
+	entry["alive"] = false
+	entry["eliminated_at_ms"] = Time.get_ticks_msec()
+	if converting:
+		one_of_us_roles[victim_id] = "them"
+		entry["one_of_us_role"] = "them"
+	online_actor_state[victim_id] = entry
+	if converting:
+		NetworkManager.broadcast_match_rpc(self, &"_net_set_one_of_us_roles",
+			[one_of_us_roles, one_of_us_first_actor_id])
+	NetworkManager.broadcast_match_rpc(self, &"_net_eliminate",
+		[victim_id, attacker_id, "ONE" if converting else "GUN", "weapon"])
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_one_of_us_spectator_filter",
+		[victim_id, "them"])
+	var generation := int(_one_of_us_respawn_generation.get(victim_id, 0)) + 1
+	_one_of_us_respawn_generation[victim_id] = generation
+	_broadcast_online_state()
+	_refresh_one_of_us_final_us_bonus()
+	_finish_online_one_of_us_respawn(victim_id, delay, generation)
+
+
+func _finish_online_one_of_us_respawn(victim_id: int, delay: float, generation: int) -> void:
+	await get_tree().create_timer(delay).timeout
+	if generation != int(_one_of_us_respawn_generation.get(victim_id, 0)) \
+			or not online_combat_live or _one_of_us_round_finishing:
+		return
+	if not online_actor_state.has(victim_id):
+		return
+	var entry: Dictionary = online_actor_state[victim_id]
+	entry["alive"] = true
+	entry["eliminated_at_ms"] = -1
+	online_actor_state[victim_id] = entry
+	var spawn_transform := _one_of_us_safe_spawn_transform(victim_id)
+	NetworkManager.broadcast_match_rpc(self, &"_net_respawn_one_of_us_actor", [
+		victim_id, spawn_transform.origin, spawn_transform.basis.get_euler().y,
+		one_of_us_role_for_actor(victim_id)])
+	_broadcast_online_state()
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_respawn_one_of_us_actor(actor_id: int, position: Vector3, yaw: float, role: String) -> void:
+	var actor = NetworkManager.find_actor(actor_id)
+	if actor == null:
+		return
+	_clear_actor_personal_loadout(actor)
+	actor.respawn(Transform3D(Basis(Vector3.UP, yaw), position))
+	actor.set_one_of_us_role(role)
+	if role == "them":
+		_grant_one_of_us_sword(actor)
+	else:
+		_grant_personal_mode_gun(actor)
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_set_one_of_us_spectator_filter(actor_id: int, role: String) -> void:
+	var actor = NetworkManager.find_actor(actor_id)
+	if actor != null and actor.has_method("set_transient_spectator_filter"):
+		actor.set_transient_spectator_filter(role)
+
+
+func _one_of_us_safe_spawn_transform(actor_id: int) -> Transform3D:
+	var markers := get_tree().get_nodes_in_group("one_of_us_spawn_point")
+	if markers.is_empty():
+		markers = get_tree().get_nodes_in_group("spawn_point")
+	if markers.is_empty():
+		var actor = NetworkManager.find_actor(actor_id) if NetworkManager.is_online() else null
+		return actor.global_transform if actor != null else Transform3D.IDENTITY
+	var us_positions: Array[Vector3] = []
+	for other_id_value in one_of_us_roles:
+		var other_id := int(other_id_value)
+		if other_id == actor_id or one_of_us_role_for_actor(other_id) != "us":
+			continue
+		var other = NetworkManager.find_actor(other_id) if NetworkManager.is_online() \
+			else _find_player_by_actor_id(other_id)
+		if other != null and not bool(other.get("is_eliminated")):
+			us_positions.append(other.global_position)
+	var best = markers[0]
+	var best_score := -INF
+	for marker in markers:
+		var score := 1000.0
+		for us_position in us_positions:
+			score = minf(score, marker.global_position.distance_to(us_position))
+		if score > best_score:
+			best_score = score
+			best = marker
+	return Transform3D(Basis(Vector3.UP, best.global_rotation.y), best.global_position)
+
+
+func _refresh_one_of_us_final_us_bonus() -> void:
+	if GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
+		return
+	var us_ids: Array[int] = []
+	for actor_id_value in one_of_us_roles:
+		var actor_id := int(actor_id_value)
+		if one_of_us_role_for_actor(actor_id) == "us":
+			us_ids.append(actor_id)
+	var final_id := us_ids[0] if us_ids.size() == 1 else -1
+	if NetworkManager.is_online():
+		if NetworkManager.is_host():
+			NetworkManager.broadcast_match_rpc(self, &"_net_set_final_us_bonus", [final_id])
+	else:
+		_net_set_final_us_bonus(final_id)
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_set_final_us_bonus(final_actor_id: int) -> void:
+	for actor in get_tree().get_nodes_in_group("player"):
+		if actor.has_method("set_one_of_us_final_us"):
+			actor.set_one_of_us_final_us(int(actor.get("actor_id")) == final_actor_id)
 func _spawn_online_melee(assignment: Dictionary) -> void:
 	var melee = MeleeScene.instantiate()
-	melee.name = "OnlineMelee"
+	melee.name = "OnlineMelee%d" % int(assignment.get("candidate_id", 0))
 	melee.online_candidate_id = int(assignment.get("candidate_id", 0))
+	melee.marker_refill_on_pickup = true
+	melee.marker_refill_requested = false
+	melee.overtime_marker_supply = bool(assignment.get("overtime_supply", false))
 	melee.add_to_group("online_spawned_melee", true)
 	get_tree().current_scene.add_child(melee)
 	melee.global_position = assignment.get("position", Vector3.ZERO)
@@ -841,7 +1477,7 @@ func _spawn_online_melee(assignment: Dictionary) -> void:
 	melee.spawn_rotation = melee.global_rotation
 	melee.apply_network_identity(assignment.get("identity", {}))
 	melee.set_online_active(true)
-	melee.set_online_pickup_locked(GameConfig.melee_spawn_delay > 0.0)
+	melee.set_online_pickup_locked(bool(assignment.get("pickup_locked", false)))
 
 func _spawn_online_item(assignment: Dictionary) -> void:
 	var item_type := str(assignment.get("item_type", ""))
@@ -854,6 +1490,8 @@ func _spawn_online_item(assignment: Dictionary) -> void:
 	item.name = "OnlineItem%d" % int(assignment.get("item_id", -1))
 	item.online_item_id = int(assignment.get("item_id", -1))
 	item.online_spawn_id = int(assignment.get("spawn_id", -1))
+	item.marker_refill_on_pickup = true
+	item.marker_refill_requested = false
 	item.add_to_group("online_item", true)
 	var container = get_tree().current_scene.get_node_or_null("OnlineItems")
 	if container == null:
@@ -863,13 +1501,15 @@ func _spawn_online_item(assignment: Dictionary) -> void:
 	item.global_rotation = assignment.get("rotation", Vector3.ZERO)
 	item.spawn_position = item.global_position
 	item.spawn_rotation = item.global_rotation
-	item.reroll_on_respawn = true
+	item.reroll_on_respawn = false
 
 func _spawn_online_powerup(assignment: Dictionary) -> void:
 	var powerup = load("res://powerup.tscn").instantiate()
 	powerup.name = "OnlinePowerup%d" % int(assignment.get("powerup_id", -1))
 	powerup.online_powerup_id = int(assignment.get("powerup_id", -1))
-	powerup.power_type = str(assignment.get("power_type", "extra_dash"))
+	var assigned_type := str(assignment.get("power_type", "extra_dash"))
+	powerup.fixed_power_type = assigned_type
+	powerup.power_type = assigned_type
 	powerup.add_to_group("online_powerup", true)
 	var container = get_tree().current_scene.get_node_or_null("OnlineItems")
 	if container == null:
@@ -879,13 +1519,15 @@ func _spawn_online_powerup(assignment: Dictionary) -> void:
 	powerup.global_rotation = assignment.get("rotation", Vector3.ZERO)
 	powerup.spawn_position = powerup.global_position
 	powerup.base_y = powerup.position.y
+	powerup.respawn_time = PICKUP_MARKER_REFILL_TIME
 
 func _online_unlock_melee_after_delay(epoch: int) -> void:
 	if not NetworkManager.is_host() or GameConfig.melee_spawn_delay <= 0.0:
 		return
 	await get_tree().create_timer(GameConfig.melee_spawn_delay).timeout
 	if epoch == online_round_epoch and not online_match_over:
-		_net_set_online_melee_locked.rpc(false)
+		NetworkManager.broadcast_match_rpc(self,
+			&"_net_set_online_melee_locked", [false])
 
 @rpc("authority", "reliable", "call_local")
 func _net_set_online_melee_locked(value: bool) -> void:
@@ -908,7 +1550,23 @@ func _net_set_online_players_enabled(enabled: bool) -> void:
 func _broadcast_online_state() -> void:
 	if not NetworkManager.is_host():
 		return
-	_net_apply_online_state.rpc({
+	NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_state",
+		[_online_state_snapshot()])
+
+
+func _online_state_snapshot() -> Dictionary:
+	var protections: Dictionary = {}
+	for actor_id in online_actor_state:
+		var actor = NetworkManager.find_actor(int(actor_id))
+		if actor == null:
+			continue
+		protections[int(actor_id)] = {
+			"extra_life": bool(actor.get("second_wind_ready")),
+			"sticky_hands": clampi(int(actor.get("melee_disarm_shields")), 0, 1),
+			"bullet_immunity": maxf(float(actor.get("bullet_immune_timer")), 0.0),
+			"lethal_immunity": maxf(float(actor.get("lethal_immunity_timer")), 0.0),
+		}
+	return {
 		"phase": round_state,
 		"combat_live": online_combat_live,
 		"round_epoch": online_round_epoch,
@@ -918,8 +1576,22 @@ func _broadcast_online_state() -> void:
 		"match_over": online_match_over,
 		"overtime_active": overtime_active,
 		"overtime_elapsed": overtime_elapsed,
+		"round_elapsed": round_elapsed,
+		"one_of_us_roles": one_of_us_roles.duplicate(true),
+		"one_of_us_first_actor_id": one_of_us_first_actor_id,
 		"actors": online_actor_state.duplicate(true),
-	})
+		"protections": protections,
+	}
+
+
+func server_sync_late_spectator(peer_id: int) -> void:
+	if not NetworkManager.is_host() or not NetworkManager.peers.has(peer_id):
+		return
+	# The spectator has already created /root/<Map>/RoundManager by the time the
+	# ready acknowledgement arrives, so this targeted state packet is safe and
+	# immediately populates its scoreboard/HUD instead of waiting for the next
+	# gameplay event.
+	callv("rpc_id", [peer_id, &"_net_apply_online_state", _online_state_snapshot()])
 
 @rpc("authority", "reliable", "call_local")
 func _net_apply_online_state(snapshot: Dictionary) -> void:
@@ -933,17 +1605,107 @@ func _net_apply_online_state(snapshot: Dictionary) -> void:
 	if bool(snapshot.get("overtime_active", false)) and overtime_active:
 		overtime_elapsed = float(snapshot.get("overtime_elapsed", overtime_elapsed))
 	online_actor_state = snapshot.get("actors", {}).duplicate(true)
+	round_elapsed = float(snapshot.get("round_elapsed", round_elapsed))
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		one_of_us_roles = snapshot.get("one_of_us_roles", one_of_us_roles).duplicate(true)
+		one_of_us_first_actor_id = int(snapshot.get(
+			"one_of_us_first_actor_id", one_of_us_first_actor_id))
+		for actor_id_value in one_of_us_roles:
+			var role_actor = NetworkManager.find_actor(int(actor_id_value))
+			if role_actor != null and role_actor.has_method("set_one_of_us_role"):
+				role_actor.set_one_of_us_role(
+					str(one_of_us_roles[actor_id_value]))
+	var protections: Dictionary = snapshot.get("protections", {})
+	for actor_id in protections:
+		var actor = NetworkManager.find_actor(int(actor_id))
+		if actor == null:
+			continue
+		var protection: Dictionary = protections[actor_id]
+		actor.second_wind_ready = bool(protection.get("extra_life", false))
+		actor.melee_disarm_shields = clampi(int(protection.get("sticky_hands", 0)), 0, 1)
+		actor.bullet_immune_timer = maxf(float(protection.get("bullet_immunity", 0.0)), 0.0)
+		actor.lethal_immunity_timer = maxf(float(protection.get("lethal_immunity", 0.0)), 0.0)
+		actor.active_powerup_order.erase("extra_life")
+		actor.active_powerup_order.erase("sticky_hands")
+		if actor.second_wind_ready:
+			actor.active_powerup_order.push_back("extra_life")
+		if actor.melee_disarm_shields > 0:
+			actor.active_powerup_order.push_back("sticky_hands")
 	if _online_hud != null and _online_hud.has_method("bind_local_player"):
 		_online_hud.bind_local_player(NetworkManager.find_net_player(NetworkManager.local_id()))
 
+
+func _one_of_us_actor_ids_for_role(role: String) -> Array:
+	var result: Array = []
+	for actor_id_value in one_of_us_roles:
+		var actor_id := int(actor_id_value)
+		if one_of_us_role_for_actor(actor_id) == role:
+			result.append(actor_id)
+	return result
+
+
+func _check_online_one_of_us_round_end() -> void:
+	if _one_of_us_round_finishing:
+		return
+	var us_ids := _one_of_us_actor_ids_for_role("us")
+	if us_ids.is_empty():
+		_finish_one_of_us_online("THEM", "them")
+	elif round_elapsed >= GameConfig.ONE_OF_US_ROUND_TIME:
+		_finish_one_of_us_online("US", "us")
+
+
+func _finish_one_of_us_online(winner_label: String, winning_role: String) -> void:
+	if _one_of_us_round_finishing or not NetworkManager.is_host():
+		return
+	var scoring_ids := _one_of_us_actor_ids_for_role(winning_role)
+	if scoring_ids.is_empty():
+		return
+	_one_of_us_round_finishing = true
+	_online_transitioning = true
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_combat",
+		[false, online_round_epoch])
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_players_enabled", [false])
+	for scoring_id in scoring_ids:
+		var entry: Dictionary = online_actor_state[scoring_id]
+		entry["rounds"] = 1
+		entry["sets"] = 1
+		online_actor_state[scoring_id] = entry
+	var representative_id := int(scoring_ids[0])
+	NetworkManager.broadcast_match_rpc(
+		self, &"_net_play_online_victory", [representative_id])
+	online_match_over = true
+	online_announcement = "%s WIN!" % winner_label
+	round_state = "match_end"
+	_broadcast_online_state()
+	await get_tree().create_timer(match_end_display_time).timeout
+	NetworkManager.host_return_everyone_to_lobby()
+
 func _check_online_round_end() -> void:
 	if _online_transitioning or not online_combat_live or online_actor_state.size() < 2:
+		return
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		_check_online_one_of_us_round_end()
 		return
 	var alive_ids: Array = []
 	for actor_id in online_actor_state:
 		var actor = NetworkManager.find_actor(int(actor_id))
 		if actor != null and not actor.is_eliminated:
 			alive_ids.append(int(actor_id))
+	if GameConfig.teams_enabled:
+		var alive_teams: Dictionary = {}
+		for actor_id in alive_ids:
+			var team_id := int(online_actor_state[actor_id].get("team_id", -1))
+			if not alive_teams.has(team_id):
+				alive_teams[team_id] = []
+			alive_teams[team_id].append(actor_id)
+		if alive_teams.size() == 1:
+			_online_finish_round(int((alive_teams.values()[0] as Array)[0]))
+		elif alive_teams.is_empty():
+			var team_winner := _select_online_overtime_winner(_online_previous_alive_ids) if overtime_active else -1
+			_online_finish_round(team_winner)
+		else:
+			_online_previous_alive_ids = alive_ids
+		return
 	if alive_ids.size() == 1:
 		_online_finish_round(alive_ids[0])
 	elif alive_ids.is_empty():
@@ -954,6 +1716,26 @@ func _check_online_round_end() -> void:
 
 func _select_online_overtime_winner(candidates: Array) -> int:
 	var remaining := candidates.filter(func(id): return online_actor_state.has(int(id)))
+	if remaining.is_empty():
+		return -1
+	if GameConfig.teams_enabled:
+		var team_candidates: Dictionary = {}
+		for id in remaining:
+			var team_id := int(online_actor_state[int(id)].get("team_id", -1))
+			if not team_candidates.has(team_id):
+				team_candidates[team_id] = []
+			team_candidates[team_id].append(id)
+		remaining = []
+		for team_id in team_candidates:
+			# A team only needs one representative in the final comparison. When
+			# teammates are themselves exactly tied, either represents that team.
+			var finalist := _rank_online_overtime_candidates(team_candidates[team_id], false)
+			if finalist >= 0:
+				remaining.append(finalist)
+	return _rank_online_overtime_candidates(remaining, true)
+
+func _rank_online_overtime_candidates(candidates: Array, unresolved_on_exact_tie: bool) -> int:
+	var remaining := candidates.duplicate()
 	if remaining.is_empty():
 		return -1
 	var latest := -1
@@ -975,27 +1757,45 @@ func _select_online_overtime_winner(candidates: Array) -> int:
 		most_kills = maxi(most_kills, int(online_actor_state[int(id)].get("round_kills", 0)))
 	remaining = remaining.filter(func(id):
 		return int(online_actor_state[int(id)].get("round_kills", 0)) == most_kills)
-	return int(remaining[0]) if remaining.size() == 1 else -1
+	if remaining.size() == 1 or not unresolved_on_exact_tie:
+		return int(remaining[0])
+	return -1
 
-func _online_finish_round(winner_id: int) -> void:
+func _online_finish_round(winner_id: int, winner_label := "",
+		scoring_ids_override: Array = []) -> void:
 	if _online_transitioning or not NetworkManager.is_host():
 		return
 	_online_transitioning = true
-	_net_set_online_combat.rpc(false, online_round_epoch)
-	_net_set_online_players_enabled.rpc(false)
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_combat",
+		[false, online_round_epoch])
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_players_enabled", [false])
 	var winner_name := ""
 	var won_set := false
 	var won_match := false
 	if winner_id >= 0 and online_actor_state.has(winner_id):
 		var winner: Dictionary = online_actor_state[winner_id]
-		winner_name = str(winner["name"])
-		winner["rounds"] = int(winner["rounds"]) + 1
-		if int(winner["rounds"]) >= GameConfig.rounds_per_set:
-			winner["sets"] = int(winner["sets"]) + 1
+		var winning_team := int(winner.get("team_id", -1))
+		winner_name = winner_label if winner_label != "" else (
+			"Team %d" % (winning_team + 1) if GameConfig.teams_enabled else str(winner["name"]))
+		var scoring_ids: Array = scoring_ids_override.duplicate()
+		if scoring_ids.is_empty():
+			scoring_ids = [winner_id]
+			if GameConfig.teams_enabled:
+				scoring_ids = online_actor_state.keys().filter(func(id):
+					return int(online_actor_state[id].get("team_id", -1)) == winning_team)
+		for scoring_id in scoring_ids:
+			var scoring_entry: Dictionary = online_actor_state[scoring_id]
+			scoring_entry["rounds"] = int(scoring_entry["rounds"]) + 1
+			online_actor_state[scoring_id] = scoring_entry
+		var representative: Dictionary = online_actor_state[scoring_ids[0]]
+		if int(representative["rounds"]) >= GameConfig.rounds_per_set:
+			for scoring_id in scoring_ids:
+				var set_entry: Dictionary = online_actor_state[scoring_id]
+				set_entry["sets"] = int(set_entry["sets"]) + 1
+				online_actor_state[scoring_id] = set_entry
 			won_set = true
-			won_match = int(winner["sets"]) >= GameConfig.sets_per_match
-		online_actor_state[winner_id] = winner
-		_net_play_online_victory.rpc(winner_id)
+			won_match = int(online_actor_state[scoring_ids[0]]["sets"]) >= GameConfig.sets_per_match
+		NetworkManager.broadcast_match_rpc(self, &"_net_play_online_victory", [winner_id])
 	else:
 		winner_name = "Draw"
 
@@ -1005,7 +1805,7 @@ func _online_finish_round(winner_id: int) -> void:
 		round_state = "match_end"
 		_broadcast_online_state()
 		await get_tree().create_timer(match_end_display_time).timeout
-		_net_return_online_lobby.rpc()
+		NetworkManager.host_return_everyone_to_lobby()
 		return
 
 	if won_set:
@@ -1055,7 +1855,7 @@ func _on_online_roster_changed() -> void:
 			removed.append(int(actor_id))
 	for actor_id in removed:
 		online_actor_state.erase(actor_id)
-		_net_remove_online_actor.rpc(actor_id)
+		NetworkManager.broadcast_match_rpc(self, &"_net_remove_online_actor", [actor_id])
 	_broadcast_online_state()
 
 func _on_online_gun_picked_up(_player_name: String) -> void:
@@ -1095,7 +1895,11 @@ func _net_remove_online_actor(actor_id: int) -> void:
 		actor.queue_free()
 
 func _on_online_host_left() -> void:
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	if not is_inside_tree():
+		return
+	var tree := get_tree()
+	if tree != null:
+		tree.change_scene_to_file("res://main_menu.tscn")
 
 # ---- online combat: eliminations (host-authoritative) ---------------------
 # Death is permanent for the rest of the round: the victim drops the gun and
@@ -1111,11 +1915,41 @@ func server_eliminate(victim_id: int, killer_id: int, epoch: int = -1,
 	if not online_actor_state.has(victim_id) or not bool(online_actor_state[victim_id].get("alive", false)):
 		return
 	var victim = NetworkManager.find_actor(victim_id)
+	if not practice_mode and GameConfig.game_mode == GameConfig.MODE_ONE_OF_US \
+			and lethal_kind == "weapon":
+		var victim_role := one_of_us_role_for_actor(victim_id)
+		if victim_role == "them":
+			_server_begin_one_of_us_respawn(victim_id, killer_id,
+				GameConfig.ONE_OF_US_THEM_RESPAWN_TIME, false)
+			server_confirm_hit(killer_id, true, feedback_kind)
+		else:
+			server_confirm_hit(killer_id, false, feedback_kind)
+		return
 	if lethal_kind == "weapon" and victim != null and float(victim.get("lethal_immunity_timer")) > 0.0:
 		server_confirm_hit(killer_id, false, feedback_kind)
 		return
+	if not practice_mode and GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+			and lethal_kind == "weapon":
+		var heart_entry: Dictionary = online_actor_state[victim_id]
+		var hearts := maxi(int(heart_entry.get("hearts", GameConfig.ALL_GUN_MAX_HEARTS)) - 1, 0)
+		heart_entry["hearts"] = hearts
+		online_actor_state[victim_id] = heart_entry
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_all_gun_hearts",
+			[victim_id, hearts, hearts > 0])
+		if hearts > 0:
+			server_confirm_hit(killer_id, false, feedback_kind)
+			_broadcast_online_state()
+			return
+	elif not practice_mode and GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+			and lethal_kind == "environment":
+		var heart_entry: Dictionary = online_actor_state[victim_id]
+		heart_entry["hearts"] = 0
+		online_actor_state[victim_id] = heart_entry
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_all_gun_hearts",
+			[victim_id, 0, false])
 	if lethal_kind == "weapon" and victim != null and bool(victim.get("second_wind_ready")):
-		_net_consume_online_second_wind.rpc(victim_id)
+		NetworkManager.broadcast_match_rpc(self,
+			&"_net_consume_online_second_wind", [victim_id])
 		server_confirm_hit(killer_id, false, feedback_kind)
 		return
 	var victim_entry: Dictionary = online_actor_state[victim_id]
@@ -1129,7 +1963,8 @@ func server_eliminate(victim_id: int, killer_id: int, epoch: int = -1,
 		killer_entry["kills"] = int(killer_entry.get("kills", 0)) + 1
 		killer_entry["round_kills"] = int(killer_entry.get("round_kills", 0)) + 1
 		online_actor_state[killer_id] = killer_entry
-	_net_eliminate.rpc(victim_id, killer_id, weapon_icon, lethal_kind)
+	NetworkManager.broadcast_match_rpc(self, &"_net_eliminate",
+		[victim_id, killer_id, weapon_icon, lethal_kind])
 	if killer_id != victim_id:
 		server_confirm_hit(killer_id, true, feedback_kind)
 	_broadcast_online_state()
@@ -1139,7 +1974,8 @@ func server_eliminate(victim_id: int, killer_id: int, epoch: int = -1,
 # locally-controlled actor (bots never trigger a marker anywhere).
 func server_confirm_hit(attacker_id: int, eliminated: bool, source_kind: String = "gun") -> void:
 	if multiplayer.is_server():
-		_net_hit_confirmed.rpc(attacker_id, eliminated, source_kind)
+		NetworkManager.broadcast_match_rpc(self, &"_net_hit_confirmed",
+			[attacker_id, eliminated, source_kind])
 
 @rpc("authority", "reliable", "call_local")
 func _net_hit_confirmed(attacker_id: int, eliminated: bool, source_kind: String = "gun") -> void:
@@ -1151,6 +1987,7 @@ func _net_hit_confirmed(attacker_id: int, eliminated: bool, source_kind: String 
 	if int(attacker.get("owner_peer_id")) != NetworkManager.local_id():
 		return
 	GameEvents.combat_feedback.emit(attacker.get_display_name(), "%s_%s" % [source_kind, "elimination" if eliminated else "hit"])
+	GameEvents.actor_combat_feedback.emit(attacker_id, "%s_%s" % [source_kind, "elimination" if eliminated else "hit"])
 
 @rpc("authority", "reliable", "call_local")
 func _net_consume_online_second_wind(actor_id: int) -> void:
@@ -1165,6 +2002,17 @@ func _net_consume_online_second_wind(actor_id: int) -> void:
 		actor.lethal_immunity_timer = 1.0
 	actor.flash_hit()
 
+
+@rpc("authority", "reliable", "call_local")
+func _net_apply_all_gun_hearts(actor_id: int, hearts: int, protected_hit: bool) -> void:
+	var actor = NetworkManager.find_actor(actor_id)
+	if actor == null:
+		return
+	actor.all_gun_hearts = clampi(hearts, 0, GameConfig.ALL_GUN_MAX_HEARTS)
+	if protected_hit:
+		actor.lethal_immunity_timer = maxf(
+			actor.lethal_immunity_timer, GameConfig.ALL_GUN_HIT_PROTECTION_TIME)
+		actor.flash_hit()
 @rpc("authority", "reliable", "call_local")
 func _net_eliminate(victim_id: int, killer_id: int, weapon_icon: String, lethal_kind: String = "weapon") -> void:
 	var victim = NetworkManager.find_actor(victim_id)
@@ -1177,7 +2025,7 @@ func _net_eliminate(victim_id: int, killer_id: int, weapon_icon: String, lethal_
 	# The victim's eliminate() drops the gun locally on each peer (online drop
 	# is deterministic — see gun.gd), so the gun frees up everywhere at once,
 	# and the victim's own machine enters spectate. No respawn until round start.
-	victim.eliminate(killer_name, weapon_icon, lethal_kind)
+	victim.eliminate(killer_name, weapon_icon, lethal_kind, killer_id)
 
 # Round-start reset hook (called by Phase 2b scoring, not on death).
 @rpc("authority", "reliable", "call_local")
@@ -1186,16 +2034,61 @@ func _net_respawn(victim_id: int, pos: Vector3, yaw: float) -> void:
 	if victim != null and victim.has_method("respawn"):
 		victim.respawn(Transform3D(Basis(Vector3.UP, yaw), pos))
 
+
+func _apply_one_of_us_environment_grade() -> void:
+	if GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
+		return
+	var root := get_parent()
+	if root == null:
+		return
+	var world := root.find_child("WorldEnvironment", true, false) as WorldEnvironment
+	if world == null:
+		world = WorldEnvironment.new()
+		world.name = "OneOfUsWorldEnvironment"
+		root.add_child(world)
+	var environment := world.environment.duplicate(true) as Environment \
+		if world.environment != null else Environment.new()
+	world.environment = environment
+	# Runtime-only grade: cool, desaturated shadows and restrained contrast make
+	# every arena feel dingy without changing any authored map resource.
+	environment.adjustment_enabled = true
+	environment.adjustment_brightness = minf(environment.adjustment_brightness, 0.74)
+	environment.adjustment_contrast = maxf(environment.adjustment_contrast, 1.10)
+	environment.adjustment_saturation = minf(environment.adjustment_saturation, 0.58)
+	environment.ambient_light_color = environment.ambient_light_color.lerp(
+		Color(0.34, 0.39, 0.32), 0.55)
+	environment.ambient_light_energy *= 0.72
+	environment.background_energy_multiplier *= 0.78
+	environment.fog_enabled = true
+	environment.fog_light_color = Color(0.32, 0.36, 0.31)
+	environment.fog_density = maxf(environment.fog_density, 0.0045)
+	environment.fog_sky_affect = maxf(environment.fog_sky_affect, 0.55)
+
+
 func _ready():
+	_apply_one_of_us_environment_grade()
 	if NetworkManager.is_online():
 		# Defer: the scene tree is still "busy setting up children" during
 		# _ready, so we can't free/add nodes yet.
 		call_deferred("_setup_online_freeroam")
 		return
+	var local_human_count := 2 if GameConfig.split_screen_enabled else 1
+	var planned_local_actors := local_human_count + mini(
+		GameConfig.bot_configs.size(),
+		MatchLimitsData.max_bots_for_humans(local_human_count))
+	var available_local_spawns := get_tree().get_nodes_in_group("spawn_point").size()
+	if available_local_spawns < planned_local_actors:
+		push_error("RoundManager: map has %d player spawns for %d local actors; returning to lobby." \
+			% [available_local_spawns, planned_local_actors])
+		call_deferred("_leave_match_to", "res://game_setup.tscn")
+		return
 	_spawn_bots()
 	players = get_tree().get_nodes_in_group("player")
 	if not GameConfig.split_screen_enabled:
 		players = players.filter(func(p): return not ("is_player2" in p and p.is_player2))
+	_assign_local_actor_identities()
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		_prepare_local_one_of_us_roles()
 	for p in players:
 		round_wins[p] = 0
 		match_points[p] = 0
@@ -1210,17 +2103,72 @@ func _ready():
 	await get_tree().process_frame
 	_disable_all_players()
 	_assign_spawn_transforms()
+	_capture_gun_center()
 	_apply_gun_spawn_mode()
 	_spawn_marker_melee()
 	_spawn_marker_items()
-	GameEvents.player_eliminated.connect(_on_stat_eliminated)
-	GameEvents.player_disarmed.connect(_on_stat_disarmed)
-	GameEvents.gun_picked_up.connect(_on_stat_gun_picked_up)
-	GameEvents.melee_hit_landed.connect(_on_stat_melee_hit)
+	_prepare_local_mode_loadouts()
+	_refresh_one_of_us_final_us_bonus()
+	GameEvents.actor_eliminated.connect(_on_stat_actor_eliminated)
+	GameEvents.actor_disarmed.connect(_on_stat_actor_disarmed)
+	GameEvents.actor_gun_picked_up.connect(_on_stat_actor_gun_picked_up)
+	GameEvents.actor_melee_hit_landed.connect(_on_stat_actor_melee_hit)
+	GameEvents.melee_marker_refill_requested.connect(notify_local_melee_marker_pickup)
+	GameEvents.item_marker_refill_requested.connect(notify_local_item_marker_pickup)
 	_setup_local_hit_markers()
 	await get_tree().process_frame
 	AudioManager.play_music("game")
-	_start_countdown()
+	await _play_first_round_intro_local()
+	_start_countdown(GameConfig.game_mode == GameConfig.MODE_ONE_OF_US \
+		and round_number == 1 and set_number == 1)
+
+func _intro_authored_position() -> Vector3:
+	var marker := get_tree().get_first_node_in_group("round_intro_camera_point") as Node3D
+	if marker != null:
+		return marker.global_position
+	return _gun_center_position + Vector3(0.0, 14.0, -24.0)
+
+func _play_first_round_intro_local() -> void:
+	if round_number != 1 or set_number != 1:
+		return
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		for actor in players:
+			if not ("is_bot" in actor and actor.is_bot) \
+					and actor.has_method("play_one_of_us_intro"):
+				actor.play_one_of_us_intro(one_of_us_first_actor_id)
+		await get_tree().create_timer(OneOfUsIntroData.TOTAL_TIME + 0.05).timeout
+		return
+	var start := _intro_authored_position()
+	for actor in players:
+		if not ("is_bot" in actor and actor.is_bot) and actor.has_method("play_match_intro"):
+			actor.play_match_intro(start, 3.0)
+	await get_tree().create_timer(3.0).timeout
+
+@rpc("authority", "reliable", "call_local")
+func _net_play_first_round_intro(start: Vector3) -> void:
+	var local_actor = NetworkManager.find_net_player(NetworkManager.local_id())
+	if local_actor != null and local_actor.has_method("play_match_intro"):
+		local_actor.play_match_intro(start, 3.0)
+
+@rpc("authority", "reliable", "call_local")
+func _net_play_one_of_us_intro(first_actor_id: int) -> void:
+	var local_actor = NetworkManager.find_net_player(NetworkManager.local_id())
+	if local_actor != null and local_actor.has_method("play_one_of_us_intro"):
+		local_actor.play_one_of_us_intro(first_actor_id)
+
+
+
+func _assign_local_actor_identities() -> void:
+	var next_bot_id := ONLINE_BOT_ACTOR_ID_BASE
+	for actor in players:
+		if "is_bot" in actor and actor.is_bot:
+			actor.actor_id = next_bot_id
+			next_bot_id += 1
+			continue
+		var local_index := 1 if ("is_player2" in actor and actor.is_player2) else 0
+		actor.actor_id = local_index + 1
+		actor.owner_peer_id = local_index + 1
+		actor.team_id = int(GameConfig.local_player_teams[local_index]) if GameConfig.teams_enabled else -1
 
 func _setup_local_combat_tags() -> void:
 	if NetworkManager.is_online():
@@ -1238,6 +2186,8 @@ func _setup_local_combat_tags() -> void:
 			continue
 		var render_layer := 18 + viewer_index
 		camera.cull_mask |= 1 << (render_layer - 1)
+		if viewer.has_method("set_local_view_render_layer"):
+			viewer.set_local_view_render_layer(render_layer)
 		for target in players:
 			if target != viewer:
 				_add_local_combat_tag(target, viewer, render_layer)
@@ -1270,41 +2220,42 @@ func _setup_local_hit_markers():
 		var marker = Control.new()
 		marker.name = "HitMarker"
 		marker.set_script(load("res://hit_marker.gd"))
-		marker.set("filter_name", pnode.get_display_name())
+		marker.set("filter_actor_id", int(pnode.get("actor_id")))
 		ui.add_child(marker)
 
-func _find_player_by_name(display_name: String):
-	for p in players:
-		if p.get_display_name() == display_name:
-			return p
+func _find_player_by_actor_id(requested_actor_id: int):
+	for player in players:
+		if int(player.get("actor_id")) == requested_actor_id:
+			return player
 	return null
 
-func _on_stat_eliminated(victim_name: String, killer_name: String, _icon: String):
-	var victim = _find_player_by_name(victim_name)
+func _on_stat_actor_eliminated(victim_actor_id: int, killer_actor_id: int, _icon: String) -> void:
+	var victim = _find_player_by_actor_id(victim_actor_id)
 	if overtime_active and victim != null and not _elimination_time_ms.has(victim):
 		_elimination_time_ms[victim] = Time.get_ticks_msec()
 	if victim != null and stat_deaths.has(victim):
 		stat_deaths[victim] += 1
-	if killer_name != "":
-		var killer = _find_player_by_name(killer_name)
-		if killer != null and stat_kills.has(killer):
-			stat_kills[killer] += 1
-			_round_kills[killer] = int(_round_kills.get(killer, 0)) + 1
+	if killer_actor_id < 0:
+		return
+	var killer = _find_player_by_actor_id(killer_actor_id)
+	if killer != null and stat_kills.has(killer):
+		stat_kills[killer] += 1
+		_round_kills[killer] = int(_round_kills.get(killer, 0)) + 1
 
-func _on_stat_disarmed(victim_name: String, disarmer_name: String, _icon: String):
-	var disarmer = _find_player_by_name(disarmer_name)
+func _on_stat_actor_disarmed(_victim_actor_id: int, disarmer_actor_id: int, _icon: String) -> void:
+	var disarmer = _find_player_by_actor_id(disarmer_actor_id)
 	if disarmer != null and stat_disarms.has(disarmer):
 		stat_disarms[disarmer] += 1
 
-func _on_stat_gun_picked_up(player_name: String):
-	var p = _find_player_by_name(player_name)
-	if p != null and stat_pickups.has(p):
-		stat_pickups[p] += 1
+func _on_stat_actor_gun_picked_up(actor_id: int) -> void:
+	var player = _find_player_by_actor_id(actor_id)
+	if player != null and stat_pickups.has(player):
+		stat_pickups[player] += 1
 
-func _on_stat_melee_hit(hitter_name: String):
-	var p = _find_player_by_name(hitter_name)
-	if p != null and stat_melee.has(p):
-		stat_melee[p] += 1
+func _on_stat_actor_melee_hit(actor_id: int) -> void:
+	var player = _find_player_by_actor_id(actor_id)
+	if player != null and stat_melee.has(player):
+		stat_melee[player] += 1
 
 func get_scoreboard_data() -> Array:
 	if NetworkManager.is_online():
@@ -1312,7 +2263,9 @@ func get_scoreboard_data() -> Array:
 		for actor_id in online_actor_state:
 			var entry: Dictionary = online_actor_state[actor_id]
 			online_data.append({
+				"actor_id": int(actor_id),
 				"name": str(entry.get("name", "Player")),
+				"team_id": int(entry.get("team_id", -1)),
 				"sets": int(entry.get("sets", 0)),
 				"rounds": int(entry.get("rounds", 0)),
 				"kills": int(entry.get("kills", 0)),
@@ -1323,17 +2276,22 @@ func get_scoreboard_data() -> Array:
 				"alive": bool(entry.get("alive", false)),
 			})
 		online_data.sort_custom(func(a, b):
+			if GameConfig.teams_enabled and a["team_id"] != b["team_id"]:
+				return a["team_id"] < b["team_id"]
 			if a["sets"] != b["sets"]:
 				return a["sets"] > b["sets"]
 			if a["rounds"] != b["rounds"]:
 				return a["rounds"] > b["rounds"]
 			return a["kills"] > b["kills"]
 		)
+		_apply_duplicate_scoreboard_labels(online_data)
 		return online_data
 	var data = []
 	for p in players:
 		data.append({
+			"actor_id": int(p.get("actor_id")),
 			"name":    p.get_display_name(),
+			"team_id": int(p.get("team_id")),
 			"sets":    match_points.get(p, 0),
 			"rounds":  round_wins.get(p, 0),
 			"kills":   stat_kills.get(p, 0),
@@ -1344,11 +2302,28 @@ func get_scoreboard_data() -> Array:
 			"alive":   not p.is_eliminated,
 		})
 	data.sort_custom(func(a, b):
+		if GameConfig.teams_enabled and a["team_id"] != b["team_id"]:
+			return a["team_id"] < b["team_id"]
 		if a["sets"] != b["sets"]:
 			return a["sets"] > b["sets"]
 		return a["rounds"] > b["rounds"]
 	)
+	_apply_duplicate_scoreboard_labels(data)
 	return data
+
+
+func _apply_duplicate_scoreboard_labels(data: Array) -> void:
+	var name_counts := {}
+	for entry in data:
+		var base := str(entry.get("name", "Player"))
+		name_counts[base] = int(name_counts.get(base, 0)) + 1
+	for entry in data:
+		var base := str(entry.get("name", "Player"))
+		if int(name_counts.get(base, 0)) < 2:
+			continue
+		var actor_id := int(entry.get("actor_id", -1))
+		var suffix := "B%d" % (actor_id - ONLINE_BOT_ACTOR_ID_BASE + 1) if actor_id >= ONLINE_BOT_ACTOR_ID_BASE else "P%d" % actor_id
+		entry["name"] = "%s [%s]" % [base, suffix]
 
 # A spawn marker only defines WHERE (and which way) a player spawns — never
 # how big the player is. Copying a marker's full transform used to stamp any
@@ -1374,7 +2349,7 @@ func _assign_spawn_transforms():
 
 	var human_players = players.filter(func(p): return not ("is_bot" in p and p.is_bot))
 	for i in human_players.size():
-		var idx = i % shuffled.size()
+		var idx = i
 		spawn_transforms[human_players[i]] = _clean_spawn_transform(shuffled[idx].global_transform)
 		used_indices.append(idx)
 		human_players[i].global_transform = spawn_transforms[human_players[i]]
@@ -1382,15 +2357,15 @@ func _assign_spawn_transforms():
 	var bot_players = players.filter(func(p): return "is_bot" in p and p.is_bot)
 	var next_idx = human_players.size()
 	for bot in bot_players:
-		var idx = next_idx % shuffled.size()
+		var idx = next_idx
 		spawn_transforms[bot] = _clean_spawn_transform(shuffled[idx].global_transform)
 		bot.global_transform = spawn_transforms[bot]
 		next_idx += 1
 
 func _spawn_bots():
 	var human_count = 2 if GameConfig.split_screen_enabled else 1
-	var max_bots = MAX_BOTS_SPLIT if GameConfig.split_screen_enabled else MAX_BOTS_SOLO
-	var bot_count = clamp(GameConfig.bot_configs.size(), 0, min(max_bots, MAX_TOTAL_PLAYERS - human_count))
+	var max_bots := MatchLimitsData.max_bots_for_humans(human_count)
+	var bot_count = clampi(GameConfig.bot_configs.size(), 0, max_bots)
 
 	if bot_count == 0:
 		return
@@ -1400,7 +2375,7 @@ func _spawn_bots():
 		bot.name = "Bot" + str(i + 1)
 		var config = GameConfig.bot_configs[i]
 		bot.ai_difficulty = config.get("difficulty", "easy")
-		bot.team_id = config.get("team_id", -1)
+		bot.team_id = config.get("team_id", 0) if GameConfig.teams_enabled else -1
 		add_child(bot)
 
 func _disable_all_players():
@@ -1432,7 +2407,7 @@ func _set_round_label_text(text):
 		label.text = text
 	_round_labels_styled = true
 
-func _start_countdown():
+func _start_countdown(skip_countdown := false):
 	_clear_overtime_state()
 	round_state = "countdown"
 	_local_round_generation += 1
@@ -1442,6 +2417,15 @@ func _start_countdown():
 	_apply_melee_spawn_delay(_local_round_generation)
 	previous_alive = players.duplicate()
 	_update_status_label()
+	if skip_countdown:
+		_set_round_label_text("GO!")
+		round_elapsed = 0.0
+		round_state = "live"
+		_enable_all_players()
+		await get_tree().create_timer(0.5).timeout
+		_set_round_label_text("")
+		return
+
 	GameEvents.hud_notification.emit("NEW ROUND STARTING")
 	for i in range(countdown_time, 0, -1):
 		_set_round_label_text(str(i))
@@ -1476,22 +2460,29 @@ func _process(delta):
 				_online_overtime_sync_timer -= delta
 				if _online_overtime_sync_timer <= 0.0:
 					_online_overtime_sync_timer = 0.2
-					_net_sync_overtime_clock.rpc(overtime_elapsed, online_round_epoch)
+					NetworkManager.broadcast_match_rpc(self,
+						&"_net_sync_overtime_clock",
+						[overtime_elapsed, online_round_epoch], false)
 			_update_storm_visual()
 			# Every peer tracks exposure locally so its HUD countdown stays
 			# responsive. Only the host is allowed to resolve an elimination.
 			if online_combat_live:
 				_update_overtime_damage(delta, true, NetworkManager.is_host())
+		if online_combat_live and not overtime_active:
+			round_elapsed += delta
+			if NetworkManager.is_host() \
+					and GameConfig.game_mode != GameConfig.MODE_ONE_OF_US \
+					and GameConfig.round_time_limit > 0.0 \
+					and round_elapsed >= GameConfig.round_time_limit:
+				_start_online_overtime()
 		if NetworkManager.is_host():
-			if online_combat_live and not overtime_active:
-				round_elapsed += delta
-				if GameConfig.round_time_limit > 0.0 and round_elapsed >= GameConfig.round_time_limit:
-					_start_online_overtime()
 			_check_online_round_end()
 		return
 	if round_state == "live":
 		round_elapsed += delta
-		if GameConfig.round_time_limit > 0.0 and round_elapsed >= GameConfig.round_time_limit:
+		if GameConfig.game_mode != GameConfig.MODE_ONE_OF_US \
+				and GameConfig.round_time_limit > 0.0 \
+				and round_elapsed >= GameConfig.round_time_limit:
 			_start_local_overtime()
 		_check_round_end()
 		_update_status_label()
@@ -1677,8 +2668,10 @@ func _start_online_overtime() -> void:
 	if alive_ids.size() < 2:
 		return
 	_calculate_overtime_geometry()
-	_net_begin_overtime.rpc(
-		alive_ids, _overtime_center, _overtime_outer_extents, _overtime_floor_y)
+	var melee_assignment := _make_online_overtime_melee_assignment()
+	NetworkManager.broadcast_match_rpc(self, &"_net_begin_overtime", [
+		alive_ids, _overtime_center, _overtime_outer_extents, _overtime_floor_y,
+		melee_assignment])
 	online_announcement = _overtime_announcement()
 	_broadcast_online_state()
 	_clear_online_overtime_banner()
@@ -1691,7 +2684,7 @@ func _clear_online_overtime_banner() -> void:
 
 @rpc("authority", "reliable", "call_local")
 func _net_begin_overtime(alive_ids: Array, center: Vector3, outer_extents: Vector2,
-		floor_y: float) -> void:
+		floor_y: float, melee_assignment: Dictionary = {}) -> void:
 	_overtime_center = center
 	_overtime_outer_extents = outer_extents
 	_overtime_outer_radius = maxf(outer_extents.x, outer_extents.y)
@@ -1702,9 +2695,9 @@ func _net_begin_overtime(alive_ids: Array, center: Vector3, outer_extents: Vecto
 		var actor = NetworkManager.find_actor(int(actor_id))
 		if actor != null:
 			alive.append(actor)
-	_begin_overtime(alive)
+	_begin_overtime(alive, melee_assignment)
 
-func _begin_overtime(alive: Array) -> void:
+func _begin_overtime(alive: Array, melee_assignment: Dictionary = {}) -> void:
 	round_state = "overtime"
 	overtime_active = true
 	overtime_elapsed = 0.0
@@ -1714,7 +2707,13 @@ func _begin_overtime(alive: Array) -> void:
 	_storm_safe_time.clear()
 	_storm_cumulative.clear()
 	_disable_overtime_ground_spawns()
-	if GameConfig.chaos_overtime_enabled:
+	if GameConfig.game_mode == GameConfig.MODE_ONE_GUN:
+		if NetworkManager.is_online():
+			if not melee_assignment.is_empty():
+				_spawn_online_melee(melee_assignment)
+		else:
+			_spawn_local_overtime_melee_supply()
+	if GameConfig.chaos_overtime_enabled and GameConfig.game_mode == GameConfig.MODE_ONE_GUN:
 		_begin_chaos_overtime(alive)
 	else:
 		_begin_standard_overtime(alive)
@@ -1723,12 +2722,15 @@ func _begin_overtime(alive: Array) -> void:
 	_last_overtime_pulse_zone = 0
 
 func _overtime_announcement() -> String:
+	if GameConfig.game_mode == GameConfig.MODE_ALL_GUN:
+		return "OVERTIME - SUDDEN DEATH"
 	return "OVERTIME - CHAOS GUNFIGHT" if GameConfig.chaos_overtime_enabled \
 		else "OVERTIME - ONE GUN"
 
 func _disable_overtime_ground_spawns() -> void:
-	# Both overtime modes close every authored item/powerup/melee spawn. Standard
-	# OT preserves held inventory, while marking it as non-respawning.
+	# Both overtime modes close every authored item/powerup spawn and all loose
+	# melee placements. Held melee remains usable, and one new OT melee marker is
+	# populated immediately after this cleanup.
 	for item in get_tree().get_nodes_in_group("item"):
 		if bool(item.get("is_held")):
 			if item.has_method("preserve_held_for_standard_overtime"):
@@ -1743,8 +2745,42 @@ func _disable_overtime_ground_spawns() -> void:
 		if powerup.has_method("disable_for_overtime"):
 			powerup.disable_for_overtime()
 	for melee in get_tree().get_nodes_in_group("melee"):
-		if melee.has_method("disable_for_overtime"):
+		if bool(melee.get("is_held")) and melee.has_method("preserve_held_for_overtime"):
+			melee.preserve_held_for_overtime()
+		elif melee.has_method("disable_for_overtime"):
 			melee.disable_for_overtime()
+
+func _random_overtime_melee_marker():
+	var markers := _arena_markers_in_group("melee_spawn_point")
+	if markers.is_empty():
+		push_warning("RoundManager: overtime has no melee_spawn_point marker.")
+		return null
+	markers.sort_custom(func(a, b): return str(a.get_path()) < str(b.get_path()))
+	return markers[randi() % markers.size()]
+
+func _spawn_local_overtime_melee_supply() -> void:
+	if GameConfig.game_mode != GameConfig.MODE_ONE_GUN:
+		return
+	var marker = _random_overtime_melee_marker()
+	if marker != null:
+		_spawn_local_melee_at(marker.global_position, marker.global_rotation, true)
+
+func _make_online_overtime_melee_assignment() -> Dictionary:
+	if GameConfig.game_mode != GameConfig.MODE_ONE_GUN:
+		return {}
+	var marker = _random_overtime_melee_marker()
+	if marker == null:
+		return {}
+	var candidate_id := _next_online_melee_candidate_id
+	_next_online_melee_candidate_id += 1
+	return {
+		"candidate_id": candidate_id,
+		"position": marker.global_position,
+		"rotation": marker.global_rotation,
+		"identity": MeleeWeaponRegistry.get_random_identity(),
+		"pickup_locked": false,
+		"overtime_supply": true,
+	}
 
 func _begin_standard_overtime(alive: Array) -> void:
 	for actor in alive:
@@ -1778,7 +2814,7 @@ func _begin_chaos_overtime(alive: Array) -> void:
 		get_tree().current_scene.add_child(gun)
 		gun.global_position = _overtime_center
 		gun.spawn_position = _overtime_center
-		gun._local_pickup(actor)
+		gun._local_pickup(actor, true)
 
 func _build_storm_fire() -> void:
 	if _storm_wall != null and is_instance_valid(_storm_wall):
@@ -1796,7 +2832,9 @@ func _build_storm_fire() -> void:
 	# game-ready map. Rendering the burn on a copy of that mesh avoids Decal
 	# receiver differences and avoids guessing terrain heights with loose tiles.
 	if not _build_navigation_fire_surface(fire_intensity_scale):
-		push_warning("Overtime fire could not find a baked NavigationRegion3D")
+		push_warning("Overtime fire could not find a baked NavigationRegion3D; "
+			+ "using the emergency projected floor surface")
+		_build_fallback_fire_surface(fire_intensity_scale)
 	_build_surface_flame_particles()
 	_storm_fire_visual_radius = -1.0
 	_update_storm_visual()
@@ -1846,9 +2884,53 @@ func _build_navigation_fire_surface(fire_intensity_scale: float) -> bool:
 			triangle_count += 1
 	if triangle_count == 0:
 		return false
+	return _commit_fire_surface(surface_tool, fire_intensity_scale, "navigation")
+
+
+func _build_fallback_fire_surface(fire_intensity_scale: float) -> bool:
+	# A map should always ship with baked navigation, but fire is gameplay-critical
+	# feedback and must not vanish if that resource is accidentally cleared. This
+	# projected plane keeps the damage boundary visible until the bake is repaired.
+	var surface_tool := SurfaceTool.new()
+	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var floor_y := _overtime_floor_y + 0.055
+	var minimum := _overtime_center + Vector3(
+		-_overtime_fire_outer_extents.x, 0.0,
+		-_overtime_fire_outer_extents.y)
+	var maximum := _overtime_center + Vector3(
+		_overtime_fire_outer_extents.x, 0.0,
+		_overtime_fire_outer_extents.y)
+	var world_a := Vector3(minimum.x, floor_y, minimum.z)
+	var world_b := Vector3(maximum.x, floor_y, minimum.z)
+	var world_c := Vector3(maximum.x, floor_y, maximum.z)
+	var world_d := Vector3(minimum.x, floor_y, maximum.z)
+	for world_vertex in [world_a, world_d, world_c, world_a, world_c, world_b]:
+		surface_tool.set_normal(Vector3.UP)
+		surface_tool.add_vertex(_storm_wall.to_local(world_vertex))
+
+	var sample_keys := {}
+	var sample_step := 2.0
+	var sample_x := minimum.x
+	while sample_x <= maximum.x + 0.01:
+		var sample_z := minimum.z
+		while sample_z <= maximum.z + 0.01:
+			_add_navigation_fire_sample(
+				Vector3(sample_x, floor_y, sample_z), sample_keys)
+			sample_z += sample_step
+		sample_x += sample_step
+	return _commit_fire_surface(surface_tool, fire_intensity_scale, "fallback")
+
+
+func _commit_fire_surface(
+		surface_tool: SurfaceTool, fire_intensity_scale: float,
+		surface_source: String) -> bool:
+	var committed_mesh := surface_tool.commit()
+	if committed_mesh == null or committed_mesh.get_surface_count() == 0:
+		return false
 	_storm_floor_mesh = MeshInstance3D.new()
 	_storm_floor_mesh.name = "NavigationFireFloor"
-	_storm_floor_mesh.mesh = surface_tool.commit()
+	_storm_floor_mesh.mesh = committed_mesh
+	_storm_floor_mesh.set_meta("surface_source", surface_source)
 	_storm_floor_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_storm_floor_material = ShaderMaterial.new()
 	var fire_shader := Shader.new()
@@ -2107,7 +3189,8 @@ func get_fire_warning(actor) -> Dictionary:
 	var active := _is_position_in_fire(actor.global_position)
 	if not active:
 		return inactive
-	var limit := _current_fire_exposure_limit()
+	var limit := 0.0 if GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+		else _current_fire_exposure_limit()
 	var exposure := float(_storm_exposure.get(key, 0.0))
 	return {
 		"active": true,
@@ -2115,9 +3198,22 @@ func get_fire_warning(actor) -> Dictionary:
 		"limit": limit,
 	}
 
+
+func is_position_in_overtime_fire(world_position: Vector3) -> bool:
+	return overtime_active and _is_position_in_fire(world_position)
+
+
+func get_bot_fire_escape_position(world_position: Vector3, safety_margin := 0.75) -> Vector3:
+	var extents := _current_storm_extents()
+	var offset := Vector2(world_position.x - _overtime_center.x, world_position.z - _overtime_center.z)
+	offset.x = clampf(offset.x, -maxf(extents.x - safety_margin, 0.2), maxf(extents.x - safety_margin, 0.2))
+	offset.y = clampf(offset.y, -maxf(extents.y - safety_margin, 0.2), maxf(extents.y - safety_margin, 0.2))
+	return Vector3(_overtime_center.x + offset.x, world_position.y, _overtime_center.z + offset.y)
+
 func _update_overtime_damage(delta: float, online: bool,
 		can_eliminate := true) -> void:
-	var limit := _current_fire_exposure_limit()
+	var limit := 0.0 if GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+		else _current_fire_exposure_limit()
 	var alive: Array = []
 	if online:
 		for actor_id in online_actor_state:
@@ -2151,9 +3247,11 @@ func _update_overtime_damage(delta: float, online: bool,
 func get_round_timer_text() -> String:
 	if overtime_active:
 		return "OT  %s" % _format_clock(floori(overtime_elapsed))
-	if GameConfig.round_time_limit <= 0.0:
+	var time_limit: float = GameConfig.ONE_OF_US_ROUND_TIME \
+		if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US else GameConfig.round_time_limit
+	if time_limit <= 0.0:
 		return ""
-	return _format_clock(ceili(maxf(GameConfig.round_time_limit - round_elapsed, 0.0)))
+	return _format_clock(ceili(maxf(time_limit - round_elapsed, 0.0)))
 
 func _format_clock(total_seconds: int) -> String:
 	total_seconds = maxi(total_seconds, 0)
@@ -2188,7 +3286,44 @@ func _update_status_label():
 		if hud2.has_method("update_fire_warning"):
 			hud2.update_fire_warning(get_fire_warning(get_node_or_null("../player2")))
 
+
+func _check_local_one_of_us_round_end() -> void:
+	if _one_of_us_round_finishing:
+		return
+	var us_players := players.filter(func(actor):
+		return is_instance_valid(actor) \
+			and one_of_us_role_for_actor(int(actor.get("actor_id"))) == "us")
+	if us_players.is_empty():
+		_finish_one_of_us_local("THEM", "them")
+	elif round_elapsed >= GameConfig.ONE_OF_US_ROUND_TIME:
+		_finish_one_of_us_local("US", "us")
+
+
+func _finish_one_of_us_local(winner_label: String, winning_role: String) -> void:
+	if _one_of_us_round_finishing:
+		return
+	var scoring_players := players.filter(func(actor):
+		return is_instance_valid(actor) \
+			and one_of_us_role_for_actor(int(actor.get("actor_id"))) == winning_role)
+	if scoring_players.is_empty():
+		return
+	_one_of_us_round_finishing = true
+	round_state = "match_end"
+	_disable_all_players()
+	for actor in scoring_players:
+		round_wins[actor] = 1
+		match_points[actor] = 1
+	var representative = scoring_players[0]
+	if representative.has_method("play_victory_dance"):
+		representative.play_victory_dance()
+	_set_round_label_text("%s WIN!" % winner_label)
+	await get_tree().create_timer(match_end_display_time).timeout
+	_leave_match_to("res://game_setup.tscn")
+
 func _check_round_end():
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		_check_local_one_of_us_round_end()
+		return
 	var alive = []
 	for p in players:
 		if not p.is_eliminated:
@@ -2245,6 +3380,24 @@ func _select_local_overtime_winner(candidates: Array):
 	var remaining := candidates.filter(func(p): return is_instance_valid(p))
 	if remaining.is_empty():
 		return null
+	if GameConfig.teams_enabled:
+		var team_candidates: Dictionary = {}
+		for player in remaining:
+			var team_id := int(player.get("team_id"))
+			if not team_candidates.has(team_id):
+				team_candidates[team_id] = []
+			team_candidates[team_id].append(player)
+		remaining = []
+		for team_id in team_candidates:
+			var finalist = _rank_local_overtime_candidates(team_candidates[team_id], false)
+			if finalist != null:
+				remaining.append(finalist)
+	return _rank_local_overtime_candidates(remaining, true)
+
+func _rank_local_overtime_candidates(candidates: Array, unresolved_on_exact_tie: bool):
+	var remaining := candidates.duplicate()
+	if remaining.is_empty():
+		return null
 	var latest := -1
 	for p in remaining:
 		latest = maxi(latest, int(_elimination_time_ms.get(p, -1)))
@@ -2262,25 +3415,31 @@ func _select_local_overtime_winner(candidates: Array):
 	for p in remaining:
 		most_kills = maxi(most_kills, int(_round_kills.get(p, 0)))
 	remaining = remaining.filter(func(p): return int(_round_kills.get(p, 0)) == most_kills)
-	return remaining[0] if remaining.size() == 1 else null
+	if remaining.size() == 1 or not unresolved_on_exact_tie:
+		return remaining[0]
+	return null
 
-func _end_round(alive, multi_winner_draw := false):
+func _end_round(alive, multi_winner_draw := false, winner_label := "",
+		scoring_players_override: Array = []):
 	round_state = "ended"
 	_disable_all_players()
 
-	if GameConfig.teams_enabled and alive.size() > 0:
+	if GameConfig.teams_enabled and alive.size() > 0 \
+			and scoring_players_override.is_empty():
 		if multi_winner_draw:
 			await _resolve_team_multi_winner(alive)
 			return
 		var winning_team_id = alive[0].team_id if "team_id" in alive[0] else -1
-		for p in alive:
+		var winning_team_members := players.filter(func(p):
+			return "team_id" in p and int(p.team_id) == int(winning_team_id))
+		for p in winning_team_members:
 			round_wins[p] += 1
 		_set_round_label_text("Team " + str(winning_team_id + 1) + " wins the round!")
 		await get_tree().create_timer(round_end_display_time).timeout
 
 		var team_round_wins = round_wins[alive[0]]
 		if team_round_wins >= GameConfig.rounds_per_set:
-			for p in alive:
+			for p in winning_team_members:
 				match_points[p] += 1
 			for p in players:
 				round_wins[p] = 0
@@ -2304,28 +3463,35 @@ func _end_round(alive, multi_winner_draw := false):
 
 	if alive.size() == 1:
 		var winner = alive[0]
-		round_wins[winner] += 1
-		# Trigger victory dance on the winner immediately.
+		var scoring_players: Array = scoring_players_override.duplicate()
+		if scoring_players.is_empty():
+			scoring_players = [winner]
+		for scoring_player in scoring_players:
+			round_wins[scoring_player] += 1
+		# Trigger victory dance on the representative immediately.
 		if winner.has_method("play_victory_dance"):
 			winner.play_victory_dance()
-		var winner_text: String = winner.get_display_name() + " wins the round!"
+		var display_name: String = winner_label if winner_label != "" \
+			else winner.get_display_name()
+		var winner_text: String = display_name + " wins the round!"
 		if overtime_active:
 			winner_text += "\nOT " + _format_time_ms(overtime_elapsed)
 		_set_round_label_text(winner_text)
 		await get_tree().create_timer(round_end_display_time).timeout
 
 		if round_wins[winner] >= GameConfig.rounds_per_set:
-			match_points[winner] += 1
+			for scoring_player in scoring_players:
+				match_points[scoring_player] += 1
 			for p in players:
 				round_wins[p] = 0
 
 			if match_points[winner] >= GameConfig.sets_per_match:
-				_set_round_label_text(winner.get_display_name() + " WINS THE MATCH!")
+				_set_round_label_text(display_name + " WINS THE MATCH!")
 				await get_tree().create_timer(match_end_display_time).timeout
 				_leave_match_to("res://game_setup.tscn")
 				return
 			else:
-				_set_round_label_text(winner.get_display_name() + " wins the set!")
+				_set_round_label_text(display_name + " wins the set!")
 				await get_tree().create_timer(set_end_display_time).timeout
 				set_number += 1
 				round_number = 0
@@ -2441,14 +3607,21 @@ func _resolve_team_multi_winner(tied_players):
 
 func _reset_round():
 	round_number += 1
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		_prepare_local_one_of_us_roles()
 	for p in players:
 		_round_kills[p] = 0
 	_assign_spawn_transforms()
+	_clear_personal_mode_guns()
+	_clear_personal_mode_melees()
 	for p in players:
 		p.respawn(spawn_transforms[p])
-	for w in get_tree().get_nodes_in_group("weapon"):
-		w.reset_to_spawn()
-	_apply_gun_spawn_mode()
+	if GameConfig.game_mode == GameConfig.MODE_ONE_GUN:
+		for w in get_tree().get_nodes_in_group("weapon"):
+			w.reset_to_spawn()
+		_apply_gun_spawn_mode()
+	_prepare_local_mode_loadouts()
+	_refresh_one_of_us_final_us_bonus()
 	_spawn_marker_melee()
 	_spawn_marker_items()
 	for it in get_tree().get_nodes_in_group("item"):
@@ -2461,28 +3634,98 @@ func _reset_round():
 	_start_countdown()
 
 # ============================================================
-# Marker-driven item spawning: maps place `item_spawn_point` and
-# `powerup_spawn_point` Marker3Ds (user-positioned); each round every item
-# marker gets a random enabled item, every powerup marker gets a powerup.
+# Marker-driven pickup spawning: every authored melee, item, and powerup marker
+# starts populated. Each marker then maintains its own independent refill cycle.
 # Scene-placed legacy item nodes keep working alongside.
 # ============================================================
 const POWERUP_SCENE_PATH := "res://powerup.tscn"
 
+func notify_local_melee_marker_pickup(melee) -> void:
+	if NetworkManager.is_online() or melee == null:
+		return
+	var overtime_supply := bool(melee.get("overtime_marker_supply"))
+	if overtime_active != overtime_supply \
+			or (not overtime_active and round_state != "live"):
+		return
+	_schedule_local_melee_marker_refill(
+		melee.spawn_position, melee.spawn_rotation, _local_round_generation,
+		overtime_supply)
+
+func _schedule_local_melee_marker_refill(
+		spawn_position: Vector3, spawn_rotation: Vector3, generation: int,
+		overtime_supply: bool = false) -> void:
+	await get_tree().create_timer(MELEE_MARKER_REFILL_TIME).timeout
+	if generation != _local_round_generation or overtime_active != overtime_supply \
+			or (not overtime_active and round_state != "live"):
+		return
+	_spawn_local_melee_at(spawn_position, spawn_rotation, overtime_supply)
+
+func _spawn_local_melee_at(spawn_position: Vector3, spawn_rotation: Vector3,
+		overtime_supply: bool = false) -> void:
+	var melee = MeleeScene.instantiate()
+	melee.name = "OvertimeMeleeSupply" if overtime_supply else "RoundMelee"
+	melee.marker_refill_on_pickup = true
+	melee.marker_refill_requested = false
+	melee.overtime_marker_supply = overtime_supply
+	melee.add_to_group("marker_melee_spawned", true)
+	get_tree().current_scene.add_child(melee)
+	melee.global_position = spawn_position
+	melee.global_rotation = spawn_rotation
+	melee.spawn_position = spawn_position
+	melee.spawn_rotation = spawn_rotation
+
+func notify_local_item_marker_pickup(item) -> void:
+	if NetworkManager.is_online() or item == null or overtime_active \
+			or round_state != "live":
+		return
+	_schedule_local_item_marker_refill(
+		item.spawn_position, item.spawn_rotation, _local_round_generation)
+
+func _schedule_local_item_marker_refill(
+		spawn_position: Vector3, spawn_rotation: Vector3, generation: int) -> void:
+	await get_tree().create_timer(PICKUP_MARKER_REFILL_TIME).timeout
+	if generation != _local_round_generation or overtime_active \
+			or round_state != "live":
+		return
+	_spawn_local_random_item_at(spawn_position, spawn_rotation)
+
+func _spawn_local_random_item_at(spawn_position: Vector3, spawn_rotation: Vector3):
+	var enabled_types: Array = []
+	for item_type in GameConfig.ITEM_SCENES:
+		if GameConfig.is_item_enabled(item_type):
+			enabled_types.append(str(item_type))
+	if enabled_types.is_empty():
+		return null
+	var item_type: String = enabled_types[randi() % enabled_types.size()]
+	var scene = load(GameConfig.ITEM_SCENES[item_type])
+	if scene == null:
+		return null
+	var item = scene.instantiate()
+	item.marker_refill_on_pickup = true
+	item.marker_refill_requested = false
+	item.reroll_on_respawn = false
+	item.add_to_group("marker_spawned", true)
+	get_tree().current_scene.add_child(item)
+	item.global_position = spawn_position
+	item.global_rotation = spawn_rotation
+	item.spawn_position = spawn_position
+	item.spawn_rotation = spawn_rotation
+	return item
+
 func _spawn_marker_melee() -> void:
 	for node in get_tree().get_nodes_in_group("marker_melee_spawned"):
 		node.free()
+	if GameConfig.game_mode != GameConfig.MODE_ONE_GUN:
+		for melee in get_tree().get_nodes_in_group("melee"):
+			melee.free()
+		return
 	var markers := get_tree().get_nodes_in_group("melee_spawn_point")
 	if markers.is_empty():
 		push_warning("RoundManager: map has no melee_spawn_point markers.")
 		return
-	var marker = markers[randi() % markers.size()]
-	var melee = MeleeScene.instantiate()
-	melee.name = "RoundMelee"
-	melee.add_to_group("marker_melee_spawned", true)
-	get_tree().current_scene.add_child(melee)
-	melee.global_transform = marker.global_transform
-	melee.spawn_position = melee.global_position
-	melee.spawn_rotation = melee.global_rotation
+	markers.sort_custom(func(a, b): return str(a.get_path()) < str(b.get_path()))
+	for marker in markers:
+		_spawn_local_melee_at(marker.global_position, marker.global_rotation)
 
 func _spawn_marker_items():
 	# Free everything spawned last round. A group (not an array) is used so
@@ -2490,34 +3733,16 @@ func _spawn_marker_items():
 	# cleaned up too, not just the originals.
 	for node in get_tree().get_nodes_in_group("marker_spawned"):
 		node.queue_free()
-	var enabled_types: Array = []
-	for t in GameConfig.ITEM_SCENES:
-		if GameConfig.is_item_enabled(t):
-			enabled_types.append(t)
-	if enabled_types.size() > 0:
-		for m in get_tree().get_nodes_in_group("item_spawn_point"):
-			var t: String = enabled_types[randi() % enabled_types.size()]
-			var scene = load(GameConfig.ITEM_SCENES[t])
-			if scene == null:
-				continue
-			var inst = scene.instantiate()
-			get_tree().current_scene.add_child(inst)
-			inst.global_position = m.global_position
-			# _ready() captured spawn_position at the origin (before we moved it);
-			# re-point it so reset_to_spawn() keeps the item at its marker on
-			# round 2+ instead of teleporting it to map center near the gun.
-			if "spawn_position" in inst:
-				inst.spawn_position = inst.global_position
-			if "spawn_rotation" in inst:
-				inst.spawn_rotation = inst.global_rotation
-			# marker items re-roll into a random type when they respawn mid-round
-			if "reroll_on_respawn" in inst:
-				inst.reroll_on_respawn = true
-			inst.add_to_group("marker_spawned", true)
+	for marker in get_tree().get_nodes_in_group("item_spawn_point"):
+		_spawn_local_random_item_at(marker.global_position, marker.global_rotation)
 	if ResourceLoader.exists(POWERUP_SCENE_PATH):
 		var pu_scene = load(POWERUP_SCENE_PATH)
+		var enabled_powerups := GameConfig.enabled_powerup_types()
 		for m in get_tree().get_nodes_in_group("powerup_spawn_point"):
+			if enabled_powerups.is_empty():
+				break
 			var pu = pu_scene.instantiate()
+			pu.respawn_time = PICKUP_MARKER_REFILL_TIME
 			get_tree().current_scene.add_child(pu)
 			pu.global_position = m.global_position
 			if "spawn_position" in pu:
@@ -2527,14 +3752,19 @@ func _spawn_marker_items():
 			pu.add_to_group("marker_spawned", true)
 
 func _apply_gun_spawn_mode():
-	if GameConfig.gun_spawn_mode != "random":
-		return
-	var spawn_points = get_tree().get_nodes_in_group("gun_spawn_point")
-	if spawn_points.size() == 0:
-		return
 	var guns = get_tree().get_nodes_in_group("gun")
 	if guns.size() == 0:
 		return
-	var chosen = spawn_points[randi() % spawn_points.size()]
-	guns[0].global_position = chosen.global_position
-	guns[0].spawn_position = chosen.global_position
+	var position := _gun_center_position
+	if GameConfig.gun_spawn_mode == "random":
+		var spawn_points = get_tree().get_nodes_in_group("gun_spawn_point")
+		if not spawn_points.is_empty():
+			position = spawn_points[randi() % spawn_points.size()].global_position
+	guns[0].global_position = position
+	guns[0].spawn_position = position
+
+
+func _capture_gun_center() -> void:
+	var guns := get_tree().get_nodes_in_group("gun")
+	if not guns.is_empty():
+		_gun_center_position = guns[0].global_position

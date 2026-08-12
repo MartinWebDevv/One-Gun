@@ -6,7 +6,7 @@ extends Node3D
 # immunity grant — a grenade blast is meant to be riskier than a melee
 # knockback hit, not safer.
 
-@export var radius := 6.0
+@export var radius := 7.5
 @export var knockback_distance := 4.0
 @export var flash_lifetime := 0.3
 
@@ -39,10 +39,13 @@ func _apply_blast():
 		if not body.has_method("apply_knockback"):
 			continue
 		var direction = body.global_position - global_position
+		var distance_to_blast: float = direction.length()
 		direction.y = 0
 		if direction.length() < 0.01:
 			direction = Vector3.FORWARD
-		body.apply_knockback(direction.normalized(), knockback_distance)
+		var falloff_strength := lerpf(knockback_distance, knockback_distance * 0.5,
+			clampf(distance_to_blast / radius, 0.0, 1.0))
+		body.apply_knockback(direction.normalized(), falloff_strength)
 		if bool(body.get("holding_gun")):
 			var blocked := false
 			if body.has_method("consume_sticky_hands"):
@@ -61,6 +64,9 @@ func _apply_blast():
 					var victim: String = body.get_display_name()
 					var attacker: String = owner_player.get_display_name() if owner_player != null else ""
 					GameEvents.player_disarmed.emit(victim, attacker, "💥")
+					var victim_actor_id := int(body.get("actor_id")) if body.get("actor_id") != null else -1
+					var attacker_actor_id := int(owner_player.get("actor_id")) if owner_player != null and owner_player.get("actor_id") != null else -1
+					GameEvents.actor_disarmed.emit(victim_actor_id, attacker_actor_id, "💥")
 
 func _flash():
 	var mesh_instance = get_node_or_null("MeshInstance3D")

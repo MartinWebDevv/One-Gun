@@ -50,7 +50,7 @@ func throw():
 		p.held_item = null
 	_update_pickup_label()
 
-func _net_do_throw(start_position: Vector3, _start_rotation: Vector3, _velocity: Vector3, direction: Vector3, owner_actor_id: int) -> void:
+func _net_do_throw(start_position: Vector3, _start_rotation: Vector3, _velocity: Vector3, direction: Vector3, owner_actor_id: int, _fuse_remaining := 0.0) -> void:
 	var p = player_ref
 	if p == null or not is_held:
 		return
@@ -165,6 +165,9 @@ func _strike(body: Node3D) -> void:
 					gun_node.drop()
 				var victim: String = body.get_display_name() if body.has_method("get_display_name") else str(body.name)
 				GameEvents.player_disarmed.emit(victim, killer, null)
+				var victim_actor_id := int(body.get("actor_id")) if body.get("actor_id") != null else -1
+				var disarmer_actor_id := int(_thrower.get("actor_id")) if _thrower != null and _thrower.get("actor_id") != null else -1
+				GameEvents.actor_disarmed.emit(victim_actor_id, disarmer_actor_id, "")
 			if body.has_method("grant_bullet_immunity"):
 				body.grant_bullet_immunity(1.0)
 	elif body.has_method("apply_knockback"):

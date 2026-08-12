@@ -11,20 +11,48 @@ signal closed
 enum Kind { BOT, MATCH }
 
 const DIFFICULTIES := ["easy", "medium", "hard", "expert"]
-const MATCH_TABS := ["GENERAL", "COMBAT", "SPAWNS", "PRESETS"]
+const MATCH_TABS := ["OVERVIEW", "MATCH FLOW", "COMBAT", "SPAWNS", "BOTS", "PRESETS", "TESTING"]
+const ITEM_DISPLAY_NAMES := {
+	"bubble_gum": "BUBBLE GUM TRAP",
+	"grenade": "GRENADE",
+	"bear_trap": "BEAR TRAP",
+	"spring_pad": "SPRING PAD",
+	"smoke_bomb": "SMOKE BOMB",
+	"decoy": "DECOY",
+	"boomerang": "BOOMERANG",
+	"flash_camera": "FLASH CAMERA",
+	"double_jump_shoes": "DOUBLE JUMP SHOES",
+}
+const POWERUP_DISPLAY_NAMES := {
+	"extra_dash": "EXTRA DASH",
+	"sticky_hands": "STICKY HANDS",
+	"speed_surge": "SPEED SURGE",
+	"silent_steps": "SILENT STEPS",
+	"vampire_touch": "VAMPIRE TOUCH",
+	"extra_life": "EXTRA LIFE",
+	"reach": "REACH",
+}
 
 @export var panel_kind: Kind = Kind.MATCH
 @export var maximum_bots := 9
 @export var online_mode := false
+@export var read_only := false
+@export var initial_tab := 0
 
 var _pending: Dictionary = {}
 var _original: Dictionary = {}
 var _body: VBoxContainer
 var _tab_bar: OneGunTabBar
+var _nav_buttons: Array[OneGunButton] = []
 var _selected_tab := 0
 var _apply_button: OneGunButton
 var _pending_label: Label
 var _first_focus: Control
+var _expanded_spawn_sections := {
+	"items": false,
+	"powerups": false,
+	"melee": false,
+}
 
 
 func _ready() -> void:
@@ -32,7 +60,7 @@ func _ready() -> void:
 	variant = OneGunCabinet.Variant.CABINET
 	content_padding = OneGunUI.SPACE_L
 	show_bolts = true
-	_pending = GameConfig.snapshot_for_preset().duplicate(true)
+	_pending = GameConfig.snapshot_for_lobby().duplicate(true)
 	_original = _pending.duplicate(true)
 	_build_ui()
 
@@ -51,6 +79,7 @@ func close_without_applying() -> void:
 
 
 func _build_ui() -> void:
+	_selected_tab = clampi(initial_tab, 0, MATCH_TABS.size() - 1)
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	get_content().add_child(root)
@@ -62,10 +91,10 @@ func _build_ui() -> void:
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	titles.add_theme_constant_override("separation", 0)
 	header.add_child(titles)
-	var title_text := "BOT SETTINGS" if panel_kind == Kind.BOT else "MATCH SETTINGS"
-	titles.add_child(OneGunUI.make_heading(title_text, OneGunUI.TEXT_XL, "gold"))
-	var subtitle := "Build the roster before the match starts." if panel_kind == Kind.BOT else "Tune the rules without changing the live lobby until Apply."
-	var subtitle_label := OneGunUI.make_label(subtitle, OneGunUI.TEXT_S, "muted")
+	titles.add_child(OneGunUI.make_heading("SETTINGS", OneGunUI.TEXT_XL, "gold"))
+	var subtitle_label := OneGunUI.make_label(
+		"Configure the rules of your match. Changes take effect only after Apply.",
+		OneGunUI.TEXT_S, "muted")
 	subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	titles.add_child(subtitle_label)
 	var close_button := OneGunButton.new()
@@ -77,22 +106,45 @@ func _build_ui() -> void:
 	close_button.pressed.connect(close_without_applying)
 	header.add_child(close_button)
 
-	if panel_kind == Kind.MATCH:
-		_tab_bar = OneGunTabBar.new()
-		_tab_bar.tabs = PackedStringArray(MATCH_TABS)
-		_tab_bar.tab_selected.connect(_on_tab_selected)
-		root.add_child(_tab_bar)
-		_first_focus = _tab_bar.get_child(0) as Control if _tab_bar.get_child_count() > 0 else null
+	var workspace := HBoxContainer.new()
+	workspace.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	workspace.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(workspace)
+
+	var navigation := OneGunCabinet.new()
+	navigation.name = "SettingsNavigation"
+	navigation.variant = OneGunCabinet.Variant.SECTION
+	navigation.content_padding = OneGunUI.SPACE_S
+	navigation.custom_minimum_size.x = 174.0
+	navigation.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	workspace.add_child(navigation)
+	var nav_column := VBoxContainer.new()
+	nav_column.add_theme_constant_override("separation", OneGunUI.SPACE_XS)
+	navigation.get_content().add_child(nav_column)
+	_nav_buttons.clear()
+	for tab_index in MATCH_TABS.size():
+		var nav_button := OneGunButton.new()
+		nav_button.name = "SettingsNav" + MATCH_TABS[tab_index].replace(" ", "")
+		nav_button.variant = "purple" if tab_index == _selected_tab else "navy"
+		nav_button.text = MATCH_TABS[tab_index]
+		nav_button.font_size = OneGunUI.TEXT_S
+		nav_button.custom_minimum_size.y = 48.0
+		nav_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		nav_button.pressed.connect(_on_tab_selected.bind(tab_index))
+		nav_column.add_child(nav_button)
+		_nav_buttons.append(nav_button)
 
 	var well := OneGunCabinet.new()
 	well.variant = OneGunCabinet.Variant.WELL
 	well.content_padding = OneGunUI.SPACE_M
+	well.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	well.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(well)
+	workspace.add_child(well)
 	var scroll := ScrollContainer.new()
 	scroll.name = "SettingsScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	well.get_content().add_child(scroll)
 	_body = VBoxContainer.new()
@@ -110,51 +162,123 @@ func _build_ui() -> void:
 	var reset := OneGunButton.new()
 	reset.name = "ResetPending"
 	reset.variant = "navy"
-	reset.text = "RESET"
-	reset.tooltip_text = "Restore defaults in this pending panel; Apply is still required"
+	reset.text = "RESET TO DEFAULTS"
+	reset.tooltip_text = "Restore every pending match and bot setting to defaults"
 	reset.pressed.connect(_on_reset_pressed)
 	footer.add_child(reset)
 	var footer_spacer := Control.new()
 	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(footer_spacer)
-	var cancel := OneGunButton.new()
-	cancel.name = "CancelPending"
-	cancel.variant = "navy"
-	cancel.text = "CANCEL"
-	cancel.tooltip_text = "Discard every pending change"
-	cancel.pressed.connect(close_without_applying)
-	footer.add_child(cancel)
 	_apply_button = OneGunButton.new()
 	_apply_button.name = "ApplySettings"
 	_apply_button.variant = "gold"
-	_apply_button.text = "APPLY"
+	_apply_button.text = "APPLY CHANGES"
 	_apply_button.tooltip_text = "Commit these settings to the lobby"
+	_apply_button.disabled = read_only
 	_apply_button.pressed.connect(_on_apply_pressed)
 	footer.add_child(_apply_button)
 
+	_first_focus = _nav_buttons[0] if not _nav_buttons.is_empty() else close_button
 	_rebuild_body()
 	_refresh_pending_state()
 
 
 func _on_tab_selected(index: int) -> void:
-	_selected_tab = index
+	_selected_tab = clampi(index, 0, MATCH_TABS.size() - 1)
+	for button_index in _nav_buttons.size():
+		_nav_buttons[button_index].variant = "purple" if button_index == _selected_tab else "navy"
 	_rebuild_body()
 
 
 func _rebuild_body() -> void:
-	_first_focus = _tab_bar.get_child(0) as Control if _tab_bar != null and _tab_bar.get_child_count() > 0 else null
 	for child in _body.get_children():
-		child.free()
-	if panel_kind == Kind.BOT:
-		_build_bot_settings()
-	else:
-		match _selected_tab:
-			0: _build_general_tab()
-			1: _build_combat_tab()
-			2: _build_spawns_tab()
-			3: _build_presets_tab()
+		# Rebuilds are commonly requested by a control's own signal callback. An
+		# immediate free during signal emission is rejected by Godot 4.7.
+		_body.remove_child(child)
+		child.queue_free()
+	match _selected_tab:
+		0: _build_overview_tab()
+		1: _build_general_tab()
+		2: _build_combat_tab()
+		3: _build_spawns_tab()
+		4: _build_bot_settings()
+		5: _build_presets_tab()
+		6: _build_testing_tab()
+	if read_only:
+		_disable_editing_recursive(_body)
 	_refresh_pending_state()
 
+func _disable_editing_recursive(node: Node) -> void:
+	if node is BaseButton:
+		(node as BaseButton).disabled = true
+	elif node is SpinBox:
+		(node as SpinBox).editable = false
+	elif node is LineEdit:
+		(node as LineEdit).editable = false
+	for child in node.get_children():
+		_disable_editing_recursive(child)
+
+
+func _build_overview_tab() -> void:
+	_add_section_heading("OVERVIEW", "A quick summary of your current pending match settings.")
+	var round_time := float(_pending.get("round_time_limit", 0.0))
+	_build_overview_card("MATCH FLOW", [
+		["Teams", _on_off(bool(_pending.get("teams_enabled", false)))],
+		["Team Count", str(int(_pending.get("team_count", 2)))],
+		["Friendly Fire", _on_off(bool(_pending.get("friendly_fire_enabled", false)))],
+		["Round Time Limit", "OFF" if round_time <= 0.0 else "%d SECONDS" % int(round_time)],
+		["Rounds Per Set", str(int(_pending.get("rounds_per_set", 3)))],
+		["Sets Per Match", str(int(_pending.get("sets_per_match", 3)))],
+	])
+	_build_overview_card("COMBAT", [
+		["Sprint", _on_off(bool(_pending.get("sprinting_enabled", false)))],
+		["Melee Weapon Breaking", _on_off(bool(_pending.get("melee_weapon_breaking", true)))],
+		["Disarm Lock Time", "%.1f SECONDS" % float(_pending.get("disarm_lock_time", 3.0))],
+		["Max Dash Charges", str(int(_pending.get("max_dash_charges", 3)))],
+	])
+	_build_overview_card("SPAWNS", [
+		["Gun Spawn Mode", str(_pending.get("gun_spawn_mode", "center")).to_upper()],
+		["Melee Spawn Delay", "%.1f SECONDS" % float(_pending.get("melee_spawn_delay", 0.0))],
+		["Dropped Melee Despawn", "%.1f SECONDS" % float(_pending.get("dropped_melee_despawn_time", 3.0))],
+		["Items", _on_off(bool(_pending.get("hazards_enabled", true)) and bool(_pending.get("consumables_enabled", true)))],
+		["Power Ups", _on_off(bool(_pending.get("powerups_enabled", true)))],
+		["Melee Weapons", "%d ENABLED" % _pending_enabled_melee_count()],
+	])
+	var bots: Array = _pending.get("bot_configs", [])
+	var bot_difficulty := "—" if bots.is_empty() else str(bots[0].get("difficulty", "easy")).to_upper()
+	_build_overview_card("BOTS", [
+		["Bot Count", str(bots.size())],
+		["Difficulty", bot_difficulty],
+		["Lobby Capacity", "%d TOTAL ACTORS" % (maximum_bots + 1)],
+	])
+	_build_overview_card("TESTING", [
+		["Visible Hitboxes", _on_off(bool(_pending.get("visible_hitboxes", false)))],
+	])
+
+
+func _build_overview_card(title: String, entries: Array) -> void:
+	var section := OneGunCabinet.new()
+	section.variant = OneGunCabinet.Variant.SECTION
+	section.content_padding = OneGunUI.SPACE_M
+	_body.add_child(section)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_XS)
+	section.get_content().add_child(column)
+	column.add_child(OneGunUI.make_heading(title, OneGunUI.TEXT_M, "cyan"))
+	for entry_value in entries:
+		var entry: Array = entry_value
+		var row := HBoxContainer.new()
+		column.add_child(row)
+		var label := OneGunUI.make_label(str(entry[0]), OneGunUI.TEXT_S, "muted")
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var value := OneGunUI.make_label(str(entry[1]), OneGunUI.TEXT_S, "text_bright", true)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(value)
+
+
+func _on_off(value: bool) -> String:
+	return "ON" if value else "OFF"
 
 func _build_bot_settings() -> void:
 	_add_section_heading("ROSTER CAPACITY", "Ten total player slots. Up to %d bots fit the current roster." % maximum_bots)
@@ -187,31 +311,37 @@ func _build_bot_settings() -> void:
 			func(value: String) -> void:
 				(_pending["bot_configs"] as Array)[index]["difficulty"] = value
 				_mark_changed())
-		if bool(_pending.get("teams_enabled", false)) and not online_mode:
-			var teams := ["no team", "team 1", "team 2", "team 3", "team 4"]
-			var team_id := int(bots[index].get("team_id", -1))
-			_add_dropdown_to(column, "TEAM", teams, teams[clampi(team_id + 1, 0, 4)],
+		if bool(_pending.get("teams_enabled", false)):
+			var teams := []
+			for team_index in clampi(int(_pending.get("team_count", 2)), 2, 4):
+				teams.append("team %d" % (team_index + 1))
+			var team_id := int(bots[index].get("team_id", 0))
+			_add_dropdown_to(column, "TEAM", teams, teams[clampi(team_id, 0, teams.size() - 1)],
 				"Team assignment is available when Teams is enabled.",
 				func(value: String) -> void:
-					(_pending["bot_configs"] as Array)[index]["team_id"] = teams.find(value) - 1
+					(_pending["bot_configs"] as Array)[index]["team_id"] = teams.find(value)
 					_mark_changed())
 
 
 func _build_general_tab() -> void:
 	_add_section_heading("MATCH FLOW", "Core structure, timing and team rules.")
 	_add_toggle("TEAMS ENABLED", bool(_pending.get("teams_enabled", false)),
-		"Group players into teams. Online team assignment is not implemented yet.",
+		"Group players into two to four teams.",
 		func(value: bool) -> void:
-			_pending["teams_enabled"] = value if not online_mode else false
+			_pending["teams_enabled"] = value
 			if not value:
 				_pending["friendly_fire_enabled"] = false
 			_mark_changed()
-			_rebuild_body(), online_mode)
+			_rebuild_body(), read_only)
+	_add_int_stepper("TEAM COUNT", int(_pending.get("team_count", 2)), 2, 4,
+		"Number of represented teams available in this match.",
+		func(value: int) -> void: _pending["team_count"] = value; _mark_changed(); _rebuild_body(),
+		read_only or not bool(_pending.get("teams_enabled", false)))
 	_add_toggle("FRIENDLY FIRE", bool(_pending.get("friendly_fire_enabled", false)),
 		"Allow teammates to affect one another.",
 		func(value: bool) -> void:
 			_pending["friendly_fire_enabled"] = value
-			_mark_changed(), online_mode or not bool(_pending.get("teams_enabled", false)))
+			_mark_changed(), read_only or not bool(_pending.get("teams_enabled", false)))
 	_add_float_spin("ROUND TIME LIMIT", float(_pending.get("round_time_limit", 0.0)), 0.0, 900.0, 1.0, "SECONDS",
 		"Set any whole-second duration. Zero disables the round timer.",
 		func(value: float) -> void: _pending["round_time_limit"] = value; _mark_changed())
@@ -229,6 +359,9 @@ func _build_general_tab() -> void:
 
 func _build_combat_tab() -> void:
 	_add_section_heading("COMBAT RULES", "Tune disarms, melee lethality and movement resources.")
+	_add_toggle("SPRINTING ENABLED", bool(_pending.get("sprinting_enabled", false)),
+		"Allow human players and bots to sprint using stamina.",
+		func(value: bool) -> void: _pending["sprinting_enabled"] = value; _mark_changed())
 	_add_toggle("MELEE ELIMINATES GUN HOLDER", bool(_pending.get("melee_eliminates_gunholder", false)),
 		"A melee hit immediately eliminates the current gun holder.",
 		func(value: bool) -> void: _pending["melee_eliminates_gunholder"] = value; _mark_changed())
@@ -244,35 +377,75 @@ func _build_combat_tab() -> void:
 	_add_float_spin("DISARM LOCK TIME", float(_pending.get("disarm_lock_time", 3.0)), 0.0, 10.0, 0.5, "SECONDS",
 		"How long a disarmed player waits before taking the gun again.",
 		func(value: float) -> void: _pending["disarm_lock_time"] = value; _mark_changed())
-	_add_int_stepper("MAX DASH CHARGES", int(_pending.get("max_dash_charges", 2)), 0, 6,
+	_add_int_stepper("MAX DASH CHARGES", int(_pending.get("max_dash_charges", 3)), 0, 6,
 		"Maximum dash charges granted at spawn.", func(value: int) -> void: _pending["max_dash_charges"] = value; _mark_changed())
 
 
 func _build_spawns_tab() -> void:
-	_add_section_heading("SPAWNS & ITEMS", "Control weapon timing and every implemented item type.")
+	_add_section_heading("SPAWNS", "Control weapon timing and choose which pickup pools are in play.")
 	_add_dropdown("GUN SPAWN MODE", ["center", "random"], str(_pending.get("gun_spawn_mode", "center")),
 		"Choose a fixed center spawn or a random authored gun marker.",
 		func(value: String) -> void: _pending["gun_spawn_mode"] = value; _mark_changed())
 	_add_float_spin("MELEE SPAWN DELAY", float(_pending.get("melee_spawn_delay", 0.0)), 0.0, 15.0, 0.5, "SECONDS",
-		"Delay before the one melee weapon can be picked up.",
+		"Delay before the round's authored melee supply can be picked up.",
 		func(value: float) -> void: _pending["melee_spawn_delay"] = value; _mark_changed())
 	_add_float_spin("DROPPED MELEE DESPAWN", float(_pending.get("dropped_melee_despawn_time", 3.0)), 0.0, 30.0, 0.5, "SECONDS",
 		"Zero leaves a dropped melee weapon in place indefinitely.",
 		func(value: float) -> void: _pending["dropped_melee_despawn_time"] = value; _mark_changed())
 	_add_divider()
-	_add_toggle("HAZARDS ENABLED", bool(_pending.get("hazards_enabled", true)),
-		"Master switch for all hazard items.", func(value: bool) -> void: _pending["hazards_enabled"] = value; _mark_changed())
-	_add_toggle("CONSUMABLES ENABLED", bool(_pending.get("consumables_enabled", true)),
-		"Master switch for all consumable items.", func(value: bool) -> void: _pending["consumables_enabled"] = value; _mark_changed())
+
+	var item_pool_enabled := bool(_pending.get("hazards_enabled", true)) \
+		and bool(_pending.get("consumables_enabled", true))
+	var item_column := _add_spawn_pool_section("items", "ITEMS",
+		item_pool_enabled,
+		"Enable or disable all items, or open the list to tune each one.",
+		func(value: bool) -> void:
+			_pending["hazards_enabled"] = value
+			_pending["consumables_enabled"] = value
+			_mark_changed())
 	var registry: Dictionary = _pending.get("item_registry", {})
-	for item_name in registry.keys():
-		var entry: Dictionary = registry[item_name]
-		var category := str(entry.get("category", "item")).to_upper()
-		_add_toggle(str(item_name).replace("_", " ").to_upper(), bool(entry.get("enabled", true)),
-			"%s item. The category master switch still takes precedence." % category,
-			func(value: bool) -> void:
-				(_pending["item_registry"] as Dictionary)[item_name]["enabled"] = value
-				_mark_changed())
+	if item_column != null:
+		for item_name in registry.keys():
+			var entry: Dictionary = registry[item_name]
+			var item_toggle := _add_toggle_to(item_column, str(ITEM_DISPLAY_NAMES.get(item_name,
+				str(item_name).replace("_", " ").to_upper())), bool(entry.get("enabled", true)),
+				"Allow this item to appear whenever Items are enabled.",
+				func(value: bool) -> void:
+					(_pending["item_registry"] as Dictionary)[item_name]["enabled"] = value
+					_mark_changed())
+			item_toggle.name = "Item_" + str(item_name)
+
+	var powerup_column := _add_spawn_pool_section("powerups", "POWER UPS",
+		bool(_pending.get("powerups_enabled", true)),
+		"Enable or disable collectible powerups, or open the list to tune each one.",
+		func(value: bool) -> void:
+			_pending["powerups_enabled"] = value
+			_mark_changed())
+	if powerup_column != null:
+		var powerup_registry: Dictionary = _pending.get("powerup_registry", {})
+		for power_type in GameConfig.POWERUP_TYPES:
+			var powerup_entry: Dictionary = powerup_registry.get(power_type, {"enabled": true})
+			var powerup_toggle := _add_toggle_to(powerup_column, str(POWERUP_DISPLAY_NAMES.get(power_type,
+				str(power_type).replace("_", " ").to_upper())), bool(powerup_entry.get("enabled", true)),
+				"Allow this powerup to be rolled at powerup spawn markers.",
+				func(value: bool) -> void:
+					(_pending["powerup_registry"] as Dictionary)[power_type]["enabled"] = value
+					_mark_changed())
+			powerup_toggle.name = "Powerup_" + str(power_type)
+
+	var melee_column := _add_spawn_pool_section("melee", "MELEE WEAPONS", null,
+		"Choose which melee weapons can spawn. At least one must remain enabled.", Callable())
+	if melee_column != null:
+		var melee_registry: Dictionary = _pending.get("melee_weapon_registry", {})
+		var enabled_melee_count := _pending_enabled_melee_count()
+		for weapon_id in GameConfig.MELEE_WEAPON_NAMES:
+			var weapon_entry: Dictionary = melee_registry.get(weapon_id, {"enabled": true})
+			var weapon_enabled := bool(weapon_entry.get("enabled", true))
+			var locks_minimum := weapon_enabled and enabled_melee_count <= 1
+			_add_toggle_to(melee_column, str(GameConfig.MELEE_WEAPON_NAMES[weapon_id]).to_upper(),
+				weapon_enabled, "At least one melee weapon must remain enabled.",
+				func(value: bool) -> void: _set_pending_melee_weapon_enabled(weapon_id, value),
+				locks_minimum)
 
 
 func _build_presets_tab() -> void:
@@ -325,6 +498,8 @@ func _build_presets_tab() -> void:
 			var values := GameConfig.get_preset_slot_values(slot_index)
 			if values.is_empty():
 				return
+			# Session-only testing flags never load from disk presets.
+			values["visible_hitboxes"] = bool(_pending.get("visible_hitboxes", false))
 			_pending = values
 			_mark_changed()
 			_rebuild_body())
@@ -344,6 +519,15 @@ func _build_presets_tab() -> void:
 		actions.add_child(remove)
 
 
+func _build_testing_tab() -> void:
+	_add_section_heading("TESTING", "Temporary host-controlled diagnostics. These options sync online but are never saved in presets.")
+	_add_toggle("VISIBLE HITBOXES", bool(_pending.get("visible_hitboxes", false)),
+		"Show cyan character capsules and melee hit volumes for every player. Yellow is idle; red is an active swing.",
+		func(value: bool) -> void:
+			_pending["visible_hitboxes"] = value
+			_mark_changed(), read_only)
+
+
 func _add_section_heading(title: String, description: String) -> void:
 	_body.add_child(OneGunUI.make_heading(title, OneGunUI.TEXT_L, "gold"))
 	var desc := OneGunUI.make_label(description, OneGunUI.TEXT_S, "muted")
@@ -353,6 +537,43 @@ func _add_section_heading(title: String, description: String) -> void:
 
 func _add_divider() -> void:
 	_body.add_child(HSeparator.new())
+
+
+func _add_spawn_pool_section(section_id: String, title: String, master_value,
+		tooltip: String, master_callback: Callable) -> VBoxContainer:
+	var section := OneGunCabinet.new()
+	section.name = "SpawnPool_" + section_id
+	section.variant = OneGunCabinet.Variant.SECTION
+	section.content_padding = OneGunUI.SPACE_M
+	_body.add_child(section)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	section.get_content().add_child(column)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	column.add_child(header)
+	var expanded := bool(_expanded_spawn_sections.get(section_id, false))
+	var expand_button := OneGunButton.new()
+	expand_button.name = "Expand_" + section_id
+	expand_button.variant = "navy"
+	expand_button.font_size = OneGunUI.TEXT_M
+	expand_button.text = ("▼  " if expanded else "▶  ") + title
+	expand_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	expand_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	expand_button.tooltip_text = tooltip
+	expand_button.pressed.connect(func() -> void:
+		_expanded_spawn_sections[section_id] = not bool(
+			_expanded_spawn_sections.get(section_id, false))
+		_rebuild_body())
+	header.add_child(expand_button)
+	if master_value is bool:
+		var master_toggle := OneGunToggle.new()
+		master_toggle.name = "Master_" + section_id
+		master_toggle.button_pressed = master_value
+		master_toggle.tooltip_text = tooltip
+		master_toggle.toggled.connect(master_callback)
+		header.add_child(master_toggle)
+	return column if expanded else null
 
 
 func _make_setting_row(label_text: String, tooltip: String) -> HBoxContainer:
@@ -372,8 +593,13 @@ func _make_setting_row(label_text: String, tooltip: String) -> HBoxContainer:
 
 func _add_toggle(label_text: String, value: bool, tooltip: String, callback: Callable,
 		disabled := false) -> OneGunToggle:
+	return _add_toggle_to(_body, label_text, value, tooltip, callback, disabled)
+
+
+func _add_toggle_to(parent: VBoxContainer, label_text: String, value: bool,
+		tooltip: String, callback: Callable, disabled := false) -> OneGunToggle:
 	var row := _make_setting_row(label_text, tooltip)
-	_body.add_child(row)
+	parent.add_child(row)
 	var toggle := OneGunToggle.new()
 	toggle.button_pressed = value
 	toggle.disabled = disabled
@@ -385,8 +611,32 @@ func _add_toggle(label_text: String, value: bool, tooltip: String, callback: Cal
 	return toggle
 
 
+func _pending_enabled_melee_count() -> int:
+	var count := 0
+	var registry: Dictionary = _pending.get("melee_weapon_registry", {})
+	for weapon_id in GameConfig.MELEE_WEAPON_NAMES:
+		var entry: Dictionary = registry.get(weapon_id, {"enabled": true})
+		if bool(entry.get("enabled", true)):
+			count += 1
+	return count
+
+
+func _set_pending_melee_weapon_enabled(weapon_id: String, enabled: bool) -> void:
+	var registry: Dictionary = _pending.get("melee_weapon_registry", {})
+	if not registry.has(weapon_id):
+		registry[weapon_id] = {"enabled": true}
+	if not enabled and _pending_enabled_melee_count() <= 1:
+		_rebuild_body()
+		return
+	registry[weapon_id]["enabled"] = enabled
+	_pending["melee_weapon_registry"] = registry
+	_mark_changed()
+	# Refresh which final switch is locked by the minimum-one rule.
+	_rebuild_body()
+
+
 func _add_int_stepper(label_text: String, value: int, min_value: int, max_value: int,
-		tooltip: String, callback: Callable) -> OneGunStepper:
+		tooltip: String, callback: Callable, disabled := false) -> OneGunStepper:
 	var row := _make_setting_row(label_text, tooltip)
 	_body.add_child(row)
 	var stepper := OneGunStepper.new()
@@ -396,7 +646,9 @@ func _add_int_stepper(label_text: String, value: int, min_value: int, max_value:
 	stepper.tooltip_text = tooltip
 	stepper.value_changed.connect(callback)
 	row.add_child(stepper)
-	if _first_focus == null and stepper.get_child_count() > 0:
+	if disabled:
+		_disable_editing_recursive(stepper)
+	if _first_focus == null and stepper.get_child_count() > 0 and not disabled:
 		_first_focus = stepper.get_child(0) as Control
 	return stepper
 
@@ -459,7 +711,7 @@ func _make_line_edit(placeholder: String, max_length: int) -> LineEdit:
 func _on_bot_count_changed(value: int) -> void:
 	var bots: Array = _pending.get("bot_configs", []).duplicate(true)
 	while bots.size() < value:
-		bots.append({"difficulty": "easy", "team_id": -1})
+		bots.append({"difficulty": "easy", "team_id": bots.size() % clampi(int(_pending.get("team_count", 2)), 2, 4)})
 	while bots.size() > value:
 		bots.pop_back()
 	_pending["bot_configs"] = bots
@@ -475,12 +727,8 @@ func _on_set_all_difficulty(value: String) -> void:
 
 
 func _on_reset_pressed() -> void:
-	if panel_kind == Kind.BOT:
-		_pending["bot_configs"] = GameConfig.default_match_settings()["bot_configs"].duplicate(true)
-	else:
-		var bots: Array = _pending.get("bot_configs", []).duplicate(true)
-		_pending = GameConfig.default_match_settings()
-		_pending["bot_configs"] = bots
+	_pending = GameConfig.default_match_settings()
+	_pending["visible_hitboxes"] = false
 	_mark_changed()
 	_rebuild_body()
 

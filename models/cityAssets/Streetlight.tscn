@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/Streetlight.glb" id="1_model"]
+
+[node name="Streetlight" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+rotation = Vector3(0, -1.5707964, 0)
+scale = Vector3(5, 5, 5)

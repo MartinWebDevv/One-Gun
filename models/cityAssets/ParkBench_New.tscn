@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/ParkBench.glb" id="1_visual"]
+
+[node name="ParkBench_New" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+position = Vector3(0.0201106, 0.7490187, -0.0051805)
+scale = Vector3(1.2, 1.2, 1.2)

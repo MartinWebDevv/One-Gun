@@ -317,15 +317,25 @@ func _refresh_scoreboard():
 		return
 
 	# Online: highlight the row belonging to this machine's player.
-	var local_name := ""
+	var local_actor_id := -1
 	if NetworkManager.is_online():
 		var lp = NetworkManager.find_net_player(NetworkManager.local_id())
-		if lp != null and lp.has_method("get_display_name"):
-			local_name = lp.get_display_name()
+		if lp != null:
+			local_actor_id = int(lp.get("actor_id"))
 
 	var data = round_manager.get_scoreboard_data()
+	var current_team := -999
 	for i in data.size():
 		var entry = data[i]
+		var team_id := int(entry.get("team_id", -1))
+		if GameConfig.teams_enabled and team_id != current_team:
+			current_team = team_id
+			var team_heading := Label.new()
+			team_heading.text = "TEAM %d   •   %d SETS   •   %d ROUNDS" % [
+				team_id + 1, int(entry.get("sets", 0)), int(entry.get("rounds", 0))]
+			team_heading.add_theme_font_size_override("font_size", 15)
+			team_heading.add_theme_color_override("font_color", [Color(0.25, 0.7, 1.0), Color(1.0, 0.3, 0.3), Color(0.35, 0.9, 0.45), Color(1.0, 0.75, 0.2)][clampi(team_id, 0, 3)])
+			_scoreboard_content.add_child(team_heading)
 		var row = HBoxContainer.new()
 		row.add_theme_constant_override("separation", 0)
 
@@ -346,7 +356,7 @@ func _refresh_scoreboard():
 
 		# Zebra striping + gold left edge on your own row.
 		var row_panel = PanelContainer.new()
-		var is_you: bool = local_name != "" and str(entry["name"]) == local_name
+		var is_you: bool = local_actor_id >= 0 and int(entry.get("actor_id", -1)) == local_actor_id
 		var zebra_bg := Color(1, 1, 1, 0.04) if i % 2 == 0 else Color(0, 0, 0, 0.0)
 		var row_style = ThemeManager.panel(zebra_bg, Color.TRANSPARENT, 4, 0)
 		row_style.shadow_size = 0

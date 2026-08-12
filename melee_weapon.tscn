@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bqhdpt43v8aon" path="res://melee_weapon.gd" id="1_vax1h"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_xhknj"]
-size = Vector3(2.0025635, 1, 2.46167)
+size = Vector3(2.0025635, 1, 3.1679077)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vax1h"]
 albedo_color = Color(1, 0.5411765, 0.11372549, 1)
@@ -15,14 +15,14 @@ material = SubResource("StandardMaterial3D_vax1h")
 radius = 1.5
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bf788"]
-size = Vector3(0.29671478, 0.5402832, 1.8331089)
+size = Vector3(0.29671478, 0.5402832, 2.4756684)
 
 [node name="MeleeWeapon" type="RigidBody3D" unique_id=1665878362]
 collision_layer = 4
 script = ExtResource("1_vax1h")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2020956412]
-transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.6, -0.0017120354, 0, 0.036987305)
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.6, -0.0017120354, 0, 0.03261108)
 shape = SubResource("BoxShape3D_xhknj")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=91112034]
@@ -40,7 +40,7 @@ shape = SubResource("SphereShape3D_3eo4f")
 collision_mask = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="HitBox" unique_id=1662649966]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004055023, 0.020141602, 0.27544928)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004055023, 0.020141602, 0.49761534)
 shape = SubResource("BoxShape3D_bf788")
 
 [node name="Node3D" type="Node3D" parent="." unique_id=1835559051]

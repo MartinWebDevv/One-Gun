@@ -9,11 +9,12 @@ signal setting_changed(key: String, value)
 const SAVE_PATH := "user://player_prefs.json"
 const BACKUP_PATH := "user://player_prefs.backup.json"
 const TEMP_PATH := "user://player_prefs.pending.json"
-const SETTINGS_VERSION := 3
+const SETTINGS_VERSION := 4
 const SETTINGS_APPLIER = preload("res://UI/player_settings_applier.gd")
 
 const DEFAULT_SETTINGS := {
 	"player_name": "Player 1",
+	"character_skin_id": "blue",
 	"master_volume": 1.0,
 	"music_volume": 1.0,
 	"sfx_volume": 1.0,
@@ -188,8 +189,13 @@ func reset_input_overrides() -> void:
 
 
 func apply_input_overrides() -> void:
+	apply_input_binding_map(get_setting("input_overrides"))
+
+
+func apply_input_binding_map(overrides) -> void:
+	# Rebuild from project defaults each time so saved commits and the settings
+	# screen's reversible live preview use exactly the same application path.
 	InputMap.load_from_project_settings()
-	var overrides = get_setting("input_overrides")
 	if not overrides is Dictionary:
 		return
 	for action_key in overrides:
@@ -300,6 +306,8 @@ func _normalize(values: Dictionary) -> Dictionary:
 			normalized[key] = values[key]
 	normalized["player_name"] = str(normalized["player_name"]).strip_edges().substr(0, 24)
 	if normalized["player_name"] == "": normalized["player_name"] = "Player 1"
+	normalized["character_skin_id"] = PlayerSkinRegistry.sanitize_skin_id(
+		str(normalized["character_skin_id"]))
 	for key in ["master_volume", "music_volume", "sfx_volume"]:
 		normalized[key] = clampf(float(normalized[key]), 0.0, 1.0)
 	normalized["mouse_sensitivity"] = clampf(float(normalized["mouse_sensitivity"]), 0.1, 5.0)

@@ -436,7 +436,8 @@ def make_hoop(name):
     add_cyl(bm, (0, 0, 0), 0.09, 0.09, 3.4, 8, 0)
     add_box(bm, (0, 0.35, 3.35), (0.06, 0.35, 0.06), 0)
     add_box(bm, (0, 0.75, 3.5), (0.9, 0.04, 0.6), 1)
-    add_cyl(bm, (0, 0.55, 3.05), 0.24, 0.24, 0.04, 10, 2)
+    # Keep the rim on the court-facing side of the backboard, away from the pole.
+    add_cyl(bm, (0, 0.95, 3.05), 0.24, 0.24, 0.04, 10, 2)
     finish(obj, bm, mats)
     export_glb(obj, name + ".glb")
 

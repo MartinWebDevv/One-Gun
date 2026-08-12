@@ -76,8 +76,12 @@ func _process(_delta):
 	else:
 		$WeaponSlot/NameLabel.text = ""
 
-	var item1 = player.held_item_1 if "held_item_1" in player else null
-	var item1_active = "active_slot" in player and player.active_slot == "item1"
+	# Humans expose two explicit inventory slots; bots carry a single generic
+	# item.  Spectator HUDs can bind to either kind of actor, so present a bot's
+	# item in the first card instead of assuming the human-only properties.
+	var item1 = player.held_item_1 if "held_item_1" in player else (player.held_item if "held_item" in player else null)
+	var item1_active = ("active_slot" in player and player.active_slot == "item1") \
+		or (not ("active_slot" in player) and item1 != null)
 	_update_slot($ItemSlot, item1 != null, item1_active)
 	if item1 != null and item1.has_method("get_display_name"):
 		$ItemSlot/NameLabel.text = item1.get_display_name()

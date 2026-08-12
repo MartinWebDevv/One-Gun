@@ -36,8 +36,12 @@ func _run() -> void:
 	lobby._open_settings_slideout(lobby.LOBBY_SETTINGS_SLIDEOUT.Kind.BOT)
 	await get_tree().process_frame
 	var bot_panel = lobby._settings_slideout
-	_check(bot_panel != null and bot_panel.name == "BotSettingsSlideout",
-		"Bot Settings opens as the connected slide-out")
+	_check(bot_panel != null and bot_panel.name == "SettingsSlideout",
+		"Bot controls open inside the unified connected Settings slide-out")
+	_check(bot_panel._selected_tab == 4 and bot_panel._nav_buttons.size() == 7,
+		"unified Settings opens directly to Bots and exposes every approved page")
+	_check(lobby._bot_settings_button == null and lobby._match_settings_button.text == "SETTINGS",
+		"lobby exposes one Settings entry instead of separate Bot and Match buttons")
 	_check(bot_panel._apply_button.get_global_rect().end.y <= lobby.get_viewport_rect().end.y,
 		"settings transaction footer remains visible inside the safe viewport")
 	get_tree().root.size = Vector2i(1280, 720)
@@ -83,7 +87,8 @@ func _run() -> void:
 		"Reset restores round time inside the pending transaction")
 	_check(not bool(match_panel._pending["chaos_overtime_enabled"]),
 		"Reset restores standard one-gun overtime")
-	_check((match_panel._pending["item_registry"] as Dictionary).size() == 7
+	_check((match_panel._pending["item_registry"] as Dictionary).size()
+			== (GameConfig.DEFAULT_VALUES["item_registry"] as Dictionary).size()
 		and bool(match_panel._pending["item_registry"]["boomerang"]["enabled"]),
 		"Reset restores every implemented item type")
 	_check("round_time_limit" in GameConfig.PRESET_FIELDS,
@@ -126,6 +131,13 @@ func _run() -> void:
 			and NetworkManager.lobby_share_code == "ABCD23",
 			"NetworkManager retains real privacy, capacity and share-code metadata")
 		var payload: Dictionary = NetworkManager._discovery_payload("smoke")
+		NetworkManager.peers[1]["role"] = "participant"
+		NetworkManager.set_one_of_us_volunteer(true)
+		_check(NetworkManager.one_of_us_volunteer_actor_ids() == [1],
+			"host-private One of Us volunteer preference resolves to its actor")
+		_check(not NetworkManager.peers[1].has("one_of_us_volunteer"),
+			"One of Us volunteer preference is not exposed in the shared roster")
+		NetworkManager.peers[1]["role"] = "lobby"
 		_check(payload["privacy"] == "private" and int(payload["max_players"]) == 10,
 			"discovery payload exposes browser metadata without publishing the secret")
 	NetworkManager.disconnect_net()

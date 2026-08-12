@@ -56,6 +56,10 @@ func show_empty(title := "NOTHING HERE YET", message := "") -> void:
 	_apply(OneGunIcon.Kind.PLAYER, Color(OneGunUI.color("muted"), 0.5), title, message, false)
 
 
+func show_mystery(title := "RANDOM MAP", message := "") -> void:
+	_apply(OneGunIcon.Kind.HELP, OneGunUI.color("gold"), title, message, false)
+
+
 func show_error(title := "SOMETHING WENT WRONG", message := "", can_retry := true) -> void:
 	_apply(OneGunIcon.Kind.WARNING, OneGunUI.color("red"), title, message, can_retry)
 

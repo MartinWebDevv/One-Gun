@@ -4,7 +4,7 @@ extends Area3D
 ## be moving upward inside the steam, so walking across it does not launch them.
 
 @export_category("Steam Boost Tuning")
-@export_range(0.0, 40.0, 0.5) var lift_strength: float = 12.0
+@export_range(0.0, 40.0, 0.5) var lift_strength: float = 15.0
 ## Fast-fall gravity begins only after a steam-launched body rises this far
 ## above its launch point and starts descending.
 @export_range(0.0, 10.0, 0.25) var descent_height_gate: float = 2.0

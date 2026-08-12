@@ -1,9 +1,27 @@
 extends Node
 
+const MatchLimitsData = preload("res://match_limits.gd")
+
 var split_screen_enabled = false
 var lobby_settings_dirty = false
 var melee_effects_hit_anyone = true
+var player2_skin_id = "blue"  # Session-only, like the second local player's name.
 var player2_name = "Player 2"  # session-only, not saved to disk — P2 may be a different guest each time
+
+# -- Game modes --
+const MODE_ONE_GUN := "one_gun"
+const MODE_ALL_GUN := "all_gun"
+const MODE_ONE_OF_US := "one_of_us"
+const GAME_MODES := [MODE_ONE_GUN, MODE_ALL_GUN, MODE_ONE_OF_US]
+const GAME_MODE_NAMES := {
+	MODE_ONE_GUN: "ONE GUN",
+	MODE_ALL_GUN: "ALL GUN",
+	MODE_ONE_OF_US: "ONE OF US",
+}
+var game_mode := MODE_ONE_GUN
+# Session-only and deliberately excluded from presets/synchronised match rules.
+var local_one_of_us_volunteers: Array[bool] = [false, false]
+
 
 # -- Bots --
 # Each entry: {"difficulty": "easy"/"medium"/"hard"/"expert", "team_id": int}
@@ -19,42 +37,66 @@ var bot_count: int:
 
 func set_bot_count(count: int):
 	count = max(0, count)
-	# Hard cap: bots + human players can never exceed 10 total (menu redesign
-	# capacity). Split screen has 2 humans so max 8 bots; solo allows 9.
+	# Humans and bots share the single project-wide actor capacity.
 	var human_count = 2 if split_screen_enabled else 1
-	var max_bots = 10 - human_count
+	var max_bots := MatchLimitsData.max_bots_for_humans(human_count)
 	count = min(count, max_bots)
 	while bot_configs.size() < count:
-		bot_configs.append({"difficulty": "easy", "team_id": -1})
+		bot_configs.append({"difficulty": "easy", "team_id": bot_configs.size() % clampi(team_count, 2, 4)})
 	while bot_configs.size() > count:
 		bot_configs.pop_back()
 
 # -- Team mode --
 var teams_enabled = false
 var friendly_fire_enabled = false
+var team_count = 2
+# Local humans use these stable match actor slots. Online human team ownership
+# lives in NetworkManager's actor roster so it survives every scene/round.
+var local_player_teams: Array = [0, 1]
 
 # -- Round rules --
+const REACH_POWERUP_DISTANCE := 8.0
+const SHARED_THROW_FORWARD_SPEED := 15.0
+const SHARED_THROW_UPWARD_SPEED := 5.0
+const DOUBLE_JUMP_SHOE_MULTIPLIER := 1.0
+const ONE_OF_US_US_DASH_CHARGES := 3
+const ONE_OF_US_THEM_DASH_CHARGES := 4
+const ALL_GUN_MAX_HEARTS := 3
+const ALL_GUN_HIT_PROTECTION_TIME := 0.75
+const ONE_OF_US_ROUND_TIME := 180.0
+const ONE_OF_US_THEM_RESPAWN_TIME := 2.0
+const ONE_OF_US_CONVERSION_TIME := 1.5
+const ONE_OF_US_THEM_SPEED_MULTIPLIER := 1.3
+const ONE_OF_US_THEM_REACH_MULTIPLIER := 1.5
+
+
 var melee_eliminates_gunholder = false
 var melee_eliminates_anyone = false
 var round_time_limit = 300.0  # host-adjustable; 0 keeps the legacy unlimited option
 var chaos_overtime_enabled = false  # everyone armed + guns-only OT; off preserves the one-gun loop
 var overtime_fire_exposure_time = 5.0  # zone-1 seconds allowed in OT fire before elimination
+var sprinting_enabled = false  # match-wide for humans and bots
 var melee_spawn_delay = 0.0  # seconds after round start before melee weapons can be picked up
 var gun_spawn_mode = "center"  # "center" or "random" — read by whatever spawns the gun each round
 var disarm_lock_time = 3.0
-var max_dash_charges = 2  # clamped 0-6 at spawn time by character_body_3d.gd
+var max_dash_charges = 3  # clamped 0-6 at spawn time by character_body_3d.gd
 var dropped_melee_despawn_time = 3.0  # seconds after a death-drop before the weapon despawns and returns to spawn; <= 0 disables this (weapon stays where dropped, forever)
 var melee_weapon_breaking = true  # when true, the first swing begun at zero stamina breaks the weapon afterward
+
+# Temporary host-controlled diagnostics. This deliberately stays outside
+# PRESET_FIELDS so a testing aid can never become part of a saved ruleset.
+var visible_hitboxes = false
 
 # -- Win conditions --
 var rounds_per_set = 3  # rounds a player/team must win to take a set
 var sets_per_match = 3  # sets a player/team must win to take the match
 
 # -- Items / hazards / consumables --
-# Category toggles act as convenience "select/deselect all" switches.
-# The per-item registry below is the actual source of truth checked at spawn time.
+# Category toggles are master gates that preserve the individual selections
+# underneath them. Both layers are checked at spawn time.
 var hazards_enabled = true
 var consumables_enabled = true
+var powerups_enabled = true
 
 # item_type -> { enabled: bool, category: "hazard" or "consumable" }
 var item_registry = {
@@ -64,7 +106,9 @@ var item_registry = {
 	"spring_pad": {"enabled": true, "category": "hazard"},
 	"smoke_bomb": {"enabled": true, "category": "consumable"},
 	"decoy": {"enabled": true, "category": "consumable"},
-	"boomerang": {"enabled": true, "category": "consumable"}
+	"boomerang": {"enabled": true, "category": "consumable"},
+	"flash_camera": {"enabled": true, "category": "consumable"},
+	"double_jump_shoes": {"enabled": true, "category": "consumable"},
 }
 
 # item_type -> pickup scene, used by the marker-driven item spawner
@@ -76,6 +120,42 @@ const ITEM_SCENES = {
 	"smoke_bomb": "res://smoke_bomb.tscn",
 	"decoy": "res://decoy.tscn",
 	"boomerang": "res://boomerang.tscn",
+	"flash_camera": "res://flash_camera.tscn",
+	"double_jump_shoes": "res://double_jump_shoes.tscn",
+}
+
+const POWERUP_TYPES := [
+	"extra_dash", "sticky_hands", "speed_surge", "silent_steps",
+	"vampire_touch", "extra_life", "reach",
+]
+
+# Per-powerup switches are separate from the master switch so a ruleset can
+# preserve its chosen pool while temporarily turning all powerups off.
+var powerup_registry := {
+	"extra_dash": {"enabled": true},
+	"sticky_hands": {"enabled": true},
+	"speed_surge": {"enabled": true},
+	"silent_steps": {"enabled": true},
+	"vampire_touch": {"enabled": true},
+	"extra_life": {"enabled": true},
+	"reach": {"enabled": true},
+}
+
+const MELEE_WEAPON_NAMES := {
+	"sword": "Sword",
+	"baseball_bat": "Baseball Bat",
+	"stick": "Stick",
+	"crowbar": "Crowbar",
+	"frying_pan": "Frying Pan",
+}
+
+# At least one entry is always restored/enforced by apply_preset_values().
+var melee_weapon_registry := {
+	"sword": {"enabled": true},
+	"baseball_bat": {"enabled": true},
+	"stick": {"enabled": true},
+	"crowbar": {"enabled": true},
+	"frying_pan": {"enabled": true},
 }
 
 func is_item_enabled(item_type: String) -> bool:
@@ -97,6 +177,43 @@ func set_category_enabled(category: String, enabled: bool):
 		hazards_enabled = enabled
 	elif category == "consumable":
 		consumables_enabled = enabled
+
+
+func is_powerup_enabled(power_type: String) -> bool:
+	if not powerups_enabled:
+		return false
+	var entry: Dictionary = powerup_registry.get(power_type, {})
+	return bool(entry.get("enabled", true))
+
+
+func enabled_powerup_types() -> Array[String]:
+	var enabled: Array[String] = []
+	for power_type in POWERUP_TYPES:
+		if power_type == "extra_life" and game_mode in [MODE_ALL_GUN, MODE_ONE_OF_US]:
+			continue
+		if game_mode == MODE_ONE_OF_US and power_type == "sticky_hands":
+			continue
+		if is_powerup_enabled(power_type):
+			enabled.append(power_type)
+	return enabled
+
+
+func is_melee_weapon_enabled(weapon_name: String) -> bool:
+	for weapon_id in MELEE_WEAPON_NAMES:
+		if str(MELEE_WEAPON_NAMES[weapon_id]) == weapon_name:
+			var entry: Dictionary = melee_weapon_registry.get(weapon_id, {})
+			return bool(entry.get("enabled", true))
+	# Unknown future/modded weapons remain available until they gain a setting.
+	return true
+
+
+func enabled_melee_weapon_count() -> int:
+	var count := 0
+	for weapon_id in MELEE_WEAPON_NAMES:
+		var entry: Dictionary = melee_weapon_registry.get(weapon_id, {})
+		if bool(entry.get("enabled", true)):
+			count += 1
+	return count
 
 # Returns true if `attacker` is allowed to affect `target` (melee, disarm,
 # knockback, stagger, thrown items, bullets). False only when teams are
@@ -132,11 +249,15 @@ const MAX_PRESET_SLOTS := 5
 # single source of truth for what a preset includes — adding a new
 # match-rule field later just means adding its name here.
 const PRESET_FIELDS := [
+	"game_mode",
 	"teams_enabled",
 	"friendly_fire_enabled",
+	"team_count",
+	"local_player_teams",
 	"round_time_limit",
 	"chaos_overtime_enabled",
 	"overtime_fire_exposure_time",
+	"sprinting_enabled",
 	"melee_eliminates_gunholder",
 	"melee_eliminates_anyone",
 	"melee_effects_hit_anyone",
@@ -151,6 +272,9 @@ const PRESET_FIELDS := [
 	"hazards_enabled",
 	"consumables_enabled",
 	"item_registry",
+	"powerups_enabled",
+	"powerup_registry",
+	"melee_weapon_registry",
 	"bot_configs",
 ]
 
@@ -158,24 +282,29 @@ const PRESET_FIELDS := [
 # (or "Default" button press) restores. Kept separate from PRESET_FIELDS'
 # order so this reads clearly as "what is default," not "what gets saved."
 const DEFAULT_VALUES := {
+	"game_mode": MODE_ONE_GUN,
 	"teams_enabled": false,
 	"friendly_fire_enabled": false,
+	"team_count": 2,
+	"local_player_teams": [0, 1],
 	"round_time_limit": 300.0,
 	"chaos_overtime_enabled": false,
 	"overtime_fire_exposure_time": 5.0,
+	"sprinting_enabled": false,
 	"melee_eliminates_gunholder": false,
 	"melee_eliminates_anyone": false,
 	"melee_effects_hit_anyone": true,
 	"melee_spawn_delay": 0.0,
 	"gun_spawn_mode": "center",
 	"disarm_lock_time": 3.0,
-	"max_dash_charges": 2,
+	"max_dash_charges": 3,
 	"dropped_melee_despawn_time": 3.0,
 	"melee_weapon_breaking": true,
 	"rounds_per_set": 3,
 	"sets_per_match": 3,
 	"hazards_enabled": true,
 	"consumables_enabled": true,
+	"powerups_enabled": true,
 	"item_registry": {
 		"bubble_gum": {"enabled": true, "category": "hazard"},
 		"grenade": {"enabled": true, "category": "hazard"},
@@ -184,6 +313,24 @@ const DEFAULT_VALUES := {
 		"smoke_bomb": {"enabled": true, "category": "consumable"},
 		"decoy": {"enabled": true, "category": "consumable"},
 		"boomerang": {"enabled": true, "category": "consumable"},
+		"flash_camera": {"enabled": true, "category": "consumable"},
+		"double_jump_shoes": {"enabled": true, "category": "consumable"},
+	},
+	"powerup_registry": {
+		"extra_dash": {"enabled": true},
+		"sticky_hands": {"enabled": true},
+		"speed_surge": {"enabled": true},
+		"silent_steps": {"enabled": true},
+		"vampire_touch": {"enabled": true},
+		"extra_life": {"enabled": true},
+		"reach": {"enabled": true},
+	},
+	"melee_weapon_registry": {
+		"sword": {"enabled": true},
+		"baseball_bat": {"enabled": true},
+		"stick": {"enabled": true},
+		"crowbar": {"enabled": true},
+		"frying_pan": {"enabled": true},
 	},
 	"bot_configs": [{"difficulty": "easy", "team_id": -1}],
 }
@@ -216,6 +363,16 @@ func snapshot_for_preset() -> Dictionary:
 		values[field] = value
 	return values
 
+
+func snapshot_for_lobby() -> Dictionary:
+	var values := snapshot_for_preset()
+	values["visible_hitboxes"] = visible_hitboxes
+	return values
+
+
+func snapshot_for_network() -> Dictionary:
+	return snapshot_for_lobby()
+
 func apply_preset_values(values: Dictionary):
 	for field in PRESET_FIELDS:
 		if not values.has(field):
@@ -224,6 +381,51 @@ func apply_preset_values(values: Dictionary):
 		if value is Dictionary or value is Array:
 			value = value.duplicate(true)
 		set(field, value)
+	item_registry = _merge_registry_defaults(item_registry, DEFAULT_VALUES["item_registry"])
+	powerup_registry = _merge_registry_defaults(powerup_registry, DEFAULT_VALUES["powerup_registry"])
+	melee_weapon_registry = _merge_registry_defaults(
+		melee_weapon_registry, DEFAULT_VALUES["melee_weapon_registry"])
+	if enabled_melee_weapon_count() <= 0:
+		melee_weapon_registry["sword"]["enabled"] = true
+	if game_mode not in GAME_MODES:
+		game_mode = MODE_ONE_GUN
+	team_count = clampi(team_count, 2, 4)
+	while local_player_teams.size() < 2:
+		local_player_teams.append(local_player_teams.size() % team_count)
+	for index in local_player_teams.size():
+		local_player_teams[index] = clampi(int(local_player_teams[index]), 0, team_count - 1)
+	for config in bot_configs:
+		if config is Dictionary:
+			config["team_id"] = clampi(int(config.get("team_id", 0)), 0, team_count - 1)
+
+
+func _merge_registry_defaults(current: Dictionary, defaults: Dictionary) -> Dictionary:
+	var merged := defaults.duplicate(true)
+	for key in current:
+		if not merged.has(key) or not current[key] is Dictionary:
+			continue
+		for field in current[key]:
+			merged[key][field] = current[key][field]
+	return merged
+
+
+func apply_lobby_values(values: Dictionary) -> void:
+	apply_preset_values(values)
+	if values.has("visible_hitboxes"):
+		visible_hitboxes = bool(values["visible_hitboxes"])
+
+
+func apply_network_values(values: Dictionary) -> void:
+	apply_lobby_values(values)
+
+
+func active_rules_summary() -> String:
+	var mode := "%d TEAMS%s" % [team_count, " • FF ON" if friendly_fire_enabled else ""] if teams_enabled else "FREE FOR ALL"
+	var timer := "NO TIMER" if round_time_limit <= 0.0 else "%ds ROUND" % int(round_time_limit)
+	var overtime := "CHAOS OT" if chaos_overtime_enabled else "STANDARD OT"
+	return "%s\n%s • %s\n%d DASH%s • %s GUN" % [
+		mode, timer, overtime, max_dash_charges,
+		"ES" if max_dash_charges != 1 else "", gun_spawn_mode.to_upper()]
 
 func save_preset_slot(slot_index: int, preset_name: String) -> bool:
 	return save_preset_values(slot_index, preset_name, snapshot_for_preset())
@@ -322,12 +524,19 @@ func _normalized_preset_values(values: Dictionary) -> Dictionary:
 		if not values.has(field):
 			continue
 		var value = values[field]
-		if field == "item_registry" and value is Dictionary:
+		if field in ["item_registry", "powerup_registry", "melee_weapon_registry"] \
+				and value is Dictionary:
 			var merged_registry: Dictionary = normalized[field]
-			for item_name in value:
-				if merged_registry.has(item_name) and value[item_name] is Dictionary:
-					merged_registry[item_name].merge(value[item_name], true)
+			for entry_name in value:
+				if merged_registry.has(entry_name) and value[entry_name] is Dictionary:
+					merged_registry[entry_name].merge(value[entry_name], true)
 			normalized[field] = merged_registry
 		else:
 			normalized[field] = value.duplicate(true) if value is Dictionary or value is Array else value
+	var enabled_melee := 0
+	for weapon_id in MELEE_WEAPON_NAMES:
+		if bool(normalized["melee_weapon_registry"][weapon_id].get("enabled", true)):
+			enabled_melee += 1
+	if enabled_melee <= 0:
+		normalized["melee_weapon_registry"]["sword"]["enabled"] = true
 	return normalized

@@ -6,11 +6,13 @@ extends Node
 
 const TEST_PORT := 24646
 const DEFAULT_TEST_MAP := "res://node_3d.tscn"
-const TIMEOUT_MSEC := 20000
+const TIMEOUT_MSEC := 60000
 
 var role := ""
 var test_map := DEFAULT_TEST_MAP
 var test_mode := "match"
+var _lobby_client_complete := false
+var _late_spectator_complete := false
 const NAMED_TEST_LOBBY := "Codex Smoke Lobby"
 
 func _ready() -> void:
@@ -21,8 +23,8 @@ func _ready() -> void:
 			test_map = arg.trim_prefix("--map=")
 		elif arg.begins_with("--mode="):
 			test_mode = arg.trim_prefix("--mode=")
-	if role not in ["host", "client"]:
-		_fail("missing --role=host or --role=client")
+	if role not in ["host", "client", "spectator"]:
+		_fail("missing --role=host, --role=client, or --role=spectator")
 		return
 	call_deferred("_detach_and_run")
 
@@ -33,6 +35,8 @@ func _detach_and_run() -> void:
 	GameConfig.rounds_per_set = 2
 	GameConfig.sets_per_match = 1
 	GameConfig.bot_configs = [{"difficulty": "hard", "team_id": -1}] if test_mode == "online_bots" else []
+	if test_mode == "one_of_us":
+		GameConfig.game_mode = GameConfig.MODE_ONE_OF_US
 	if test_mode == "overtime":
 		GameConfig.round_time_limit = 0.25
 		GameConfig.chaos_overtime_enabled = false
@@ -45,19 +49,43 @@ func _detach_and_run() -> void:
 	if test_mode == "named_lobby":
 		await _run_named_lobby_smoke()
 		return
+	if test_mode == "late_spectator":
+		await _run_late_spectator_smoke()
+		return
+	if test_mode == "playpen" and role == "client":
+		await _run_playpen_smoke()
+		return
 	if role == "host":
+		if test_mode == "playpen":
+			await _run_playpen_smoke()
+			return
 		if not NetworkManager.host_game(TEST_PORT):
 			_fail("host_game failed")
 			return
 		var connected := await _wait_for(func(): return NetworkManager.peers.size() >= 2, "client connection")
 		if not connected:
 			return
+		if test_mode == "one_of_us":
+			var preference_received := await _wait_for(func():
+				return NetworkManager._one_of_us_volunteers.values().any(
+					func(value): return value == true)
+			, "private One of Us volunteer preference")
+			if not preference_received:
+				return
 		NetworkManager.start_game(test_map)
 	else:
 		if not NetworkManager.join_game("127.0.0.1", TEST_PORT):
 			_fail("join_game failed")
 			return
+		if test_mode == "one_of_us":
+			if not await _wait_for(func(): return NetworkManager.peers.size() >= 2,
+					"One of Us lobby roster"):
+				return
+			NetworkManager.set_one_of_us_volunteer(true)
 
+	if test_mode == "one_of_us":
+		await _run_online_one_of_us_checks()
+		return
 	var ready := await _wait_for(_match_is_ready, "network players/combat readiness")
 	if not ready:
 		return
@@ -77,6 +105,274 @@ func _detach_and_run() -> void:
 		await _run_host_checks()
 	else:
 		await _run_client_checks()
+
+
+func _run_online_one_of_us_checks() -> void:
+	if not await _wait_for(func():
+		var scene := get_tree().current_scene
+		if scene == null or scene.scene_file_path != test_map:
+			return false
+		var net_players := scene.get_node_or_null("NetPlayers")
+		var manager := scene.get_node_or_null("RoundManager")
+		var local_actor = NetworkManager.find_net_player(NetworkManager.local_id())
+		return net_players != null and net_players.get_child_count() == 2 \
+			and manager != null and manager.one_of_us_roles.size() == 2 \
+			and local_actor != null and local_actor.get_node_or_null("OneOfUsIntro") != null
+	, "One of Us synchronized role cinematic"):
+		return
+	var scene := get_tree().current_scene
+	var manager = scene.get_node("RoundManager")
+	var local_actor = NetworkManager.find_net_player(NetworkManager.local_id())
+	var intro = local_actor.get_node("OneOfUsIntro")
+	var expected_role := "them" if int(local_actor.actor_id) == manager.one_of_us_first_actor_id else "us"
+	var volunteer_peer_id := -1
+	for peer_id_value in NetworkManager.peers:
+		if int(peer_id_value) != 1:
+			volunteer_peer_id = int(peer_id_value)
+			break
+	var volunteer_actor_id := NetworkManager.actor_id_for_peer(volunteer_peer_id)
+	if manager.one_of_us_first_actor_id != volunteer_actor_id:
+		_fail("server did not select the sole private volunteer as first infected")
+		return
+	for peer_data in NetworkManager.peers.values():
+		if (peer_data as Dictionary).has("one_of_us_volunteer"):
+			_fail("private volunteer intent leaked into the synchronized roster")
+			return
+	if str(local_actor.one_of_us_role) != expected_role:
+		_fail("local One of Us cinematic role did not match the server selection")
+	var cinematic_target = intro.get("_infected_actor")
+	if cinematic_target == null \
+			or int(cinematic_target.get("actor_id")) != manager.one_of_us_first_actor_id \
+			or intro.get("_camera") == null:
+		_fail("network cinematic did not target the server-selected first infected")
+		return
+
+	if not bool(local_actor.get("_one_of_us_intro_input_locked")) or local_actor.is_physics_processing():
+		_fail("One of Us did not lock local controls during the network cinematic")
+		return
+	await get_tree().create_timer(5.55).timeout
+	var label = intro.get("_text") if is_instance_valid(intro) else null
+	var expected_text := "YOU ARE THE FIRST." if expected_role == "them" else "ONE OF THEM HAS TURNED."
+	if label == null or label.text != expected_text:
+		_fail("network role cinematic showed the wrong local-role message")
+		return
+	if not await _wait_for(func():
+		return manager.online_combat_live \
+			and not bool(local_actor.get("_one_of_us_intro_input_locked")) \
+			and local_actor.is_physics_processing()
+	, "One of Us cinematic completion and local control restoration"):
+		return
+	var them_count := 0
+	var us_count := 0
+	for actor in scene.get_node("NetPlayers").get_children():
+		var actor_role := str(actor.get("one_of_us_role"))
+		if actor_role == "them":
+			them_count += 1
+			if int(actor.get("max_dash_charges")) != GameConfig.ONE_OF_US_THEM_DASH_CHARGES:
+				_fail("network Them player did not receive four base dashes")
+				return
+			var melee = actor.get("held_melee_weapon")
+			if melee == null or int(melee.get("tier")) != 3:
+				_fail("network Them player did not receive the Tier 3 sword")
+				return
+		else:
+			us_count += 1
+			if int(actor.get("max_dash_charges")) != GameConfig.ONE_OF_US_US_DASH_CHARGES:
+				_fail("network Us player did not receive three base dashes")
+				return
+			if not bool(actor.get("holding_gun")):
+				_fail("network Us player did not receive a personal gun")
+				return
+	if them_count != 1 or us_count != 1:
+		_fail("server did not synchronize exactly one first infected")
+		return
+	print("ONLINE_ONE_OF_US_PASS " + role)
+	await get_tree().create_timer(0.75).timeout
+	get_tree().quit()
+
+
+func _run_playpen_smoke() -> void:
+	if role == "host":
+		if not NetworkManager.host_game(TEST_PORT):
+			_fail("Playpen host setup failed")
+			return
+		if not await _wait_for(func(): return NetworkManager.peers.size() >= 2,
+				"Playpen client connection"):
+			return
+		NetworkManager.pending_map_path = test_map
+		NetworkManager.request_enter_playpen(true)
+	else:
+		if not NetworkManager.join_game("127.0.0.1", TEST_PORT):
+			_fail("Playpen client setup failed")
+			return
+		if not await _wait_for(func(): return NetworkManager.is_peer_in_playpen(1),
+				"host opening The Playpen"):
+			return
+		NetworkManager.request_enter_playpen(false)
+	if not await _wait_for(func():
+		var scene := get_tree().current_scene
+		var net_players := scene.get_node_or_null("NetPlayers") if scene != null else null
+		return scene != null and scene.scene_file_path == "res://maps/playpen/playpen.tscn" \
+			and NetworkManager.local_match_role == "playpen" \
+			and NetworkManager.playpen_peer_ids().size() == 2 \
+			and net_players != null and net_players.get_child_count() == 2
+	, "two-peer Playpen readiness"):
+		return
+	var guns := get_tree().get_nodes_in_group("gun").filter(func(gun):
+		return int(gun.get("playpen_spawn_id")) >= 0)
+	if guns.size() != 6:
+		_fail("The Playpen did not replicate two guns in each armory bay")
+		return
+	for actor in get_tree().current_scene.get_node("NetPlayers").get_children():
+		if "is_bot" in actor and actor.is_bot:
+			_fail("The Playpen spawned a bot")
+			return
+	if role == "client":
+		await get_tree().create_timer(0.5).timeout
+		NetworkManager.request_leave_playpen()
+		if not await _wait_for(func():
+			return get_tree().current_scene != null \
+				and get_tree().current_scene.scene_file_path == "res://game_setup.tscn" \
+				and NetworkManager.local_match_role == "lobby"
+		, "independent Playpen guest exit"):
+			return
+		var guest_lobby = get_tree().current_scene
+		for property_name in ["_match_settings_button",
+				"_character_customization_button", "_player_settings_button",
+				"_playpen_button", "_back_button"]:
+			var lobby_button = guest_lobby.get(property_name)
+			if not lobby_button is BaseButton or lobby_button.disabled:
+				_fail("guest lobby button stayed disabled after leaving Playpen: %s" \
+					% property_name)
+				return
+		var settings_button = guest_lobby.get("_match_settings_button")
+		settings_button.emit_signal("pressed")
+		await get_tree().process_frame
+		if guest_lobby.get("_settings_slideout") == null:
+			_fail("guest lobby Settings click did nothing after leaving Playpen")
+			return
+		guest_lobby.call("_discard_settings_slideout_immediately")
+		await get_tree().process_frame
+		var playpen_button = guest_lobby.get("_playpen_button")
+		playpen_button.emit_signal("pressed")
+		await get_tree().process_frame
+		var entry_dialogs: Array[Node] = guest_lobby.find_children(
+			"*", "ConfirmationDialog", true, false)
+		if not entry_dialogs.any(func(dialog): return dialog.visible):
+			_fail("guest lobby Playpen click did not open its Ready prompt")
+			return
+		for dialog in entry_dialogs:
+			dialog.queue_free()
+		_lobby_test_client_complete.rpc_id(1)
+		print("ONLINE_PLAYPEN_PASS client")
+		await get_tree().create_timer(0.5).timeout
+		get_tree().quit()
+		return
+	if not await _wait_for(func():
+		for peer_id_value in NetworkManager.peers:
+			var peer_id := int(peer_id_value)
+			if peer_id != 1 and str(NetworkManager.peers[peer_id].get("role", "")) == "lobby":
+				var net_players := get_tree().current_scene.get_node_or_null("NetPlayers")
+				return net_players != null and net_players.get_child_count() == 1
+		return false
+	, "host retaining The Playpen after guest exit"):
+		return
+	if not await _wait_for(func(): return _lobby_client_complete,
+			"client returned-lobby button verification"):
+		return
+	print("ONLINE_PLAYPEN_PASS host")
+	get_tree().quit()
+func _run_late_spectator_smoke() -> void:
+	if role == "host":
+		if not NetworkManager.host_game(TEST_PORT):
+			_fail("late-spectator host setup")
+			return
+		if not await _wait_for(func(): return NetworkManager.peers.size() >= 2, "initial match client"):
+			return
+		NetworkManager.start_game(test_map)
+		if not await _wait_for(_match_is_ready, "initial late-spectator match readiness"):
+			return
+		if not await _wait_for(func():
+			for entry in NetworkManager.peers.values():
+				if str(entry.get("role", "")) == "spectator":
+					return true
+			return false
+		, "late spectator role"):
+			return
+		print("ONLINE_LATE_SPECTATOR_PASS host")
+		if not await _wait_for(func(): return _late_spectator_complete, "late spectator full verification"):
+			return
+		await get_tree().create_timer(1.0).timeout
+		get_tree().quit()
+		return
+	if role == "client":
+		if not NetworkManager.join_game("127.0.0.1", TEST_PORT):
+			_fail("late-spectator initial client join")
+			return
+		if not await _wait_for(_match_is_ready, "late-spectator initial client readiness"):
+			return
+		if not await _wait_for(func():
+			for entry in NetworkManager.peers.values():
+				if str(entry.get("role", "")) == "spectator":
+					return true
+			return false
+		, "late spectator roster replication"):
+			return
+		print("ONLINE_LATE_SPECTATOR_PASS client")
+		if not await _wait_for(func(): return _late_spectator_complete, "late spectator client completion"):
+			return
+		await get_tree().create_timer(1.0).timeout
+		get_tree().quit()
+		return
+
+	if not NetworkManager.join_game("127.0.0.1", TEST_PORT):
+		_fail("late spectator join")
+		return
+	if not await _wait_for(func():
+		return NetworkManager.peers.has(NetworkManager.local_id()) \
+			and NetworkManager.lobby_in_progress \
+			and NetworkManager.local_match_role == "waiting"
+	, "late spectator waiting-room admission"):
+		return
+	get_tree().change_scene_to_file("res://game_setup.tscn")
+	if not await _wait_for(func(): return get_tree().current_scene != null and get_tree().current_scene.scene_file_path == "res://game_setup.tscn", "late spectator waiting room"):
+		return
+	# Give the waiting-room scene one complete frame to finish its ready-time UI
+	# wiring before sending the autoload RPC that changes scenes again.
+	await get_tree().process_frame
+	NetworkManager.request_spectate_current_match()
+	if not await _wait_for(func():
+		return get_tree().current_scene != null \
+			and get_tree().current_scene.scene_file_path == test_map \
+			and NetworkManager.local_match_role == "spectator"
+	, "late spectator map entry"):
+		return
+	if not await _wait_for(func():
+		var scene := get_tree().current_scene
+		var net_players := scene.get_node_or_null("NetPlayers") if scene != null else null
+		var manager := scene.get_node_or_null("RoundManager") if scene != null else null
+		return net_players != null and net_players.get_child_count() >= 2 \
+			and scene.get_node_or_null("LateSpectatorController") != null \
+			and manager != null and manager.online_actor_state.size() >= 2
+	, "late spectator replicated actors and camera"):
+		return
+	print("ONLINE_LATE_SPECTATOR_PASS spectator")
+	_late_spectator_test_complete_request.rpc_id(1)
+	await get_tree().create_timer(0.5).timeout
+	get_tree().quit()
+
+
+@rpc("any_peer", "reliable")
+func _late_spectator_test_complete_request() -> void:
+	if not multiplayer.is_server():
+		return
+	_late_spectator_complete = true
+	_late_spectator_test_complete_state.rpc()
+
+
+@rpc("authority", "call_local", "reliable")
+func _late_spectator_test_complete_state() -> void:
+	_late_spectator_complete = true
 
 func _run_join_timeout_smoke() -> void:
 	if role != "client":
@@ -115,15 +411,11 @@ func _run_lobby_smoke() -> void:
 		return get_tree().current_scene != null and get_tree().current_scene.scene_file_path == "res://game_setup.tscn"
 	, "online lobby scene"):
 		return
-	# Keep the real preview/UI/network roster alive long enough to catch render
-	# stalls, runaway config callbacks, or disconnects after a peer arrives.
-	await get_tree().create_timer(10.0).timeout
-	if get_tree().current_scene == null or get_tree().current_scene.scene_file_path != "res://game_setup.tscn":
-		_fail("online lobby changed scenes unexpectedly")
+	if not await _wait_for(func(): return NetworkManager.peers.size() >= 2, "accepted compatibility roster"):
 		return
-	if not NetworkManager.is_online():
-		_fail("online lobby lost its ENet session")
-		return
+	# Exchange the names before the extended live-UI soak. A cold headless map
+	# preview can render much more slowly than the other peer, and the soak is
+	# meant to observe that condition rather than make the faster peer abandon it.
 	var renamed := "Smoke Host" if role == "host" else "Smoke Client"
 	NetworkManager.set_local_name(renamed)
 	if not await _wait_for(func():
@@ -133,10 +425,80 @@ func _run_lobby_smoke() -> void:
 		return false
 	, "online lobby name update"):
 		return
+	# Character portraits are derived locally from the synchronized skin ID.
+	# Give each peer a distinct confirmed color, then prove both clients render
+	# both portraits rather than only updating their own local profile.
+	var smoke_skin := "brown" if role == "host" else "purple"
+	if not NetworkManager.set_local_skin_id(smoke_skin):
+		_fail("online lobby skin update was rejected")
+		return
+	if not await _wait_for(func():
+		var seen := {}
+		for entry in NetworkManager.peers.values():
+			seen[str(entry.get("skin_id", ""))] = true
+		return seen.has("brown") and seen.has("purple")
+	, "shared online skin IDs"):
+		return
+	if not await _wait_for(func():
+		var scene := get_tree().current_scene
+		if scene == null:
+			return false
+		var seen := {}
+		for portrait in scene.find_children("PlayerPortrait", "", true, false):
+			if portrait.visible and portrait.texture != null:
+				seen[str(portrait.skin_id)] = true
+		return seen.has("brown") and seen.has("purple")
+	, "shared online roster portraits"):
+		return
+	# Keep the real preview/UI/network roster alive long enough to catch render
+	# stalls, runaway config callbacks, or disconnects after a peer arrives.
+	await get_tree().create_timer(10.0).timeout
+	if get_tree().current_scene == null or get_tree().current_scene.scene_file_path != "res://game_setup.tscn":
+		_fail("online lobby changed scenes unexpectedly")
+		return
+	if not NetworkManager.is_online():
+		_fail("online lobby lost its ENet session")
+		return
+	# The lobby launch countdown is network-owned, appears as 3/2/1 on every
+	# peer, and can be cancelled by the host before any scene load begins.
+	if role == "host":
+		if not await _wait_for(func():
+			for entry in NetworkManager.peers.values():
+				if str(entry.get("name", "")) == "Smoke Client":
+					return true
+			return false
+		, "client name before countdown"):
+			return
+		NetworkManager.begin_prelaunch(test_map)
+		if not await _wait_for(func(): return NetworkManager._prelaunch_active and NetworkManager._prelaunch_seconds == 3, "host launch countdown three"):
+			return
+		if not await _wait_for(func(): return NetworkManager._prelaunch_active and NetworkManager._prelaunch_seconds <= 2, "host launch countdown advance"):
+			return
+		NetworkManager.cancel_prelaunch("Smoke cancellation")
+		if not await _wait_for(func(): return not NetworkManager._prelaunch_active, "host launch countdown cancellation"):
+			return
+	else:
+		if not await _wait_for(func(): return NetworkManager._prelaunch_active and NetworkManager._prelaunch_seconds > 0, "client launch countdown visibility"):
+			return
+		if not await _wait_for(func(): return not NetworkManager._prelaunch_active, "client launch countdown cancellation"):
+			return
 	print("ONLINE_LOBBY_PASS " + role)
 	if role == "host":
-		await get_tree().create_timer(2.0).timeout
+		# A headless peer can spend tens of wall-clock seconds compiling the live
+		# carousel previews. Keep the host alive until that client explicitly
+		# completes rather than guessing a safe grace period.
+		if not await _wait_for(func(): return _lobby_client_complete, "client lobby smoke completion"):
+			return
+	else:
+		_lobby_test_client_complete.rpc_id(1)
+		await get_tree().create_timer(0.5).timeout
 	get_tree().quit()
+
+
+@rpc("any_peer", "reliable")
+func _lobby_test_client_complete() -> void:
+	if multiplayer.is_server():
+		_lobby_client_complete = true
 
 func _run_named_lobby_smoke() -> void:
 	if role == "host":
@@ -362,14 +724,15 @@ func _run_host_checks() -> void:
 	rm.set_end_display_time = 0.4
 	rm.match_end_display_time = 0.6
 	var host_player = NetworkManager.find_net_player(1)
-	var client_ids := NetworkManager.peer_ids_sorted().filter(func(id): return int(id) != 1)
+	var client_peer_ids := NetworkManager.peer_ids_sorted().filter(func(id): return int(id) != 1)
 	var guns := get_tree().get_nodes_in_group("gun")
 	var melee = _active_melee()
-	if host_player == null or guns.is_empty() or melee == null or client_ids.is_empty():
+	if host_player == null or guns.is_empty() or melee == null or client_peer_ids.is_empty():
 		_fail("host player, client actor, gun or melee weapon missing")
 		return
 	var gun = guns[0]
-	var victim = NetworkManager.find_net_player(int(client_ids[0]))
+	var victim = NetworkManager.find_net_player(int(client_peer_ids[0]))
+	var client_actor_id := int(victim.actor_id) if victim != null else -1
 	if not await _verify_online_pause_menu(true):
 		return
 	# The server copy of a client-owned actor must keep ticking authoritative
@@ -404,6 +767,11 @@ func _run_host_checks() -> void:
 		_fail("online HUD did not bind to the host player")
 		return
 	var melee_weapons := get_tree().get_nodes_in_group("melee")
+	var melee_markers := get_tree().get_nodes_in_group("melee_spawn_point")
+	if melee_weapons.size() != melee_markers.size():
+		_fail("online round populated %d of %d melee markers" % [
+			melee_weapons.size(), melee_markers.size()])
+		return
 	var melee_ids: Dictionary = {}
 	for authored_melee in melee_weapons:
 		if not bool(authored_melee.get("online_active")) or authored_melee.get("weapon_data") == null:
@@ -432,7 +800,7 @@ func _run_host_checks() -> void:
 		_fail("authoritative melee pickup did not replicate locally")
 		return
 	victim.global_position = gun.global_position
-	gun._server_try_pickup(int(client_ids[0]), rm.online_round_epoch)
+	gun._server_try_pickup(client_actor_id, rm.online_round_epoch)
 	# Rendered clients may still be compiling newly introduced item shaders.
 	# Leave the client-owned gun visible for long enough that its observation
 	# loop can see both the held state and the subsequent disarm transition.
@@ -441,7 +809,7 @@ func _run_host_checks() -> void:
 		_fail("melee smoke setup could not give the client the gun")
 		return
 	host_player.global_position = victim.global_position + Vector3(1.0, 0.0, 0.0)
-	melee._server_try_swing(int(client_ids[0]), rm.online_round_epoch)
+	melee._server_try_swing(client_actor_id, rm.online_round_epoch)
 	melee._server_try_swing(1, rm.online_round_epoch + 1)
 	if melee.is_swinging:
 		_fail("wrong-owner or stale-round melee swing was accepted")
@@ -495,7 +863,7 @@ func _run_host_checks() -> void:
 	host_player.get_node("AimPivot/SpringArm3D").rotation.x = -1.2
 	victim.grant_bullet_immunity(5.0)
 	var smoke_shot_direction: Vector3 = host_player.get_aim_direction()
-	gun._server_try_fire(int(client_ids[0]), smoke_shot_direction, rm.online_round_epoch)
+	gun._server_try_fire(client_actor_id, smoke_shot_direction, rm.online_round_epoch)
 	gun._server_try_fire(1, smoke_shot_direction, rm.online_round_epoch + 1)
 	if not gun.can_fire:
 		_fail("wrong-owner or stale-round fire request was accepted")
@@ -532,7 +900,7 @@ func _run_host_checks() -> void:
 	if not next_round:
 		return
 	host_player = NetworkManager.find_net_player(1)
-	victim = NetworkManager.find_net_player(int(client_ids[0]))
+	victim = NetworkManager.find_net_player(int(client_peer_ids[0]))
 	gun = get_tree().get_nodes_in_group("gun")[0]
 	var host_score: Dictionary = rm.online_actor_state.get(host_player.actor_id, {})
 	if int(host_score.get("rounds", -1)) != 1 or not bool(host_score.get("alive", false)):
@@ -576,6 +944,16 @@ func _run_host_item_powerup_checks(rm, host_player, victim) -> bool:
 	var powerups := get_tree().get_nodes_in_group("online_powerup")
 	if items.is_empty() or powerups.is_empty():
 		_fail("Phase 2d marker pickups did not spawn")
+		return false
+	var item_markers := get_tree().get_nodes_in_group("item_spawn_point")
+	var powerup_markers := get_tree().get_nodes_in_group("powerup_spawn_point")
+	if items.size() != item_markers.size():
+		_fail("online round populated %d of %d item markers" % [
+			items.size(), item_markers.size()])
+		return false
+	if powerups.size() != powerup_markers.size():
+		_fail("online round populated %d of %d powerup markers" % [
+			powerups.size(), powerup_markers.size()])
 		return false
 	var original = items[0]
 	var test_item_id := int(original.online_item_id)
@@ -632,24 +1010,24 @@ func _run_host_item_powerup_checks(rm, host_player, victim) -> bool:
 		return false
 	rm.server_online_boomerang_hit(test_item_id, int(host_player.actor_id), int(victim.actor_id), rm.online_round_epoch)
 	await get_tree().create_timer(0.2).timeout
-	if item.visible or item.is_in_flight or victim.knockback_timer <= 0.0:
+	if (is_instance_valid(item) and (item.visible or item.is_in_flight)) \
+			or victim.knockback_timer <= 0.0:
 		_fail("online boomerang hit/effect/consume did not replicate")
 		return false
 	var loose_items := get_tree().get_nodes_in_group("online_item").filter(func(candidate): return int(candidate.online_item_id) != test_item_id and candidate.visible and not candidate.is_held)
 	if not loose_items.is_empty():
-		rm._net_respawn_online_powerup.rpc(int(powerup.online_powerup_id), "magnet_hands")
+		rm._net_respawn_online_powerup.rpc(int(powerup.online_powerup_id), "reach")
 		await get_tree().create_timer(0.15).timeout
 		host_player.global_position = powerup.global_position
 		rm.server_collect_online_powerup(int(powerup.online_powerup_id), int(host_player.actor_id), rm.online_round_epoch)
 		await get_tree().create_timer(0.15).timeout
 		var loose_item = loose_items[0]
-		var magnet_start: Vector3 = host_player.global_position + Vector3(3.0, 0.0, 0.0)
-		rm.broadcast_online_item_move(int(loose_item.online_item_id), magnet_start)
-		var before_distance: float = loose_item.global_position.distance_to(host_player.global_position)
-		rm._server_online_magnet_pull(1, int(host_player.actor_id))
-		await get_tree().process_frame
-		if host_player.magnet_timer <= 0.0 or loose_item.global_position.distance_to(host_player.global_position) >= before_distance:
-			_fail("Magnet Hands did not move a loose item host-authoritatively")
+		var reach_pickup_position: Vector3 = host_player.global_position + Vector3(3.15, 0.0, 0.0)
+		rm.broadcast_online_item_move(int(loose_item.online_item_id), reach_pickup_position)
+		loose_item._server_try_pickup(1, rm.online_round_epoch)
+		await get_tree().create_timer(0.1).timeout
+		if host_player.reach_timer <= 0.0 or not loose_item.is_held:
+			_fail("Reach did not authorize an extended host-resolved pickup")
 			return false
 	return true
 
@@ -734,7 +1112,7 @@ func _verify_online_pause_menu(expect_return_to_lobby: bool) -> bool:
 	if pause_menu == null:
 		_fail("online pause menu was not created")
 		return false
-	var found_return_to_lobby := _has_button_text(pause_menu, "Return to Lobby")
+	var found_return_to_lobby := _has_action_id(pause_menu, "return_lobby")
 	if found_return_to_lobby != expect_return_to_lobby:
 		_fail("online pause lobby ownership controls were incorrect")
 		return false
@@ -746,11 +1124,11 @@ func _verify_online_pause_menu(expect_return_to_lobby: bool) -> bool:
 	PauseManager.resume()
 	return true
 
-func _has_button_text(node: Node, button_text: String) -> bool:
-	if node is Button and str(node.text).to_lower().contains(button_text.to_lower()):
+func _has_action_id(node: Node, action_id: String) -> bool:
+	if node is Button and str(node.get_meta("action_id", "")) == action_id:
 		return true
 	for child in node.get_children():
-		if _has_button_text(child, button_text):
+		if _has_action_id(child, action_id):
 			return true
 	return false
 

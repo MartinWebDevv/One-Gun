@@ -1,0 +1,35 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://double_jump_shoes_item.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/springShoes/SpringShoes.tscn" id="2_model"]
+
+[sub_resource type="BoxShape3D" id="BoxShape_pickup"]
+size = Vector3(0.85, 0.48, 0.8)
+
+[sub_resource type="SphereShape3D" id="SphereShape_pickup"]
+radius = 1.3
+
+[node name="DoubleJumpShoes" type="RigidBody3D"]
+collision_layer = 4
+script = ExtResource("1_script")
+item_type = "double_jump_shoes"
+respawn_after_deploy_time = 8.0
+HELD_SCALE = 0.42
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.24, 0)
+shape = SubResource("BoxShape_pickup")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+transform = Transform3D(0.035, 0, 0, 0, 0.035, 0, 0, 0, 0.035, 0, 0, 0)
+
+[node name="Area3D" type="Area3D" parent="."]
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("SphereShape_pickup")
+
+[node name="PickupLabel" type="Label3D" parent="."]
+position = Vector3(0, 0.95, 0)
+billboard = 1
+text = "[F] Pick Up Double Jump Shoes"

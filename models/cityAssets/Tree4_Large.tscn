@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/Tree4.glb" id="1_visual"]
+
+[node name="Tree4_Large" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+position = Vector3(0, 0.0075, 0)
+scale = Vector3(1.5, 1.5, 1.5)

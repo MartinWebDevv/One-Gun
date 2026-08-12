@@ -7,9 +7,7 @@ extends Node3D
 # No game logic — purely visual.
 # ============================================================
 
-const PLAYER_SCENE   = "res://player.tscn"
-const ANIM_SOURCE    = "res://models/playerAnimations/Dance.glb"
-const IDLE_IDX       = 0   # Layer0 = idle
+const VISUAL_SCENE = preload("res://models/player_v2/player_v2_visual.tscn")
 
 # Camera pan settings
 const PAN_SPEED      = 0.04   # radians per second
@@ -37,39 +35,24 @@ func _spawn_characters():
 		Vector3( 3.0, 0.0,  2.0),
 	]
 
-	var packed = load(ANIM_SOURCE)
-	if packed == null:
-		return
-
 	for i in positions.size():
-		# Instantiate the animation GLB as a visual-only character stand-in.
-		var char_instance = packed.instantiate()
+		var char_instance = VISUAL_SCENE.instantiate()
 		char_instance.position = positions[i]
 		# Face roughly toward camera.
 		char_instance.rotation.y = PI
+		char_instance.set("skin_id", str(PlayerPrefs.get_setting("character_skin_id")) \
+			if i == 1 else PlayerSkinRegistry.skin_id_at(i * 4))
+		char_instance.set("build_animation_library", false)
 		add_child(char_instance)
 
-		var anim_player = char_instance.find_child("AnimationPlayer", true, false)
+		var anim_player = char_instance.ensure_animations(["idle"])
 		if anim_player == null:
 			_characters.append(null)
 			continue
 
-		# Add idle animation to default library.
-		if not anim_player.has_animation_library(""):
-			anim_player.add_animation_library("", AnimationLibrary.new())
-		var lib = anim_player.get_animation_library("")
-
-		var source = packed.instantiate()
-		var source_ap = source.find_child("AnimationPlayer", true, false)
-		if source_ap != null:
-			var anim_list = source_ap.get_animation_list()
-			if anim_list.size() > IDLE_IDX:
-				var anim = source_ap.get_animation(anim_list[IDLE_IDX]).duplicate()
-				anim.loop_mode = Animation.LOOP_LINEAR
-				if not lib.has_animation("idle"):
-					lib.add_animation("idle", anim)
-				anim_player.play("idle")
-		source.queue_free()
+		if anim_player.has_animation("idle"):
+			anim_player.play("idle")
+			anim_player.advance(0.0)
 		_characters.append(char_instance)
 
 func _process(delta):

@@ -18,6 +18,7 @@ extends Control
 # existing consumers (menu_map_cycler, lobby_map_preview) keep reading
 # game_setup.MAPS unchanged.
 const MAPS = preload("res://map_registry.gd").MAPS
+const MatchLimitsData = preload("res://match_limits.gd")
 const LOBBY_SETTINGS_SLIDEOUT = preload("res://UI/lobby_settings_slideout.gd")
 const CONFIRM_BUTTON = preload("res://UI/components/one_gun_confirm_button.gd")
 
@@ -25,7 +26,8 @@ const CONFIRM_BUTTON = preload("res://UI/components/one_gun_confirm_button.gd")
 enum MapSelectMode { VOTE, SPECIFIC, RANDOM }
 
 const RANDOM_ITEM_ID := 1000
-const LOCAL_SLOT_CAP := 10
+const RANDOM_MAP_SENTINEL := "__random_map_pending__"
+const LOCAL_SLOT_CAP := MatchLimitsData.MAX_TOTAL_ACTORS
 const ONLINE_SLOT_CAP := NetworkManager.MAX_PEERS
 
 var map_select_mode: int = MapSelectMode.SPECIFIC
@@ -39,6 +41,12 @@ var _map_dropdown: OptionButton
 var _mode_dropdown: OptionButton
 var _bot_settings_button: OneGunButton
 var _match_settings_button: OneGunButton
+var _character_customization_button: OneGunButton
+var _player_settings_button: OneGunButton
+var _playpen_button: OneGunButton
+var _one_of_us_preference_panel: OneGunCabinet
+var _one_of_us_resist_buttons: Array[OneGunButton] = []
+var _one_of_us_let_in_buttons: Array[OneGunButton] = []
 var _back_button: OneGunButton
 var _play_button: OneGunButton
 var _banner_name: Label
@@ -53,6 +61,8 @@ var _thumbnails := {}           # map index -> ImageTexture captured from live p
 var _settings_slideout = null
 var _match_settings_popup: PopupPanel # legacy builder retained only for old saved scene compatibility
 var _settings_layer: CanvasLayer
+var _character_customization_overlay: Control
+var _player_settings_overlay: Control
 var _settings_target_position := Vector2.ZERO
 var _settings_tween: Tween
 var _left_cabinet: OneGunCabinet
@@ -70,9 +80,9 @@ const LAYOUT_GAP := 20.0
 const COMPACT_MARGIN := 16.0
 const COMPACT_GAP := 12.0
 const LEFT_WIDTH := 360.0
-const RIGHT_WIDTH := 340.0
+const RIGHT_WIDTH := 440.0
 const COMPACT_LEFT_WIDTH := 310.0
-const COMPACT_RIGHT_WIDTH := 330.0
+const COMPACT_RIGHT_WIDTH := 380.0
 const TOP_STRIP_HEIGHT := 190.0
 const CAROUSEL_HEIGHT := 148.0
 const PLAY_HEIGHT := 84.0
@@ -92,7 +102,8 @@ func _ready():
 	_configure_focus_navigation.call_deferred()
 	_open_capture_state.call_deferred()
 	var capture_state := OS.get_environment("ONEGUN_UI_CAPTURE_STATE")
-	var capture_name := capture_state if capture_state in ["bot_settings", "match_settings", "lobby_host", "lobby_guest"] else "local_lobby"
+	var capture_name := capture_state if capture_state in ["bot_settings", "match_settings",
+		"lobby_host", "lobby_guest", "lobby_customization", "lobby_one_of_us"] else "local_lobby"
 	UICapture.maybe_capture(self, capture_name, 2.5)
 
 
@@ -106,16 +117,12 @@ func _is_net() -> bool:
 func _setup_online_mode():
 	if not _is_net():
 		return
-	# Phase 2b scoring is free-for-all. Online team assignment does not exist
-	# yet, so keep team rules visibly unavailable instead of silently scoring a
-	# team-configured lobby as FFA.
-	GameConfig.teams_enabled = false
-	GameConfig.friendly_fire_enabled = false
 	NetworkManager.lobby_changed.connect(_on_online_lobby_changed)
 	NetworkManager.lobby_readiness_changed.connect(_on_lobby_readiness_changed)
 	NetworkManager.lobby_notice.connect(_on_lobby_notice)
 	NetworkManager.match_config_received.connect(_on_net_config_synced)
 	NetworkManager.server_disconnected.connect(_on_net_host_left)
+	NetworkManager.prelaunch_countdown_changed.connect(_on_prelaunch_countdown_changed)
 	if NetworkManager.is_host():
 		_net_broadcast_config()   # seed clients with the starting config/map
 	else:
@@ -128,6 +135,11 @@ func _max_online_bots() -> int:
 
 func _local_human_count() -> int:
 	return 2 if GameConfig.split_screen_enabled else 1
+
+
+func _planned_actor_count() -> int:
+	var human_count := NetworkManager.peers.size() if _is_net() else _local_human_count()
+	return human_count + GameConfig.bot_configs.size()
 
 
 func _clamp_bot_count_to_capacity() -> void:
@@ -146,8 +158,9 @@ func _on_online_lobby_changed() -> void:
 		_net_broadcast_config()
 	_refresh_roster()
 	_refresh_online_session_ui()
-	_update_lobby_action()
+	_update_map_info()
 	_reset_force_start_confirmation()
+	_update_playpen_availability()
 
 
 func _on_lobby_readiness_changed() -> void:
@@ -163,11 +176,27 @@ func _on_lobby_notice(message: String) -> void:
 
 func _net_broadcast_config():
 	if _is_net() and NetworkManager.is_host():
-		NetworkManager.broadcast_match_config(GameConfig.snapshot_for_preset(), _resolve_map_scene_path())
+		var sync_path := RANDOM_MAP_SENTINEL if map_select_mode == MapSelectMode.RANDOM \
+			else _resolve_map_scene_path()
+		NetworkManager.broadcast_match_config(GameConfig.snapshot_for_network(), sync_path)
 
 
 func _on_net_config_synced():
+	if _mode_dropdown != null:
+		var mode_index := GameConfig.GAME_MODES.find(GameConfig.game_mode)
+		_mode_dropdown.select(maxi(mode_index, 0))
+	_refresh_one_of_us_preference_panel()
 	# Client: reflect the host's map choice in the preview + picker + carousel.
+	if NetworkManager.pending_map_path == RANDOM_MAP_SENTINEL:
+		map_select_mode = MapSelectMode.RANDOM
+		if _map_dropdown != null:
+			_map_dropdown.select(MAPS.size())
+		if _map_preview != null:
+			_map_preview.apply(MapSelectMode.RANDOM, selected_map_index)
+		_sync_carousel()
+		_update_map_info()
+		_refresh_roster()
+		return
 	var index := MapRegistry.find_index_by_path(NetworkManager.pending_map_path)
 	if index >= 0:
 		selected_map_index = index
@@ -184,7 +213,7 @@ func _on_net_config_synced():
 func _apply_client_lock():
 	# Clients can't touch host-owned lobby state — host configures for everyone.
 	for control in [_map_dropdown, _mode_dropdown, _bot_settings_button,
-			_match_settings_button, _carousel_prev, _carousel_next]:
+			_carousel_prev, _carousel_next]:
 		if control != null:
 			control.disabled = true
 	for card in _map_cards:
@@ -229,6 +258,18 @@ func _on_preview_map_shown(index: int) -> void:
 # UI construction
 # ============================================================
 func _build_lobby_ui() -> void:
+	# CanvasLayer layer numbers are absolute, even when one CanvasLayer is
+	# nested beneath another. The host returns from The Playpen into a lobby
+	# overlay on layer 150, so a hard-coded modal layer of 20 would place
+	# Settings and Character Customization behind the visible lobby.
+	var containing_canvas_layer := 0
+	var ancestor := get_parent()
+	while ancestor != null:
+		if ancestor is CanvasLayer:
+			containing_canvas_layer = (ancestor as CanvasLayer).layer
+			break
+		ancestor = ancestor.get_parent()
+
 	_build_left_cabinet()
 	_build_top_strip()
 	_build_roster_panel()
@@ -236,7 +277,7 @@ func _build_lobby_ui() -> void:
 	_build_play_action()
 	_settings_layer = CanvasLayer.new()
 	_settings_layer.name = "SettingsSlideoutLayer"
-	_settings_layer.layer = 20
+	_settings_layer.layer = containing_canvas_layer + 20
 	add_child(_settings_layer)
 
 
@@ -292,32 +333,31 @@ func _build_left_cabinet() -> void:
 	column.add_child(_map_dropdown)
 
 	column.add_child(OneGunUI.make_label("GAME MODE", OneGunUI.TEXT_XS, "muted", true))
-	_mode_dropdown = OneGunUI.make_dropdown(PackedStringArray(["ONE GUN"]))
-	_mode_dropdown.disabled = true   # single mode today; honest lock, not decoration
-	_mode_dropdown.tooltip_text = "One Gun is the only game mode for now."
+	_mode_dropdown = OneGunUI.make_dropdown(PackedStringArray(["ONE GUN", "ALL GUN", "ONE OF US"]))
+	_mode_dropdown.select(maxi(GameConfig.GAME_MODES.find(GameConfig.game_mode), 0))
+	_mode_dropdown.item_selected.connect(_on_mode_dropdown_selected)
+	_mode_dropdown.tooltip_text = "Choose the rules used for this match."
 	column.add_child(_mode_dropdown)
+	_build_one_of_us_preference_panel(column)
 
-	# Purple SETTINGS badge (locked: reads SETTINGS, not BOTS).
-	var badge := PanelContainer.new()
-	var badge_style := OneGunUI.style_box(
-		OneGunUI.color("purple").darkened(0.3), OneGunUI.color("purple").lightened(0.05),
-		OneGunUI.RADIUS_INPUT, OneGunUI.BORDER_THIN)
-	badge_style.content_margin_left = 12
-	badge_style.content_margin_right = 12
-	badge_style.content_margin_top = 4
-	badge_style.content_margin_bottom = 4
-	badge.add_theme_stylebox_override("panel", badge_style)
-	badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	badge.add_child(OneGunUI.make_label("SETTINGS", OneGunUI.TEXT_S, "text_bright", true))
-	column.add_child(badge)
-
-	_bot_settings_button = _make_cabinet_button("BOT SETTINGS")
-	_bot_settings_button.pressed.connect(_on_bot_settings_button_pressed)
-	column.add_child(_bot_settings_button)
-
-	_match_settings_button = _make_cabinet_button("MATCH SETTINGS")
+	_bot_settings_button = null
+	_match_settings_button = _make_cabinet_button("SETTINGS")
 	_match_settings_button.pressed.connect(_on_match_settings_button_pressed)
 	column.add_child(_match_settings_button)
+	_character_customization_button = _make_cabinet_button("CHARACTER CUSTOMIZATION")
+
+	_character_customization_button.pressed.connect(_on_character_customization_pressed)
+	column.add_child(_character_customization_button)
+
+	_player_settings_button = _make_cabinet_button("PLAYER SETTINGS")
+	_player_settings_button.pressed.connect(_on_player_settings_pressed)
+	column.add_child(_player_settings_button)
+	if _is_net():
+		_playpen_button = _make_cabinet_button("THE PLAYPEN")
+		_playpen_button.tooltip_text = "Enter the online practice room."
+		_playpen_button.pressed.connect(_on_playpen_pressed)
+		column.add_child(_playpen_button)
+		_update_playpen_availability()
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -406,6 +446,74 @@ func _on_privacy_selected(index: int) -> void:
 	NetworkManager.set_lobby_privacy("private" if index == 1 else "public")
 
 
+func _build_one_of_us_preference_panel(parent: VBoxContainer) -> void:
+	_one_of_us_preference_panel = OneGunCabinet.new()
+	_one_of_us_preference_panel.name = "OneOfUsPreference"
+	_one_of_us_preference_panel.variant = OneGunCabinet.Variant.SECTION
+	_one_of_us_preference_panel.content_padding = OneGunUI.SPACE_S
+	parent.add_child(_one_of_us_preference_panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_XS)
+	_one_of_us_preference_panel.get_content().add_child(column)
+	column.add_child(OneGunUI.make_heading("HEAR THE CALL?", OneGunUI.TEXT_S, "gold"))
+	var description := OneGunUI.make_label(
+		"Privately volunteer for the first THEM draw.", OneGunUI.TEXT_XS, "muted")
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(description)
+	_one_of_us_resist_buttons.clear()
+	_one_of_us_let_in_buttons.clear()
+	var player_rows := 1 if _is_net() else _local_human_count()
+	for player_index in player_rows:
+		if player_rows > 1:
+			column.add_child(OneGunUI.make_label(
+				"PLAYER %d" % (player_index + 1), OneGunUI.TEXT_XS, "cyan", true))
+		var choices := HBoxContainer.new()
+		choices.add_theme_constant_override("separation", OneGunUI.SPACE_XS)
+		column.add_child(choices)
+		var resist := OneGunButton.new()
+		resist.text = "RESIST"
+		resist.custom_minimum_size.y = 36.0
+		resist.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		resist.tooltip_text = "Do not volunteer; random fallback still applies if nobody volunteers."
+		resist.pressed.connect(_set_one_of_us_preference.bind(player_index, false))
+		choices.add_child(resist)
+		_one_of_us_resist_buttons.append(resist)
+		var let_in := OneGunButton.new()
+		let_in.text = "LET IT IN"
+		let_in.custom_minimum_size.y = 36.0
+		let_in.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		let_in.tooltip_text = "Privately join the pool for first THEM."
+		let_in.pressed.connect(_set_one_of_us_preference.bind(player_index, true))
+		choices.add_child(let_in)
+		_one_of_us_let_in_buttons.append(let_in)
+	_refresh_one_of_us_preference_panel()
+
+
+func _set_one_of_us_preference(player_index: int, volunteer: bool) -> void:
+	if NetworkManager._prelaunch_active or NetworkManager.lobby_in_progress:
+		return
+	if _is_net():
+		NetworkManager.set_one_of_us_volunteer(volunteer)
+	else:
+		while GameConfig.local_one_of_us_volunteers.size() < 2:
+			GameConfig.local_one_of_us_volunteers.append(false)
+		GameConfig.local_one_of_us_volunteers[player_index] = volunteer
+	_refresh_one_of_us_preference_panel()
+
+
+func _refresh_one_of_us_preference_panel() -> void:
+	if _one_of_us_preference_panel == null:
+		return
+	_one_of_us_preference_panel.visible = GameConfig.game_mode == GameConfig.MODE_ONE_OF_US
+	for player_index in _one_of_us_resist_buttons.size():
+		var volunteer := NetworkManager.is_one_of_us_volunteer() if _is_net() \
+			else bool(GameConfig.local_one_of_us_volunteers[player_index])
+		_one_of_us_resist_buttons[player_index].variant = "navy" if volunteer else "blue"
+		_one_of_us_let_in_buttons[player_index].variant = "purple" if volunteer else "navy"
+		var locked := NetworkManager._prelaunch_active or NetworkManager.lobby_in_progress
+		_one_of_us_resist_buttons[player_index].disabled = locked
+		_one_of_us_let_in_buttons[player_index].disabled = locked
+
 func _make_cabinet_button(text: String) -> OneGunButton:
 	var button := OneGunButton.new()
 	button.variant = "navy"
@@ -476,6 +584,7 @@ func _build_roster_panel() -> void:
 	_roster_cabinet.name = "RosterCabinet"
 	_roster_cabinet.variant = OneGunCabinet.Variant.CABINET
 	_roster_cabinet.content_padding = OneGunUI.SPACE_M
+	_roster_cabinet.clip_contents = true
 	_roster_cabinet.anchor_left = 1.0
 	_roster_cabinet.anchor_top = 0.0
 	_roster_cabinet.anchor_right = 1.0
@@ -575,6 +684,7 @@ func _make_chevron_button(icon_kind: OneGunIcon.Kind) -> OneGunButton:
 func _build_play_action() -> void:
 	_play_button = CONFIRM_BUTTON.new() if _is_net() and NetworkManager.is_host() else OneGunButton.new()
 	_play_button.name = "PlayButton"
+	_play_button.set_meta("action_id", "start_match" if _is_net() and NetworkManager.is_host() else "ready")
 	_play_button.variant = "gold"
 	_play_button.text = "PLAY"
 	_play_button.font_size = 30
@@ -623,7 +733,7 @@ func _apply_responsive_layout() -> void:
 	if _settings_slideout != null and is_instance_valid(_settings_slideout):
 		var slideout_left := left_edge + left_width - 10.0
 		var slideout_right := center_right
-		var slideout_width := clampf(slideout_right - slideout_left, 480.0, 640.0)
+		var slideout_width := clampf(slideout_right - slideout_left, 540.0, 780.0)
 		_settings_slideout.anchor_left = 0.0
 		_settings_slideout.anchor_top = 0.0
 		_settings_slideout.anchor_right = 0.0
@@ -667,8 +777,9 @@ func _apply_responsive_layout() -> void:
 
 
 func _configure_focus_navigation() -> void:
-	var left_controls: Array = [_map_dropdown, _bot_settings_button,
-			_match_settings_button, _back_button]
+	var left_controls: Array = [_map_dropdown, _mode_dropdown, _match_settings_button,
+			_character_customization_button, _player_settings_button, _back_button]
+	left_controls = left_controls.filter(func(control): return control != null)
 	OneGunUI.chain_focus_vertical(left_controls)
 	var carousel_controls: Array = [_carousel_prev]
 	carousel_controls.append_array(_map_cards)
@@ -706,6 +817,12 @@ func _on_map_dropdown_selected(item_index: int) -> void:
 		_map_preview.apply(map_select_mode, selected_map_index)
 	_sync_carousel()
 	_update_map_info()
+
+func _on_mode_dropdown_selected(item_index: int) -> void:
+	if item_index < 0 or item_index >= GameConfig.GAME_MODES.size():
+		return
+	GameConfig.game_mode = str(GameConfig.GAME_MODES[item_index])
+	_refresh_one_of_us_preference_panel()
 	_on_settings_changed()
 
 
@@ -749,9 +866,10 @@ func _update_map_info() -> void:
 		return
 	if map_select_mode == MapSelectMode.RANDOM:
 		_banner_name.text = "RANDOM ROTATION"
-		_banner_desc.text = "A different battlefield every match — previews cycle below."
+		_banner_desc.text = "The battlefield stays hidden until the match begins."
 		for key in _info_labels:
 			_info_labels[key].text = "—"
+		_apply_map_capacity_warning_to_banner()
 		_update_play_availability()
 		return
 	selected_map_index = clampi(selected_map_index, 0, MAPS.size() - 1)
@@ -765,25 +883,75 @@ func _update_map_info() -> void:
 	if bool(map_data.get("hazards", false)):
 		hazards_text = "AVAILABLE" if GameConfig.hazards_enabled else "DISABLED"
 	_info_labels["hazards"].text = hazards_text
+	_apply_map_capacity_warning_to_banner()
 	_update_play_availability()
 
 
+func _apply_map_capacity_warning_to_banner() -> void:
+	var unavailable_reason := _selection_unavailable_reason()
+	if unavailable_reason != "" and _banner_desc != null:
+		_banner_desc.text = unavailable_reason
+
+
 func _selected_map_available() -> bool:
+	return _selection_unavailable_reason() == ""
+
+
+func _selection_unavailable_reason() -> String:
 	if MAPS.is_empty():
-		return false
+		return "No playable maps are registered."
+	var team_error := _team_roster_error()
+	if team_error != "":
+		return team_error
+	var actor_count := _planned_actor_count()
 	if map_select_mode == MapSelectMode.RANDOM:
-		return not MapRegistry.available_indices().is_empty()
-	return MapRegistry.is_scene_available(selected_map_index)
+		if MapRegistry.available_indices().is_empty():
+			return "No playable maps are currently available."
+		if MapRegistry.available_indices(actor_count).is_empty():
+			return "No available map supports the current %d-player roster." % actor_count
+		return ""
+	if not MapRegistry.is_scene_available(selected_map_index):
+		return "The selected map is unavailable."
+	var capacity := MapRegistry.get_player_capacity(selected_map_index)
+	if actor_count > capacity:
+		var map_name := str(MAPS[selected_map_index].get("name", "Selected map"))
+		return "%s supports %d players, but the roster has %d. Remove players or bots, or choose another map." \
+			% [map_name, capacity, actor_count]
+	return ""
+
+
+func _team_roster_error() -> String:
+	if not GameConfig.teams_enabled:
+		return ""
+	var represented: Dictionary = {}
+	if _is_net():
+		for peer_id in NetworkManager.peers:
+			if str(NetworkManager.peers[peer_id].get("role", "lobby")) \
+					in ["lobby", "playpen", "playpen_loading", "playpen_hosting"]:
+				represented[int(NetworkManager.peers[peer_id].get("team_id", -1))] = true
+	else:
+		for index in _local_human_count():
+			represented[int(GameConfig.local_player_teams[index])] = true
+	for config in GameConfig.bot_configs:
+		represented[int(config.get("team_id", -1))] = true
+	represented.erase(-1)
+	if represented.size() < 2:
+		return "Team matches require players on at least two represented teams."
+	return ""
 
 
 func _update_play_availability() -> void:
 	if _play_button == null:
 		return
-	if _is_net() and not NetworkManager.is_host():
-		_play_button.disabled = false
+	if _is_net():
+		if NetworkManager.is_host():
+			_update_lobby_action()
+		else:
+			_play_button.disabled = false
 		return
-	_play_button.disabled = not _selected_map_available()
-	_play_button.tooltip_text = "" if not _play_button.disabled else "No playable map is available for this selection."
+	var unavailable_reason := _selection_unavailable_reason()
+	_play_button.disabled = unavailable_reason != ""
+	_play_button.tooltip_text = unavailable_reason
 
 
 func _resolve_map_scene_path() -> String:
@@ -791,7 +959,7 @@ func _resolve_map_scene_path() -> String:
 		return ""
 	match map_select_mode:
 		MapSelectMode.RANDOM:
-			var available := MapRegistry.available_indices()
+			var available := MapRegistry.available_indices(_planned_actor_count())
 			if available.is_empty():
 				return ""
 			return str(MAPS[available.pick_random()].get("scene_path", ""))
@@ -827,7 +995,15 @@ func _refresh_roster() -> void:
 			var ready_state := OneGunRosterRow.ReadyState.NONE
 			if id != 1:
 				ready_state = OneGunRosterRow.ReadyState.READY if NetworkManager.is_peer_lobby_ready(id) else OneGunRosterRow.ReadyState.NOT_READY
-			row.set_human(peer_name, id == 1, is_me, ready_state)
+			row.set_human(peer_name, id == 1, is_me, ready_state,
+				NetworkManager.peer_skin_id(id))
+			if GameConfig.teams_enabled:
+				var team_id := int(NetworkManager.peers[id].get("team_id", 0))
+				var can_edit_team := NetworkManager.is_host() or is_me
+				row.add_team_chip(team_id, _is_team_uneven(team_id), not can_edit_team)
+				if can_edit_team:
+					var roster_actor_id := int(NetworkManager.peers[id].get("actor_id", -1))
+					row.add_trailing(_make_team_dropdown(team_id, _on_online_roster_team_selected.bind(roster_actor_id)))
 			if is_me:
 				row.enable_name_editing(_on_edit_online_name)
 				row.add_trailing(_make_edit_name_button(_on_edit_online_name))
@@ -838,13 +1014,26 @@ func _refresh_roster() -> void:
 		_roster_title.text = "LOCAL ROSTER"
 		var p1 := OneGunRosterRow.new()
 		_roster_list.add_child(p1)
-		p1.set_human(str(PlayerPrefs.get_setting("player_name")), true, false)
+		p1.set_human(str(PlayerPrefs.get_setting("player_name")), true, false,
+			OneGunRosterRow.ReadyState.NONE,
+			str(PlayerPrefs.get_setting("character_skin_id")))
+		if GameConfig.teams_enabled:
+			p1.add_team_chip(int(GameConfig.local_player_teams[0]), _is_team_uneven(int(GameConfig.local_player_teams[0])), false)
+			p1.add_trailing(_make_team_dropdown(int(GameConfig.local_player_teams[0]), func(value: int):
+				GameConfig.local_player_teams[0] = value
+				_on_settings_changed()))
 		p1.add_trailing(_make_edit_name_button(_on_edit_player1_name))
 		used += 1
 		if GameConfig.split_screen_enabled:
 			var p2 := OneGunRosterRow.new()
 			_roster_list.add_child(p2)
-			p2.set_human(str(GameConfig.player2_name), false, false)
+			p2.set_human(str(GameConfig.player2_name), false, false,
+				OneGunRosterRow.ReadyState.NONE, str(GameConfig.player2_skin_id))
+			if GameConfig.teams_enabled:
+				p2.add_team_chip(int(GameConfig.local_player_teams[1]), _is_team_uneven(int(GameConfig.local_player_teams[1])), false)
+				p2.add_trailing(_make_team_dropdown(int(GameConfig.local_player_teams[1]), func(value: int):
+					GameConfig.local_player_teams[1] = value
+					_on_settings_changed()))
 			p2.add_trailing(_make_edit_name_button(_on_edit_player2_name))
 			used += 1
 
@@ -855,6 +1044,12 @@ func _refresh_roster() -> void:
 		_roster_list.add_child(bot_row)
 		var difficulty := str(GameConfig.bot_configs[i].get("difficulty", "easy"))
 		bot_row.set_bot("Bot %d" % (i + 1), difficulty, _is_net())
+		if GameConfig.teams_enabled:
+			var bot_team := int(GameConfig.bot_configs[i].get("team_id", 0))
+			var can_edit_bot_team := not _is_net() or NetworkManager.is_host()
+			bot_row.add_team_chip(bot_team, _is_team_uneven(bot_team), not can_edit_bot_team)
+			if can_edit_bot_team:
+				bot_row.add_trailing(_make_team_dropdown(bot_team, _on_bot_team_selected.bind(i)))
 		used += 1
 
 	for slot in range(used + 1, slot_cap + 1):
@@ -880,6 +1075,56 @@ func _make_edit_name_button(callback: Callable) -> OneGunButton:
 	button.add_child(edit_icon)
 	button.pressed.connect(callback)
 	return button
+
+
+func _make_team_dropdown(team_id: int, callback: Callable) -> OptionButton:
+	var dropdown := OneGunUI.make_dropdown()
+	dropdown.custom_minimum_size = Vector2(76, 36)
+	for index in GameConfig.team_count:
+		dropdown.add_item("T%d" % (index + 1), index)
+	dropdown.select(clampi(team_id, 0, GameConfig.team_count - 1))
+	dropdown.item_selected.connect(callback)
+	return dropdown
+
+
+func _on_online_roster_team_selected(value: int, actor_id: int) -> void:
+	if NetworkManager.is_host():
+		NetworkManager.set_actor_team(actor_id, value)
+	else:
+		NetworkManager.request_local_team(value)
+
+
+func _on_bot_team_selected(value: int, bot_index: int) -> void:
+	if bot_index < 0 or bot_index >= GameConfig.bot_configs.size():
+		return
+	GameConfig.bot_configs[bot_index]["team_id"] = value
+	_on_settings_changed()
+
+
+func _team_counts() -> Dictionary:
+	var counts := {}
+	if _is_net():
+		for peer_id in NetworkManager.peers:
+			if str(NetworkManager.peers[peer_id].get("role", "lobby")) \
+					in ["lobby", "playpen", "playpen_loading", "playpen_hosting"]:
+				var team := int(NetworkManager.peers[peer_id].get("team_id", 0))
+				counts[team] = int(counts.get(team, 0)) + 1
+	else:
+		for index in _local_human_count():
+			var team := int(GameConfig.local_player_teams[index])
+			counts[team] = int(counts.get(team, 0)) + 1
+	for config in GameConfig.bot_configs:
+		var team := int(config.get("team_id", 0))
+		counts[team] = int(counts.get(team, 0)) + 1
+	return counts
+
+
+func _is_team_uneven(team_id: int) -> bool:
+	var counts := _team_counts()
+	if counts.size() < 2:
+		return false
+	var sizes := counts.values()
+	return int(sizes.min()) != int(sizes.max()) and int(counts.get(team_id, 0)) != int(sizes.max())
 
 
 func _make_kick_button(peer_id: int, peer_name: String) -> OneGunConfirmButton:
@@ -916,26 +1161,71 @@ func _on_match_settings_button_pressed() -> void:
 	_open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH)
 
 
-func _open_settings_slideout(kind: int) -> void:
-	if _is_net() and not NetworkManager.is_host():
+func _on_character_customization_pressed() -> void:
+	if _character_customization_overlay != null:
 		return
 	if _settings_slideout != null and is_instance_valid(_settings_slideout):
-		if _settings_slideout.panel_kind == kind:
-			_close_settings_slideout()
-			return
-		# Switching panels follows the same contract as Cancel: pending values are
-		# discarded, never silently committed.
 		_discard_settings_slideout_immediately()
+	_character_customization_overlay = preload(
+		"res://UI/character_customization_overlay.gd").new()
+	_character_customization_overlay.configure(_is_net(), _local_human_count())
+	_character_customization_overlay.closed.connect(_on_character_customization_closed)
+	_character_customization_overlay.skin_changed.connect(
+		func(_slot: int, _skin_id: String): _refresh_roster())
+	_settings_layer.add_child(_character_customization_overlay)
+
+
+func _on_character_customization_closed() -> void:
+	_character_customization_overlay = null
+	_refresh_roster()
+	_configure_focus_navigation.call_deferred()
+
+
+func _on_player_settings_pressed() -> void:
+	if _player_settings_overlay != null:
+		return
+	if _character_customization_overlay != null:
+		_character_customization_overlay.queue_free()
+		_character_customization_overlay = null
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		_discard_settings_slideout_immediately()
+	_player_settings_overlay = preload("res://player_settings.tscn").instantiate()
+	_player_settings_overlay.is_overlay = true
+	_player_settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	_player_settings_overlay.settings_closed.connect(_on_player_settings_closed)
+	_settings_layer.add_child(_player_settings_overlay)
+
+
+func _on_player_settings_closed() -> void:
+	if _player_settings_overlay == null:
+		return
+	_player_settings_overlay.queue_free()
+	_player_settings_overlay = null
+	_configure_focus_navigation.call_deferred()
+
+
+func _close_player_settings_immediately() -> void:
+	if _player_settings_overlay != null:
+		_player_settings_overlay.queue_free()
+		_player_settings_overlay = null
+
+
+func _open_settings_slideout(kind: int) -> void:
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		_close_settings_slideout()
+		return
 	_settings_slideout = LOBBY_SETTINGS_SLIDEOUT.new()
-	_settings_slideout.name = "BotSettingsSlideout" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.BOT else "MatchSettingsSlideout"
-	_settings_slideout.panel_kind = kind
+	_settings_slideout.name = "SettingsSlideout"
+	_settings_slideout.panel_kind = LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH
+	_settings_slideout.initial_tab = 4 if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.BOT else 0
 	_settings_slideout.maximum_bots = _max_online_bots()
 	_settings_slideout.online_mode = _is_net()
+	_settings_slideout.read_only = _is_net() and not NetworkManager.is_host()
 	_settings_slideout.z_index = 15
 	_settings_slideout.applied.connect(_on_settings_slideout_applied)
 	_settings_slideout.closed.connect(_close_settings_slideout)
 	_settings_layer.add_child(_settings_slideout)
-	_set_settings_button_state(kind)
+	_set_settings_button_state(LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH)
 	_apply_responsive_layout()
 	if not _reduced_motion_enabled():
 		_settings_slideout.position = _settings_target_position - Vector2(34.0, 0.0)
@@ -946,7 +1236,6 @@ func _open_settings_slideout(kind: int) -> void:
 	_settings_slideout.focus_first()
 	_constrain_settings_slideout.call_deferred()
 
-
 func _constrain_settings_slideout() -> void:
 	if _settings_slideout == null or not is_instance_valid(_settings_slideout):
 		return
@@ -956,7 +1245,7 @@ func _constrain_settings_slideout() -> void:
 
 
 func _on_settings_slideout_applied(values: Dictionary) -> void:
-	GameConfig.apply_preset_values(values)
+	GameConfig.apply_lobby_values(values)
 	_on_settings_changed()
 	_close_settings_slideout()
 
@@ -990,8 +1279,8 @@ func _discard_settings_slideout_immediately() -> void:
 
 
 func _set_settings_button_state(kind: int) -> void:
-	_bot_settings_button.variant = "purple" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.BOT else "navy"
-	_match_settings_button.variant = "purple" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH else "navy"
+	if _match_settings_button != null:
+		_match_settings_button.variant = "purple" if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH else "navy"
 
 
 func _open_capture_state() -> void:
@@ -1000,6 +1289,14 @@ func _open_capture_state() -> void:
 	match OS.get_environment("ONEGUN_UI_CAPTURE_STATE"):
 		"bot_settings": _open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.BOT)
 		"match_settings": _open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH)
+		"lobby_customization":
+			GameConfig.split_screen_enabled = true
+			_refresh_roster()
+			_on_character_customization_pressed()
+		"lobby_one_of_us":
+			GameConfig.game_mode = GameConfig.MODE_ONE_OF_US
+			_mode_dropdown.select(GameConfig.GAME_MODES.find(GameConfig.MODE_ONE_OF_US))
+			_refresh_one_of_us_preference_panel()
 
 
 func _reduced_motion_enabled() -> bool:
@@ -1101,15 +1398,17 @@ func _build_bot_config_row(bot_index: int) -> HBoxContainer:
 
 	if GameConfig.teams_enabled:
 		var team_button = OptionButton.new()
-		team_button.add_item("No Team", 0)
-		for t in range(4):
-			team_button.add_item("Team " + str(t + 1), t + 1)
-		var current_team = GameConfig.bot_configs[bot_index].get("team_id", -1)
-		team_button.select(current_team + 1)
+		for t in range(GameConfig.team_count):
+			team_button.add_item("Team " + str(t + 1), t)
+		var current_team := clampi(
+			int(GameConfig.bot_configs[bot_index].get("team_id", 0)),
+			0, GameConfig.team_count - 1)
+		team_button.select(current_team)
 		team_button.fit_to_longest_item = true
 		team_button.custom_minimum_size = Vector2(120, 36)
 		team_button.item_selected.connect(func(idx):
-			GameConfig.bot_configs[bot_index]["team_id"] = idx - 1
+			GameConfig.bot_configs[bot_index]["team_id"] = idx
+			_on_settings_changed()
 		)
 		row.add_child(team_button)
 		team_button.get_popup().max_size = Vector2(0, 124)
@@ -1154,6 +1453,7 @@ func _build_match_settings_popup():
 
 	_add_bool_setting(settings_list, "Teams Enabled", GameConfig.teams_enabled, func(v): GameConfig.teams_enabled = v)
 	_add_bool_setting(settings_list, "Friendly Fire", GameConfig.friendly_fire_enabled, func(v): GameConfig.friendly_fire_enabled = v)
+	_add_bool_setting(settings_list, "Sprinting Enabled", GameConfig.sprinting_enabled, func(v): GameConfig.sprinting_enabled = v)
 	_add_bool_setting(settings_list, "Melee Eliminates Gun Holder", GameConfig.melee_eliminates_gunholder, func(v): GameConfig.melee_eliminates_gunholder = v)
 	_add_bool_setting(settings_list, "Melee Eliminates Anyone", GameConfig.melee_eliminates_anyone, func(v): GameConfig.melee_eliminates_anyone = v)
 	_add_bool_setting(settings_list, "Melee Effects Hit Anyone", GameConfig.melee_effects_hit_anyone, func(v): GameConfig.melee_effects_hit_anyone = v)
@@ -1316,12 +1616,10 @@ func _bump_fonts_recursive(node: Node):
 func _add_bool_setting(parent: VBoxContainer, label_text: String, current_value: bool, on_changed: Callable):
 	var row = HBoxContainer.new()
 	var label = Label.new()
-	var online_forced_off := _is_net() and label_text in ["Teams Enabled", "Friendly Fire"]
-	label.text = label_text + (" (offline only)" if online_forced_off else "")
+	label.text = label_text
 	label.custom_minimum_size = Vector2(220, 0)
 	var checkbox = CheckBox.new()
-	checkbox.button_pressed = false if online_forced_off else current_value
-	checkbox.disabled = online_forced_off
+	checkbox.button_pressed = current_value
 	checkbox.toggled.connect(func(v):
 		on_changed.call(v)
 		_on_settings_changed()
@@ -1442,9 +1740,54 @@ func _prompt_edit_name(current_name: String, on_confirmed: Callable):
 
 
 # ============================================================
+
+func _update_playpen_availability() -> void:
+	if _playpen_button == null:
+		return
+	var host_open := NetworkManager.is_playpen_open()
+	_playpen_button.disabled = NetworkManager._prelaunch_active \
+		or (not NetworkManager.is_host() and not host_open)
+	_playpen_button.text = "ENTER THE PLAYPEN"
+	if not NetworkManager.is_host() and not host_open:
+		_playpen_button.tooltip_text = "The host must open The Playpen first."
+	else:
+		_playpen_button.tooltip_text = "Practice with the lobby while waiting for the match."
+
+
+func _on_playpen_pressed() -> void:
+	if not _is_net() or NetworkManager.lobby_in_progress:
+		return
+	if not NetworkManager.is_host() and not NetworkManager.is_playpen_open():
+		_on_lobby_notice("The host must open The Playpen first.")
+		return
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "ENTER THE PLAYPEN"
+	dialog.dialog_text = "Are you ready for the match?\n\nYour answer updates your lobby Ready status before entering practice."
+	dialog.ok_button_text = "YES"
+	dialog.cancel_button_text = "CANCEL"
+	dialog.add_button("NO", true, "not_ready")
+	add_child(dialog)
+	dialog.confirmed.connect(func():
+		NetworkManager.request_enter_playpen(true)
+		dialog.queue_free())
+	dialog.custom_action.connect(func(action: StringName):
+		if action == &"not_ready":
+			NetworkManager.request_enter_playpen(false)
+			dialog.queue_free())
+	dialog.canceled.connect(func(): dialog.queue_free())
+	dialog.popup_centered(Vector2i(520, 250))
+
 # Back / Play
 # ============================================================
 func _on_back_button_pressed():
+	if _player_settings_overlay != null:
+		_close_player_settings_immediately()
+		return
+
+	if _character_customization_overlay != null:
+		_character_customization_overlay.queue_free()
+		_character_customization_overlay = null
+		return
 	if _settings_slideout != null and is_instance_valid(_settings_slideout):
 		_close_settings_slideout()
 		return
@@ -1457,7 +1800,13 @@ func _on_play_button_pressed():
 	if not _is_net():
 		_launch_match()
 		return
+	if NetworkManager.lobby_in_progress and not NetworkManager.is_match_participant(NetworkManager.local_id()):
+		NetworkManager.request_spectate_current_match()
+		return
 	if NetworkManager.is_host():
+		if NetworkManager._prelaunch_active:
+			NetworkManager.cancel_prelaunch("Host cancelled the start countdown")
+			return
 		# OneGunConfirmButton handles the two-click FORCE START path. When all
 		# guests are ready, this same button launches immediately in one click.
 		if NetworkManager.are_all_lobby_guests_ready():
@@ -1476,14 +1825,58 @@ func _update_lobby_action() -> void:
 			(_play_button as OneGunConfirmButton).set_idle(
 				"START MATCH" if all_ready else "FORCE START",
 				"gold" if all_ready else "red")
-		_play_button.disabled = not _selected_map_available()
-		_play_button.tooltip_text = "" if all_ready else "One or more guests are not ready. Press twice to force start."
+		var unavailable_reason := _selection_unavailable_reason()
+		_play_button.disabled = unavailable_reason != ""
+		if unavailable_reason != "":
+			_play_button.tooltip_text = unavailable_reason
+		else:
+			_play_button.tooltip_text = "" if all_ready else "One or more guests are not ready. Press twice to force start."
 	else:
+		if NetworkManager.lobby_in_progress and not NetworkManager.is_match_participant(NetworkManager.local_id()):
+			_play_button.text = "SPECTATE MATCH"
+			_play_button.variant = "gold"
+			_play_button.disabled = false
+			_play_button.set_meta("action_id", "spectate_match")
+			_play_button.tooltip_text = "Watch the active match until it ends"
+			return
 		var ready := NetworkManager.is_peer_lobby_ready(NetworkManager.local_id())
 		_play_button.text = "READY" if ready else "READY UP"
 		_play_button.variant = "green" if ready else "red"
 		_play_button.disabled = false
 		_play_button.tooltip_text = "Click to mark not ready" if ready else "Click when you are ready to play"
+
+
+func _on_prelaunch_countdown_changed(active: bool, seconds: int) -> void:
+	if active:
+		_close_player_settings_immediately()
+	if active and _character_customization_overlay != null:
+		_character_customization_overlay.queue_free()
+		_character_customization_overlay = null
+	var controls: Array = [_map_dropdown, _mode_dropdown, _match_settings_button,
+		_character_customization_button, _player_settings_button,
+		_playpen_button, _carousel_prev, _carousel_next, _back_button]
+	for control in controls:
+		if control != null:
+			control.disabled = active
+	for card in _map_cards:
+		card.disabled = active or (_is_net() and not NetworkManager.is_host())
+	_refresh_one_of_us_preference_panel()
+	if not active:
+		if _is_net() and not NetworkManager.is_host():
+			_apply_client_lock()
+		_update_lobby_action()
+		return
+	_reset_force_start_confirmation()
+	if NetworkManager.is_host():
+		_play_button.disabled = false
+		_play_button.text = "CANCEL — %d" % seconds
+		_play_button.variant = "red"
+		_play_button.set_meta("action_id", "cancel_start")
+	else:
+		_play_button.disabled = true
+		_play_button.text = "STARTING IN %d" % seconds
+		_play_button.variant = "gold"
+		_play_button.set_meta("action_id", "starting_countdown")
 
 
 func _reset_force_start_confirmation() -> void:
@@ -1492,6 +1885,15 @@ func _reset_force_start_confirmation() -> void:
 
 
 func _launch_match():
+	var unavailable_reason := _selection_unavailable_reason()
+	if unavailable_reason != "":
+		if _lobby_notice_label != null:
+			_lobby_notice_label.text = unavailable_reason
+		if _banner_desc != null:
+			_banner_desc.text = unavailable_reason
+		push_warning("GameSetup: cannot start; %s" % unavailable_reason)
+		_update_play_availability()
+		return
 	var map_path := _resolve_map_scene_path()
 	if map_path == "" or not ResourceLoader.exists(map_path):
 		_update_play_availability()
@@ -1499,17 +1901,23 @@ func _launch_match():
 		return
 	if _is_net():
 		if NetworkManager.is_host():
-			AudioManager.stop_music(0.8)
-			NetworkManager.start_game(map_path)
-		return   # clients never launch directly
+			NetworkManager.begin_prelaunch(map_path)
+			return   # clients never launch directly
 	AudioManager.stop_music(0.8)
 	get_tree().change_scene_to_file(map_path)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
+		if _player_settings_overlay != null:
+			_close_player_settings_immediately()
+			return
+
 		get_viewport().set_input_as_handled()
-		if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		if _character_customization_overlay != null:
+			_character_customization_overlay.queue_free()
+			_character_customization_overlay = null
+		elif _settings_slideout != null and is_instance_valid(_settings_slideout):
 			_close_settings_slideout()
 		else:
 			_on_back_button_pressed()

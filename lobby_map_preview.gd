@@ -31,6 +31,7 @@ const FADE_HALF_TIME := OneGunUI.TIME_MAP_FADE * 0.5
 var _maps: Array = []             # the MAPS array from game_setup
 var _mode: int = 1                # MapSelectMode (1 = SPECIFIC by default)
 const MODE_SPECIFIC := 1          # must match game_setup.MapSelectMode.SPECIFIC
+const MODE_RANDOM := 2            # must match game_setup.MapSelectMode.RANDOM
 
 var _viewport: SubViewport = null
 var _camera: Camera3D = null
@@ -133,9 +134,12 @@ func apply(mode: int, index: int) -> void:
 		_status.visible = true
 		_status.show_empty("NO MAPS AVAILABLE", "Add a valid map entry to the map registry.")
 		return
-	if mode == MODE_SPECIFIC:
+	if mode == MODE_RANDOM:
+		_show_random_mystery()
+	elif mode == MODE_SPECIFIC:
 		_cycling = false
-		if index != _current_index:
+		_fade_rect.color.a = 0.0
+		if _current_map == null or index != _current_index:
 			_fade_swap_to(index)
 	else:
 		# Vote / Random: cycle through everything, starting from the top.
@@ -143,6 +147,20 @@ func apply(mode: int, index: int) -> void:
 		if _current_index < 0:
 			_fade_swap_to(0)
 		_cycle_timer = MAP_VIEW_SECONDS
+
+func _show_random_mystery() -> void:
+	_cycling = false
+	_swapping = false
+	_requested_index = -1
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_clear_current_map()
+	_current_index = -1
+	_fade_rect.color = Color(0.02, 0.025, 0.05, 0.72)
+	_status.visible = true
+	_status.show_mystery(
+		"RANDOM MAP",
+		"The battlefield will be revealed when the match begins.")
 
 func _process(delta: float) -> void:
 	if _camera == null:
@@ -199,6 +217,21 @@ func _load_map(index: int) -> void:
 	var path := str(_maps[index].get("scene_path", ""))
 	if not ResourceLoader.exists(path):
 		_fail_map_load(index, "The map scene could not be found.")
+		return
+	# The dummy renderer cannot display or capture this viewport. Avoid loading
+	# several complete gameplay maps into headless validation/dedicated-server
+	# processes; visible game builds continue through the full live-preview path.
+	if DisplayServer.get_name() == "headless":
+		var headless_data: Dictionary = _maps[index]
+		_clear_current_map()
+		_current_index = index
+		_orbit_angle = float(headless_data.get("preview_angle", 0.0))
+		_orbit_height_ratio = float(headless_data.get("preview_height_ratio", 0.6))
+		_orbit_target_height_ratio = float(headless_data.get("preview_target_height_ratio", 0.1))
+		_orbit_center = headless_data.get("preview_center", Vector3.ZERO)
+		_orbit_radius = float(headless_data.get("preview_radius", 20.0))
+		_status.visible = false
+		map_shown.emit(index)
 		return
 	var packed := load(path) as PackedScene
 	if packed == null:

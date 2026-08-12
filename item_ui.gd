@@ -33,6 +33,10 @@ func _process(_delta):
 			item = player.held_item_1
 		elif player.active_slot == "item2" and "held_item_2" in player:
 			item = player.held_item_2
+	elif "held_item" in player:
+		# Bots use one generic item slot. Follow spectators should still receive
+		# the same item-name readout as when following a human actor.
+		item = player.held_item
 	visible = item != null
 	if not visible:
 		return

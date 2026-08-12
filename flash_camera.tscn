@@ -1,0 +1,54 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://flash_camera.gd" id="1_script"]
+
+[sub_resource type="BoxShape3D" id="BodyShape"]
+size = Vector3(0.42, 0.28, 0.18)
+
+[sub_resource type="SphereShape3D" id="PickupShape"]
+radius = 1.5
+
+[sub_resource type="BoxMesh" id="BodyMesh"]
+size = Vector3(0.42, 0.28, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="BodyMaterial"]
+albedo_color = Color(0.08, 0.1, 0.13, 1)
+metallic = 0.45
+roughness = 0.3
+
+[sub_resource type="CylinderMesh" id="LensMesh"]
+top_radius = 0.11
+bottom_radius = 0.13
+height = 0.15
+
+[node name="flash_camera" type="RigidBody3D"]
+collision_layer = 4
+script = ExtResource("1_script")
+item_type = "flash_camera"
+respawn_after_deploy_time = 14.0
+HELD_SCALE = 1.15
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BodyShape")
+
+[node name="CameraBody" type="MeshInstance3D" parent="."]
+mesh = SubResource("BodyMesh")
+material_override = SubResource("BodyMaterial")
+
+[node name="Lens" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, -0.16)
+mesh = SubResource("LensMesh")
+material_override = SubResource("BodyMaterial")
+
+[node name="Area3D" type="Area3D" parent="."]
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("PickupShape")
+
+[node name="PickupLabel" type="Label3D" parent="."]
+position = Vector3(0, 0.55, 0)
+billboard = 1
+text = "[F]  Flash Camera"
+font_size = 34
+outline_size = 8

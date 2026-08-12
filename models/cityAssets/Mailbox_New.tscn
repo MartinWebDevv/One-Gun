@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/Mailbox.glb" id="1_visual"]
+
+[node name="Mailbox_New" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+position = Vector3(-0.025, 0.0474, 0.0184)
+scale = Vector3(3.2425, 3.2425, 3.2425)

@@ -612,6 +612,7 @@ func _store_bindings(action: String, group: String, bindings: Array) -> void:
 	per_action[group] = bindings.duplicate(true)
 	overrides[action] = per_action
 	_pending["input_overrides"] = overrides
+	PlayerPrefs.apply_input_binding_map(overrides)
 
 
 func _add_binding_row(parent: VBoxContainer, label_text: String, action: String) -> void:
@@ -759,7 +760,9 @@ func _defaults_for_category() -> void:
 				_pending[key] = PlayerPrefs.get_default(key)
 			APPLIER.apply_video(_pending, get_tree(), true)
 			_display_recovery_timer.start()
-		"Controls": _pending["input_overrides"] = {}
+		"Controls":
+			_pending["input_overrides"] = {}
+			PlayerPrefs.apply_input_binding_map(_pending["input_overrides"])
 		"Accessibility":
 			for key in PlayerPrefs.DEFAULT_SETTINGS:
 				if _is_accessibility_key(str(key)): _pending[key] = PlayerPrefs.get_default(str(key))
@@ -782,6 +785,7 @@ func _apply_and_close() -> void:
 func _cancel_and_close() -> void:
 	_capture_action = ""
 	_display_recovery_timer.stop()
+	PlayerPrefs.apply_input_overrides()
 	APPLIER.apply_all(_opening, get_tree(), true)
 	AccessibilityManager.apply_all(_opening)
 	_finish_close()
@@ -793,6 +797,11 @@ func _finish_close() -> void:
 		settings_closed.emit()
 	else:
 		get_tree().change_scene_to_file("res://main_menu.tscn")
+
+
+func request_cancel_close() -> void:
+	_cancel_and_close()
+
 
 
 func _unhandled_input(event: InputEvent) -> void:

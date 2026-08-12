@@ -4,7 +4,7 @@ extends Control
 # events select hit versus elimination presentation; an elimination can replace
 # an active hit, while a later ordinary hit cannot downgrade an elimination.
 
-var filter_name := ""
+var filter_actor_id := -1
 var _life := 0.0
 var _duration := 0.28
 var _event_kind := ""
@@ -19,11 +19,12 @@ func _ready() -> void:
 	offset_right = 80.0
 	offset_bottom = 80.0
 	visible = false
-	GameEvents.combat_feedback.connect(_on_combat_feedback)
+	GameEvents.actor_combat_feedback.connect(_on_actor_combat_feedback)
 
 
-func _on_combat_feedback(attacker_name: String, event_kind: String) -> void:
-	if filter_name != "" and attacker_name != filter_name: return
+func _on_actor_combat_feedback(attacker_actor_id: int, event_kind: String) -> void:
+	if filter_actor_id >= 0 and attacker_actor_id != filter_actor_id:
+		return
 	show_feedback(event_kind)
 
 

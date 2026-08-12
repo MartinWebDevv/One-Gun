@@ -11,9 +11,9 @@ config_version=5
 [application]
 
 config/name="OneGun"
-config/version="0.0.3"
+config/version="0.0.4"
 run/main_scene="uid://d1fwhxci8mk6h"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -33,10 +33,6 @@ NetworkManager="*res://network_manager.gd"
 window/size/viewport_width=1600
 window/size/viewport_height=900
 window/size/mode=3
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/terrain_3d/plugin.cfg")
 
 [gui]
 

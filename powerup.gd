@@ -2,7 +2,7 @@ extends Area3D
 
 # Type is fixed once at spawn and re-rolled only when the powerup respawns.
 @export var effect_duration := 5.0
-@export var respawn_time := 15.0
+@export var respawn_time := 8.0
 @export var fixed_power_type := ""
 
 const BOB_HEIGHT = 0.15
@@ -15,10 +15,9 @@ const DISPLAY_NAMES := {
 	"silent_steps": "Silent Steps",
 	"vampire_touch": "Vampire Touch",
 	"extra_life": "Extra Life",
-	"magnet_hands": "Magnet Hands",
+	"reach": "Reach",
 }
 
-var available_types = ["extra_dash", "sticky_hands", "speed_surge", "silent_steps", "vampire_touch", "extra_life", "magnet_hands"]
 var color_map = {
 	"extra_dash": Color(0.2, 1.0, 1.0),
 	"sticky_hands": Color(0.2, 1.0, 0.35),
@@ -26,7 +25,7 @@ var color_map = {
 	"silent_steps": Color(0.55, 0.55, 0.85),
 	"vampire_touch": Color(0.85, 0.15, 0.25),
 	"extra_life": Color(1.0, 0.72, 0.18),
-	"magnet_hands": Color(0.85, 0.35, 0.95),
+	"reach": Color(0.2, 1.0, 0.42),
 }
 
 var power_type := "extra_dash"
@@ -42,6 +41,10 @@ var _respawn_generation := 0
 @onready var powerup_name_label: Label3D = $PowerupName
 
 func _ready():
+	var enabled_types := GameConfig.enabled_powerup_types()
+	if enabled_types.is_empty() or (fixed_power_type != "" and fixed_power_type not in enabled_types):
+		queue_free()
+		return
 	add_to_group("powerup")
 	body_entered.connect(_on_body_entered)
 	collision_layer = 0
@@ -49,10 +52,10 @@ func _ready():
 	spawn_position = global_position
 	base_y = position.y
 	_setup_material()
-	if fixed_power_type in available_types:
+	if fixed_power_type in enabled_types:
 		power_type = fixed_power_type
 	elif not NetworkManager.is_online():
-		power_type = available_types[randi() % available_types.size()]
+		power_type = enabled_types[randi() % enabled_types.size()]
 	_update_color()
 
 func _setup_material():
@@ -102,6 +105,21 @@ func _on_body_entered(body):
 			return
 	_collect()
 
+
+func try_collect_for(body) -> bool:
+	if overtime_disabled or collected or body == null or not body.is_in_group("player"):
+		return false
+	if NetworkManager.is_online():
+		var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+		if rm != null:
+			rm.request_online_powerup_collect(online_powerup_id, int(body.get("actor_id")))
+			return true
+		return false
+	if not body.has_method("apply_powerup") or not body.apply_powerup(power_type, effect_duration):
+		return false
+	_collect()
+	return true
+
 func _collect():
 	collected = true
 	visible = false
@@ -116,8 +134,12 @@ func _collect():
 	collected = false
 	visible = true
 	set_deferred("monitoring", true)
-	power_type = fixed_power_type if fixed_power_type in available_types \
-		else available_types[randi() % available_types.size()]
+	var enabled_types := GameConfig.enabled_powerup_types()
+	if enabled_types.is_empty():
+		queue_free()
+		return
+	power_type = fixed_power_type if fixed_power_type in enabled_types \
+		else enabled_types[randi() % enabled_types.size()]
 	_update_color()
 
 func _net_collect(actor_id: int, collected_type: String) -> void:
@@ -144,6 +166,9 @@ func _net_respawn(new_type: String) -> void:
 func reset_to_spawn():
 	_respawn_generation += 1
 	overtime_disabled = false
+	if not GameConfig.is_powerup_enabled(power_type):
+		queue_free()
+		return
 	collected = false
 	global_position = spawn_position
 	position.y = base_y

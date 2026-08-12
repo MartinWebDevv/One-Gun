@@ -30,7 +30,9 @@ static func _run(node: Node, base_name: String, delay: float) -> void:
 	await tree.create_timer(delay).timeout
 	if not is_instance_valid(node) or not node.is_inside_tree():
 		return
-	var dir_path := ProjectSettings.globalize_path(CAPTURE_DIR)
+	var requested_dir := OS.get_environment("ONEGUN_UI_CAPTURE_DIR")
+	var dir_path := requested_dir if not requested_dir.is_empty() \
+		else ProjectSettings.globalize_path(CAPTURE_DIR)
 	DirAccess.make_dir_recursive_absolute(dir_path)
 	var image := node.get_viewport().get_texture().get_image()
 	var file_name := "%s_%dx%d.png" % [base_name.get_basename(), image.get_width(), image.get_height()]

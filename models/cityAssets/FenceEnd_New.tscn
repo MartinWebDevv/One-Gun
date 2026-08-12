@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/Fence End.glb" id="1_visual"]
+
+[node name="FenceEnd_New" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+position = Vector3(0, 0.0035, 0)
+scale = Vector3(1.7745, 1.269, 0.4196)

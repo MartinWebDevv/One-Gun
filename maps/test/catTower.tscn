@@ -15,20 +15,35 @@
 [ext_resource type="PackedScene" uid="uid://c181jv30rbm83" path="res://furntiure/pottedPlant.glb" id="12_htht2"]
 [ext_resource type="PackedScene" uid="uid://l2xt65d3kpun" path="res://furntiure/tableCoffee.glb" id="13_556j8"]
 [ext_resource type="PackedScene" uid="uid://dt7twws2pl1bw" path="res://furntiure/sideTableDrawers.glb" id="14_rbjw7"]
+[ext_resource type="Script" uid="uid://cvvwonydncavs" path="res://round_label.gd" id="15_8h0un"]
 [ext_resource type="PackedScene" uid="uid://h2s2gntxsmdw" path="res://furntiure/televisionModern.glb" id="15_816r4"]
+[ext_resource type="Script" uid="uid://bvqj5matij4cw" path="res://kill_feed.gd" id="16_k4jru"]
 [ext_resource type="PackedScene" uid="uid://doaop8qa3mpry" path="res://furntiure/wallWindowSlide.glb" id="16_ori5j"]
+[ext_resource type="Script" uid="uid://egcbpt4rhdl1" path="res://match_hud.gd" id="17_053n5"]
 [ext_resource type="PackedScene" uid="uid://bkg3r5u7bc2g1" path="res://furntiure/wall.glb" id="17_fac25"]
+[ext_resource type="Script" uid="uid://8cb5vuepvo2w" path="res://player_ui_container.gd" id="18_0iutb"]
 [ext_resource type="PackedScene" uid="uid://br8s78r1hrvd1" path="res://furntiure/doorway.glb" id="18_rapqh"]
 [ext_resource type="PackedScene" uid="uid://c41tqox1skeu8" path="res://furntiure/wallDoorway.glb" id="19_duo1l"]
+[ext_resource type="Script" uid="uid://c0djnbn6whcf5" path="res://crosshair.gd" id="19_s3u7j"]
 [ext_resource type="PackedScene" uid="uid://e8yhba0jm14e" path="res://furntiure/trashcan.glb" id="20_qqeuv"]
+[ext_resource type="Script" uid="uid://kq7rxku3mu47" path="res://stamina_bar.gd" id="20_w3lb0"]
 [ext_resource type="PackedScene" uid="uid://dbn2nrd2m6ry4" path="res://furntiure/rugDoormat.glb" id="21_1n3p7"]
+[ext_resource type="Script" uid="uid://i1kxwgxjurmb" path="res://dash_charges.gd" id="21_4hwue"]
+[ext_resource type="Script" uid="uid://dmq6onhybdv8t" path="res://gun_ui.gd" id="22_5udx3"]
 [ext_resource type="PackedScene" uid="uid://dheinmljaobi8" path="res://furntiure/kitchenCabinet.glb" id="22_8aehn"]
+[ext_resource type="Texture2D" uid="uid://b5vd4r3sebxop" path="res://icon.svg" id="23_1pnvl"]
 [ext_resource type="PackedScene" uid="uid://bvkxp23ti48ss" path="res://furntiure/kitchenCabinetCornerInner.glb" id="23_lawwj"]
+[ext_resource type="Script" uid="uid://dyy60np7vjpc6" path="res://melee_ui.gd" id="24_m8ijy"]
 [ext_resource type="PackedScene" uid="uid://bwodk8ty5ij6c" path="res://furntiure/kitchenFridgeLarge.glb" id="24_vh7dd"]
 [ext_resource type="PackedScene" uid="uid://bqnqg2ov6c5ui" path="res://furntiure/kitchenCabinetDrawer.glb" id="25_33qw3"]
+[ext_resource type="Script" uid="uid://cv3mmrvig6mce" path="res://reload_spinner.gd" id="25_l4hcn"]
 [ext_resource type="PackedScene" uid="uid://67blrp5pgfg1" path="res://furntiure/kitchenSink.glb" id="26_7jkbn"]
+[ext_resource type="Script" uid="uid://emh4vrqytxqx" path="res://item_ui.gd" id="26_l0mx2"]
 [ext_resource type="PackedScene" uid="uid://crrt46xpc7otu" path="res://furntiure/kitchenStove.glb" id="27_bemy2"]
+[ext_resource type="Script" uid="uid://bwsmgbp1vw6l2" path="res://inventory_slots.gd" id="27_snhf2"]
 [ext_resource type="PackedScene" uid="uid://d3nk125iyu27t" path="res://furntiure/bookcaseClosed.glb" id="28_7c4pm"]
+[ext_resource type="Script" uid="uid://dcs71qvxprgew" path="res://powerup_status.gd" id="28_huxyf"]
+[ext_resource type="Script" uid="uid://bigaqrmy6p743" path="res://pause_menu.gd" id="29_dt2ic"]
 [ext_resource type="PackedScene" uid="uid://cv6faknirfnia" path="res://furntiure/bookcaseOpenLow.glb" id="29_g6sfr"]
 [ext_resource type="PackedScene" uid="uid://cjhhryqnboeti" path="res://furntiure/bookcaseClosedWide.glb" id="30_is7e5"]
 [ext_resource type="PackedScene" uid="uid://cpy2wuihduxsm" path="res://furntiure/cardboardBoxOpen.glb" id="31_2g3dh"]
@@ -71,7 +86,7 @@ albedo_texture = ExtResource("3_46jnm")
 uv1_triplanar = true
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_xrivr"]
-size = Vector3(0.03765869, 3.327057, 8.62945)
+size = Vector3(0.03765869, 6.5, 10)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o2o5h"]
 albedo_color = Color(1, 1, 0.5882353, 1)
@@ -175,7 +190,7 @@ albedo_color = Color(0, 0, 0, 0)
 
 [sub_resource type="BoxMesh" id="PreviewBoundsMesh"]
 material = SubResource("PreviewBoundsMaterial")
-size = Vector3(70, 14, 90)
+size = Vector3(92.92468, 14, 85.30127)
 
 [sub_resource type="Environment" id="Environment_cat_tower"]
 background_mode = 1
@@ -251,9 +266,9 @@ size = Vector3(1.5245972, 1.0247803, 0.024414063)
 material = SubResource("StandardMaterial3D_25bs2")
 
 [node name="CSGBox3D7" type="CSGBox3D" parent="Game Area/bottom house" unique_id=752686671]
-transform = Transform3D(1.9106855e-15, -1, -4.371139e-08, -4.371139e-08, -4.371139e-08, 1, -1, 0, -4.371139e-08, -0.77755976, 0.12577593, 0.26523483)
+transform = Transform3D(1.9106857e-15, -1, -4.371139e-08, -4.371139e-08, -4.371139e-08, 1, -1, 0, -4.371139e-08, -2.7775593, 0.12577583, 0.2652359)
 material_override = SubResource("StandardMaterial3D_q2tda")
-size = Vector3(8.5, 5.5, 0.024414063)
+size = Vector3(8.5, 8.5, 0.024414063)
 material = SubResource("StandardMaterial3D_7f2x3")
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/bottom house" unique_id=974301943]
@@ -265,19 +280,19 @@ material = SubResource("StandardMaterial3D_25bs2")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04025507, 0.62577593, 0.027624965)
 
 [node name="BorderEdge1" type="CollisionShape3D" parent="Game Area/BOARDER" unique_id=453681155]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.504919, 1.1759174, 1.1677151)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.004919, 1.1759174, 1.3529892)
 shape = SubResource("BoxShape3D_xrivr")
 
 [node name="BorderEdge2" type="CollisionShape3D" parent="Game Area/BOARDER" unique_id=1824331541]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.028, 1.176, 1.24)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5279999, 1.4260001, 1.2399998)
 shape = SubResource("BoxShape3D_xrivr")
 
 [node name="BorderEdge3" type="CollisionShape3D" parent="Game Area/BOARDER" unique_id=2034838971]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.8369999, 1.1760001, -3.026)
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.90843, 1.9260001, -3.0260105)
 shape = SubResource("BoxShape3D_xrivr")
 
 [node name="BorderEdge4" type="CollisionShape3D" parent="Game Area/BOARDER" unique_id=1112662454]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.837, 1.176, 5.497)
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.7655754, 1.7624717, 5.496997)
 shape = SubResource("BoxShape3D_xrivr")
 
 [node name="bottom house3" type="CSGCombiner3D" parent="Game Area" unique_id=76852461]
@@ -346,6 +361,72 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04025507, 0.62577593, -0.9
 size = Vector3(1, 1, 0.024414063)
 material = SubResource("StandardMaterial3D_o2o5h")
 
+[node name="bottom house4" type="CSGCombiner3D" parent="Game Area" unique_id=1669822654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.1428566, 2.3373654, -0.91179657)
+use_collision = true
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/bottom house4" unique_id=890372724]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.54025507, 0.62577593, -0.22246659)
+size = Vector3(1.5245972, 1, 0.024414063)
+material = SubResource("StandardMaterial3D_o2o5h")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Game Area/bottom house4" unique_id=653025655]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04025507, 0.62577593, 0.52762496)
+size = Vector3(1, 1, 0.024414063)
+material = SubResource("StandardMaterial3D_o2o5h")
+
+[node name="CSGCylinder3D3" type="CSGCylinder3D" parent="Game Area/bottom house4/CSGBox3D" unique_id=2071213426]
+transform = Transform3D(1.6631049e-15, -3.8047407e-08, 0.8933938, -0.8704232, -3.8047407e-08, 0, 3.8047407e-08, -0.8704232, -3.9051486e-08, -0.00015687943, -0.019358873, -0.0057073236)
+operation = 2
+radius = 0.3076172
+height = 0.11230469
+sides = 26
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/bottom house4/CSGBox3D" unique_id=1787823530]
+transform = Transform3D(-0.8704233, 0, -7.609482e-08, 0, 0.8704233, 0, 7.609482e-08, 0, -0.8704233, 0.00014126301, -0.33164924, -0.0028794408)
+operation = 2
+size = Vector3(0.6290436, 0.6894531, 0.123535156)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/bottom house4" unique_id=225224520]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0.45974493, 0.62577593, -0.22246659)
+size = Vector3(1.5245972, 1, 0.024414063)
+material = SubResource("StandardMaterial3D_o2o5h")
+
+[node name="CSGCylinder3D2" type="CSGCylinder3D" parent="Game Area/bottom house4/CSGBox3D4" unique_id=586650067]
+transform = Transform3D(8.284662e-16, -1.9096333e-08, -0.43486872, -0.4335963, -1.9096333e-08, 0, -1.8953097e-08, 0.4368732, -1.9008716e-08, -0.36019242, 0.12436515, -5.5879354e-08)
+operation = 2
+radius = 0.49609375
+height = 0.11230469
+sides = 26
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Game Area/bottom house4/CSGBox3D4" unique_id=184942458]
+transform = Transform3D(1.6631049e-15, -3.8047407e-08, -0.8933938, -0.8704232, -3.8047407e-08, 0, -3.8047407e-08, 0.8704232, -3.9051486e-08, 0.3144791, -0.019358873, -0.031065892)
+operation = 2
+radius = 0.3076172
+height = 0.11230469
+sides = 26
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Game Area/bottom house4/CSGBox3D4" unique_id=1466206873]
+transform = Transform3D(0.8704232, 0, 0, 0, 0.8704232, 0, 0, 0, 0.8704232, 0.31418097, -0.33164924, -0.03389373)
+operation = 2
+size = Vector3(0.6290436, 0.6894531, 0.123535156)
+material = SubResource("StandardMaterial3D_o2o5h")
+
+[node name="CSGBox3D6" type="CSGBox3D" parent="Game Area/bottom house4" unique_id=647810644]
+transform = Transform3D(1.9106855e-15, -1, -4.371139e-08, -4.371139e-08, -4.371139e-08, 1, -1, 0, -4.371139e-08, -0.039949894, 1.1257759, -0.22246659)
+size = Vector3(1.5245972, 1.0247803, 0.024414063)
+material = SubResource("StandardMaterial3D_o2o5h")
+
+[node name="CSGBox3D7" type="CSGBox3D" parent="Game Area/bottom house4" unique_id=1078086249]
+transform = Transform3D(3.5527137e-15, -1, -4.371139e-08, -4.371139e-08, -4.371139e-08, 1, -1, 0, -4.371139e-08, 0.20833778, 0.10966253, 0.011571884)
+size = Vector3(2.0629883, 1.5281982, 0.056640625)
+material = SubResource("StandardMaterial3D_o2o5h")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/bottom house4" unique_id=1552944576]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04025507, 0.62577593, -0.97237504)
+size = Vector3(1, 1, 0.024414063)
+material = SubResource("StandardMaterial3D_o2o5h")
+
 [node name="bottom house2" type="CSGCombiner3D" parent="Game Area" unique_id=197884570]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 2.3280175, -0.9670792)
 use_collision = true
@@ -400,6 +481,11 @@ transform = Transform3D(1.9106855e-15, -1, -4.371139e-08, -4.371139e-08, -4.3711
 size = Vector3(1.0266113, 1, 0.06347656)
 material = SubResource("StandardMaterial3D_n54ba")
 
+[node name="CSGBox3D8" type="CSGBox3D" parent="Game Area/bottom house2" unique_id=775497425]
+transform = Transform3D(1.9106857e-15, -1, -4.371139e-08, -4.371139e-08, -4.371139e-08, 1, -1, 0, -4.371139e-08, -2.8847027, 0.11545873, -0.45144272)
+size = Vector3(1.0266113, 1, 0.06286621)
+material = SubResource("StandardMaterial3D_n54ba")
+
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/bottom house2" unique_id=188161881]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.54025507, 0.6257758, -0.97237504)
 size = Vector3(1, 1, 0.024414063)
@@ -422,22 +508,22 @@ size = Vector3(0.5427246, 0.042236328, 1.5)
 material = SubResource("StandardMaterial3D_d7amp")
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge2" unique_id=1727174828]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023044527, 0.15186)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005197525, 0.018519402, 0.15413189)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
 [node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge2" unique_id=1337178296]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023022741, -0.24346936)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005197525, 0.01849842, -0.24119759)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
 [node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge2" unique_id=1922832326]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023154736, -0.6296359)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005197525, 0.018630028, -0.62736416)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge2" unique_id=1836453764]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023442596, 0.61179763)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005197525, 0.018918037, 0.61406803)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
@@ -446,22 +532,22 @@ transform = Transform3D(1.0999999, -1.44234e-07, -9.4397e-08, -3.2093278e-15, 0.
 use_collision = true
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge5" unique_id=574879562]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023044527, 0.15186)
+transform = Transform3D(1, 0, 0, 7.1054274e-15, 1, -2.9802322e-08, 1.4210855e-14, 0, 1, -0.0005197525, 0.0192585, 0.15376091)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
 [node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge5" unique_id=513126903]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023022741, -0.24346936)
+transform = Transform3D(1, 0, 0, 7.1054274e-15, 1, -2.9802322e-08, 1.4210855e-14, 0, 1, -0.0005197525, 0.019236565, -0.24156761)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
 [node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge5" unique_id=1994591188]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023154736, -0.6296359)
+transform = Transform3D(1, 0, 0, 7.1054274e-15, 1, -2.9802322e-08, 1.4210855e-14, 0, 1, -0.0005197525, 0.019368172, -0.62773514)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge5" unique_id=1917749501]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023442596, 0.61179763)
+transform = Transform3D(1, 0, 0, 7.1054274e-15, 1, -2.9802322e-08, 1.4210855e-14, 0, 1, -0.0005197525, 0.019656181, 0.61369896)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_h8qmo")
 
@@ -476,22 +562,82 @@ size = Vector3(0.5427246, 0.042236328, 1.5)
 material = SubResource("StandardMaterial3D_13qdw")
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge4" unique_id=814204968]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023044527, 0.15186)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.01862526, 0.15408039)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_yhnf7")
 
 [node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge4" unique_id=656250480]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023022741, -0.24346936)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.018602371, -0.24124908)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_yhnf7")
 
 [node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge4" unique_id=1010933567]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023154736, -0.6296359)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.018735886, -0.62741566)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_yhnf7")
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge4" unique_id=1508170627]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023442596, 0.61179763)
+transform = Transform3D(1, 0, -3.5527137e-15, 0, 1, -5.9604645e-08, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.019022942, 0.6140175)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="Bridge6" type="CSGCombiner3D" parent="Game Area" unique_id=360223719]
+transform = Transform3D(-1.0999999, 1.04308164e-07, 1.4901161e-08, -1.432971e-15, 0.79102546, -0.52500004, -5.9604645e-08, -0.45669878, -0.90932643, -3.6968384, 0.5068077, 2.1931725)
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Game Area/Bridge6" unique_id=1199214230]
+transform = Transform3D(1, 3.5527137e-15, 7.1054274e-15, 0, 1.0000001, -5.9604645e-08, 0, 2.9802322e-08, 1.0000001, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_3shbp")
+size = Vector3(0.5427246, 0.042236328, 1.5)
+material = SubResource("StandardMaterial3D_13qdw")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge6" unique_id=485728828]
+transform = Transform3D(1, -1.4210855e-14, -3.5527137e-15, 3.5527137e-15, 0.99999994, 0, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.018315315, 0.15423584)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge6" unique_id=1408333675]
+transform = Transform3D(1, -1.4210855e-14, -3.5527137e-15, 3.5527137e-15, 0.99999994, 0, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.01829338, -0.24109459)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge6" unique_id=199846084]
+transform = Transform3D(1, -1.4210855e-14, -3.5527137e-15, 3.5527137e-15, 0.99999994, 0, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.018424988, -0.62726116)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge6" unique_id=851896691]
+transform = Transform3D(1, -1.4210855e-14, -3.5527137e-15, 3.5527137e-15, 0.99999994, 0, 3.5527137e-15, 2.9802322e-08, 1, -0.0005187988, 0.018712997, 0.61417294)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="Bridge7" type="CSGCombiner3D" parent="Game Area" unique_id=2012126809]
+transform = Transform3D(1.0999999, -1.4423402e-07, -9.4397e-08, -3.6661056e-15, 0.7910255, -0.5250001, 1.5576968e-07, 0.45669878, 0.90932643, -5.2682667, 1.2810651, 2.2327118)
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Game Area/Bridge7" unique_id=901141487]
+transform = Transform3D(1, 3.5527137e-15, 7.1054274e-15, 0, 1.0000001, -5.9604645e-08, 0, 2.9802322e-08, 1.0000001, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_3shbp")
+size = Vector3(0.5427246, 0.042236328, 1.5)
+material = SubResource("StandardMaterial3D_13qdw")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge7" unique_id=1051921533]
+transform = Transform3D(0.99999994, 7.1054274e-15, -1.4210855e-14, -7.1054274e-15, 1, -5.9604645e-08, 1.4210855e-14, 2.9802322e-08, 1, -0.0005187988, 0.018739223, 0.15402222)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge7" unique_id=585641220]
+transform = Transform3D(0.99999994, 7.1054274e-15, -1.4210855e-14, -7.1054274e-15, 1, -5.9604645e-08, 1.4210855e-14, 2.9802322e-08, 1, -0.0005197525, 0.018716812, -0.2413063)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge7" unique_id=1736987869]
+transform = Transform3D(0.99999994, 7.1054274e-15, -1.4210855e-14, -7.1054274e-15, 1, -5.9604645e-08, 1.4210855e-14, 2.9802322e-08, 1, -0.0005197525, 0.01884842, -0.62747383)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_yhnf7")
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge7" unique_id=478484940]
+transform = Transform3D(0.9999999, 1.4210855e-14, -2.842171e-14, -1.4210855e-14, 1, -8.940697e-08, 2.842171e-14, 5.9604645e-08, 1, -0.0005187988, 0.019136906, 0.6139593)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_yhnf7")
 
@@ -505,22 +651,51 @@ size = Vector3(0.5427246, 0.042236328, 1.5)
 material = SubResource("StandardMaterial3D_13qdw")
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge3" unique_id=385429854]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023044527, 0.15186)
+transform = Transform3D(1, -1.7763568e-15, 3.5527137e-15, 0, 1, -2.9802322e-08, -3.5527137e-15, 0, 1, -0.0005187988, 0.01909256, 0.15384483)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_g0e7w")
 
 [node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge3" unique_id=1182959945]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023022741, -0.24346936)
+transform = Transform3D(1, -1.7763568e-15, 3.5527137e-15, 0, 1, -2.9802322e-08, -3.5527137e-15, 0, 1, -0.0005187988, 0.019070625, -0.2414856)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_g0e7w")
 
 [node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge3" unique_id=962858700]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023154736, -0.6296359)
+transform = Transform3D(1, -1.7763568e-15, 3.5527137e-15, 0, 1, -2.9802322e-08, -3.5527137e-15, 0, 1, -0.0005187988, 0.019202232, -0.6276512)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_g0e7w")
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge3" unique_id=697991269]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0005187988, 0.023442596, 0.61179763)
+transform = Transform3D(1, -1.7763568e-15, 3.5527137e-15, 0, 1, -2.9802322e-08, -3.5527137e-15, 0, 1, -0.0005187988, 0.019491196, 0.613781)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_g0e7w")
+
+[node name="Bridge8" type="CSGCombiner3D" parent="Game Area" unique_id=639496409]
+transform = Transform3D(1.0999999, -6.438224e-08, 6.459469e-08, -3.2093278e-15, 0.7910254, -0.5250001, -3.65604e-08, 0.45669878, 0.90932643, -3.6897192, 2.0638547, -0.23463249)
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Game Area/Bridge8" unique_id=594642313]
+transform = Transform3D(1, 3.5527137e-15, 7.1054274e-15, 0, 1.0000001, -5.9604645e-08, 0, 2.9802322e-08, 1.0000001, 0, 0, 0)
+size = Vector3(0.5427246, 0.042236328, 1.5)
+material = SubResource("StandardMaterial3D_13qdw")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/Bridge8" unique_id=1713756816]
+transform = Transform3D(1, -3.5527137e-15, 1.7763568e-15, 0, 1, 0, -7.1054274e-15, 2.9802322e-08, 1, -0.0005187988, 0.018845558, 0.15396881)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_g0e7w")
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="Game Area/Bridge8" unique_id=1894272167]
+transform = Transform3D(1, -3.5527137e-15, 1.7763568e-15, 0, 1, 0, -7.1054274e-15, 2.9802322e-08, 1, -0.0005187988, 0.018824577, -0.24135971)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_g0e7w")
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="Game Area/Bridge8" unique_id=665197547]
+transform = Transform3D(1, -3.5527137e-15, 1.7763568e-15, 0, 1, 0, -7.1054274e-15, 2.9802322e-08, 1, -0.0005187988, 0.01895523, -0.6275253)
+size = Vector3(0.45111084, 0.005859375, 0.095703125)
+material = SubResource("StandardMaterial3D_g0e7w")
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="Game Area/Bridge8" unique_id=988218503]
+transform = Transform3D(1, -3.5527137e-15, 1.7763568e-15, 0, 1, 0, -7.1054274e-15, 2.9802322e-08, 1, -0.0005187988, 0.019244194, 0.61390686)
 size = Vector3(0.45111084, 0.005859375, 0.095703125)
 material = SubResource("StandardMaterial3D_g0e7w")
 
@@ -537,14 +712,32 @@ transform = Transform3D(1.1408683, 0, 0, 0, 1.1408683, 0, 0, 0, 1.1408683, -0.05
 size = Vector3(1, 0.08459473, 1)
 material = SubResource("StandardMaterial3D_b1lj4")
 
+[node name="platform3" type="CSGCombiner3D" parent="Game Area" unique_id=1129388272]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6428576, 0, 4.9285717)
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Game Area/platform3" unique_id=1295476887]
+transform = Transform3D(1.1408683, 0, 0, 0, 1.1408683, 0, 0, 0, 1.1408683, -1.5505749, 0.87005234, -1.4929364)
+size = Vector3(1, 0.08459473, 1)
+material = SubResource("StandardMaterial3D_b1lj4")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/platform3" unique_id=19429149]
+transform = Transform3D(1.1408683, 0, 0, 0, 1.1408683, 0, 0, 0, 1.1408683, -0.0505749, 0.87005234, -1.4929364)
+size = Vector3(1, 0.08459473, 1)
+material = SubResource("StandardMaterial3D_b1lj4")
+
 [node name="platform2" type="CSGCombiner3D" parent="Game Area" unique_id=1863678814]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.77415144, 2.4834752)
 use_collision = true
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="Game Area/platform2" unique_id=1403679016]
-transform = Transform3D(1.1408683, 0, 0, 0, 1.1408683, 0, 0, 0, 1.1408683, -0.80094093, 0.87005234, -1.4929364)
-size = Vector3(2.3154297, 0.08459473, 1)
+transform = Transform3D(1.1408685, 0, 0, 0, 1.1408685, 0, 0, 0, 1.1408685, -2.617528, 0.87005234, -1.4929352)
+size = Vector3(5.5, 0.08459473, 1)
 material = SubResource("StandardMaterial3D_b1lj4")
+
+[node name="platform4" type="CSGCombiner3D" parent="Game Area" unique_id=255802917]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6428576, 0.7741515, 2.4834747)
+use_collision = true
 
 [node name="POLES" type="CSGCombiner3D" parent="Game Area" unique_id=16629129]
 transform = Transform3D(0.19999999, 0, 0, 0, 0.5, 0, 0, 0, 0.19999999, -1.5, 0.875, 1)
@@ -586,8 +779,32 @@ height = 5.2691727
 sides = 25
 material = SubResource("StandardMaterial3D_verrx")
 
+[node name="CSGCylinder3D8" type="CSGCylinder3D" parent="Game Area/POLES" unique_id=1947639669]
+transform = Transform3D(1, 0, 0, 0, 0.99999934, 0, 0, 0, 1, -18.517616, 0.9101453, 12.124908)
+height = 4.866333
+sides = 25
+material = SubResource("StandardMaterial3D_dlxco")
+
+[node name="CSGCylinder3D9" type="CSGCylinder3D" parent="Game Area/POLES" unique_id=578785256]
+transform = Transform3D(1, 0, 0, 0, 0.9999995, 0, 0, 0, 1, -11.017616, -2.5807729, 12.124908)
+height = 5.2691727
+sides = 25
+material = SubResource("StandardMaterial3D_verrx")
+
 [node name="CSGCylinder3D5" type="CSGCylinder3D" parent="Game Area/POLES" unique_id=1006700485]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.2024007, 0.52598953, 13.473841)
+height = 5.2843094
+sides = 25
+material = SubResource("StandardMaterial3D_joc7j")
+
+[node name="CSGCylinder3D10" type="CSGCylinder3D" parent="Game Area/POLES" unique_id=1906642885]
+transform = Transform3D(-4.3711392e-08, 0, -1, 0, 0.99999964, 0, 1, 0, -4.3711392e-08, -17.599525, 0.48356628, -13.01725)
+height = 5.4145203
+sides = 25
+material = SubResource("StandardMaterial3D_13e3h")
+
+[node name="CSGCylinder3D11" type="CSGCylinder3D" parent="Game Area/POLES" unique_id=879005320]
+transform = Transform3D(-4.3711392e-08, 0, -1, 0, 0.99999964, 0, 1, 0, -4.3711392e-08, -17.602303, 0.52598953, -5.8148575)
 height = 5.2843094
 sides = 25
 material = SubResource("StandardMaterial3D_joc7j")
@@ -616,6 +833,56 @@ sides = 25
 
 [node name="CSGCylinder3D7" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=491136188]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.041997477, 2.6884477, -1.5)
+height = 0.001
+sides = 25
+material = SubResource("StandardMaterial3D_vtrmx")
+
+[node name="CSGCylinder3D14" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=1659744626]
+transform = Transform3D(-0.5878923, 0, -0.8089393, 0, 1, 0, 0.8089393, 0, -0.5878923, -5.220314, 2.728137, 1.0006542)
+height = 0.085998535
+sides = 25
+material = SubResource("StandardMaterial3D_vtrmx")
+
+[node name="CSGCylinder3D15" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=1977856121]
+transform = Transform3D(-0.52910304, 0, -0.72804534, 0, 0.9, 0, 0.72804534, 0, -0.52910304, -5.220314, 2.7308416, 1.0006542)
+material_override = SubResource("StandardMaterial3D_7ae3m")
+operation = 2
+height = 0.0952301
+sides = 25
+
+[node name="CSGCylinder3D16" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=1996554757]
+transform = Transform3D(-0.47619286, 0, -0.65524095, 0, 0.8100002, 0, 0.65524095, 0, -0.47619286, -4.9263687, 2.7392988, 0.5961857)
+operation = 2
+height = 0.10107803
+sides = 25
+
+[node name="CSGCylinder3D17" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=1502153607]
+transform = Transform3D(-0.5878923, 0, -0.8089393, 0, 1, 0, 0.8089393, 0, -0.5878923, -5.220314, 2.688449, 1.0006542)
+height = 0.001
+sides = 25
+material = SubResource("StandardMaterial3D_vtrmx")
+
+[node name="CSGCylinder3D18" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=997807493]
+transform = Transform3D(-0.10465997, 0, -0.9945081, 0, 1, 0, 0.9945081, 0, -0.10465997, -5.2006245, 2.5889132, 3.4158134)
+height = 0.085998535
+sides = 25
+material = SubResource("StandardMaterial3D_vtrmx")
+
+[node name="CSGCylinder3D19" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=59251482]
+transform = Transform3D(-0.094194025, 0, -0.89505744, 0, 0.9, 0, 0.89505744, 0, -0.094194025, -5.2006245, 2.5916178, 3.4158134)
+material_override = SubResource("StandardMaterial3D_7ae3m")
+operation = 2
+height = 0.0952301
+sides = 25
+
+[node name="CSGCylinder3D20" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=1083468008]
+transform = Transform3D(-0.0847746, 0, -0.8055518, 0, 0.81000024, 0, 0.8055518, 0, -0.0847746, -5.1482944, 2.600075, 2.91856)
+operation = 2
+height = 0.10107803
+sides = 25
+
+[node name="CSGCylinder3D21" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=167014904]
+transform = Transform3D(-0.10465997, 0, -0.9945081, 0, 1, 0, 0.9945081, 0, -0.10465997, -5.2006245, 2.549225, 3.4158134)
 height = 0.001
 sides = 25
 material = SubResource("StandardMaterial3D_vtrmx")
@@ -658,6 +925,25 @@ operation = 2
 height = 0.10107803
 sides = 25
 
+[node name="CSGCylinder3D11" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=1323251336]
+transform = Transform3D(-0.7071068, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, -0.7071068, -2.4927297, 2.7358694, 2.2845933)
+height = 0.085998535
+sides = 25
+material = SubResource("StandardMaterial3D_vtrmx")
+
+[node name="CSGCylinder3D12" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=727954734]
+transform = Transform3D(-0.6363961, 0, 0.63639605, 0, 0.9, 0, -0.63639605, 0, -0.6363961, -2.4927297, 2.738575, 2.2845933)
+material_override = SubResource("StandardMaterial3D_7ae3m")
+operation = 2
+height = 0.0952301
+sides = 25
+
+[node name="CSGCylinder3D13" type="CSGCylinder3D" parent="Game Area/BEDS" unique_id=118744385]
+transform = Transform3D(-0.5727564, 0, 0.57275635, 0, 0.8099999, 0, -0.57275635, 0, -0.5727564, -2.1391761, 2.7470312, 2.6381469)
+operation = 2
+height = 0.10107803
+sides = 25
+
 [node name="CSGCylinder3D7" type="CSGCylinder3D" parent="Game Area" unique_id=1469358070]
 transform = Transform3D(0.25881907, 0, 0.9659258, 0, 1, 0, -0.9659258, 0, 0.25881907, -0.00353536, 2.7696369, 1.0051126)
 height = 0.001
@@ -673,51 +959,75 @@ material = SubResource("StandardMaterial3D_vtrmx")
 [node name="SpawnPoints" type="Node3D" parent="Game Area" unique_id=1705191261]
 
 [node name="SpawnPoint1" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=583404665 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.126265, 0.24928102, -2.6572359)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.865425, 0.28532124, -2.5906696)
 
 [node name="SpawnPoint8" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=319796963 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75467634, 0.24928102, -2.6572359)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.7094536, 0.24928103, -2.657236)
 
 [node name="SpawnPoint2" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=252787866 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5762247, 0.24928102, -2.4326274)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.717103, 0.24928103, -2.4326286)
 
 [node name="SpawnPoint3" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=91308476 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3793113, 0.24928102, 4.8671613)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0705366, 0.24928103, 4.8671618)
 
 [node name="SpawnPoint7" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=1149819059 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.57126045, 0.24928102, 4.8671613)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.1648607, 0.24928103, 4.8671618)
 
 [node name="SpawnPoint4" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=1982028790 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8009586, 0.24928102, 4.826892)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.4611244, 0.24928103, 4.826892)
 
 [node name="SpawnPoint5" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=1472036233 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1554604, 0.24928102, 1.5984509)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1554613, 0.24928103, 1.0104141)
 
 [node name="SpawnPoint6" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=1260090475 groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.711226, 0.24928102, 1.5984509)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9923563, 0.24928103, 1.991579)
 
-[node name="SpawnPoint9" type="Marker3D" parent="Game Area/SpawnPoints" groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.24928102, 1.5984509)
+[node name="SpawnPoint9" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=1500455856 groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2348938, 0.24928103, 2.255577)
 
-[node name="SpawnPoint10" type="Marker3D" parent="Game Area/SpawnPoints" groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 0.24928102, 3.15)
+[node name="SpawnPoint10" type="Marker3D" parent="Game Area/SpawnPoints" unique_id=1064666058 groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.393749, 0.24928103, 1.583252)
 
 [node name="gun_spawn_point" type="Marker3D" parent="Game Area" unique_id=2071205023 groups=["gun_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0437698, 1.8451118, 0.8066025)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6079407, 1.8993973, 0.8066025)
+
+[node name="GunSpawnPoint2" type="Marker3D" parent="Game Area" unique_id=1921588667 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5497923, 1.0761863, -1.2029476)
+
+[node name="GunSpawnPoint3" type="Marker3D" parent="Game Area" unique_id=892686327 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9076061, 0.274464, 0.9759636)
+
+[node name="GunSpawnPoint4" type="Marker3D" parent="Game Area" unique_id=759575069 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8513651, 0.274464, 3.2949266)
+
+[node name="GunSpawnPoint5" type="Marker3D" parent="Game Area" unique_id=406563772 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4885426, 2.8101783, 2.3714333)
 
 [node name="ItemSpawnPoints" type="Node3D" parent="Game Area" unique_id=1240822759]
 
 [node name="ItemSpawn0" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=1653821622 groups=["item_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.45, 0.32, -1.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.435089, 0.32000005, -0.91166496)
 
 [node name="ItemSpawn1" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=1149377617 groups=["item_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.32, -1.35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16775036, 0.32000005, -0.52402306)
 
 [node name="ItemSpawn2" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=149003323 groups=["item_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.35, 0.32, 3.65)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.66329, 0.32000005, 2.7568684)
 
 [node name="ItemSpawn3" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=2122304229 groups=["item_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.32, 3.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.30895996, 2.5847058, 3.482152)
+
+[node name="ItemSpawn4" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=1369704360 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6345463, 2.734277, 2.355957)
+
+[node name="ItemSpawn5" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=173834279 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.31118, 2.7753487, 0.8771076)
+
+[node name="ItemSpawn6" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=875372930 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0054655075, 2.7753499, -1.3570328)
+
+[node name="ItemSpawn7" type="Marker3D" parent="Game Area/ItemSpawnPoints" unique_id=618712295 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.9094133, 2.73514, -1.4771843)
 
 [node name="PowerupSpawnPoints" type="Node3D" parent="Game Area" unique_id=962632468]
 
@@ -731,7 +1041,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9076061, 0.34000003, 0.9759
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8513651, 0.34000003, 3.2949266)
 
 [node name="PowerupSpawn3" type="Marker3D" parent="Game Area/PowerupSpawnPoints" unique_id=847319649 groups=["powerup_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1627817, 0.34000003, 1.2741394)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5041494, 1.8699932, 1.2741394)
 
 [node name="PowerupSpawn4" type="Marker3D" parent="Game Area/PowerupSpawnPoints" unique_id=1943800090 groups=["powerup_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4885426, 2.9006033, 2.3714333)
@@ -743,7 +1053,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.036460876, 2.9006033, 1.010
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7821226, 2.7131217, 3.9134893)
 
 [node name="PowerupSpawn7" type="Marker3D" parent="Game Area/PowerupSpawnPoints" unique_id=1025701938 groups=["powerup_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.21821308, 1.9085995, 1.3511524)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.060236, 2.7193832, -0.08699417)
 
 [node name="PowerupSpawn8" type="Marker3D" parent="Game Area/PowerupSpawnPoints" unique_id=1085722330 groups=["powerup_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.36801624, 1.0018991, -1.9366074)
@@ -752,25 +1062,25 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.36801624, 1.0018991, -1.93
 transform = Transform3D(0.26, 0, 0, 0, 0.26, 0, 0, 0, 0.26, -0.5053692, 0, 0)
 
 [node name="MeleeSpawn0" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=1665878362 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7198982, 0.709019, 0.8918762)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7198982, 0.8705466, 0.8918762)
 
 [node name="MeleeSpawn1" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=1140503262 groups=["melee_spawn_point"]]
-transform = Transform3D(0.99999976, 0, 0, 0, 0.99999976, 0, 0, 0, 0.99999976, 8.582478, 0.6926531, -1.5202942)
+transform = Transform3D(0.99999976, 0, 0, 0, 0.99999976, 0, 0, 0, 0.99999976, 1.8230019, 0.6926531, 12.787598)
 
 [node name="MeleeSpawn2" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=2012924032 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3884468, 0.70569587, -7.6080856)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5397987, 0.7056959, -5.7710648)
 
 [node name="MeleeSpawn3" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=1898840314 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.461796, 3.9098253, -6.7358856)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0565605, 3.9098253, -7.175247)
 
 [node name="MeleeSpawn4" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=838281866 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.527428, 0.6860736, -3.6763916)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.612057, 7.1197405, 4.126709)
 
 [node name="MeleeSpawn5" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=1197488781 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1039352, 3.697321, -7.1587677)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1039352, 3.8253183, -5.286522)
 
 [node name="MeleeSpawn6" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=646002517 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0225792, 10.735157, -6.0006638)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.328888, 10.005549, -6.0006638)
 
 [node name="MeleeSpawn7" type="Marker3D" parent="Game Area/MeleeSpawnPoints" unique_id=1412305799 groups=["melee_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0704231, 10.111574, 12.049885)
@@ -789,41 +1099,767 @@ shape = SubResource("VoidKillShape")
 transform = Transform3D(0.21428573, 0, 0, 0, 0.21428573, 0, 0, 0, 0.21428573, 12.057934, -0.02193887, 14.446882)
 
 [node name="blackSITTINGcat" parent="Game Area/BIG KITTYS" unique_id=1809362144 instance=ExtResource("42_apv5n")]
-transform = Transform3D(-1.0053619e-06, 0, -23.000002, 0, 23.000002, 0, 23.000002, 0, -1.0053619e-06, -42.229443, -0.04483453, -74.843025)
+transform = Transform3D(-1.0053619e-06, 0, -23.000002, 0, 23.000002, 0, 23.000002, 0, -1.0053619e-06, -41.042095, -0.04483453, -73.50969)
 
 [node name="CalicoSITTINGcat" parent="Game Area/BIG KITTYS" unique_id=2008264294 instance=ExtResource("43_tkgfa")]
-transform = Transform3D(-1.1146404e-06, 0, -25.500004, 0, 25.500004, 0, 25.500004, 0, -1.1146404e-06, -42.229443, 0.098165505, -50.93628)
+transform = Transform3D(-1.1146404e-06, 0, -25.500004, 0, 25.500004, 0, 25.500004, 0, -1.1146404e-06, -41.16662, 0.098165505, -50.93628)
+
+[node name="CalicoSITTINGcat2" parent="Game Area/BIG KITTYS" unique_id=1010274479 instance=ExtResource("43_tkgfa")]
+transform = Transform3D(24.631115, 0, 6.599887, 0, 25.500004, 0, -6.599887, 0, 24.631115, -83.89611, 0.098165505, -90.651146)
 
 [node name="greySIttingCat" parent="Game Area/BIG KITTYS" unique_id=474530720 instance=ExtResource("44_lx2r3")]
-transform = Transform3D(-24.000004, 0, 3.6238994e-06, 0, 24.000004, 0, -3.6238994e-06, 0, -24.000004, -52.515514, 0.07863889, -36.57666)
+transform = Transform3D(-24.000004, 0, 3.6238994e-06, 0, 24.000004, 0, -3.6238994e-06, 0, -24.000004, -52.515514, 0.07863889, -32.90999)
 
 [node name="orangeSIttingCat" parent="Game Area/BIG KITTYS" unique_id=1591167801 instance=ExtResource("2_tkgfa")]
-transform = Transform3D(-24.000004, 0, -3.6238994e-06, 0, 24.000004, 0, 3.6238994e-06, 0, -24.000004, -66.6917, 0.03876195, -36.57065)
+transform = Transform3D(-24.000004, 0, -3.6238994e-06, 0, 24.000004, 0, 3.6238994e-06, 0, -24.000004, -70.358376, 0.03876195, -33.237312)
+
+[node name="orangeSIttingCat2" parent="Game Area/BIG KITTYS" unique_id=1713198906 instance=ExtResource("2_tkgfa")]
+transform = Transform3D(5.985186, 0, 22.337038, 0, 23.125002, 0, -22.337038, 0, 5.985186, -96.848434, 0.03876195, -74.90398)
 
 [node name="tabbySIttingCat" parent="Game Area/BIG KITTYS" unique_id=108629704 instance=ExtResource("47_7sbnd")]
-transform = Transform3D(-9.616506e-07, 0, 22.000002, 0, 22.000002, 0, -22.000002, 0, -9.616506e-07, -77.32406, 0.13446794, -49.201942)
+transform = Transform3D(-11.000002, 0, 19.052559, 0, 22.000002, 0, -19.052559, 0, -11.000002, -96.56927, 0.13446794, -38.270554)
 
 [node name="tuxSIttingCat" parent="Game Area/BIG KITTYS" unique_id=1294265557 instance=ExtResource("48_uexso")]
-transform = Transform3D(-1.0490733e-06, 0, 24.000004, 0, 24.000004, 0, -24.000004, 0, -1.0490733e-06, -77.32406, 0.15918921, -73.0873)
+transform = Transform3D(-1.0490733e-06, 0, 24.000004, 0, 24.000004, 0, -24.000004, 0, -1.0490733e-06, -97.379845, 0.15918921, -55.753975)
 
 [node name="whiteSIttingCat" parent="Game Area/BIG KITTYS" unique_id=2083183278 instance=ExtResource("49_d68mr")]
-transform = Transform3D(25.000004, 0, 0, 0, 25.000004, 0, 0, 0, 25.000004, -59.08119, 0.08566479, -86.122406)
+transform = Transform3D(24.148151, 0, -6.470477, 0, 25.000004, 0, 6.470477, 0, 24.148151, -56.08119, 0.08566479, -90.45574)
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="Game Area" unique_id=1275254221]
 top_level = true
 navigation_mesh = ExtResource("57_nav")
 
+[node name="player1" parent="." unique_id=1881660810 groups=["local_player"] instance=ExtResource("50_i41q4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -125.4635, 2.150821, -151.37036)
+
+[node name="player2" parent="." unique_id=1674352502 instance=ExtResource("50_i41q4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -103.371704, 1.8985393, -151.83632)
+input_prefix = "p2"
+is_player2 = true
+use_gamepad_look = true
+
+[node name="Gun" parent="." unique_id=2145716613 instance=ExtResource("51_gun")]
+transform = Transform3D(0.809017, 0, -0.58778524, 0, 1, 0, 0.58778524, 0, 0.809017, -102.66112, 13.449353, -127.589455)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2124105966]
+script = ExtResource("54_local_ui")
+
+[node name="RoundLabel" type="Label" parent="CanvasLayer" unique_id=967578653]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -73.5
+offset_right = 24.0
+offset_bottom = -6.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7924642, 0.000498057, 0.7944216, 1)
+theme_override_font_sizes/font_size = 48
+script = ExtResource("15_8h0un")
+
+[node name="RoundLabel2" type="Label" parent="CanvasLayer" unique_id=716446538]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -73.5
+offset_right = 24.0
+offset_bottom = -6.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.7924642, 0.000498057, 0.7944216, 1)
+theme_override_font_sizes/font_size = 48
+script = ExtResource("15_8h0un")
+is_second_screen = true
+
+[node name="KillFeed" type="VBoxContainer" parent="CanvasLayer" unique_id=64806364]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -274.0
+offset_top = 20.0
+offset_right = -17.0
+offset_bottom = 203.0
+grow_horizontal = 0
+script = ExtResource("16_k4jru")
+
+[node name="KillFeed2" type="VBoxContainer" parent="CanvasLayer" unique_id=225889240]
+modulate = Color(0, 0, 0, 1)
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -274.0
+offset_top = 20.0
+offset_right = -17.0
+offset_bottom = 203.0
+grow_horizontal = 0
+script = ExtResource("16_k4jru")
+is_second_screen = true
+
+[node name="MatchHUD" type="Control" parent="CanvasLayer" unique_id=1358878890]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("17_053n5")
+
+[node name="MatchHUD2" type="Control" parent="CanvasLayer" unique_id=567439420]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("17_053n5")
+is_second_screen = true
+
+[node name="PlayerUI1" type="Control" parent="CanvasLayer" unique_id=2047602406]
+layout_mode = 3
+anchor_right = 0.5
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("18_0iutb")
+player_path = NodePath("../../player1")
+
+[node name="Crosshair" type="Label" parent="CanvasLayer/PlayerUI1" unique_id=1160401494]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -308.0
+offset_top = -22.5
+offset_right = -268.0
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "+"
+script = ExtResource("19_s3u7j")
+
+[node name="StaminaBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1" unique_id=358906255]
+layout_mode = 0
+offset_left = -560.0
+offset_top = 603.0
+offset_right = -337.0
+offset_bottom = 630.0
+value = 100.0
+script = ExtResource("20_w3lb0")
+
+[node name="DashCharges" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=1771092095]
+layout_mode = 0
+offset_left = -551.0
+offset_top = 569.0
+offset_right = -347.0
+offset_bottom = 599.0
+script = ExtResource("21_4hwue")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/PlayerUI1/DashCharges" unique_id=1307396422]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ColorRect2" type="ColorRect" parent="CanvasLayer/PlayerUI1/DashCharges" unique_id=1038959327]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="GunUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=2126723265]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -117.0
+offset_top = -108.0
+offset_right = 16.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("22_5udx3")
+
+[node name="AmmoLabel" type="Label" parent="CanvasLayer/PlayerUI1/GunUI" unique_id=481914725]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/GunUI" unique_id=1362186966]
+layout_mode = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="MeleeUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=63318656]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -117.0
+offset_top = -108.0
+offset_right = 16.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("24_m8ijy")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/MeleeUI" unique_id=1667572084]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/MeleeUI" unique_id=528302847]
+layout_mode = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="ReloadSpinner" type="Control" parent="CanvasLayer/PlayerUI1" unique_id=213506902]
+modulate = Color(18.892157, 0, 0, 1)
+anchors_preset = 0
+offset_left = -576.0
+offset_right = -536.0
+offset_bottom = 40.0
+script = ExtResource("25_l4hcn")
+
+[node name="ItemUI" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=1003564375]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("26_l0mx2")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/ItemUI" unique_id=1409904457]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/ItemUI" unique_id=1103861659]
+layout_mode = 2
+
+[node name="InventorySlots" type="HBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=564908631]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("27_snhf2")
+
+[node name="WeaponSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=26176030]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=1475618728]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=987290467]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=1033531594]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1/InventorySlots/WeaponSlot" unique_id=5487568]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=829939024]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=1237770912]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=472895267]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=342522458]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot" unique_id=1924416664]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="ItemSlot2" type="Control" parent="CanvasLayer/PlayerUI1/InventorySlots" unique_id=712039557]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2" unique_id=156997130]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2" unique_id=211105878]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2" unique_id=992287609]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI1/InventorySlots/ItemSlot2" unique_id=651032864]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI1" unique_id=1966501182]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("28_huxyf")
+
+[node name="PlayerUI2" type="Control" parent="CanvasLayer" unique_id=1777713013]
+layout_mode = 3
+anchor_left = 0.5
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("18_0iutb")
+player_path = NodePath("../../player2")
+
+[node name="Crosshair2" type="Label" parent="CanvasLayer/PlayerUI2" unique_id=444694622]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 268.0
+offset_top = -22.5
+offset_right = 308.0
+offset_bottom = 22.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "+"
+script = ExtResource("19_s3u7j")
+
+[node name="ReloadSpinner2" type="Control" parent="CanvasLayer/PlayerUI2" unique_id=96840152]
+modulate = Color(18.892157, 0, 0, 1)
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("25_l4hcn")
+
+[node name="MeleeUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1469524454]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 459.0
+offset_top = -108.0
+offset_right = 592.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("24_m8ijy")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/MeleeUI2" unique_id=1989794209]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/MeleeUI2" unique_id=445793533]
+layout_mode = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="GunUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=589717655]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 459.0
+offset_top = -108.0
+offset_right = 592.0
+offset_bottom = 20.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+script = ExtResource("22_5udx3")
+
+[node name="AmmoLabel" type="Label" parent="CanvasLayer/PlayerUI2/GunUI2" unique_id=1315329530]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/GunUI2" unique_id=1352063141]
+layout_mode = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="DashCharges2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=994573955]
+layout_mode = 0
+offset_left = 25.0
+offset_top = 569.0
+offset_right = 229.0
+offset_bottom = 599.0
+script = ExtResource("21_4hwue")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer/PlayerUI2/DashCharges2" unique_id=1263789966]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ColorRect2" type="ColorRect" parent="CanvasLayer/PlayerUI2/DashCharges2" unique_id=1977616818]
+custom_minimum_size = Vector2(100, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="StaminaBar2" type="ProgressBar" parent="CanvasLayer/PlayerUI2" unique_id=77110081]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 603.0
+offset_right = 239.0
+offset_bottom = 630.0
+value = 100.0
+script = ExtResource("20_w3lb0")
+
+[node name="ItemUI2" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1099384757]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -760.0
+offset_bottom = 40.0
+script = ExtResource("26_l0mx2")
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/ItemUI2" unique_id=201453952]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/ItemUI2" unique_id=18206482]
+layout_mode = 2
+
+[node name="InventorySlots" type="HBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=1102914243]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -656.0
+offset_bottom = 70.0
+script = ExtResource("27_snhf2")
+
+[node name="WeaponSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=1893418973]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=1139103882]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=2056999396]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=994510276]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI2/InventorySlots/WeaponSlot" unique_id=344463717]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="ItemSlot" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=153143922]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=1895198518]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=486252253]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=1792106767]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot" unique_id=791787635]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="ItemSlot2" type="Control" parent="CanvasLayer/PlayerUI2/InventorySlots" unique_id=2111379581]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2" unique_id=8657679]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2" unique_id=1011606701]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("23_1pnvl")
+
+[node name="NameLabel" type="Label" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2" unique_id=1233649695]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="HoldBar" type="ProgressBar" parent="CanvasLayer/PlayerUI2/InventorySlots/ItemSlot2" unique_id=779396140]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 6.0
+grow_horizontal = 2
+show_percentage = false
+
+[node name="PowerupStatus" type="VBoxContainer" parent="CanvasLayer/PlayerUI2" unique_id=529571262]
+layout_mode = 0
+offset_left = -800.0
+offset_right = -760.0
+offset_bottom = 40.0
+script = ExtResource("28_huxyf")
+
+[node name="PauseMenu" type="Control" parent="CanvasLayer" unique_id=535774393]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("29_dt2ic")
+
+[node name="RoundManager" type="Node" parent="." unique_id=1028570873]
+script = ExtResource("53_round")
+
+[node name="SplitScreenLayer" type="CanvasLayer" parent="." unique_id=1745384125]
+layer = 0
+script = ExtResource("55_split")
+player1_path = NodePath("../player1")
+player2_path = NodePath("../player2")
+
+[node name="ViewportRow" type="HBoxContainer" parent="SplitScreenLayer" unique_id=2097427808]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="SubViewportContainer1" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=1443655626]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport1" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1" unique_id=118472786]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera1" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1/SubViewport1" unique_id=864891257]
+current = true
+
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=226978702]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport2" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2" unique_id=872009589]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2" unique_id=840896229]
+current = true
+
 [node name="House Floor" type="Node3D" parent="." unique_id=80214207]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)
-
-[node name="CSGCombiner3D" type="CSGCombiner3D" parent="House Floor" unique_id=1273853169]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.4, 0, 0, 0)
-
-[node name="floor" type="CSGBox3D" parent="House Floor/CSGCombiner3D" unique_id=476713865]
-transform = Transform3D(80, 0, 0, 0, 11.088, 0, 0, 0, 75.398, -0.54025507, 0.053710938, 0.039831996)
-material_override = SubResource("StandardMaterial3D_tkgfa")
-size = Vector3(6.906128, 0.107421875, 7.3120117)
-material = SubResource("StandardMaterial3D_wi6ju")
 
 [node name="HOUSE BIG" type="Node3D" parent="House Floor" unique_id=1948457417]
 transform = Transform3D(-80, 0, -1.2079664e-05, 0, 80, 0, 1.2079664e-05, 0, -80, 22, 0, 31)
@@ -973,20 +2009,41 @@ transform = Transform3D(-0.8105646, 0, 7.0861795e-08, 0, 0.8105646, 0, -7.086179
 [node name="plantSmall1" parent="House Floor/HOUSE BIG" unique_id=567037412 instance=ExtResource("42_u84ar")]
 transform = Transform3D(-0.9141621, 0, 7.991858e-08, 0, 0.9141621, 0, -7.991858e-08, 0, -0.9141621, 1.4116575, 0.27322403, -0.091074586)
 
-[node name="player1" parent="." unique_id=1526157025 groups=["local_player"] instance=ExtResource("50_i41q4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.883854, 1.7449671, -18.60065)
+[node name="CSGCombiner3D2" type="CSGCombiner3D" parent="." unique_id=1273853169]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 2.1, 0, 0, 0)
 
-[node name="player2" parent="." unique_id=1556404836 instance=ExtResource("50_i41q4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -41.930515, 2.3423228, -42.89037)
-input_prefix = "p2"
-is_player2 = true
-use_gamepad_look = true
+[node name="floor" type="CSGBox3D" parent="CSGCombiner3D2" unique_id=476713865]
+transform = Transform3D(79.99999, 0, 0, 0, 11.087999, 0, 0, 0, 75.398, -0.540255, 0.053710934, 0.039831992)
+material_override = SubResource("StandardMaterial3D_tkgfa")
+size = Vector3(6.906128, 0.107421875, 7.3120117)
+material = SubResource("StandardMaterial3D_wi6ju")
 
 [node name="Ground" type="Node3D" parent="." unique_id=1256721442]
 
 [node name="PreviewBounds" type="MeshInstance3D" parent="Ground" unique_id=287833444]
-transform = Transform3D(0.71999997, 0, 0, 0, 1, 0, 0, 0, 0.784, -89.67172, 7.688861, -126.75413)
+transform = Transform3D(0.71999997, 0, 0, 0, 1, 0, 0, 0, 0.784, -103.7913, 8.188861, -124.412224)
 mesh = SubResource("PreviewBoundsMesh")
+
+[node name="poles" type="CSGCombiner3D" parent="." unique_id=1486440559]
+transform = Transform3D(0.71999997, 0, 0, 0, 1, 0, 0, 0, 0.784, -89.67172, 7.688861, -126.75413)
+
+[node name="CSGCylinder3D8" type="CSGCylinder3D" parent="poles" unique_id=493484824]
+transform = Transform3D(1.9444443, 0, 0, 0, 3.5, 0, 0, 0, 1.7857138, -43.380264, 2.2151232, 0.64704895)
+height = 5.1579723
+sides = 25
+material = SubResource("StandardMaterial3D_enh4s")
+
+[node name="CSGCylinder3D10" type="CSGCylinder3D" parent="poles" unique_id=1518723775]
+transform = Transform3D(1.9444443, 0, 0, 0, 3.5, 0, 0, 0, 1.7857138, -28.79692, -1.4231024, 0.64704895)
+height = 3.0789862
+sides = 25
+material = SubResource("StandardMaterial3D_enh4s")
+
+[node name="CSGCylinder3D9" type="CSGCylinder3D" parent="poles" unique_id=768030316]
+transform = Transform3D(1.9444443, 0, 0, 0, 3.5, 0, 0, 0, 1.7857138, -30.185806, 1.3233366, -22.312134)
+height = 4.64838
+sides = 25
+material = SubResource("StandardMaterial3D_enh4s")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=858266990]
 environment = SubResource("Environment_cat_tower")
@@ -1005,52 +2062,3 @@ transform = Transform3D(-0.7880108, -0.45752564, 0.4119579, 0, 0.66913056, 0.743
 light_color = Color(0.82, 0.9, 1, 1)
 light_energy = 0.28
 light_specular = 0.1
-
-[node name="Gun" parent="." unique_id=2145716613 instance=ExtResource("51_gun")]
-transform = Transform3D(0.809017, 0, -0.58778524, 0, 1, 0, 0.58778524, 0, 0.809017, -98.58802, 12.245055, -128.10596)
-
-[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1204828348]
-script = ExtResource("54_local_ui")
-
-[node name="RoundManager" type="Node" parent="." unique_id=1133866307]
-script = ExtResource("53_round")
-
-[node name="SplitScreenLayer" type="CanvasLayer" parent="." unique_id=349615466]
-layer = 0
-script = ExtResource("55_split")
-player1_path = NodePath("../player1")
-player2_path = NodePath("../player2")
-
-[node name="ViewportRow" type="HBoxContainer" parent="SplitScreenLayer" unique_id=962731647]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 0
-
-[node name="SubViewportContainer1" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=1770223506]
-layout_mode = 2
-size_flags_horizontal = 3
-stretch = true
-
-[node name="SubViewport1" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1" unique_id=523001937]
-handle_input_locally = false
-size = Vector2i(800, 900)
-render_target_update_mode = 4
-
-[node name="ViewportCamera1" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1/SubViewport1" unique_id=2076388102]
-current = true
-
-[node name="SubViewportContainer2" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=1638095372]
-layout_mode = 2
-size_flags_horizontal = 3
-stretch = true
-
-[node name="SubViewport2" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2" unique_id=163772428]
-handle_input_locally = false
-size = Vector2i(800, 900)
-render_target_update_mode = 4
-
-[node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2" unique_id=1780003768]
-current = true

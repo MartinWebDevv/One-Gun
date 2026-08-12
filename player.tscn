@@ -1,120 +1,30 @@
-[gd_scene format=3 uid="uid://ddjvi4ck1h7rc"]
+[gd_scene load_steps=4 format=3 uid="uid://ddjvi4ck1h7rc"]
 
-[ext_resource type="Script" uid="uid://bqptcsbcs4ps2" path="res://character_body_3d.gd" id="1_4flbx"]
-[ext_resource type="PackedScene" uid="uid://bhgxubx7snc4x" path="res://models/playerAnimations/cat model firing ani.glb" id="2_onrkg"]
+[ext_resource type="Script" uid="uid://bqptcsbcs4ps2" path="res://character_body_3d.gd" id="1_player"]
+[ext_resource type="PackedScene" path="res://models/player_v2/player_v2_visual.tscn" id="2_visual"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_r3fl7"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
 radius = 0.495
 height = 2.3266993
 
-[node name="CharacterBody3D" type="CharacterBody3D" unique_id=1526157025 groups=["player"]]
+[node name="CharacterBody3D" type="CharacterBody3D" groups=["player"]]
 collision_layer = 2
 collision_mask = 3
-script = ExtResource("1_4flbx")
+script = ExtResource("1_player")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1647789790]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07334959, 0)
-shape = SubResource("CapsuleShape3D_r3fl7")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.07334959, 0)
+shape = SubResource("CapsuleShape3D_player")
 
-[node name="AimPivot" type="Node3D" parent="." unique_id=1361963331]
+[node name="AimPivot" type="Node3D" parent="."]
 
-[node name="SpringArm3D" type="SpringArm3D" parent="AimPivot" unique_id=1000966572]
-transform = Transform3D(1, 0, 0, 0, 0.99999994, 0, 0, 0, 0.99999994, 0.6596317, 1.6743513, -0.5467267)
-collision_mask = 1
-margin = 0.15
+[node name="SpringArm3D" type="SpringArm3D" parent="AimPivot"]
+position = Vector3(0.6596317, 1.6743513, -0.5467267)
 spring_length = 4.0
+margin = 0.15
 
-[node name="Camera3D" type="Camera3D" parent="AimPivot/SpringArm3D" unique_id=1994487957]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.43908894, -0.11221671, -0.13058637)
+[node name="Camera3D" type="Camera3D" parent="AimPivot/SpringArm3D"]
+position = Vector3(-0.43908894, -0.11221671, -0.13058637)
 
-[node name="CharacterModel" type="Node3D" parent="." unique_id=202006143]
-transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, -1, 0)
-
-[node name="cat model firing ani" parent="CharacterModel" unique_id=118698642 instance=ExtResource("2_onrkg")]
-
-[node name="Skeleton3D" parent="CharacterModel/cat model firing ani/Armature" parent_id_path=PackedInt32Array(118698642, 213824027) index="0" unique_id=1640374352]
-bones/0/position = Vector3(5.442561, -6.027874, -168.13065)
-bones/0/rotation = Quaternion(-0.6837957, -0.2668565, 0.2508369, 0.63110375)
-bones/1/position = Vector3(7.748604e-07, 33.052177, 1.0519818)
-bones/1/rotation = Quaternion(0.13190399, -0.041787244, 0.040339775, 0.9895595)
-bones/2/position = Vector3(-3.5762787e-06, 38.58044, 7.1525676e-07)
-bones/2/rotation = Quaternion(0.017529232, -0.02033462, 0.0075043445, 0.9996114)
-bones/3/position = Vector3(1.6912626e-06, 44.09192, -4.7650724e-07)
-bones/3/rotation = Quaternion(0.01742836, -0.020285878, 0.0078592645, 0.99961144)
-bones/4/position = Vector3(6.914139e-06, 49.60341, 1.9833954e-06)
-bones/4/rotation = Quaternion(0.09134791, 0.12137446, -0.04410522, 0.98741)
-bones/5/position = Vector3(-4.053116e-06, 49.599834, 1.8775654)
-bones/5/rotation = Quaternion(0.15011281, 0.0806435, 0.049089625, 0.98415095)
-bones/6/position = Vector3(3.8146973e-06, 140.47032, 5.3173504)
-bones/7/position = Vector3(27.030987, 41.387367, 0.1852116)
-bones/7/rotation = Quaternion(0.6721113, 0.3190971, -0.53842044, 0.3956601)
-bones/8/position = Vector3(1.047299e-05, 56.50221, -2.0705673e-05)
-bones/8/rotation = Quaternion(0.11519634, -0.3228715, 0.32558405, 0.8811804)
-bones/9/position = Vector3(2.5530559e-05, 84.289406, 1.3239955e-05)
-bones/9/rotation = Quaternion(-0.015160535, 0.00023529027, 0.5032262, 0.8640218)
-bones/10/position = Vector3(-3.5922712e-06, 84.94858, 4.196606e-05)
-bones/10/rotation = Quaternion(-0.091139734, -0.89671516, -0.19078784, 0.38883865)
-bones/11/position = Vector3(-3.8873754e-06, 13.301526, 6.6746597e-06)
-bones/11/rotation = Quaternion(0.3409058, -0.022181313, -0.0014071115, 0.9398348)
-bones/12/position = Vector3(1.0013608e-05, 6.0448256, -9.145591e-06)
-bones/12/rotation = Quaternion(0.5380946, 0.007131484, -0.051029135, 0.8413082)
-bones/13/position = Vector3(-0.29714775, 8.534956, -0.7417358)
-bones/13/rotation = Quaternion(0.2406281, 0.015313969, -0.085186474, 0.9667507)
-bones/14/position = Vector3(-0.939517, 5.2394857, -0.8095222)
-bones/15/position = Vector3(-27.030993, 41.392258, 0.33763164)
-bones/15/rotation = Quaternion(0.6400656, -0.34472543, 0.57110214, 0.3812123)
-bones/16/position = Vector3(-1.0108649e-06, 56.502193, -3.6626952e-06)
-bones/16/rotation = Quaternion(0.11688029, -0.10215287, -0.55916816, 0.8143923)
-bones/17/position = Vector3(-5.317676e-06, 84.2811, 1.2848395e-06)
-bones/17/rotation = Quaternion(-0.026000649, 4.1667377e-06, -0.7489657, 0.66209847)
-bones/18/position = Vector3(-1.781555e-05, 84.9483, 3.022197e-05)
-bones/18/rotation = Quaternion(-0.10741745, 0.35381564, 0.31797495, 0.8730224)
-bones/19/position = Vector3(2.9752351e-05, 15.63864, 1.4305246e-05)
-bones/19/rotation = Quaternion(0.13126983, 0.008142353, -0.017707683, 0.9911551)
-bones/20/position = Vector3(-3.3378677e-05, 5.4342136, 2.4736655e-06)
-bones/20/rotation = Quaternion(0.36673164, -0.012341776, 0.04706797, 0.92905337)
-bones/21/position = Vector3(0.46716356, 7.6890836, 0.39806956)
-bones/21/rotation = Quaternion(0.2962164, -0.014626585, 0.0013858705, 0.95500785)
-bones/22/position = Vector3(0.17915812, 4.722668, -0.14240488)
-bones/23/position = Vector3(63.71505, -18.376625, -0.5279105)
-bones/23/rotation = Quaternion(0.26778337, 0.022510024, 0.95929694, -0.08680398)
-bones/24/position = Vector3(-5.3318945e-07, 90.0711, -3.4753136e-06)
-bones/24/rotation = Quaternion(-0.6679054, 0.08733689, -0.09619147, 0.73281777)
-bones/25/position = Vector3(-2.3143757e-06, 79.044136, -3.195253e-06)
-bones/25/rotation = Quaternion(0.5652885, -0.5574065, 0.46730623, 0.38906544)
-bones/26/position = Vector3(-5.7542156e-06, 4.542397, -1.526083e-06)
-bones/26/rotation = Quaternion(0.32102254, 0.31569913, -0.13733888, 0.8822792)
-bones/27/position = Vector3(1.013279e-06, 6.0361705, 3.0696415e-06)
-bones/28/position = Vector3(-63.715046, -18.376614, -0.14184749)
-bones/28/rotation = Quaternion(-0.0109131625, 0.21040855, 0.9771703, -0.027340803)
-bones/29/position = Vector3(6.105902e-07, 90.067375, -2.6249252e-06)
-bones/29/rotation = Quaternion(-0.46647713, 0.0049879937, -0.040382463, 0.8835969)
-bones/30/position = Vector3(-1.1848533e-05, 76.1667, 1.4546993e-06)
-bones/30/rotation = Quaternion(0.7814295, 0.20128044, -0.101002395, 0.5819388)
-bones/31/position = Vector3(-4.1528028e-07, 9.8883705, -2.7927904e-06)
-bones/31/rotation = Quaternion(0.15801696, 0.015940791, -0.11919165, 0.9800867)
-bones/32/position = Vector3(-9.238729e-07, 8.018345, 1.6242302e-06)
-
-[node name="LeftHandBoneAttch" type="BoneAttachment3D" parent="CharacterModel/cat model firing ani/Armature/Skeleton3D" index="5" unique_id=1172585865]
-transform = Transform3D(-0.6279462, -0.7750724, -0.07033259, -0.7767626, 0.6185776, 0.11833143, -0.0482094, 0.12893772, -0.9904801, -56.618538, 188.48135, -281.5276)
-bone_name = "mixamorig_LeftHand"
-bone_idx = 10
-
-[node name="RightHandBoneAttch" type="BoneAttachment3D" parent="CharacterModel/cat model firing ani/Armature/Skeleton3D" index="6" unique_id=2116805446]
-transform = Transform3D(-0.065843046, -0.1438561, 0.9874054, -0.007252693, 0.9895956, 0.14369133, -0.9978031, 0.0022999477, -0.06620142, -93.49632, 50.329517, -274.0682)
-bone_name = "mixamorig_RightHand"
-bone_idx = 18
-
-[node name="GunHoldPoint" type="Marker3D" parent="CharacterModel/cat model firing ani/Armature/Skeleton3D/RightHandBoneAttch" unique_id=322868702]
-transform = Transform3D(-15.493157, 220.42343, -23.585106, 7.0285625, 24.119192, 220.79758, 221.57013, 14.647828, -8.653133, -45.253872, 1.4998627, 10.916351)
-
-[node name="MeleeHoldPoint" type="Marker3D" parent="CharacterModel/cat model firing ani/Armature/Skeleton3D/RightHandBoneAttch" unique_id=581350994]
-transform = Transform3D(-74.1376, 208.48967, -20.454645, 7.018403, 24.157467, 220.79332, 209.3732, 73.01503, -14.644078, 115.82168, 65.306595, 15.909813)
-
-[node name="ItemHoldPoint" type="Marker3D" parent="CharacterModel/cat model firing ani/Armature/Skeleton3D/RightHandBoneAttch" unique_id=867258982]
-transform = Transform3D(-15.493153, 220.42343, -23.585102, 7.028567, 24.119192, 220.79762, 221.57016, 14.647828, -8.65314, -5.212082, 9.71949, -15.227982)
-
-[node name="AnimationPlayer" parent="CharacterModel/cat model firing ani" index="82" unique_id=1140343903]
-root_motion_track = NodePath("Armature/Skeleton3D:mixamorig_Hips")
-
-[editable path="CharacterModel/cat model firing ani"]
+[node name="CharacterModel" parent="." instance=ExtResource("2_visual")]
+position = Vector3(0, -1.09, 0)

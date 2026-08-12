@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://cttcua0buswxc"]
+
+[ext_resource type="PackedScene" uid="uid://nak7uoouwruo" path="res://models/springShoes/JumpShoes.glb" id="1_hpy8p"]
+[ext_resource type="PackedScene" uid="uid://dnktypg0gajn1" path="res://models/springShoes/SpringCoil.glb" id="2_sbhtu"]
+
+[node name="Node3D" type="Node3D" unique_id=1058112497]
+
+[node name="JumpShoes" parent="." unique_id=221904373 instance=ExtResource("1_hpy8p")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0.32770193, 6.091371, 2.126691)
+
+[node name="SpringCoil" parent="." unique_id=295843082 instance=ExtResource("2_sbhtu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8640227, 3.9535434, 6.8634214)
+
+[node name="SpringCoil4" parent="." unique_id=2129169661 instance=ExtResource("2_sbhtu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8640227, 3.9535434, -2.764376)
+
+[node name="SpringCoil2" parent="." unique_id=2071622122 instance=ExtResource("2_sbhtu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.813, 3.954, 6.863)
+
+[node name="SpringCoil3" parent="." unique_id=2095570809 instance=ExtResource("2_sbhtu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.813, 3.954, -2.764)

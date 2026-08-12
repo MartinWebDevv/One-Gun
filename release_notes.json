@@ -1,0 +1,16 @@
+{
+  "version": "0.0.4",
+  "title": "Latest Release",
+  "categories": {
+    "Added": [],
+    "Improved": [],
+    "Fixed": [
+      "Godot 4.7.1 startup crashes caused by the unused Terrain3D native extension.",
+      "Local-play error spam, unsafe lobby UI rebuilding, camera transition errors, and the hidden solo second viewport continuing to render."
+    ],
+    "Removed": [],
+    "Misc": [
+      "High-priority gameplay overhaul is currently in development."
+    ]
+  }
+}

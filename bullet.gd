@@ -64,6 +64,7 @@ func _on_body_entered(body):
 	if body.has_method("is_bullet_immune") and body.is_bullet_immune():
 		if body.is_in_group("player") and GameConfig.can_affect(shooter, body):
 			GameEvents.combat_feedback.emit(shooter_name, "gun_hit")
+			GameEvents.actor_combat_feedback.emit(int(shooter.get("actor_id")) if shooter != null and shooter.get("actor_id") != null else -1, "gun_hit")
 		queue_free()
 		return
 	if not GameConfig.can_affect(shooter, body):
@@ -72,11 +73,14 @@ func _on_body_entered(body):
 	if body.has_method("flash_hit"):
 		body.flash_hit()
 	if body.has_method("eliminate"):
-		body.eliminate(shooter_name, "🔫")
+		var shooter_actor_id := int(shooter.get("actor_id")) if shooter != null and shooter.get("actor_id") != null else -1
+		body.eliminate(shooter_name, "🔫", "weapon", shooter_actor_id)
 		# eliminate() sets is_eliminated synchronously unless Extra Life ate the
 		# hit — so this reads the true outcome for the red-vs-white marker.
 		var eliminated := bool(body.get("is_eliminated"))
-		GameEvents.combat_feedback.emit(shooter_name, "gun_elimination" if eliminated else "gun_hit")
+		var event_kind := "gun_elimination" if eliminated else "gun_hit"
+		GameEvents.combat_feedback.emit(shooter_name, event_kind)
+		GameEvents.actor_combat_feedback.emit(shooter_actor_id, event_kind)
 	queue_free()
 
 func _on_hit_online(body):

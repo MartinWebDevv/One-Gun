@@ -19,7 +19,7 @@ const DISPLAY_NAMES = {
 	"silent_steps": "Silent Steps",
 	"vampire_touch": "Vampire Touch",
 	"extra_life": "Extra Life",
-	"magnet_hands": "Magnet Hands",
+	"reach": "Reach",
 }
 
 # One-line effect blurbs, shown under the name while the powerup is active.
@@ -30,7 +30,7 @@ const DESCRIPTIONS = {
 	"silent_steps": "your footsteps are silent",
 	"vampire_touch": "melee hits refund stamina",
 	"extra_life": "survive one lethal weapon hit",
-	"magnet_hands": "pulls nearby items to you",
+	"reach": "8m pickup and melee reach",
 }
 
 var player = null
@@ -82,7 +82,7 @@ const TYPE_COLORS = {
 	"silent_steps": Color(0.55, 0.55, 0.85),
 	"vampire_touch": Color(0.85, 0.15, 0.25),
 	"extra_life": Color(1.0, 0.72, 0.18),
-	"magnet_hands": Color(0.85, 0.35, 0.95),
+	"reach": Color(0.2, 1.0, 0.42),
 }
 const DESC_SHOW_TIME := 2.0   # description collapses after this to reduce clutter
 

@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://decoy_body.gd" id="1_decoy"]
-[ext_resource type="PackedScene" path="res://models/playerAnimations/cat model firing ani.glb" id="2_cat"]
+[ext_resource type="PackedScene" path="res://models/player_v2/player_v2_visual.tscn" id="2_cat"]
 
 [sub_resource type="CapsuleShape3D" id="Capsule_decoy"]
 radius = 0.495
@@ -22,4 +22,4 @@ shape = SubResource("Capsule_decoy")
 rotation = Vector3(0, 3.1415927, 0)
 
 [node name="CatModel" parent="VisualRoot" instance=ExtResource("2_cat")]
-scale = Vector3(0.45, 0.45, 0.45)
+build_animation_library = false

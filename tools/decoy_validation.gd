@@ -115,8 +115,10 @@ func _test_scene_contract() -> void:
 		"decoy lifetime default is no longer ten seconds")
 	_check(decoy.manages_deployed_lifetime(),
 		"decoy no longer owns its authoritative lifetime")
-	_check(decoy._bone_indices.size() == 7,
-		"procedural gait did not bind every required skeleton bone")
+	_check(decoy._animation_player != null \
+		and decoy._animation_player.has_animation("idle") \
+		and decoy._animation_player.has_animation("standard_run"),
+		"V2 decoy did not bind its Idle and Standard Run animations")
 	for method_name in ["can_be_affected_by", "pop_from_attack", "apply_slow",
 			"apply_launch", "server_online_hit", "apply_online_action"]:
 		_check(decoy.has_method(method_name),
@@ -126,13 +128,8 @@ func _test_scene_contract() -> void:
 		"visual root starts displaced from the collision body")
 	_check(decoy.get_visual_facing_direction().dot(Vector3.RIGHT) > 0.99,
 		"decoy visual does not face its deployment direction")
-	var players: Array[Node] = decoy.find_children("*", "AnimationPlayer", true, false)
-	var imported_animation_active := false
-	for node in players:
-		if (node as AnimationPlayer).active:
-			imported_animation_active = true
-	_check(not imported_animation_active,
-		"an imported AnimationPlayer can still move the decoy skeleton")
+	_check(decoy._animation_player.active,
+		"the V2 decoy animation player is inactive")
 	decoy.free()
 	await get_tree().process_frame
 
@@ -166,6 +163,20 @@ func _test_procedural_gait_continuity() -> void:
 	var decoy = _spawn_decoy(Vector3(0.0, 0.0, -16.0), Vector3.RIGHT)
 	decoy.set_physics_process(false)
 	decoy._visual_motion_speed = 10.0
+	if decoy._animation_player != null:
+		decoy._process(1.0 / 60.0)
+		_check(decoy._current_visual_animation == "standard_run",
+			"moving V2 decoy did not enter Standard Run")
+		_check(is_zero_approx(decoy._visual_root.position.x) \
+			and is_zero_approx(decoy._visual_root.position.z),
+			"V2 run animation translated VisualRoot in X/Z")
+		decoy._visual_motion_speed = 0.0
+		decoy._process(1.0 / 60.0)
+		_check(decoy._current_visual_animation == "idle",
+			"stopped V2 decoy did not return to Idle")
+		decoy.free()
+		await get_tree().process_frame
+		return
 	var left_leg_index := int(decoy._bone_indices["left_up_leg"])
 	var previous: Quaternion = decoy._skeleton.get_bone_pose_rotation(left_leg_index)
 	var max_rotation_step := 0.0
@@ -210,8 +221,9 @@ func _test_automatic_movement_is_monotonic() -> void:
 			"automatic gait displaced the rendered decoy from its body")
 	_check(decoy.global_position.x > 10.0,
 		"automatic decoy did not make meaningful forward progress")
-	_check(decoy._gait_phase != start_phase,
-		"automatic movement did not drive the gait")
+	_check(decoy._current_visual_animation == "standard_run" \
+		or decoy._gait_phase != start_phase,
+		"automatic movement did not drive the decoy run presentation")
 	decoy.free()
 	await get_tree().process_frame
 
@@ -363,6 +375,13 @@ func _test_combat_pop_rules() -> void:
 		"enemy shooter did not receive exactly one 0.5-second reveal request")
 	_check(_elimination_events == events_before,
 		"decoy pop emitted a player-elimination scoring event")
+	var player_source := FileAccess.get_file_as_string("res://character_body_3d.gd")
+	var bot_source := FileAccess.get_file_as_string("res://dummy.gd")
+	_check(not player_source.contains("mat.grow = true") \
+		and not bot_source.contains("mat.grow = true"),
+		"decoy shooter reveal still uses the scale-dependent expanded shell")
+	_check(player_source.contains("_restore_outline_after_temporary_reveal"),
+		"local player decoy reveal has no explicit overlay cleanup")
 	var trap_decoy = _spawn_decoy(Vector3(24.0, 0.0, 0.0), Vector3.RIGHT)
 	trap_decoy.pop_from_attack(enemy, "bear_trap")
 	await get_tree().process_frame
@@ -402,7 +421,7 @@ func _test_bot_target_parity() -> void:
 	bot.position = Vector3(35.0, 0.0, 0.0)
 	add_child(bot)
 	bot.set_physics_process(false)
-	bot._update_target()
+	bot._update_target(0.0)
 	_check(bot.target_player == decoy,
 		"bot target selection distinguished the decoy from a player target")
 	bot.free()

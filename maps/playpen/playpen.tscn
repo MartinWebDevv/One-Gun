@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://maps/playpen/playpen_manager.gd" id="1_manager"]
+
+[node name="Playpen" type="Node3D"]
+
+[node name="RoundManager" type="Node" parent="."]
+script = ExtResource("1_manager")

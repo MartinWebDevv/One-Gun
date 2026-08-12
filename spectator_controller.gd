@@ -18,9 +18,11 @@ enum Mode { FOLLOW, FREE }
 const FREE_CAM_SPEED     = 12.0
 const FREE_CAM_FAST_MULT = 3.0
 const FREE_CAM_SENS      = 0.003
+var _role_filter := ""
 const FREE_CAM_COLLISION_RADIUS = 0.25
 
 var _player: CharacterBody3D = null
+var pure_online_spectator := false
 var _input_prefix: String = "p1"
 var _use_gamepad: bool = false
 var _mode: Mode = Mode.FOLLOW
@@ -33,6 +35,24 @@ var _free_cam_pivot: Node3D = null
 var _free_cam_arm: Node3D = null
 
 var _mode_label: Label = null
+var _pure_target_refresh_timer := 0.0
+
+
+func _ready() -> void:
+	if pure_online_spectator:
+		setup_pure_online.call_deferred()
+
+
+func setup_pure_online() -> void:
+	_player = null
+	_input_prefix = "p1"
+	_use_gamepad = false
+	_build_free_cam()
+	_build_ui()
+	_refresh_follow_targets()
+	_set_mode(Mode.FOLLOW if not _follow_targets.is_empty() else Mode.FREE)
+	set_process(true)
+	set_process_input(true)
 
 func setup(player: CharacterBody3D):
 	_player = player
@@ -47,9 +67,16 @@ func setup(player: CharacterBody3D):
 		_set_mode(Mode.FOLLOW)
 	else:
 		_set_mode(Mode.FREE)
-
 	set_process(true)
 	set_process_input(true)
+
+func set_role_filter(role: String) -> void:
+	_role_filter = role
+	_refresh_follow_targets()
+	if _follow_targets.is_empty():
+		_set_mode(Mode.FREE)
+
+
 
 func _build_free_cam():
 	_free_cam_pivot = Node3D.new()
@@ -63,10 +90,15 @@ func _build_free_cam():
 	_free_cam_arm.add_child(_free_cam)
 	_free_cam_pivot.add_child(_free_cam_arm)
 
-	_player.get_tree().current_scene.add_child(_free_cam_pivot)
+	get_tree().current_scene.add_child(_free_cam_pivot)
 	if _player != null:
 		# global_position is only valid after the new pivot enters the scene tree.
 		_free_cam_pivot.global_position = _player.global_position + Vector3(0, 2.0, 0)
+	else:
+		var anchor: Node3D = get_tree().get_first_node_in_group("gun_spawn_point") as Node3D
+		if anchor == null:
+			anchor = get_tree().get_first_node_in_group("spawn_point") as Node3D
+		_free_cam_pivot.global_position = (anchor.global_position if anchor != null else Vector3.ZERO) + Vector3(0, 8.0, 0)
 
 func _build_ui():
 	_mode_label = Label.new()
@@ -82,24 +114,30 @@ func _build_ui():
 	_mode_label.offset_top    = -40
 	_mode_label.offset_bottom = -10
 
-	var canvas = _player.get_tree().current_scene.get_node_or_null("OnlineHUD")
-	if canvas == null:
+	var canvas = get_tree().current_scene.get_node_or_null("OnlineHUD")
+	if canvas == null and _player != null:
 		canvas = _player.get_node_or_null("../CanvasLayer")
 	if canvas != null:
 		canvas.add_child(_mode_label)
 	else:
-		_player.get_tree().current_scene.add_child(_mode_label)
+		get_tree().current_scene.add_child(_mode_label)
 
 func _refresh_follow_targets():
 	_follow_targets.clear()
-	var players = _player.get_tree().get_nodes_in_group("player")
+	var players = get_tree().get_nodes_in_group("player")
 	for p in players:
-		if p == _player:
+		if _player != null and p == _player:
 			continue
 		if "is_eliminated" in p and p.is_eliminated:
 			continue
-		if "is_bot" in p and p.is_bot:
-			continue
+		if _role_filter != "":
+			var round_manager = get_tree().current_scene.get_node_or_null("RoundManager")
+			if round_manager == null or not round_manager.has_method("one_of_us_role_for_actor"):
+				continue
+			var candidate_role: String = round_manager.one_of_us_role_for_actor(
+				int(p.get("actor_id")))
+			if candidate_role != _role_filter:
+				continue
 		_follow_targets.append(p)
 	_follow_index = clamp(_follow_index, 0, max(0, _follow_targets.size() - 1))
 
@@ -113,6 +151,7 @@ func _set_mode(mode: Mode):
 			_free_cam_pivot.global_position = target.global_position + Vector3(0, 2.5, 0)
 	_activate_camera_online()
 	_update_ui()
+	_update_control_hint()
 
 # Online has no splitscreen manager polling get_camera() to drive the viewport,
 # so the spectator must make its own camera current — otherwise the view stays
@@ -149,8 +188,16 @@ func get_spectator_camera() -> Camera3D:
 			return _free_cam
 	return _free_cam
 
+func get_follow_target():
+	if _mode == Mode.FOLLOW and not _follow_targets.is_empty():
+		return _follow_targets[_follow_index]
+	return null
+
+func is_follow_mode() -> bool:
+	return _mode == Mode.FOLLOW
+
 func _input(event):
-	if _player == null or PauseManager.is_pause_open():
+	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open():
 		return
 
 	if event.is_action_pressed(_input_prefix + "_jump"):
@@ -163,10 +210,15 @@ func _input(event):
 		return
 
 	if _mode == Mode.FOLLOW:
-		if event.is_action_pressed(_input_prefix + "_cycle_left") or event.is_action_pressed(_input_prefix + "_move_left"):
+		var previous: bool = event.is_action_pressed(_input_prefix + "_cycle_left")
+		var next: bool = event.is_action_pressed(_input_prefix + "_cycle_right")
+		if not _use_gamepad and event is InputEventMouseButton and event.pressed:
+			previous = event.button_index == MOUSE_BUTTON_LEFT
+			next = event.button_index == MOUSE_BUTTON_RIGHT
+		if previous:
 			_cycle_target(-1)
 			get_viewport().set_input_as_handled()
-		elif event.is_action_pressed(_input_prefix + "_cycle_right") or event.is_action_pressed(_input_prefix + "_move_right"):
+		elif next:
 			_cycle_target(1)
 			get_viewport().set_input_as_handled()
 
@@ -186,9 +238,20 @@ func _cycle_target(direction: int):
 		_follow_index += _follow_targets.size()
 	_activate_camera_online()
 	_update_ui()
+	_update_control_hint()
+
+func _update_control_hint() -> void:
+	if _mode_label == null:
+		return
+	if _mode == Mode.FOLLOW:
+		var target = get_follow_target()
+		var target_name: String = str(target.get_display_name()) if target != null and target.has_method("get_display_name") else ""
+		_mode_label.text = "SPECTATING: %s   [SPACE/A] Free Cam   [LMB/RMB or LB/RB] Switch" % target_name
+	else:
+		_mode_label.text = "FREE CAM   [SPACE/A] Follow   [WASD] Fly   [SHIFT/CTRL] Up/Down   [F] Fast"
 
 func _process(delta):
-	if _player == null or PauseManager.is_pause_open():
+	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open():
 		return
 
 	if _mode == Mode.FOLLOW:
@@ -198,7 +261,20 @@ func _process(delta):
 		# when the right camera is already current.
 		_activate_camera_online()
 		_update_ui()
+		_update_control_hint()
 		return
+
+	# A late-join spectator can enter the map before MultiplayerSpawner has
+	# delivered the current actors. Poll lightly and move into follow mode as
+	# soon as the first valid player or bot arrives.
+	if pure_online_spectator:
+		_pure_target_refresh_timer -= delta
+		if _pure_target_refresh_timer <= 0.0:
+			_pure_target_refresh_timer = 0.5
+			_refresh_follow_targets()
+			if not _follow_targets.is_empty():
+				_set_mode(Mode.FOLLOW)
+				return
 
 	# Free cam movement
 	var move = Vector3.ZERO
@@ -221,6 +297,10 @@ func _process(delta):
 
 		if Input.is_action_pressed(_input_prefix + "_sprint"):
 			speed *= FREE_CAM_FAST_MULT
+		if Input.is_action_pressed(_input_prefix + "_fire"):
+			move.y += 1.0
+		if Input.is_action_pressed(_input_prefix + "_ads"):
+			move.y -= 1.0
 	else:
 		var input_dir = Input.get_vector(
 			_input_prefix + "_move_left",
@@ -230,14 +310,12 @@ func _process(delta):
 		)
 		move += _free_cam_pivot.transform.basis * Vector3(input_dir.x, 0, input_dir.y)
 
-		if Input.is_action_pressed(_input_prefix + "_sprint"):
+		if Input.is_key_pressed(KEY_F):
 			speed *= FREE_CAM_FAST_MULT
-
-	# Vertical movement: dash = down, interact = up
-	if Input.is_action_pressed(_input_prefix + "_interact"):
-		move.y += 1.0
-	if Input.is_action_pressed(_input_prefix + "_dash"):
-		move.y -= 1.0
+		if Input.is_key_pressed(KEY_SHIFT):
+			move.y += 1.0
+		if Input.is_key_pressed(KEY_CTRL):
+			move.y -= 1.0
 
 	if move.length() > 0.01:
 		_move_free_camera(move.normalized() * speed * delta)

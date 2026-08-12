@@ -10,7 +10,7 @@ signal selected
 signal activated
 
 enum Privacy { PUBLIC, FRIENDS_ONLY, PRIVATE }
-enum Joinability { JOINABLE, FULL, IN_PROGRESS, UNKNOWN }
+enum Joinability { JOINABLE, FULL, IN_PROGRESS, INCOMPATIBLE, UNKNOWN }
 
 var lobby_name := ""
 var privacy: Privacy = Privacy.PUBLIC
@@ -106,6 +106,9 @@ func _set_status(joinability: Joinability) -> void:
 		Joinability.IN_PROGRESS:
 			text = "IN PROGRESS"
 			role = "gold"
+		Joinability.INCOMPATIBLE:
+			text = "VERSION"
+			role = "red"
 		_:
 			text = "—"
 	var accent := OneGunUI.color(role)

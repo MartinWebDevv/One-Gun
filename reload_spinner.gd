@@ -12,6 +12,7 @@ const THICKNESS    = 6.0
 const SIZE         = (RADIUS + THICKNESS + 2.0) * 2.0
 const ARC_SEGMENTS = 64
 const COLOR_RELOAD = Color(0.95, 0.75, 0.2, 0.92)   # amber while reloading
+const COLOR_GRENADE = Color(1.0, 0.32, 0.08, 0.96)
 
 func _ready():
 	visible = false
@@ -37,6 +38,14 @@ var _flash := 0.0   # 1 → reload just completed, decays to 0
 func _process(delta):
 	if _flash > 0.0:
 		_flash = maxf(_flash - delta * 3.0, 0.0)
+	if player != null and "active_slot" in player and player.active_slot in ["item1", "item2"]:
+		var active_item = player.get_active_item() if player.has_method("get_active_item") else null
+		if active_item != null and active_item.has_method("get_cook_progress") \
+				and active_item.get_cook_progress() >= 0.0:
+			visible = true
+			_was_reloading = false
+			queue_redraw()
+			return
 	if player == null or not player.holding_gun:
 		visible = false
 		_was_reloading = false
@@ -66,6 +75,16 @@ func _draw():
 		var flash_radius = RADIUS + (1.0 - _flash) * 8.0
 		draw_arc(center, flash_radius, 0.0, TAU, ARC_SEGMENTS,
 			Color(1.0, 0.718, 0.0, _flash * 0.9), THICKNESS, true)
+	if player != null and "active_slot" in player and player.active_slot in ["item1", "item2"]:
+		var active_item = player.get_active_item() if player.has_method("get_active_item") else null
+		if active_item != null and active_item.has_method("get_cook_progress"):
+			var cook_progress: float = active_item.get_cook_progress()
+			if cook_progress >= 0.0:
+				draw_arc(center, RADIUS, 0.0, TAU, ARC_SEGMENTS,
+					Color(1.0, 1.0, 1.0, 0.15), THICKNESS, true)
+				draw_arc(center, RADIUS, -PI / 2.0, -PI / 2.0 + TAU * cook_progress,
+					ARC_SEGMENTS, COLOR_GRENADE, THICKNESS, true)
+				return
 	if player == null or not player.holding_gun:
 		return
 	var weapon_active = not ("active_slot" in player) or player.active_slot == "weapon"

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**One Gun** — a local (splitscreen or solo + bots) Godot 4.6 arena shooter. GDScript, Forward+ rendering, Jolt physics. Full project docs live in `docs/` and are kept current — read the relevant one before making non-trivial changes to a system rather than re-deriving it from scratch:
+**One Gun** — a local (splitscreen or solo + bots) Godot 4.7.1 arena shooter. GDScript, Forward+ rendering, Jolt physics. Full project docs live in `docs/` and are kept current — read the relevant one before making non-trivial changes to a system rather than re-deriving it from scratch:
 
 - `docs/GAME_RULES.md` — mechanics, numbers, match settings (source of truth for balance/tuning values)
 - `docs/DESIGN.md` — the design intent/pillars behind those mechanics
@@ -13,13 +13,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running / verifying changes
 
-No CLI build, lint, or test framework exists in this project, and `godot` is not on PATH — but the engine itself is installed at `D:\GodotEngine\Godot_v4.6.3-stable_win64.exe` (a `.lnk` shortcut to it also sits in the project root). Use it headlessly to catch script/scene errors after edits, e.g.:
+No CLI build or lint framework exists in this project, and `godot` is not on PATH — but Godot 4.7.1 is available at `D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe`. Use it headlessly to catch script/scene errors after edits, e.g.:
 
 ```
-& "D:\GodotEngine\Godot_v4.6.3-stable_win64.exe" --headless --path "D:\Godot Projects\one-gun" --quit
+& "D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe" --headless --path "D:\Godot Projects\one-gun" --quit
 ```
 
-This surfaces GDScript parse errors and broken resource references without opening the editor UI. It is not a substitute for actually playing the game — there is still no automated test suite, so gameplay/feel changes still need a human to open the project in the editor and test manually.
+This surfaces GDScript parse errors and broken resource references without opening the editor UI. The project also has targeted validation scenes/scripts under `tools/`, but they are not a substitute for actually playing the game, so gameplay/feel changes still need a human editor playtest.
 
 ## Architecture essentials
 

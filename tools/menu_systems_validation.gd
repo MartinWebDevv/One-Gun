@@ -60,6 +60,15 @@ func _validate() -> void:
 		print("MENU RUNTIME OK: Crosshair Shape / Behavior / Feedback tabs")
 		var prefs = root.get_node("PlayerPrefs")
 		var before: Dictionary = prefs.snapshot()
+		var preview_descriptor := {"type": "key", "code": KEY_F12}
+		settings_screen.call("_store_bindings", "p1_move_forward",
+			"keyboard_mouse", [preview_descriptor])
+		var preview_bound := InputMap.action_get_events("p1_move_forward").any(func(event):
+			return event is InputEventKey \
+				and int(event.physical_keycode if event.physical_keycode != 0 else event.keycode) == KEY_F12)
+		if not preview_bound:
+			push_error("Menu validation: pending key rebind did not apply to live InputMap")
+			failed = true
 		var pending := before.duplicate(true)
 		pending["master_volume"] = 0.123
 		settings_screen.set("_pending", pending)
@@ -69,6 +78,14 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU RUNTIME OK: Cancel preserved active preferences")
+		var preview_still_bound := InputMap.action_get_events("p1_move_forward").any(func(event):
+			return event is InputEventKey \
+				and int(event.physical_keycode if event.physical_keycode != 0 else event.keycode) == KEY_F12)
+		if preview_still_bound:
+			push_error("Menu validation: Cancel did not restore saved key bindings")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: live key rebind preview and Cancel rollback")
 		var axis_descriptor := {"type": "joy_axis", "axis": 2, "direction": -1}
 		var axis_event = prefs.descriptor_to_event(axis_descriptor)
 		if not axis_event is InputEventJoypadMotion or axis_event.axis != 2 or axis_event.axis_value >= 0.0:
@@ -150,9 +167,8 @@ func _validate() -> void:
 		pause_menu.set_script(load("res://pause_menu.gd"))
 		root.add_child(pause_menu)
 		await process_frame
-		var button_labels: Array[String] = []
-		for button in pause_menu.find_children("*", "Button", true, false): button_labels.append(button.text)
-		if "RESUME" not in button_labels or "PLAYER SETTINGS" not in button_labels or "RETURN TO LOBBY" not in button_labels or "RETURN TO MAIN MENU" not in button_labels:
+		var action_ids := _collect_action_ids(pause_menu)
+		if "resume" not in action_ids or "player_settings" not in action_ids or "return_lobby" not in action_ids or "leave_match" not in action_ids:
 			push_error("Menu validation: local pause actions incomplete")
 			failed = true
 		else:
@@ -171,17 +187,15 @@ func _validate() -> void:
 		pause_menu.set("_capture_role", "pause_host")
 		pause_menu.call("_build_ui")
 		await process_frame
-		button_labels.clear()
-		for button in pause_menu.find_children("*", "Button", true, false): button_labels.append(button.text)
-		if "RETURN TO LOBBY  •  HOST ONLY" not in button_labels or "LEAVE MATCH" not in button_labels:
+		action_ids = _collect_action_ids(pause_menu)
+		if "return_lobby" not in action_ids or "leave_match" not in action_ids:
 			push_error("Menu validation: online host pause authority actions incomplete")
 			failed = true
 		pause_menu.set("_capture_role", "pause_guest")
 		pause_menu.call("_build_ui")
 		await process_frame
-		button_labels.clear()
-		for button in pause_menu.find_children("*", "Button", true, false): button_labels.append(button.text)
-		if "RETURN TO LOBBY  •  HOST ONLY" in button_labels or "LEAVE MATCH" not in button_labels:
+		action_ids = _collect_action_ids(pause_menu)
+		if "return_lobby" in action_ids or "leave_match" not in action_ids:
 			push_error("Menu validation: online guest received host-only action")
 			failed = true
 		else:
@@ -189,4 +203,15 @@ func _validate() -> void:
 		pause_menu.queue_free()
 		settings_screen.queue_free()
 		await process_frame
+	if not failed:
+		print("MENU SYSTEMS VALIDATION: PASS")
 	quit(1 if failed else 0)
+
+
+func _collect_action_ids(root: Node) -> Array[String]:
+	var result: Array[String] = []
+	for button in root.find_children("*", "Button", true, false):
+		var action_id := str(button.get_meta("action_id", ""))
+		if action_id != "":
+			result.append(action_id)
+	return result

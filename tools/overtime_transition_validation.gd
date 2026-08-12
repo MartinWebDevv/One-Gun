@@ -5,6 +5,8 @@ var failures: Array[String] = []
 func _ready() -> void:
 	print("OVERTIME TRANSITION VALIDATION: setup")
 	var chaos_mode := OS.get_environment("ONEGUN_TEST_CHAOS_OT") == "1"
+	var fallback_mode := OS.get_environment(
+		"ONEGUN_TEST_EMPTY_NAV_FALLBACK") == "1"
 	GameConfig.split_screen_enabled = false
 	GameConfig.bot_configs = [{"difficulty": "easy", "team_id": -1}]
 	GameConfig.round_time_limit = 999.0
@@ -14,6 +16,17 @@ func _ready() -> void:
 	var arena = load("res://maps/test/CityMap.tscn").instantiate()
 	add_child(arena)
 	print("OVERTIME TRANSITION VALIDATION: arena loaded")
+	var city_navigation := load(
+		"res://navigation/CityMapNavigation.tres") as NavigationMesh
+	_check(city_navigation != null and city_navigation.get_polygon_count() > 0,
+		"CityMap navigation resource is not baked")
+	if fallback_mode:
+		var navigation_region := arena.find_child(
+			"NavigationRegion3D", true, false) as NavigationRegion3D
+		_check(navigation_region != null,
+			"CityMap has no NavigationRegion3D for fallback validation")
+		if navigation_region != null:
+			navigation_region.navigation_mesh = NavigationMesh.new()
 	var manager = arena.get_node_or_null("RoundManager")
 	_check(manager != null, "CityMap did not provide a RoundManager")
 	if manager == null:
@@ -52,6 +65,14 @@ func _ready() -> void:
 	if held_item != null:
 		_check(held_item._do_pickup(tested_actor),
 			"could not place a ground item in the survivor's inventory")
+	var melee_actor = alive[1]
+	var ground_melee := get_tree().get_nodes_in_group("melee").filter(
+		func(melee): return is_instance_valid(melee) and not melee.is_held and melee.visible)
+	_check(not ground_melee.is_empty(), "CityMap provided no melee to test overtime carryover")
+	var held_melee = ground_melee[0] if not ground_melee.is_empty() else null
+	if held_melee != null:
+		_check(held_melee._local_pickup(melee_actor),
+			"could not place a melee weapon in a survivor's hands")
 
 	var original_gun = original_guns[0]
 	_check(original_gun._local_pickup(tested_actor), "could not place the original gun in a survivor's hand")
@@ -77,6 +98,11 @@ func _ready() -> void:
 		if manager._storm_wall != null else null
 	_check(sampled_fire is MeshInstance3D and sampled_fire.mesh != null,
 		"overtime fire did not build its navigation-surface floor covering")
+	var expected_surface_source := "fallback" if fallback_mode else "navigation"
+	_check(sampled_fire is MeshInstance3D and str(
+		sampled_fire.get_meta("surface_source", "")) == expected_surface_source,
+		"CityMap overtime fire used the wrong surface source (expected %s)"
+		% expected_surface_source)
 	_check(flame_particles is CPUParticles3D,
 		"overtime fire did not build vertical surface particles")
 	_check(not manager._storm_surface_samples.is_empty(),
@@ -197,14 +223,31 @@ func _ready() -> void:
 	for powerup in get_tree().get_nodes_in_group("powerup"):
 		_check(powerup.overtime_disabled and not powerup.visible,
 			"overtime left a ground powerup available")
+	var overtime_supply: Array = []
 	for melee in get_tree().get_nodes_in_group("melee"):
-		_check(melee.overtime_disabled and not melee.visible,
-			"overtime left a melee weapon available")
+		if melee == held_melee:
+			continue
+		if bool(melee.get("overtime_marker_supply")):
+			overtime_supply.append(melee)
+			_check(not melee.overtime_disabled and melee.visible and not melee.is_held,
+				"overtime melee supply is not available on the ground")
+		else:
+			_check(melee.overtime_disabled and not melee.visible,
+				"overtime left a non-supply melee placement available")
+	_check(overtime_supply.size() == 1,
+		"overtime did not leave exactly one active melee supply marker")
+	_check(held_melee == null or (held_melee.is_held
+		and held_melee.player_ref == melee_actor
+		and not held_melee.overtime_disabled),
+		"overtime did not preserve a survivor's held melee weapon")
 	if chaos_mode:
 		_check(original_gun.overtime_disabled and not original_gun.visible,
 			"Chaos OT did not retire the held original gun")
 		_check(overtime_guns.size() == alive.size(),
 			"Chaos OT did not grant one gun to every survivor")
+		_check(held_melee == null or (held_melee.is_held
+			and held_melee.player_ref == melee_actor and melee_actor.holding_gun),
+			"Chaos OT did not preserve melee while arming its holder")
 		_check(held_item == null or (held_item.overtime_disabled and not held_item.visible),
 			"Chaos OT preserved a held inventory item")
 		_check(not tested_actor.second_wind_ready

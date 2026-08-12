@@ -9,6 +9,7 @@ var _prev_charges := -1
 var _style_on: StyleBoxFlat = null
 var _style_off: StyleBoxFlat = null
 var _style_extra: StyleBoxFlat = null
+var _hearts_label: Label = null
 
 func _ready():
 	_style_on = _pip_style(true)
@@ -28,11 +29,48 @@ func _ready():
 	# Any scene-baked / template ColorRect pips are replaced by styled panels.
 	for child in get_children():
 		child.queue_free()
+	_build_hearts_label()
 
 func set_player(p):
 	player = p
 	_prev_charges = -1
 	_rebuild_pips()
+	_update_hearts()
+
+func _build_hearts_label() -> void:
+	if get_parent() == null:
+		return
+	_hearts_label = Label.new()
+	_hearts_label.name = "%sAllGunHearts" % name
+	_hearts_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hearts_label.anchor_left = 0.0
+	_hearts_label.anchor_top = 1.0
+	_hearts_label.anchor_right = 0.0
+	_hearts_label.anchor_bottom = 1.0
+	_hearts_label.offset_left = 20.0
+	_hearts_label.offset_top = -108.0
+	_hearts_label.offset_right = 220.0
+	_hearts_label.offset_bottom = -78.0
+	_hearts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_hearts_label.add_theme_font_size_override("font_size", 24)
+	_hearts_label.add_theme_constant_override("outline_size", 6)
+	_hearts_label.add_theme_color_override("font_color", Color(1.0, 0.18, 0.24))
+	get_parent().add_child.call_deferred(_hearts_label)
+
+
+func _update_hearts() -> void:
+	if _hearts_label == null:
+		return
+	_hearts_label.visible = GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+		and player != null and "all_gun_hearts" in player
+	if not _hearts_label.visible:
+		return
+	var hearts := clampi(int(player.all_gun_hearts), 0, GameConfig.ALL_GUN_MAX_HEARTS)
+	var parts: Array[String] = []
+	for index in GameConfig.ALL_GUN_MAX_HEARTS:
+		parts.append("♥" if index < hearts else "♡")
+
+	_hearts_label.text = " ".join(parts)
 
 func _make_pip() -> Panel:
 	var pip := Panel.new()
@@ -78,6 +116,7 @@ func _rebuild_pips():
 func _process(_delta):
 	if player == null:
 		return
+	_update_hearts()
 	var target_count: int = player.max_dash_charges + int(player.extra_dash_charge if "extra_dash_charge" in player else 0)
 	if get_child_count() != target_count:
 		_rebuild_pips()

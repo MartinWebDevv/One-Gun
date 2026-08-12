@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/Bench.glb" id="1_visual"]
+
+[node name="Bench_New" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+scale = Vector3(5.34, 5.34, 5.34)

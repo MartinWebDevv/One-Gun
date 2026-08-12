@@ -40,7 +40,6 @@ materials/extract_path=""
 _subresources={
 "nodes": {
 "PATH:tripo_node_06e6cc17-a2a7-47ce-b3c4-e0fbfc588e1c": {
-"generate/physics": true,
 "physics/shape_type": 2
 }
 }

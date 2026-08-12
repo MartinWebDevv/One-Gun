@@ -17,7 +17,7 @@ item_type = "grenade"
 deployed_scene = ExtResource("2_grenade")
 deployed_lifetime = 1.0
 respawn_after_deploy_time = 12.0
-fuse_time = 2.5
+fuse_time = 3.0
 HELD_SCALE = 0.6
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

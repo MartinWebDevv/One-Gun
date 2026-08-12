@@ -7,7 +7,7 @@ extends CharacterBody3D
 ## so animation can never translate the rendered cat backward inside its body.
 
 const CombatIdentityTagScript = preload("res://combat_identity_tag.gd")
-const REFERENCE_POSE_SOURCE := "res://models/playerAnimations/Dance.glb"
+const REFERENCE_POSE_SOURCE := "res://models/player_v2/OGCatModelV2_Rigged.glb"
 
 const MOVE_SPEED := 10.0
 const MOVE_ACCELERATION := 38.0
@@ -44,6 +44,7 @@ var is_eliminated := false
 var is_bot := false
 var actor_id := -1
 var owner_peer_id := -1
+var character_skin_id := PlayerSkinRegistry.DEFAULT_SKIN_ID
 
 var _popped := false
 var _blocked_command_time := 0.0
@@ -55,6 +56,8 @@ var _network_target_velocity := Vector3.ZERO
 var _network_has_snapshot := false
 
 var _visual_root: Node3D = null
+var _animation_player: AnimationPlayer = null
+var _current_visual_animation := ""
 var _skeleton: Skeleton3D = null
 var _bone_indices: Dictionary = {}
 var _bone_rest_rotations: Dictionary = {}
@@ -76,6 +79,7 @@ func _ready() -> void:
 	add_to_group("combat_decoy")
 	_register_with_owner()
 	_setup_procedural_visual()
+	_apply_owner_skin()
 	_face_direction(initial_forward)
 	command_forward()
 	_network_target_transform = global_transform
@@ -102,6 +106,15 @@ func _register_with_owner() -> void:
 	actor_id = int(owner_player.get("actor_id")) if "actor_id" in owner_player else -1
 	owner_peer_id = int(owner_player.get("owner_peer_id")) \
 		if "owner_peer_id" in owner_player else -1
+	character_skin_id = PlayerSkinRegistry.sanitize_skin_id(
+		str(owner_player.get("character_skin_id")) \
+		if "character_skin_id" in owner_player else PlayerSkinRegistry.DEFAULT_SKIN_ID)
+
+
+func _apply_owner_skin() -> void:
+	var visual := get_node_or_null("VisualRoot/CatModel")
+	if visual != null and visual.has_method("set_skin"):
+		visual.set_skin(character_skin_id)
 
 
 func _setup_identity_tags() -> void:
@@ -126,15 +139,18 @@ func _setup_procedural_visual() -> void:
 	if _visual_root == null:
 		push_warning("DecoyBody: VisualRoot is missing; gameplay remains active without gait.")
 		return
-	# No imported AnimationPlayer is allowed to write to this skeleton. The old
-	# decoy combined multiple imported clips and corrective root-track edits;
-	# this replacement starts from one stable rest pose instead.
-	var animation_players: Array[Node] = _visual_root.find_children(
-		"*", "AnimationPlayer", true, false)
-	for node in animation_players:
-		var animation_player := node as AnimationPlayer
-		animation_player.stop()
-		animation_player.active = false
+	var visual := get_node_or_null("VisualRoot/CatModel")
+	if visual != null and visual.has_method("ensure_animations"):
+		_animation_player = visual.ensure_animations(["idle", "standard_run"])
+	if _animation_player == null:
+		_animation_player = _visual_root.find_child(
+			"AnimationPlayer", true, false) as AnimationPlayer
+	if _animation_player != null and _animation_player.has_animation("idle"):
+		_current_visual_animation = "idle"
+		_animation_player.play("idle")
+		_animation_player.advance(0.0)
+		return
+	# Procedural gait remains a safe fallback if an animation import is missing.
 	var skeletons: Array[Node] = _visual_root.find_children(
 		"*", "Skeleton3D", true, false)
 	if skeletons.is_empty():
@@ -196,7 +212,13 @@ func _remember_bone(key: String, bone_name: String) -> void:
 
 
 func _process(delta: float) -> void:
-	_update_procedural_gait(delta)
+	if _animation_player != null:
+		var requested := "standard_run" if _visual_motion_speed > MIN_MOVING_SPEED else "idle"
+		if requested != _current_visual_animation and _animation_player.has_animation(requested):
+			_current_visual_animation = requested
+			_animation_player.play(requested, 0.12)
+	else:
+		_update_procedural_gait(delta)
 
 
 func _update_procedural_gait(delta: float) -> void:
@@ -336,7 +358,7 @@ func request_control_toggle(requester) -> void:
 	if requester != owner_player:
 		return
 	if NetworkManager.is_online():
-		if not requester.is_multiplayer_authority():
+		if not requester.has_method("is_locally_controlled") or not requester.is_locally_controlled():
 			return
 		var manager = _round_manager()
 		if manager != null and manager.has_method(
@@ -424,6 +446,20 @@ func apply_launch(launch_velocity: float) -> void:
 			_broadcast_action("launch", {"velocity": launch_velocity})
 		return
 	velocity.y = maxf(velocity.y, launch_velocity)
+
+
+func apply_spring_launch(launch_velocity: float, horizontal_boost: float, _direction_window: float) -> void:
+	var launch_direction := Vector3(initial_forward.x, 0.0, initial_forward.z).normalized()
+	if launch_direction.is_zero_approx():
+		launch_direction = Vector3.FORWARD
+	velocity.y = maxf(velocity.y, launch_velocity)
+	velocity.x += launch_direction.x * horizontal_boost
+	velocity.z += launch_direction.z * horizontal_boost
+	if NetworkManager.is_online() and multiplayer.is_server():
+		_broadcast_action("spring_launch", {
+			"velocity": launch_velocity,
+			"horizontal_boost": horizontal_boost,
+		})
 
 
 func _reveal_flicker() -> void:
@@ -555,6 +591,11 @@ func apply_online_action(action: String, data: Dictionary) -> void:
 				float(data.get("multiplier", 0.5)))
 		"launch":
 			velocity.y = maxf(velocity.y, float(data.get("velocity", 11.0)))
+		"spring_launch":
+			var launch_direction := Vector3(initial_forward.x, 0.0, initial_forward.z).normalized()
+			velocity.y = maxf(velocity.y, float(data.get("velocity", 13.0)))
+			velocity.x += launch_direction.x * float(data.get("horizontal_boost", 4.0))
+			velocity.z += launch_direction.z * float(data.get("horizontal_boost", 4.0))
 		"pop":
 			var attacker = NetworkManager.find_actor(
 				int(data.get("attacker_id", -1)))

@@ -4,6 +4,7 @@ extends CanvasLayer
 # authoritative RoundManager; this node only binds local presentation.
 
 var player = null
+var _local_player = null
 var match_hud: Control = null
 var reload_spinner: Control = null
 var stamina_bar: ProgressBar = null
@@ -13,8 +14,13 @@ var ammo_label: Label = null
 var local_state_label: Label = null
 var inventory_slots: HBoxContainer = null
 var powerup_status: VBoxContainer = null
+var throw_arc_overlay: ThrowArcOverlay = null
+var flash_camera_overlay: FlashCameraOverlay = null
+var flash_blind_overlay: FlashBlindOverlay = null
 var _hit_marker: Control = null
 var _last_banner_text := ""
+var pure_spectator := false
+var practice_mode := false
 
 func _ready() -> void:
 	layer = 10
@@ -107,6 +113,15 @@ func _ready() -> void:
 	powerup_status.name = "PowerupStatus"
 	powerup_status.set_script(load("res://powerup_status.gd"))
 	add_child(powerup_status)
+	throw_arc_overlay = ThrowArcOverlay.new()
+	throw_arc_overlay.name = "ThrowArcOverlay"
+	add_child(throw_arc_overlay)
+	flash_camera_overlay = FlashCameraOverlay.new()
+	flash_camera_overlay.name = "FlashCameraOverlay"
+	add_child(flash_camera_overlay)
+	flash_blind_overlay = FlashBlindOverlay.new()
+	flash_blind_overlay.name = "FlashBlindOverlay"
+	add_child(flash_blind_overlay)
 
 	var pause_overlay := Control.new()
 	pause_overlay.name = "PauseMenu"
@@ -157,14 +172,33 @@ func _make_inventory_slot(slot_name: String) -> Control:
 	return slot
 
 func bind_local_player(p) -> void:
-	if p == null or p == player:
+	if p == null:
+		return
+	_local_player = p
+	_bind_display_player(p)
+
+func _bind_display_player(p) -> void:
+	if p == player:
 		return
 	player = p
+	if _hit_marker != null:
+		_hit_marker.set("filter_actor_id", int(player.get("actor_id")) if player != null else -1)
 	reload_spinner.set_player(player)
 	stamina_bar.set_player(player)
 	dash_display.set_player(player)
 	inventory_slots.set_player(player)
 	powerup_status.set_player(player)
+	throw_arc_overlay.set_player(player)
+	flash_camera_overlay.set_player(player)
+	flash_blind_overlay.set_player(player)
+
+func _spectator_controller():
+	if _local_player != null:
+		var local_spectator = _local_player.get("_spectator")
+		if local_spectator != null:
+			return local_spectator
+	var scene := get_tree().current_scene
+	return scene.get_node_or_null("LateSpectatorController") if scene != null else null
 
 func _process(_delta: float) -> void:
 	var scene := get_tree().current_scene
@@ -175,15 +209,25 @@ func _process(_delta: float) -> void:
 		return
 	if player == null:
 		bind_local_player(NetworkManager.find_net_player(NetworkManager.local_id()))
+	var spectator = _spectator_controller()
+	if spectator != null and spectator.has_method("get_follow_target"):
+		var followed = spectator.get_follow_target()
+		if followed != null:
+			_bind_display_player(followed)
+		else:
+			_bind_display_player(_local_player)
+	elif _local_player != null:
+		_bind_display_player(_local_player)
 
 	var alive := 0
+	match_hud.visible = not practice_mode
 	for actor_id in rm.online_actor_state:
 		if bool(rm.online_actor_state[actor_id].get("alive", false)):
 			alive += 1
 	match_hud.update_match_state(rm.round_number, rm.set_number, alive, rm.online_actor_state.size())
 	if match_hud.has_method("update_round_timer"):
 		match_hud.update_round_timer(rm.get_round_timer_text(), rm.overtime_active)
-	if match_hud.has_method("update_fire_warning"):
+	if match_hud.has_method("update_fire_warning") and player != null:
 		match_hud.update_fire_warning(rm.get_fire_warning(player))
 	# Slam the banner in whenever the announcement changes (countdown ticks,
 	# GO!, round winners) — color-coded: GO green, countdown white, rest gold.
@@ -202,14 +246,15 @@ func _process(_delta: float) -> void:
 
 	if player == null:
 		ammo_label.visible = false
-		local_state_label.text = ""
+		local_state_label.text = "SPECTATOR" if pure_spectator else ""
 		return
-	local_state_label.text = "YOU: " + player.get_display_name()
-	if player.is_eliminated:
-		local_state_label.text += "   •   SPECTATING"
+	local_state_label.text = ("SPECTATING: " if spectator != null else "YOU: ") + player.get_display_name()
 	var gun = null
 	var melee = player.held_melee_weapon
-	var active_item = player.get_active_item() if player.active_slot in ["item1", "item2"] else null
+	var active_item = null
+	if player.has_method("get_active_item"):
+		if not ("active_slot" in player) or player.active_slot in ["item1", "item2"]:
+			active_item = player.get_active_item()
 	if player.holding_gun:
 		var hold_point = player.get_hold_point()
 		if hold_point != null and hold_point.get_child_count() > 0:

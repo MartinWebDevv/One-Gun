@@ -1,6 +1,8 @@
 extends Node3D
 
 const ProtectionIconFactory = preload("res://protection_icon_factory.gd")
+const VisibilityRules = preload("res://combat_visibility.gd")
+const CombatOutline = preload("res://combat_outline.gd")
 
 var target = null
 var viewer = null
@@ -8,6 +10,10 @@ var _name: Label3D
 var _indicator: Label3D
 var _extra_life: Sprite3D
 var _sticky_hands: Sprite3D
+var _gun_arrow: Label3D
+var _all_gun_hearts: Label3D
+var _gun_pulse := 0.0
+var _was_gun_holder := false
 
 func setup(target_actor, viewing_player, render_layer: int) -> void:
 	target = target_actor
@@ -17,6 +23,17 @@ func setup(target_actor, viewing_player, render_layer: int) -> void:
 	_indicator = _label(Vector3(0.0, 2.7, 0.0), true, layer_mask)
 	_extra_life = _icon("res://UI/icons/extra_life.svg", Vector3(-0.28, 2.88, 0.0), layer_mask)
 	_sticky_hands = _icon("res://UI/icons/sticky_hands.svg", Vector3(0.28, 2.88, 0.0), layer_mask)
+	_gun_arrow = _label(Vector3(0.0, 3.18, 0.0), false, layer_mask)
+	_all_gun_hearts = _label(Vector3(0.0, 3.18, 0.0), false, layer_mask)
+	_all_gun_hearts.name = "AllGunWorldHearts"
+	_all_gun_hearts.font_size = 34
+	_all_gun_hearts.outline_size = 9
+	_all_gun_hearts.modulate = Color(1.0, 0.16, 0.24)
+	_all_gun_hearts.visible = false
+	_gun_arrow.text = "\u25bc  GUN HOLDER  \u25bc"
+	_gun_arrow.font_size = CombatOutline.GUN_HOLDER_MARKER_FONT_SIZE
+	_gun_arrow.outline_size = CombatOutline.GUN_HOLDER_MARKER_OUTLINE_SIZE
+	_gun_arrow.modulate = Color(1.0, 0.08, 0.08)
 	_update_tag()
 
 func _label(at: Vector3, through_walls: bool, layer_mask: int) -> Label3D:
@@ -44,10 +61,15 @@ func _icon(texture_path: String, at: Vector3, layer_mask: int) -> Sprite3D:
 	add_child(icon)
 	return icon
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_gun_pulse += delta * 5.0
 	_update_tag()
 
 func _update_tag() -> void:
+	if _all_gun_hearts != null:
+		_all_gun_hearts.visible = false
+	if _gun_arrow != null:
+		_gun_arrow.visible = false
 	if target == null or viewer == null or not is_instance_valid(target) or not is_instance_valid(viewer):
 		visible = false
 		return
@@ -58,9 +80,18 @@ func _update_tag() -> void:
 	var source = target.get("owner_player") if target.is_in_group("combat_decoy") else target
 	if source == null:
 		source = target
+	var is_gun_holder := bool(source.get("holding_gun"))
+	if is_gun_holder and not _was_gun_holder:
+		_gun_pulse = 0.0
+	_was_gun_holder = is_gun_holder
 	var target_team := int(target.get("team_id"))
 	var friendly: bool = source == viewer or (GameConfig.teams_enabled and int(viewer.get("team_id")) >= 0
 		and int(viewer.get("team_id")) == target_team)
+	var smoke_visible := friendly or VisibilityRules.has_visual_contact(viewer, target, false)
+	visible = visible and smoke_visible
+	if not visible:
+		return
+	_name.no_depth_test = friendly
 	_name.text = target.get_display_name()
 	_name.font_size = 32 if friendly else 38
 	_name.modulate = Color(0.25, 0.85, 1.0) if friendly else Color(1.0, 0.2, 0.2)
@@ -74,6 +105,21 @@ func _update_tag() -> void:
 	_sticky_hands.modulate = _pref_color("sticky_hands_icon_color", Color(0.2, 1.0, 0.35))
 	_extra_life.visible = bool(source.get("second_wind_ready"))
 	_sticky_hands.visible = int(source.get("melee_disarm_shields")) > 0
+	_all_gun_hearts.visible = GameConfig.game_mode == GameConfig.MODE_ALL_GUN
+	if _all_gun_hearts.visible:
+		var hearts := clampi(int(source.get("all_gun_hearts")), 0, GameConfig.ALL_GUN_MAX_HEARTS)
+		var symbols: Array[String] = []
+		for index in GameConfig.ALL_GUN_MAX_HEARTS:
+			symbols.append("\u2665" if index < hearts else "\u2661")
+		_all_gun_hearts.text = " ".join(symbols)
+	_gun_arrow.visible = GameConfig.game_mode == GameConfig.MODE_ONE_GUN \
+		and source != viewer and bool(source.get("holding_gun")) \
+		and VisibilityRules.has_visual_contact(viewer, target, true)
+	if _gun_arrow.visible:
+		var pulse := 1.0 + sin(_gun_pulse) \
+			* CombatOutline.GUN_HOLDER_MARKER_PULSE_AMOUNT
+		_gun_arrow.scale = Vector3.ONE * pulse
+		_gun_arrow.modulate = Color(1.0, 0.12 + (sin(_gun_pulse) + 1.0) * 0.12, 0.01)
 
 func _pref_color(key: String, fallback: Color) -> Color:
 	var value = PlayerPrefs.get_setting(key)

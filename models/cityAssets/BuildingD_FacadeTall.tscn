@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/Building D.glb" id="1_visual"]
+
+[node name="BuildingD_FacadeTall" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+scale = Vector3(3.1095216, 4.6557376, 2.625)

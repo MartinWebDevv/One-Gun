@@ -21,9 +21,9 @@ Section 5 retopology/UV/LOD work remains locked.
 ## 1. Section 1 audit results (2026-07-16; corrected 2026-07-17)
 
 ### Engine / tools
-- **Godot 4.6 project format**, running with **Godot 4.6.3 stable**
-  (`config/features = "4.6", "Forward Plus"`) and Jolt physics. Editor binary:
-  `D:\GodotEngine\Godot_v4.6.3-stable_win64.exe` (not on PATH).
+- **Godot 4.7 project format**, running with **Godot 4.7.1 stable**
+  (`config/features = "4.7", "Forward Plus"`) and Jolt physics. Editor binary:
+  `D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe` (not on PATH).
 - **Blender 5.1.2** at `D:\Blender\blender.exe`, used headlessly
   (`--background --factory-startup --python <script>`). Existing generator
   scripts in `tools/` (e.g. `gen_trophy_pedestal.py`) are the house style:

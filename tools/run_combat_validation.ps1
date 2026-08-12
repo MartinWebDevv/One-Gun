@@ -1,6 +1,9 @@
 $ErrorActionPreference = "Stop"
 $project = Split-Path -Parent $PSScriptRoot
-$godot = "D:\GodotEngine\Godot_v4.6.3-stable_win64.exe"
+$godot = Join-Path $project "Godot_v4.7.1-stable_win64.exe"
+if (-not (Test-Path -LiteralPath $godot)) {
+    throw "Godot 4.7.1 executable not found at $godot"
+}
 $pathValue = $env:Path
 [Environment]::SetEnvironmentVariable("PATH", $null, "Process")
 [Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")

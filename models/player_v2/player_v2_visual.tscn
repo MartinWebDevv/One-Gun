@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://models/player_v2/player_v2_visual.gd" id="1_visual"]
+[ext_resource type="PackedScene" path="res://models/player_v2/animations/Idle.fbx" id="2_model"]
+
+[node name="PlayerV2Visual" type="Node3D"]
+scale = Vector3(55.4667, 55.4667, 55.4667)
+script = ExtResource("1_visual")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]

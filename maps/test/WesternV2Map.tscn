@@ -33,7 +33,6 @@
 [ext_resource type="Script" uid="uid://cbpbil26msruo" path="res://tumbleweed_spawner.gd" id="31_6sr7j"]
 [ext_resource type="PackedScene" path="res://tumbleweed.tscn" id="32_38hbt"]
 [ext_resource type="PackedScene" uid="uid://b0o8qjgssykx5" path="res://gun.tscn" id="33_0xspk"]
-[ext_resource type="PackedScene" uid="uid://befjncsqpswu2" path="res://melee_weapon.tscn" id="35_wjkir"]
 [ext_resource type="PackedScene" uid="uid://ddjvi4ck1h7rc" path="res://player.tscn" id="37_vjq7m"]
 [ext_resource type="Script" uid="uid://cvvwonydncavs" path="res://round_label.gd" id="39_djnjs"]
 [ext_resource type="Script" uid="uid://bvqj5matij4cw" path="res://kill_feed.gd" id="40_8k6re"]
@@ -1502,14 +1501,26 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.752814, 3.2593906, 20.0141
 [node name="SpawnPoint8" type="Marker3D" parent="SpawnPoints" unique_id=1796226867 groups=["spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.8522367, 1.4809453, 19.825571)
 
-[node name="SpawnPoint9" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.5, 0.9, 0.0)
+[node name="SpawnPoint9" type="Marker3D" parent="SpawnPoints" unique_id=928662686 groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.5, 0.9, 0)
 
-[node name="SpawnPoint10" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.5, 1.2, 1.0)
+[node name="SpawnPoint10" type="Marker3D" parent="SpawnPoints" unique_id=1937853830 groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.5, 1.2, 1)
 
 [node name="gun_spawn_point" type="Marker3D" parent="." unique_id=1760923590 groups=["gun_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+
+[node name="GunSpawnPoint2" type="Marker3D" parent="." unique_id=576953035 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.565721, 0.9, -17.473625)
+
+[node name="GunSpawnPoint3" type="Marker3D" parent="." unique_id=1164639753 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.160982, 1, 10.224339)
+
+[node name="GunSpawnPoint4" type="Marker3D" parent="." unique_id=393223956 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.771397, 0.8, 6.941622)
+
+[node name="GunSpawnPoint5" type="Marker3D" parent="." unique_id=306326652 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.854449, 1, -8.355438)
 
 [node name="Gun" parent="." unique_id=1257422070 instance=ExtResource("33_0xspk")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
@@ -1517,10 +1528,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 [node name="MeleeSpawnPoints" type="Node3D" parent="." unique_id=5548020]
 
 [node name="MeleeSpawn0" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1665878362 groups=["melee_spawn_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.55231, 1.0867835, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.287746, 1.2562531, 0)
 
 [node name="MeleeSpawn1" type="Marker3D" parent="MeleeSpawnPoints" unique_id=618785407 groups=["melee_spawn_point"]]
-transform = Transform3D(-0.0144708315, 0, 0.9998953, 0, 1, 0, -0.9998953, 0, -0.0144708315, -14.471713, 0.63679576, -9.852624)
+transform = Transform3D(-0.0144708315, 0, 0.9998953, 0, 1, 0, -0.9998953, 0, -0.0144708315, -14.139187, 0.9583756, -9.852624)
 
 [node name="MeleeSpawn2" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1426380066 groups=["melee_spawn_point"]]
 transform = Transform3D(-0.008512319, 0, 0.99996376, 0, 1, 0, -0.99996376, 0, -0.008512319, 11.262163, 0.63797075, -9.852624)
@@ -2302,3 +2313,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.949371, 3.5878253, 11.4373
 
 [node name="PowerupSpawn3" type="Marker3D" parent="ItemSpawnPoints" unique_id=1804931165 groups=["powerup_spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5423965, 4.111368, 11.626343)
+
+[node name="RoundIntroCameraPoint" type="Marker3D" parent="." groups=["round_intro_camera_point"]]
+position = Vector3(0, 15, -35)

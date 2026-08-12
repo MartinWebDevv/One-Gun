@@ -3,7 +3,9 @@ extends Area3D
 ## Deployed spring pad: launches anyone who steps on it. Lives 30s.
 ## Re-triggerable with a short per-body cooldown.
 
-@export var launch_velocity := 11.0
+@export var launch_velocity := 13.0
+@export var horizontal_boost := 4.0
+@export var direction_window := 1.0
 @export var lifetime := 30.0
 var owner_player = null
 var _cooldowns := {}
@@ -23,7 +25,9 @@ func _on_body_entered(body: Node3D) -> void:
 		return
 	_cooldowns[body] = now
 	if body.is_in_group("combat_decoy"):
-		if body.has_method("apply_launch"):
+		if body.has_method("apply_spring_launch"):
+			body.apply_spring_launch(launch_velocity, horizontal_boost, direction_window)
+		elif body.has_method("apply_launch"):
 			body.apply_launch(launch_velocity)
 		_play_bounce_visual()
 		return
@@ -32,10 +36,16 @@ func _on_body_entered(body: Node3D) -> void:
 			var rm = get_tree().current_scene.get_node_or_null("RoundManager")
 			var actor_id = body.get("actor_id")
 			if rm != null and actor_id != null:
-				rm.server_apply_online_item_effect("launch", int(actor_id), {"velocity": launch_velocity})
+				rm.server_apply_online_item_effect("launch", int(actor_id), {
+					"velocity": launch_velocity,
+					"horizontal_boost": horizontal_boost,
+					"direction_window": direction_window,
+				})
 				rm.broadcast_online_deployed_action(int(get_meta("online_deployed_id", -1)), "bounce")
 		return
-	if "velocity" in body:
+	if body.has_method("apply_spring_launch"):
+		body.apply_spring_launch(launch_velocity, horizontal_boost, direction_window)
+	elif "velocity" in body:
 		body.velocity.y = launch_velocity
 	_play_bounce_visual()
 

@@ -52,6 +52,7 @@ const SFX_PATHS = {
 	"hit_bat":    "res://audio/weapon_sounds/BaseballBat_hit.mp3",
 	"hit_pan":    "res://audio/weapon_sounds/Frying_Pan.mp3",
 	"footstep":   "res://audio/GlobalSounds/footsteps.wav",
+	"double_jump_boing": "res://audio/itemSounds/Cartoon_Boing.mp3",
 	# "gun_pickup": "res://audio/sfx/gun_pickup.wav",
 	# "gun_drop":   "res://audio/sfx/gun_drop.wav",
 	# "disarm":     "res://audio/sfx/disarm.wav",
@@ -138,6 +139,11 @@ func play_music(key: String, fade_duration: float = 0.5):
 	# round_manager makes for every match gets redirected to it.
 	if key == "game" and level_music_key != "":
 		key = level_music_key
+	elif key == "game":
+		# Most maps intentionally have no authored match track. Silence is a valid
+		# fallback, not a missing-resource warning on every local match start.
+		stop_music(fade_duration)
+		return
 	if key == _current_music_key and _music_player.playing:
 		return
 	if not MUSIC_PATHS.has(key):

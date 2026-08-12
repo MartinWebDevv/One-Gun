@@ -84,6 +84,8 @@ func _connect_network_signals() -> void:
 		NetworkManager.lobby_discovery_failed.connect(_on_discovery_failed)
 	if not NetworkManager.server_disconnected.is_connected(_on_server_disconnected):
 		NetworkManager.server_disconnected.connect(_on_server_disconnected)
+	if not NetworkManager.compatibility_rejected.is_connected(_on_compatibility_rejected):
+		NetworkManager.compatibility_rejected.connect(_on_compatibility_rejected)
 
 
 func _disconnect_network_signals() -> void:
@@ -94,6 +96,7 @@ func _disconnect_network_signals() -> void:
 		[NetworkManager.connection_failed, _on_connection_failed],
 		[NetworkManager.lobby_discovery_failed, _on_discovery_failed],
 		[NetworkManager.server_disconnected, _on_server_disconnected],
+		[NetworkManager.compatibility_rejected, _on_compatibility_rejected],
 	]:
 		var network_signal: Signal = pair[0]
 		var callback: Callable = pair[1]
@@ -350,12 +353,14 @@ func _update_selected_footer() -> void:
 		int(_selected_lobby.get("players", 1)),
 		int(_selected_lobby.get("max_players", NetworkManager.MAX_PEERS)),
 		state.replace("_", " ").to_upper()]
-	_join_selected_button.disabled = state != "joinable" or _busy
+	_join_selected_button.disabled = state not in ["joinable", "in_progress"] or _busy
+	if state == "incompatible":
+		_selection_label.text = str(_selected_lobby.get("compatibility_error", "Incompatible version"))
 
 
 func _quick_join() -> void:
 	for lobby in _lobbies:
-		if str(lobby.get("joinability", "")) == "joinable":
+		if str(lobby.get("joinability", "")) in ["joinable", "in_progress"]:
 			_selected_lobby = lobby.duplicate(true)
 			_join_selected()
 			return
@@ -601,6 +606,15 @@ func _on_connection_succeeded() -> void:
 	session_started.emit()
 
 
+func _on_compatibility_rejected(message: String) -> void:
+	_busy = false
+	if _page == Page.BROWSER and _browser_state != null:
+		_browser_state.visible = true
+		if _rows_box != null:
+			_rows_box.visible = false
+		_browser_state.show_error("INCOMPATIBLE BUILD", message, true)
+
+
 func _on_connection_failed() -> void:
 	_busy = false
 	if _page == Page.CODE and _code_error != null:
@@ -674,6 +688,7 @@ func _row_joinability(value: String) -> OneGunLobbyRow.Joinability:
 		"joinable": return OneGunLobbyRow.Joinability.JOINABLE
 		"full": return OneGunLobbyRow.Joinability.FULL
 		"in_progress": return OneGunLobbyRow.Joinability.IN_PROGRESS
+		"incompatible": return OneGunLobbyRow.Joinability.INCOMPATIBLE
 		_: return OneGunLobbyRow.Joinability.UNKNOWN
 
 

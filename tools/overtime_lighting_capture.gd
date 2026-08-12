@@ -24,7 +24,10 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 
-	var deadline := Time.get_ticks_msec() + 20000
+	# City can spend well over twenty seconds compiling/importing its large prop
+	# set on a cold validation workspace before the three-second countdown gets a
+	# chance to advance. Keep this visual tool patient enough for a cold run.
+	var deadline := Time.get_ticks_msec() + 60000
 	while manager.round_state != "live" and Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame
 	if manager.round_state != "live":

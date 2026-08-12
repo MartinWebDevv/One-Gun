@@ -1,5 +1,12 @@
 extends CharacterBody3D
 
+const CombatOutline = preload("res://combat_outline.gd")
+
+const VisibilityRules = preload("res://combat_visibility.gd")
+const HitboxDebug = preload("res://hitbox_debug_visual.gd")
+const OneOfUsIntroScript = preload("res://one_of_us_intro.gd")
+const OneOfUsRoleVisualScript = preload("res://one_of_us_role_visual.gd")
+
 const ProtectionIconFactory = preload("res://protection_icon_factory.gd")
 
 # Online (set by round_manager's networked spawn function). Local play leaves
@@ -8,12 +15,17 @@ var is_online := false
 var net_authority_id := 1
 var actor_id := 1
 var owner_peer_id := 1
+var character_skin_id := PlayerSkinRegistry.DEFAULT_SKIN_ID
 var _is_local_online := true   # true for local play + local-authority online
 var _online_name_tag: Label3D = null
 var _extra_life_icon: Sprite3D = null
 var _sticky_hands_icon: Sprite3D = null
 var _friendly_indicator: Label3D = null
+var _gun_holder_arrow: Label3D = null
+var _all_gun_hearts_label: Label3D = null
 var _online_crosshair_layer: CanvasLayer = null
+var flash_blind_timer := 0.0
+var _flash_blind_total := 0.0
 
 @export var input_prefix := "p1"
 @export var is_player2 := false
@@ -25,12 +37,11 @@ var _online_crosshair_layer: CanvasLayer = null
 @export var dash_recharge_time := 3.0
 @export_category("Jump Tuning")
 @export_range(0.0, 20.0, 0.1) var jump_velocity: float = 7
-@export_range(0.0, 5.0, 0.05) var jump_landing_cooldown: float = 0.4
 
 var gamepad_response_curve_exponent := 2.0
 var gamepad_sprint_is_toggle := true
 var mouse_keyboard_sprint_is_toggle := false
-var max_dash_charges := 2
+var max_dash_charges := 3
 var invert_look_y := false
 
 const SPEED = 10.0
@@ -42,7 +53,7 @@ const STAMINA_REGEN_RATE = 20.0
 const STAMINA_REGEN_DELAY = 1.0
 const DASH_SPEED = 30.0
 const DASH_DURATION = 0.2
-const DASH_RECHARGE_TIME = 3.0
+const DASH_RECHARGE_TIME = 2.0
 const MAX_DASH_CHARGES_HARD_CEILING = 6
 const KNOCKBACK_DURATION = 0.2
 const ADS_TRANSITION_TIME = .2
@@ -63,7 +74,22 @@ var held_item_1 = null
 var held_item_2 = null
 var active_decoy = null
 var nearby_interactables = []
+var _normal_interactables: Array = []
+var _reach_interactables: Array = []
+var _reach_scan_timer := 0.0
+var _reach_ring: MeshInstance3D = null
+var _body_hitbox_debug: HitboxDebugVisual = null
+var local_view_render_layer := 0
 var active_slot = "none"  # "none" | "weapon" | "item1" | "item2"
+var double_jump_shoes_active := false
+var all_gun_hearts := 0
+var one_of_us_role := ""
+var _one_of_us_visual: Node3D = null
+var _one_of_us_intro_restore_pitch := 0.0
+var _one_of_us_intro_input_locked := false
+var _double_jump_shoe_attachments: Array[Node] = []
+var _one_of_us_final_bonus_active := false
+
 
 # Tracks whether the current interact press already resolved as an instant
 # pickup/swap (in which case holding it longer does nothing) or is still
@@ -75,14 +101,22 @@ var stamina = MAX_STAMINA
 var stamina_regen_timer = 0.0
 var is_sprinting = false
 var _airborne_grace_timer = 0.0
-var _jump_cooldown_remaining := 0.0
-var _jump_airborne_time := 0.0
-var _was_on_floor := false
 var _steam_boost_active := false
 var _steam_fast_fall_started := false
 var _steam_boost_origin_y := 0.0
 var _steam_descent_height_gate := 0.0
 var _steam_descent_gravity_multiplier := 1.0
+var _spring_air_active := false
+var _spring_direction_window := 0.0
+var _spring_horizontal_boost := 4.0
+var _spring_boost_committed := false
+var _dash_cancelled_spring_momentum := false
+const SPRING_AIR_CONTROL := 0.60
+const DIRECTIONAL_LAUNCH_OPPOSING_MOMENTUM_RETENTION := 0.25
+const DIRECTIONAL_LAUNCH_MIN_STREAM_RATIO := 0.40
+var _directional_launch_active := false
+var _directional_launch_direction := Vector3.ZERO
+var _directional_launch_min_forward_speed := 0.0
 
 var dash_charges = 0
 var dash_recharge_timer = 0.0
@@ -105,41 +139,38 @@ var slow_multiplier_value = 1.0
 
 var is_eliminated = false
 var _spectator: Node = null
+var _intro_camera: Camera3D = null
+var _intro_active := false
 # Invalidates the asynchronous death-animation completion when a new round
 # respawns this actor before the animation has finished.
 var _elimination_generation := 0
 
-const ANIM_SOURCE_GLB = "res://models/playerAnimations/Dance.glb"
-
 const ANIM_IDLE            = "idle"
 const ANIM_IDLE_PISTOL     = "idle_pistol"
-const ANIM_IDLE_JUMPING    = "idle_jumping"
-const ANIM_WALK            = "walk"
-const ANIM_WALK_PISTOL     = "walk_pistol"
+const ANIM_LONG_IDLE       = "long_idle"
+const ANIM_IDLE_JUMPING    = "jump"
+const ANIM_WALK            = "standard_run"
+const ANIM_WALK_PISTOL     = "pistol_run"
 const ANIM_RUN             = "run"
-const ANIM_RUN_PISTOL      = "run_pistol"
-const ANIM_RUN_JUMPING     = "run_jumping"
-const ANIM_SPRINT_ROLL     = "sprint_roll"
-const ANIM_DEATH           = "death"
-const ANIM_DANCE           = "dance"
-
-const ANIM_INDICES = {
-	ANIM_IDLE:         0,
-	ANIM_IDLE_JUMPING: 1,
-	ANIM_IDLE_PISTOL:  2,
-	ANIM_WALK:         3,
-	ANIM_RUN_JUMPING:  4,
-	ANIM_WALK_PISTOL:  5,
-	ANIM_RUN:          6,
-	ANIM_RUN_PISTOL:   7,
-	ANIM_SPRINT_ROLL:  8,
-	ANIM_DEATH:        9,
-	ANIM_DANCE:        10,
-}
+const ANIM_RUN_PISTOL      = "pistol_run"
+const ANIM_RUN_JUMPING     = "running_jump"
+const ANIM_FALL            = "fall"
+const ANIM_PISTOL_JUMP     = "pistol_jump"
+const ANIM_PISTOL_BACKWARD = "pistol_backward"
+const ANIM_PISTOL_LEFT     = "pistol_strafe_left"
+const ANIM_PISTOL_RIGHT    = "pistol_strafe_right"
+const ANIM_MELEE_RUN       = "run_with_sword"
+const ANIM_MELEE_ATTACK    = "melee"
+const ANIM_THROW           = "throw_object"
+const ANIM_HIT             = "hit"
+const ANIM_DANCE           = "hip_hop_dance"
 
 var model_anim_player: AnimationPlayer = null
 var _current_anim: String = ""
 var _anim_rotation_offset: float = 0.0
+var _action_animation_time := 0.0
+var _idle_animation_time := 0.0
+var _victory_dance_active := false
 
 var ads_blend = 0.0
 var ads_blend_target = 0.0
@@ -157,9 +188,17 @@ func _enter_tree() -> void:
 		# Replication authority and synchronizer children must exist during
 		# MultiplayerSpawner's enter-tree phase. Creating them in _ready() is too
 		# late for a remote pending spawn to receive its network ID reliably.
-		set_multiplayer_authority(net_authority_id)
-		_is_local_online = is_multiplayer_authority()
+		# Keep the spawned actor root host-authoritative so its visibility can be
+		# safely gated for late joiners. The child NetSync still belongs to the
+		# controlling client and preserves responsive client-side movement.
+		set_multiplayer_authority(1)
+		_is_local_online = multiplayer.get_unique_id() == net_authority_id
+		_build_spawn_visibility_sync()
 		_build_net_sync()
+
+
+func is_locally_controlled() -> bool:
+	return not is_online or _is_local_online
 
 func _ready():
 	if not (is_player2 and not GameConfig.split_screen_enabled):
@@ -182,9 +221,15 @@ func _ready():
 		remove_from_group("player")
 		visible = false
 		set_physics_process(false)
+	_apply_character_skin(_initial_character_skin_id())
 	model_anim_player = $CharacterModel.find_child("AnimationPlayer", true, false)
 	if model_anim_player != null:
 		_merge_animations()
+		if model_anim_player.has_animation(ANIM_IDLE):
+			_current_anim = ANIM_IDLE
+			model_anim_player.play(ANIM_IDLE)
+			model_anim_player.advance(0.0)
+			_airborne_grace_timer = AIRBORNE_ANIM_GRACE
 	default_spring_length = $AimPivot/SpringArm3D.spring_length
 	default_spring_position = $AimPivot/SpringArm3D.position
 	default_camera_fov = $AimPivot/SpringArm3D/Camera3D.fov
@@ -198,9 +243,15 @@ func _ready():
 	ads_look_sensitivity_multiplier = clamp(ads_look_sensitivity_multiplier, 0.05, 1.0)
 	if not PlayerPrefs.setting_changed.is_connected(_on_player_pref_changed):
 		PlayerPrefs.setting_changed.connect(_on_player_pref_changed)
+	_body_hitbox_debug = HitboxDebug.new()
+	_body_hitbox_debug.name = "BodyHitboxDebug"
+	add_child(_body_hitbox_debug)
+	_body_hitbox_debug.setup($CollisionShape3D, Color(0.05, 0.9, 1.0, 0.18))
 
-func _on_player_pref_changed(_key: String, _value):
+func _on_player_pref_changed(key: String, _value):
 	_apply_player_prefs()
+	if key == "character_skin_id" and not is_online and not is_player2:
+		_apply_character_skin(str(PlayerPrefs.get_setting("character_skin_id")))
 
 func _apply_match_settings():
 	max_dash_charges = GameConfig.max_dash_charges
@@ -216,7 +267,105 @@ func _apply_player_prefs():
 	default_camera_fov = PlayerPrefs.get_setting("field_of_view")
 	$AimPivot/SpringArm3D/Camera3D.fov = default_camera_fov
 
+
+func _initial_character_skin_id() -> String:
+	if is_online:
+		return PlayerSkinRegistry.sanitize_skin_id(character_skin_id)
+	if is_player2:
+		return PlayerSkinRegistry.sanitize_skin_id(str(GameConfig.player2_skin_id))
+	return PlayerSkinRegistry.sanitize_skin_id(
+		str(PlayerPrefs.get_setting("character_skin_id")))
+
+
+func set_character_skin(requested_id: String) -> void:
+	_apply_character_skin(requested_id)
+
+
+func _apply_character_skin(requested_id: String) -> void:
+	character_skin_id = PlayerSkinRegistry.sanitize_skin_id(requested_id)
+	var visual := get_node_or_null("CharacterModel")
+	if visual != null and visual.has_method("set_skin"):
+		visual.set_skin(character_skin_id)
+
+
+func set_one_of_us_role(role: String) -> void:
+	one_of_us_role = role if role in ["us", "them"] else ""
+	max_dash_charges = GameConfig.ONE_OF_US_THEM_DASH_CHARGES \
+		if one_of_us_role == "them" else GameConfig.ONE_OF_US_US_DASH_CHARGES
+	max_dash_charges = clampi(max_dash_charges, 0, MAX_DASH_CHARGES_HARD_CEILING)
+	dash_charges = max_dash_charges if one_of_us_role == "them" \
+		else mini(dash_charges, max_dash_charges)
+	if _one_of_us_visual == null:
+		_one_of_us_visual = OneOfUsRoleVisualScript.new()
+		_one_of_us_visual.name = "OneOfUsRoleVisual"
+		add_child(_one_of_us_visual)
+	_one_of_us_visual.set_infected(one_of_us_role == "them")
+
+
+func set_one_of_us_final_us(active: bool) -> void:
+	if active and one_of_us_role == "us" and not _one_of_us_final_bonus_active:
+		extra_dash_charge = maxi(extra_dash_charge, 1)
+	_one_of_us_final_bonus_active = active and one_of_us_role == "us"
+
+
+func play_one_of_us_intro(first_actor_id: int) -> void:
+	var intro = OneOfUsIntroScript.new()
+	intro.name = "OneOfUsIntro"
+	add_child(intro)
+	intro.play(self, first_actor_id)
+
+
+func get_one_of_us_intro_display_rect() -> Rect2:
+	var full_rect := get_viewport().get_visible_rect()
+	if is_online or not GameConfig.split_screen_enabled:
+		return full_rect
+	var half_width := full_rect.size.x * 0.5
+	var x_offset := half_width if is_player2 else 0.0
+	return Rect2(full_rect.position + Vector2(x_offset, 0.0),
+		Vector2(half_width, full_rect.size.y))
+
+
+func get_gameplay_camera() -> Camera3D:
+	return $AimPivot/SpringArm3D/Camera3D
+
+
+func begin_one_of_us_intro_view(_first_infected: bool, cinematic_camera: Camera3D) -> void:
+	_one_of_us_intro_input_locked = true
+	_one_of_us_intro_restore_pitch = $AimPivot/SpringArm3D.rotation.x
+	_intro_active = true
+	_intro_camera = cinematic_camera
+	if is_online and _intro_camera != null:
+		_intro_camera.make_current()
+
+
+func transition_one_of_us_intro_to_gameplay(first_infected: bool) -> void:
+	_intro_active = false
+	if is_online:
+		get_gameplay_camera().make_current()
+	if first_infected:
+		var tween := create_tween()
+		tween.tween_property($AimPivot/SpringArm3D, "rotation:x", 0.48, 0.20)
+
+
+func end_one_of_us_intro_view() -> void:
+	_one_of_us_intro_input_locked = false
+	_intro_active = false
+	_intro_camera = null
+	if is_online:
+		get_gameplay_camera().make_current()
+	var tween := create_tween()
+	tween.tween_property($AimPivot/SpringArm3D, "rotation:x",
+		_one_of_us_intro_restore_pitch, 0.25)
+
+
+func play_one_of_us_transformation() -> void:
+	if _one_of_us_visual != null and _one_of_us_visual.has_method("play_transformation"):
+		_one_of_us_visual.play_transformation()
+
+
 func _input(event):
+	if _one_of_us_intro_input_locked:
+		return
 	if use_gamepad_look or not _is_local_online or PauseManager.is_pause_open():
 		return
 	if event is InputEventMouseMotion:
@@ -246,6 +395,8 @@ func _physics_process(delta):
 		bullet_immune_timer = maxf(bullet_immune_timer - delta, 0.0)
 	if lethal_immunity_timer > 0.0:
 		lethal_immunity_timer = maxf(lethal_immunity_timer - delta, 0.0)
+	_update_flash_blind(delta)
+	_update_action_animation(delta)
 	# Combat timers do not pause just because movement is interrupted.
 	_update_new_powerups(delta)
 	# Remote networked puppets are driven entirely by their MultiplayerSynchronizer
@@ -253,11 +404,18 @@ func _physics_process(delta):
 	# but still drive their locomotion animation + model facing from the synced
 	# velocity/aim so they walk/run instead of sliding in a frozen pose.
 	if is_online and not _is_local_online:
-		_update_puppet_visuals()
+		_update_puppet_visuals(delta)
 		return
+	if _one_of_us_intro_input_locked:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if not is_on_floor():
+			_apply_air_gravity(delta)
+		move_and_slide()
+		return
+
 	if _steam_boost_active and is_on_floor():
 		_clear_steam_boost()
-	_update_jump_landing_cooldown(delta)
 	_update_accessible_camera_motion(delta)
 
 	if slow_timer > 0.0:
@@ -329,9 +487,11 @@ func _physics_process(delta):
 		_update_facing()
 		return
 
-	if (Input.is_action_just_pressed(input_prefix + "_jump")
-			and is_on_floor() and _jump_cooldown_remaining <= 0.0):
-		velocity.y = jump_velocity
+	if Input.is_action_just_pressed(input_prefix + "_jump"):
+		if is_on_floor():
+			velocity.y = jump_velocity
+		elif double_jump_shoes_active:
+			_request_double_jump_shoes()
 
 	if Input.is_action_just_pressed(input_prefix + "_interact"):
 		# A tap resolves as an instant pickup/swap if one is available right
@@ -351,11 +511,22 @@ func _physics_process(delta):
 			interact_hold_timer = 0.0
 
 	if Input.is_action_just_pressed(input_prefix + "_fire"):
-		_try_primary_action()
+		var active_item = get_active_item() if active_slot in ["item1", "item2"] else null
+		if active_item != null and active_item.has_method("begin_use"):
+			active_item.begin_use()
+		else:
+			_try_primary_action()
+	if Input.is_action_just_released(input_prefix + "_fire"):
+		var released_item = get_active_item() if active_slot in ["item1", "item2"] else null
+		if released_item != null and released_item.has_method("release_use"):
+			released_item.release_use()
 
 	if Input.is_action_just_pressed(input_prefix + "_throw"):
 		if active_slot == "weapon" and held_melee_weapon != null:
-			held_melee_weapon.try_throw()
+			held_melee_weapon.begin_throw_preview()
+	if Input.is_action_just_released(input_prefix + "_throw"):
+		if active_slot == "weapon" and held_melee_weapon != null:
+			held_melee_weapon.release_throw()
 
 	if Input.is_action_just_pressed(input_prefix + "_decoy_command"):
 		_toggle_active_decoy_control()
@@ -365,7 +536,9 @@ func _physics_process(delta):
 		_start_dash()
 
 	var sprint_is_toggle = gamepad_sprint_is_toggle if use_gamepad_look else mouse_keyboard_sprint_is_toggle
-	if sprint_is_toggle:
+	if not GameConfig.sprinting_enabled:
+		is_sprinting = false
+	elif sprint_is_toggle:
 		if Input.is_action_just_pressed(input_prefix + "_sprint"):
 			_toggle_sprint()
 	else:
@@ -373,6 +546,10 @@ func _physics_process(delta):
 
 	if is_dashing:
 		dash_timer -= delta
+		if _dash_cancelled_spring_momentum:
+			# A dash committed during a spring-pad launch replaces that launch;
+			# neither its upward speed nor its horizontal boost may leak through.
+			velocity.y = 0.0
 		var steer_input: Vector2 = _get_movement_input_dir()
 		if steer_input.length_squared() > 0.01:
 			var steer_target: Vector3 = ($AimPivot.transform.basis
@@ -382,46 +559,59 @@ func _physics_process(delta):
 		velocity.z = dash_direction.z * DASH_SPEED
 		if dash_timer <= 0.0:
 			is_dashing = false
+			_dash_cancelled_spring_momentum = false
 			_current_anim = ""
 	else:
 		var current_speed = SPRINT_SPEED if is_sprinting else SPEED
 		current_speed *= slow_multiplier_value
 		if speed_surge_timer > 0.0:
 			current_speed *= SPEED_SURGE_MULT
+		if one_of_us_role == "them":
+			current_speed *= GameConfig.ONE_OF_US_THEM_SPEED_MULTIPLIER
 
 		var input_dir = _get_movement_input_dir()
+		var flash_camera_movement := _active_flash_camera_mode()
+		if flash_camera_movement:
+			input_dir.x *= 0.70
 		var direction = ($AimPivot.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+		# Normal movement keeps the established digital/analog behavior. Camera
+		# mode alone preserves the shortened input-vector magnitude so pure lateral
+		# movement really is 30% slower instead of normalization restoring it.
+		if flash_camera_movement:
+			direction *= minf(input_dir.length(), 1.0)
 
-		if direction:
+		if _spring_air_active and not is_on_floor():
+			_spring_direction_window = maxf(_spring_direction_window - delta, 0.0)
+			if direction:
+				# Preserve 40% of the launch trajectory while granting 60% of the
+				# normal movement target each physics frame. This matches bot pads.
+				velocity.x = lerpf(velocity.x, direction.x * current_speed, SPRING_AIR_CONTROL)
+				velocity.z = lerpf(velocity.z, direction.z * current_speed, SPRING_AIR_CONTROL)
+			if not _spring_boost_committed and _spring_direction_window > 0.0 and input_dir.length_squared() > 0.04:
+				var committed_direction: Vector3 = direction.normalized()
+				velocity.x += committed_direction.x * _spring_horizontal_boost
+				velocity.z += committed_direction.z * _spring_horizontal_boost
+				_spring_boost_committed = true
+			_enforce_directional_launch_minimum()
+		elif direction:
 			velocity.x = direction.x * current_speed
 			velocity.z = direction.z * current_speed
 		else:
-			velocity.x = move_toward(velocity.x, 0, current_speed)
-			velocity.z = move_toward(velocity.z, 0, current_speed)
+			if not _spring_air_active:
+				velocity.x = move_toward(velocity.x, 0, current_speed)
+				velocity.z = move_toward(velocity.z, 0, current_speed)
 
-		_update_animation(input_dir)
+		_update_animation(input_dir, delta)
 
 	var _desired_h_vel := Vector3(velocity.x, 0, velocity.z)
 	move_and_slide()
+	if _spring_air_active and is_on_floor() and velocity.y <= 0.0:
+		_clear_spring_launch_state()
 	_try_step_up(_desired_h_vel, delta)
 	_update_footsteps(delta)
 	_update_stamina(delta)
 	_update_dash_recharge(delta)
 	_update_facing()
-
-func _update_jump_landing_cooldown(delta: float) -> void:
-	_jump_cooldown_remaining = maxf(_jump_cooldown_remaining - delta, 0.0)
-	var grounded := is_on_floor()
-	if grounded:
-		# Ignore the tiny floor-state flickers caused by uneven terrain. Only an
-		# actual airborne interval counts as a landing and starts the cooldown.
-		if not _was_on_floor and _jump_airborne_time >= AIRBORNE_ANIM_GRACE:
-			_jump_cooldown_remaining = jump_landing_cooldown
-		_jump_airborne_time = 0.0
-	else:
-		_jump_airborne_time += delta
-	_was_on_floor = grounded
-
 
 func apply_steam_boost(launch_velocity: float, launch_origin_y: float,
 		descent_height_gate: float, descent_gravity_multiplier: float) -> void:
@@ -431,6 +621,80 @@ func apply_steam_boost(launch_velocity: float, launch_origin_y: float,
 	_steam_boost_origin_y = launch_origin_y
 	_steam_descent_height_gate = maxf(descent_height_gate, 0.0)
 	_steam_descent_gravity_multiplier = maxf(descent_gravity_multiplier, 1.0)
+
+
+func apply_spring_launch(launch_velocity: float, horizontal_boost: float, direction_window: float) -> void:
+	velocity.y = maxf(velocity.y, launch_velocity)
+	_spring_air_active = true
+	_spring_direction_window = maxf(direction_window, 0.0)
+	_spring_horizontal_boost = horizontal_boost
+	_spring_boost_committed = false
+
+
+func apply_directional_launch(launch_velocity: Vector3) -> void:
+	if launch_velocity.is_zero_approx():
+		return
+	# Preserve all cross-stream momentum and momentum already traveling with the
+	# water. Head-on momentum is reduced before the water impulse is added so a
+	# player entering against the stream is pushed back along the jet instead of
+	# either stopping dead or passing straight through it.
+	_clear_steam_boost()
+	var launch_horizontal := Vector3(launch_velocity.x, 0.0, launch_velocity.z)
+	if not launch_horizontal.is_zero_approx():
+		var launch_direction := launch_horizontal.normalized()
+		var current_horizontal := Vector3(velocity.x, 0.0, velocity.z)
+		var parallel_speed := current_horizontal.dot(launch_direction)
+		var cross_stream_velocity := current_horizontal - launch_direction * parallel_speed
+		if parallel_speed < 0.0:
+			parallel_speed *= DIRECTIONAL_LAUNCH_OPPOSING_MOMENTUM_RETENTION
+		var combined_horizontal := cross_stream_velocity \
+			+ launch_direction * parallel_speed + launch_horizontal
+		velocity.x = combined_horizontal.x
+		velocity.z = combined_horizontal.z
+	velocity.y = maxf(velocity.y, launch_velocity.y)
+	_spring_air_active = true
+	_spring_direction_window = 0.0
+	_spring_horizontal_boost = 0.0
+	_spring_boost_committed = true
+	is_dashing = false
+	_dash_cancelled_spring_momentum = false
+	stagger_timer = 0.0
+	knockback_timer = 0.0
+	knockback_velocity = Vector3.ZERO
+	_directional_launch_active = not launch_horizontal.is_zero_approx()
+	if _directional_launch_active:
+		_directional_launch_direction = launch_horizontal.normalized()
+		_directional_launch_min_forward_speed = (
+			launch_horizontal.length() * DIRECTIONAL_LAUNCH_MIN_STREAM_RATIO)
+		_enforce_directional_launch_minimum()
+
+
+func _enforce_directional_launch_minimum() -> void:
+	if not _directional_launch_active:
+		return
+	var current_horizontal := Vector3(velocity.x, 0.0, velocity.z)
+	var current_stream_speed := current_horizontal.dot(_directional_launch_direction)
+	if current_stream_speed >= _directional_launch_min_forward_speed:
+		return
+	var correction := _directional_launch_direction \
+		* (_directional_launch_min_forward_speed - current_stream_speed)
+	velocity.x += correction.x
+	velocity.z += correction.z
+
+
+func _clear_spring_launch_state() -> void:
+	_spring_air_active = false
+	_spring_direction_window = 0.0
+	_spring_horizontal_boost = 4.0
+	_spring_boost_committed = false
+	_directional_launch_active = false
+	_directional_launch_direction = Vector3.ZERO
+	_directional_launch_min_forward_speed = 0.0
+
+
+func _cancel_spring_launch_for_dash() -> void:
+	_clear_spring_launch_state()
+	velocity = Vector3.ZERO
 
 
 func _apply_air_gravity(delta: float) -> void:
@@ -461,6 +725,7 @@ func _update_footsteps(delta: float) -> void:
 	if footstep_timer <= 0.0:
 		if silent_steps_timer <= 0.0:
 			AudioManager.play_sfx("footstep")
+			GameEvents.combat_noise.emit(global_position, actor_id, "footstep", 9.0 if is_sprinting else 6.0)
 		footstep_timer = 0.26 if is_sprinting else 0.38
 
 # Walk straight over knee-height ledges (steps, boardwalks, small rocks)
@@ -521,6 +786,9 @@ func _try_step_up(desired_h_vel: Vector3, delta: float) -> void:
 	global_position.y += step_h + 0.02
 
 func _toggle_sprint():
+	if not GameConfig.sprinting_enabled:
+		is_sprinting = false
+		return
 	if is_sprinting:
 		is_sprinting = false
 	elif stamina > 0.0:
@@ -541,7 +809,8 @@ func _update_active_slot_and_visuals():
 
 	var hold_point = get_hold_point()
 	if hold_point != null and hold_point.get_child_count() > 0:
-		hold_point.get_child(0).visible = (active_slot == "weapon" and holding_gun)
+		hold_point.get_child(0).visible = (
+			active_slot == "weapon" and holding_gun and not _victory_dance_active)
 
 	var melee_hold_point = get_melee_hold_point()
 	if melee_hold_point != null and melee_hold_point.get_child_count() > 0:
@@ -562,6 +831,11 @@ func _first_occupied_slot() -> String:
 	return "none"
 
 func _try_cycle_slot(direction: int):
+	var current_item = get_active_item() if active_slot in ["item1", "item2"] else null
+	if current_item != null and current_item.has_method("is_committed_use") and current_item.is_committed_use():
+		return
+	if current_item != null and current_item.has_method("cancel_use"):
+		current_item.cancel_use()
 	var occupied = []
 	if holding_gun or held_melee_weapon != null:
 		occupied.append("weapon")
@@ -586,16 +860,43 @@ func _try_cycle_slot(direction: int):
 func _build_net_sync() -> void:
 	var sync := MultiplayerSynchronizer.new()
 	sync.name = "NetSync"
+	sync.public_visibility = false
+	sync.add_visibility_filter(Callable(NetworkManager,
+		"is_gameplay_replication_visible_to_peer"))
 	var cfg := SceneReplicationConfig.new()
 	for prop in [".:position", ".:rotation", "AimPivot:rotation", "AimPivot/SpringArm3D:rotation", ".:velocity", ".:stamina"]:
 		cfg.add_property(NodePath(prop))
 	sync.replication_config = cfg
 	sync.set_multiplayer_authority(net_authority_id)
+	for connected_peer in multiplayer.get_peers():
+		var connected_id := int(connected_peer)
+		sync.set_visibility_for(connected_id,
+			NetworkManager.is_gameplay_replication_visible_to_peer(connected_id))
 	add_child(sync)
+	sync.update_visibility()
 	# Puppets play idle so they read as a standing character while sliding to
 	# their synced positions (walk-anim sync is a later-phase polish).
 	if not _is_local_online:
 		call_deferred("_play_puppet_idle")
+
+
+# Spawn visibility must remain host-authoritative even though the movement
+# synchronizer is client-authoritative. Godot only lets synchronizers sharing
+# the MultiplayerSpawner's authority control whether the spawned root exists.
+func _build_spawn_visibility_sync() -> void:
+	var sync := MultiplayerSynchronizer.new()
+	sync.name = "SpawnVisibility"
+	sync.public_visibility = false
+	sync.replication_config = SceneReplicationConfig.new()
+	sync.set_multiplayer_authority(1)
+	sync.add_visibility_filter(Callable(NetworkManager,
+		"is_gameplay_replication_visible_to_peer"))
+	for connected_peer in multiplayer.get_peers():
+		var connected_id := int(connected_peer)
+		sync.set_visibility_for(connected_id,
+			NetworkManager.is_gameplay_replication_visible_to_peer(connected_id))
+	add_child(sync)
+	sync.update_visibility()
 
 # Online and local play share the exact same procedural crosshair renderer.
 func _build_online_crosshair() -> void:
@@ -645,6 +946,28 @@ func _build_online_name_tag() -> void:
 		"res://UI/icons/extra_life.svg", Vector3(-0.28, 2.78, 0.0))
 	_sticky_hands_icon = _make_protection_icon(
 		"res://UI/icons/sticky_hands.svg", Vector3(0.28, 2.78, 0.0))
+	_gun_holder_arrow = Label3D.new()
+	_gun_holder_arrow.text = "\u25bc  GUN HOLDER  \u25bc"
+	_gun_holder_arrow.position = Vector3(0.0, 3.08, 0.0)
+	_gun_holder_arrow.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_gun_holder_arrow.no_depth_test = false
+	_gun_holder_arrow.font_size = CombatOutline.GUN_HOLDER_MARKER_FONT_SIZE
+	_gun_holder_arrow.outline_size = CombatOutline.GUN_HOLDER_MARKER_OUTLINE_SIZE
+	_gun_holder_arrow.modulate = Color(1.0, 0.08, 0.08)
+	_gun_holder_arrow.visible = false
+	add_child(_gun_holder_arrow)
+	_all_gun_hearts_label = Label3D.new()
+	_all_gun_hearts_label.name = "AllGunWorldHearts"
+	_all_gun_hearts_label.position = Vector3(0.0, 3.08, 0.0)
+	_all_gun_hearts_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_all_gun_hearts_label.no_depth_test = false
+	_all_gun_hearts_label.font_size = 34
+	_all_gun_hearts_label.outline_size = 9
+	_all_gun_hearts_label.modulate = Color(1.0, 0.14, 0.2)
+	_all_gun_hearts_label.visibility_range_end = 50.0
+	_all_gun_hearts_label.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	_all_gun_hearts_label.visible = false
+	add_child(_all_gun_hearts_label)
 	_update_online_name_tag()
 	if not NetworkManager.lobby_changed.is_connected(_update_online_name_tag):
 		NetworkManager.lobby_changed.connect(_update_online_name_tag)
@@ -675,13 +998,40 @@ func _pref_color(key: String, fallback: Color) -> Color:
 func _update_protection_icons() -> void:
 	if _extra_life_icon == null or _sticky_hands_icon == null:
 		return
+	var viewer = NetworkManager.find_net_player(NetworkManager.local_id()) if NetworkManager.is_online() else null
+	var friendly := viewer != null and GameConfig.teams_enabled and int(viewer.get("team_id")) == int(team_id)
+	var spectator_view := NetworkManager.is_online() and NetworkManager.local_match_role == "spectator"
+	var perception_visible := spectator_view or friendly or (viewer != null and VisibilityRules.has_visual_contact(viewer, self, false))
+	if _online_name_tag != null:
+		_online_name_tag.visible = not _is_local_online and perception_visible and not is_eliminated
+		_online_name_tag.no_depth_test = friendly or spectator_view
+	if _friendly_indicator != null:
+		_friendly_indicator.visible = friendly and not _is_local_online and not is_eliminated
 	var icon_size := clampf(float(PlayerPrefs.get_setting("protection_icon_size")), 0.5, 2.0)
 	_extra_life_icon.scale = Vector3.ONE * icon_size
 	_sticky_hands_icon.scale = Vector3.ONE * icon_size
 	_extra_life_icon.modulate = _pref_color("extra_life_icon_color", Color(1.0, 0.72, 0.18))
 	_sticky_hands_icon.modulate = _pref_color("sticky_hands_icon_color", Color(0.2, 1.0, 0.35))
-	_extra_life_icon.visible = not _is_local_online and second_wind_ready and not is_eliminated
-	_sticky_hands_icon.visible = not _is_local_online and melee_disarm_shields > 0 and not is_eliminated
+	_extra_life_icon.visible = not _is_local_online and perception_visible and second_wind_ready and not is_eliminated
+	_sticky_hands_icon.visible = not _is_local_online and perception_visible and melee_disarm_shields > 0 and not is_eliminated
+	if _gun_holder_arrow != null:
+		_gun_holder_arrow.visible = not _is_local_online and viewer != null \
+			and GameConfig.game_mode == GameConfig.MODE_ONE_GUN \
+			and holding_gun and not is_eliminated \
+			and VisibilityRules.has_visual_contact(viewer, self, true)
+		if _gun_holder_arrow.visible:
+			var pulse := 1.0 + sin(Time.get_ticks_msec() * 0.006) \
+				* CombatOutline.GUN_HOLDER_MARKER_PULSE_AMOUNT
+			_gun_holder_arrow.scale = Vector3.ONE * pulse
+
+	if _all_gun_hearts_label != null:
+		var show_all_gun_hearts := GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+			and not is_eliminated and (_is_local_online or perception_visible)
+		_all_gun_hearts_label.visible = show_all_gun_hearts
+		if show_all_gun_hearts:
+			var remaining := clampi(all_gun_hearts, 0, 3)
+			_all_gun_hearts_label.text = "\u2665".repeat(remaining) + "\u2661".repeat(3 - remaining)
+
 
 func _play_puppet_idle() -> void:
 	if model_anim_player != null and model_anim_player.has_animation(ANIM_IDLE):
@@ -689,56 +1039,43 @@ func _play_puppet_idle() -> void:
 
 # Remote puppet: pick idle/walk/run (and pistol variants) from the synced velocity
 # so it animates while the synchronizer slides it to position; face the synced aim.
-func _update_puppet_visuals() -> void:
+func _update_puppet_visuals(delta: float) -> void:
 	if model_anim_player != null and not is_eliminated:
 		var speed := Vector2(velocity.x, velocity.z).length()
-		if speed > (SPEED + SPRINT_SPEED) * 0.5:
-			_play_anim(ANIM_RUN_PISTOL if holding_gun else ANIM_RUN)
-		elif speed > 0.6:
-			_play_anim(ANIM_WALK_PISTOL if holding_gun else ANIM_WALK)
+		if speed > 0.6:
+			_idle_animation_time = 0.0
+			if holding_gun:
+				var local_velocity: Vector3 = \
+					$AimPivot.global_transform.basis.inverse() * velocity
+				if local_velocity.z > absf(local_velocity.x) * 0.75:
+					_play_anim(ANIM_PISTOL_BACKWARD)
+				elif local_velocity.x < -0.35:
+					_play_anim(ANIM_PISTOL_LEFT)
+				elif local_velocity.x > 0.35:
+					_play_anim(ANIM_PISTOL_RIGHT)
+				else:
+					_play_anim(ANIM_RUN_PISTOL)
+			elif held_melee_weapon != null:
+				_play_anim(ANIM_MELEE_RUN)
+			else:
+				_play_anim(ANIM_RUN if speed > (SPEED + SPRINT_SPEED) * 0.5 else ANIM_WALK)
 		elif holding_gun:
+			_idle_animation_time += delta
 			_play_anim(ANIM_IDLE_PISTOL)
 		else:
-			_play_anim(ANIM_IDLE)
+			_idle_animation_time += delta
+			_play_anim(ANIM_LONG_IDLE if _idle_animation_time >= 8.0 else ANIM_IDLE)
 	_update_facing()
 
 func _merge_animations():
-	if not model_anim_player.has_animation_library(""):
-		model_anim_player.add_animation_library("", AnimationLibrary.new())
-	var lib = model_anim_player.get_animation_library("")
+	var visual := get_node_or_null("CharacterModel")
+	if visual != null and visual.has_method("ensure_animation_library"):
+		model_anim_player = visual.ensure_animation_library()
 
-	var packed = load(ANIM_SOURCE_GLB)
-	if packed == null:
-		push_warning("AnimationMerge: could not load '%s'" % ANIM_SOURCE_GLB)
-		return
-	var instance = packed.instantiate()
-	var source_player = instance.find_child("AnimationPlayer", true, false)
-	if source_player == null:
-		instance.queue_free()
-		push_warning("AnimationMerge: no AnimationPlayer in source GLB")
-		return
-
-	const ONE_SHOT = [ANIM_DEATH, ANIM_DANCE, ANIM_SPRINT_ROLL]
-
-	var source_list = source_player.get_animation_list()
-	for anim_name in ANIM_INDICES:
-		var idx = ANIM_INDICES[anim_name]
-		if idx >= source_list.size():
-			push_warning("AnimationMerge: index %d out of range for '%s'" % [idx, anim_name])
-			continue
-		if not lib.has_animation(anim_name):
-			var anim = source_player.get_animation(source_list[idx])
-			var final_anim = anim.duplicate()
-			if anim_name in ONE_SHOT:
-				final_anim.loop_mode = Animation.LOOP_NONE
-			else:
-				final_anim.loop_mode = Animation.LOOP_LINEAR
-			lib.add_animation(anim_name, final_anim)
-
-	instance.queue_free()
-
-func _play_anim(anim_name: String):
+func _play_anim(anim_name: String, force := false, custom_speed := 1.0):
 	if model_anim_player == null:
+		return
+	if _action_animation_time > 0.0 and not force:
 		return
 	if _current_anim == anim_name:
 		return
@@ -746,64 +1083,118 @@ func _play_anim(anim_name: String):
 		push_warning("_play_anim: not found: " + anim_name)
 		return
 	_current_anim = anim_name
-	match anim_name:
-		ANIM_RUN, ANIM_RUN_JUMPING, ANIM_WALK, ANIM_WALK_PISTOL:
-			_anim_rotation_offset = deg_to_rad(30.0)
-		ANIM_RUN_PISTOL:
-			_anim_rotation_offset = deg_to_rad(40.0)
-		_:
-			_anim_rotation_offset = 0.0
-	model_anim_player.play(anim_name)
+	_anim_rotation_offset = 0.0
+	model_anim_player.play(anim_name, 0.12, custom_speed)
 
 func _is_grounded_for_anim() -> bool:
 	# Debounced grounded check for animation only — see AIRBORNE_ANIM_GRACE.
 	return _airborne_grace_timer > 0.0
 
-func _update_animation(input_dir: Vector2):
+func _update_animation(input_dir: Vector2, delta: float):
+	if _action_animation_time > 0.0:
+		return
 	var is_moving = input_dir.length() > 0.1
 
 	if not _is_grounded_for_anim():
-		if is_sprinting:
+		_idle_animation_time = 0.0
+		if velocity.y < -0.5:
+			_play_anim(ANIM_FALL)
+		elif holding_gun:
+			_play_anim(ANIM_PISTOL_JUMP)
+		elif is_sprinting or is_moving:
 			_play_anim(ANIM_RUN_JUMPING)
 		else:
 			_play_anim(ANIM_IDLE_JUMPING)
-	elif is_moving and is_sprinting:
-		if holding_gun:
-			_play_anim(ANIM_RUN_PISTOL)
-		else:
-			_play_anim(ANIM_RUN)
 	elif is_moving:
+		_idle_animation_time = 0.0
 		if holding_gun:
-			_play_anim(ANIM_WALK_PISTOL)
+			if input_dir.y > absf(input_dir.x) * 0.75:
+				_play_anim(ANIM_PISTOL_BACKWARD)
+			elif input_dir.x < -0.35:
+				_play_anim(ANIM_PISTOL_LEFT)
+			elif input_dir.x > 0.35:
+				_play_anim(ANIM_PISTOL_RIGHT)
+			else:
+				_play_anim(ANIM_RUN_PISTOL)
+		elif held_melee_weapon != null:
+			_play_anim(ANIM_MELEE_RUN)
+		elif is_sprinting:
+			_play_anim(ANIM_RUN)
 		else:
 			_play_anim(ANIM_WALK)
 	elif holding_gun:
+		_idle_animation_time += delta
 		_play_anim(ANIM_IDLE_PISTOL)
 	else:
-		_play_anim(ANIM_IDLE)
+		_idle_animation_time += delta
+		_play_anim(ANIM_LONG_IDLE if _idle_animation_time >= 8.0 else ANIM_IDLE)
 
 func _stop_movement_animation():
 	_play_anim(ANIM_IDLE)
 
 func play_death(headshot: bool = false):
-	if model_anim_player == null:
-		return
-	if not model_anim_player.has_animation(ANIM_DEATH):
-		return
-	_current_anim = ANIM_DEATH
-	_anim_rotation_offset = 0.0
-	model_anim_player.play(ANIM_DEATH)
+	# The authored death presentation remains the shared confetti pop. A
+	# skeletal death clip can be inserted here later without touching combat.
+	pass
 
 func play_victory_dance():
 	if model_anim_player == null:
 		return
 	if not model_anim_player.has_animation(ANIM_DANCE):
 		return
+	_victory_dance_active = true
+	_set_held_gun_visual_visible(false)
 	_current_anim = ANIM_DANCE
 	_anim_rotation_offset = 0.0
 	model_anim_player.play(ANIM_DANCE)
 
+
+func _set_held_gun_visual_visible(show_gun: bool) -> void:
+	var hold_point = get_hold_point()
+	if hold_point == null:
+		return
+	for child in hold_point.get_children():
+		if child.get("is_held") != null:
+			child.visible = show_gun
+
+
+func play_action_animation(animation_name: String, requested_duration := 0.0) -> void:
+	if model_anim_player == null or not model_anim_player.has_animation(animation_name):
+		return
+	var animation := model_anim_player.get_animation(animation_name)
+	var duration := requested_duration if requested_duration > 0.0 else animation.length
+	var speed := animation.length / maxf(duration, 0.05)
+	_action_animation_time = maxf(duration, 0.05)
+	_current_anim = ""
+	_play_anim(animation_name, true, speed)
+
+
+func play_melee_animation(duration := 0.0) -> void:
+	play_action_animation(ANIM_MELEE_ATTACK, duration)
+
+
+func play_throw_animation() -> void:
+	play_action_animation(ANIM_THROW, 0.85)
+
+
+func play_hit_animation() -> void:
+	play_action_animation(ANIM_HIT, 0.45)
+
+
+func _update_action_animation(delta: float) -> void:
+	if _action_animation_time <= 0.0:
+		return
+	_action_animation_time = maxf(_action_animation_time - delta, 0.0)
+	if _action_animation_time <= 0.0:
+		_current_anim = ""
+
 func _update_aiming(_delta):
+	if Input.is_action_just_pressed(input_prefix + "_ads"):
+		var camera_item = get_active_item() if active_slot in ["item1", "item2"] else null
+		if camera_item != null and camera_item.has_method("is_camera_mode_active") and camera_item.is_camera_mode_active():
+			camera_item.cancel_use()
+			ads_blend_target = 0.0
+			return
 	var ads_held = Input.is_action_pressed(input_prefix + "_ads")
 	var target_blend = 1.0 if ads_held else 0.0
 	if target_blend != ads_blend_target:
@@ -868,20 +1259,75 @@ func get_item_hold_point():
 	return $CharacterModel.find_child("ItemHoldPoint", true, false)
 
 func get_camera():
+	if _intro_active and _intro_camera != null:
+		return _intro_camera
 	if _spectator != null and _spectator.has_method("get_spectator_camera"):
 		return _spectator.get_spectator_camera()
 	return $AimPivot/SpringArm3D/Camera3D
+
+func play_match_intro(authored_start: Vector3, duration := 3.0) -> void:
+	if not is_locally_controlled() or is_eliminated:
+		return
+	if AccessibilityManager.reduced_motion_enabled():
+		_play_reduced_motion_intro(duration)
+		return
+	var gameplay_camera: Camera3D = $AimPivot/SpringArm3D/Camera3D
+	_intro_active = true
+	_intro_camera = Camera3D.new()
+	_intro_camera.name = "RoundIntroCamera"
+	_intro_camera.fov = gameplay_camera.fov
+	get_tree().current_scene.add_child(_intro_camera)
+	_intro_camera.global_position = authored_start
+	if is_online:
+		_intro_camera.make_current()
+	var target := global_position + Vector3.UP * 1.1
+	var start_offset := authored_start - target
+	if Vector2(start_offset.x, start_offset.z).length() < 4.0:
+		start_offset += Vector3(0.0, 7.0, -12.0)
+	var elapsed := 0.0
+	while elapsed < duration and is_instance_valid(_intro_camera):
+		var t := clampf(elapsed / maxf(duration, 0.01), 0.0, 1.0)
+		var eased := t * t * (3.0 - 2.0 * t)
+		var orbit_offset := Basis(Vector3.UP, PI * eased) * start_offset
+		var orbit_position := target + orbit_offset
+		var settle := clampf((eased - 0.68) / 0.32, 0.0, 1.0)
+		_intro_camera.global_position = orbit_position.lerp(gameplay_camera.global_position, settle)
+		_intro_camera.look_at(target.lerp(global_position + Vector3.UP * 1.45, settle), Vector3.UP)
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+	_intro_active = false
+	if is_online:
+		gameplay_camera.make_current()
+	if _intro_camera != null:
+		_intro_camera.queue_free()
+	_intro_camera = null
+
+func _play_reduced_motion_intro(duration: float) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 50
+	var fade := ColorRect.new()
+	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fade.color = Color.BLACK
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(fade)
+	add_child(layer)
+	var tween := create_tween()
+	tween.tween_property(fade, "color:a", 0.0, maxf(duration, 0.01))
+	await tween.finished
+	layer.queue_free()
 
 func apply_knockback(direction: Vector3, distance: float):
 	knockback_velocity = direction * (distance / KNOCKBACK_DURATION)
 	knockback_timer = KNOCKBACK_DURATION
 	is_dashing = false
 	is_sprinting = false
+	play_hit_animation()
 
 func apply_stagger(duration: float):
 	stagger_timer = duration
 	is_dashing = false
 	is_sprinting = false
+	play_hit_animation()
 
 func grant_bullet_immunity(duration: float):
 	bullet_immune_timer = max(bullet_immune_timer, duration)
@@ -889,25 +1335,28 @@ func grant_bullet_immunity(duration: float):
 func is_bullet_immune():
 	return bullet_immune_timer > 0.0
 
-# Red inverted-hull outline on whoever holds the gun, so the gun holder is
+# Pulsing red/orange surface rim on whoever holds the gun, so the gun holder is
 # readable at a glance. Uses material_overlay (independent of flash_hit's
 # surface overrides) with normal depth testing — walls hide it, no wallhack.
 var _gun_outline_active := false
 var _decoy_outline_generation := 0
+var _hit_flash_generation := 0
+var _hit_flash_restore_entries: Array = []
 
 func _update_gun_holder_outline():
-	if holding_gun == _gun_outline_active:
+	# The shared material overlay cannot be hidden from only one local
+	# splitscreen viewport. Local matches therefore use the per-view GUN HOLDER
+	# tag, while online remote puppets keep the extra rim. The holder never sees
+	# their own indicator.
+	var should_outline := holding_gun and is_online and not _is_local_online \
+		and GameConfig.game_mode == GameConfig.MODE_ONE_GUN
+	if should_outline == _gun_outline_active:
 		return
-	_gun_outline_active = holding_gun
-	var mat: StandardMaterial3D = null
-	if holding_gun:
-		mat = StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.albedo_color = Color(0.95, 0.12, 0.12)
-		mat.grow = true
-		mat.grow_amount = 0.02
-		mat.cull_mode = BaseMaterial3D.CULL_FRONT
-	for mesh in _find_mesh_instances($CharacterModel):
+	_gun_outline_active = should_outline
+	var mat: Material = null
+	if should_outline:
+		mat = CombatOutline.create_gun_holder_rim_material()
+	for mesh in _character_outline_meshes():
 		mesh.material_overlay = mat
 
 func show_decoy_destroyer_outline(duration: float, decoy_owner = null) -> void:
@@ -921,52 +1370,63 @@ func show_decoy_destroyer_outline(duration: float, decoy_owner = null) -> void:
 			return
 	_decoy_outline_generation += 1
 	var generation := _decoy_outline_generation
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(1.0, 0.05, 0.05)
-	mat.grow = true
-	mat.grow_amount = 0.025
-	mat.cull_mode = BaseMaterial3D.CULL_FRONT
-	mat.no_depth_test = true
-	for mesh in _find_mesh_instances($CharacterModel):
+	var mat := CombatOutline.create_decoy_reveal_material()
+	for mesh in _character_outline_meshes():
 		mesh.material_overlay = mat
 	await get_tree().create_timer(duration).timeout
 	if generation == _decoy_outline_generation:
-		_gun_outline_active = not holding_gun
-		_update_gun_holder_outline()
+		_restore_outline_after_temporary_reveal()
 
 func show_overtime_pulse(duration: float = 1.0) -> void:
 	_decoy_outline_generation += 1
 	var generation := _decoy_outline_generation
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(1.0, 0.03, 0.03)
-	mat.grow = true
-	mat.grow_amount = 0.03
-	mat.cull_mode = BaseMaterial3D.CULL_FRONT
-	mat.no_depth_test = true
-	for mesh in _find_mesh_instances($CharacterModel):
+	var mat := CombatOutline.create_overtime_reveal_material()
+	for mesh in _character_outline_meshes():
 		mesh.material_overlay = mat
 	await get_tree().create_timer(duration).timeout
 	if generation == _decoy_outline_generation:
-		_gun_outline_active = not holding_gun
-		_update_gun_holder_outline()
+		_restore_outline_after_temporary_reveal()
+
+
+func _restore_outline_after_temporary_reveal() -> void:
+	# Clear the temporary overlay first. In local play the gun holder does not use
+	# a shared mesh rim, so merely toggling the cached gun-outline flag can early
+	# return and strand the reveal material on the shooter indefinitely.
+	for mesh in _character_outline_meshes():
+		mesh.material_overlay = null
+	_gun_outline_active = false
+	_update_gun_holder_outline()
 
 func flash_hit():
 	request_screen_shake(0.18, 0.14)
 	if not AccessibilityManager.allow_flash():
 		return
+	_hit_flash_generation += 1
+	var generation := _hit_flash_generation
+	_restore_hit_flash_materials()
+	var entries: Array = []
 	var meshes = _find_mesh_instances($CharacterModel)
-	var entries = []
 	for mesh in meshes:
-		var original = mesh.get_surface_override_material(0)
-		var base_color = Color.WHITE
-		if original != null and original is StandardMaterial3D:
-			base_color = original.albedo_color
-		var flash_material = StandardMaterial3D.new()
-		flash_material.albedo_color = base_color
-		mesh.set_surface_override_material(0, flash_material)
-		entries.append({"mesh": mesh, "material": flash_material, "original": original, "base_color": base_color})
+		if mesh.mesh == null:
+			continue
+		for surface_index in mesh.mesh.get_surface_count():
+			var original = mesh.get_surface_override_material(surface_index)
+			var source = original if original != null else mesh.get_active_material(surface_index)
+			var flash_material := StandardMaterial3D.new()
+			var base_color := Color.WHITE
+			if source is StandardMaterial3D:
+				flash_material = source.duplicate(true) as StandardMaterial3D
+				base_color = source.albedo_color
+			flash_material.albedo_color = base_color
+			mesh.set_surface_override_material(surface_index, flash_material)
+			entries.append({
+				"mesh": mesh,
+				"surface": surface_index,
+				"material": flash_material,
+				"original": original,
+				"base_color": base_color,
+			})
+	_hit_flash_restore_entries = entries
 
 	var tween = create_tween()
 	for entry in entries:
@@ -976,21 +1436,59 @@ func flash_hit():
 		tween.parallel().tween_property(entry["material"], "albedo_color", entry["base_color"], 0.1)
 
 	await tween.finished
-	for entry in entries:
-		if is_instance_valid(entry["mesh"]):
-			entry["mesh"].set_surface_override_material(0, entry["original"])
+	if generation == _hit_flash_generation:
+		_restore_hit_flash_materials()
+
+
+func _restore_hit_flash_materials() -> void:
+	for entry in _hit_flash_restore_entries:
+		var mesh = entry.get("mesh")
+		var surface := int(entry.get("surface", -1))
+		if is_instance_valid(mesh) and mesh.mesh != null \
+				and surface >= 0 and surface < mesh.mesh.get_surface_count():
+			mesh.set_surface_override_material(surface, entry.get("original"))
+	_hit_flash_restore_entries.clear()
+	# PlayerV2Visual owns the authoritative per-instance skin bindings. Reapply
+	# the selected ID after any temporary hit material so overlapping async
+	# flashes cannot strand this mesh on a textureless override.
+	var visual := get_node_or_null("CharacterModel")
+	if visual != null and visual.has_method("set_skin"):
+		visual.set_skin(character_skin_id)
 
 func _find_mesh_instances(node: Node) -> Array:
 	var result = []
+	if node == null:
+		return result
 	if node is MeshInstance3D:
 		result.append(node)
 	for child in node.get_children():
 		result.append_array(_find_mesh_instances(child))
 	return result
 
+
+func _character_outline_meshes() -> Array:
+	var visual := get_node_or_null("CharacterModel")
+	if visual != null and visual.has_method("get_character_mesh_instances"):
+		return visual.get_character_mesh_instances()
+	return _find_mesh_instances(visual)
+
 func apply_slow(duration: float, multiplier: float):
 	slow_timer = duration
 	slow_multiplier_value = multiplier
+
+func _active_flash_camera_mode() -> bool:
+	var item = get_active_item() if active_slot in ["item1", "item2"] else null
+	return item != null and item.has_method("is_camera_mode_active") and item.is_camera_mode_active()
+
+func apply_flash_blind(duration: float) -> void:
+	flash_blind_timer = maxf(flash_blind_timer, duration)
+	# Treat every successful photo as a fresh presentation pass. Keeping the
+	# longer remaining duration avoids a weaker re-flash shortening the effect.
+	_flash_blind_total = flash_blind_timer
+
+func _update_flash_blind(delta: float) -> void:
+	if flash_blind_timer > 0.0:
+		flash_blind_timer = maxf(flash_blind_timer - delta, 0.0)
 
 # --- new powerup state ---
 var speed_surge_timer := 0.0
@@ -998,14 +1496,14 @@ const SPEED_SURGE_MULT := 1.4
 var vampire_timer := 0.0
 const VAMPIRE_STAMINA_REFUND := 30.0
 var second_wind_ready := false
-var magnet_timer := 0.0
-const MAGNET_RADIUS := 4.0
-const MAGNET_PULL_SPEED := 6.0
-var _magnet_area: Area3D = null
-var _online_magnet_request_timer := 0.0
+var reach_timer := 0.0
+const REACH_PICKUP_RADIUS := 8.0
+const REACH_SCAN_INTERVAL := 0.10
 
 func _canonical_powerup_type(power_type: String) -> String:
 	match power_type:
+		"magnet_hands":
+			return "reach"
 		"extra_melee_shield":
 			return "sticky_hands"
 		"second_wind":
@@ -1046,9 +1544,9 @@ func apply_powerup(power_type: String, duration: float) -> bool:
 			vampire_timer = _extend_timed_powerup(vampire_timer, duration)
 		"extra_life":
 			second_wind_ready = true
-		"magnet_hands":
-			magnet_timer = _extend_timed_powerup(magnet_timer, duration)
-			_ensure_magnet_area()
+		"reach":
+			reach_timer = _extend_timed_powerup(reach_timer, duration)
+			_ensure_reach_ring()
 		_:
 			return false
 	active_powerup_order.erase(power_type)
@@ -1077,9 +1575,9 @@ func get_active_powerups_for_display() -> Array:
 			"extra_life":
 				if second_wind_ready:
 					result.append({"type": power_type, "timed": false, "time_left": 0.0})
-			"magnet_hands":
-				if magnet_timer > 0.0:
-					result.append({"type": power_type, "timed": true, "time_left": magnet_timer})
+			"reach":
+				if reach_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": reach_timer})
 	active_powerup_order = result.map(func(entry): return entry["type"])
 	return result
 
@@ -1090,15 +1588,95 @@ func _update_new_powerups(delta: float) -> void:
 		silent_steps_timer = maxf(silent_steps_timer - delta, 0.0)
 	if vampire_timer > 0.0:
 		vampire_timer = maxf(vampire_timer - delta, 0.0)
-	if magnet_timer > 0.0:
-		magnet_timer = maxf(magnet_timer - delta, 0.0)
-		_magnet_pull(delta)
+	if reach_timer > 0.0:
+		reach_timer = maxf(reach_timer - delta, 0.0)
+		if is_locally_controlled():
+			_update_reach_candidates(delta)
+	elif not _reach_interactables.is_empty():
+		_reach_interactables.clear()
+		_rebuild_interactables()
+	if _reach_ring != null:
+		_reach_ring.visible = reach_timer > 0.0 and not is_eliminated
 
+
+
+func activate_double_jump_shoes() -> void:
+	if double_jump_shoes_active:
+		return
+	double_jump_shoes_active = true
+	_refresh_double_jump_shoe_visuals()
+
+
+func clear_double_jump_shoes() -> void:
+	double_jump_shoes_active = false
+	for attachment in _double_jump_shoe_attachments:
+		if is_instance_valid(attachment):
+			attachment.queue_free()
+	_double_jump_shoe_attachments.clear()
+
+
+func _refresh_double_jump_shoe_visuals() -> void:
+	if not double_jump_shoes_active or not _double_jump_shoe_attachments.is_empty():
+		return
+	var visual = get_node_or_null("CharacterModel")
+	if visual == null:
+		return
+	var attachments := [
+		{"left": true, "scene": "res://models/springShoes/LeftSpringShoe.tscn"},
+		{"left": false, "scene": "res://models/springShoes/RightSpringShoe.tscn"},
+	]
+	for definition in attachments:
+		var socket: Node3D = visual.get_foot_socket(bool(definition["left"])) \
+			if visual.has_method("get_foot_socket") else null
+		if socket == null:
+			push_warning("Double Jump Shoes: missing runtime foot socket.")
+			continue
+		var packed := load(definition["scene"]) as PackedScene
+		if packed == null:
+			continue
+		var shoe := packed.instantiate() as Node3D
+		socket.add_child(shoe)
+		shoe.position = Vector3.ZERO
+		_double_jump_shoe_attachments.append(shoe)
+
+
+func _request_double_jump_shoes() -> void:
+	if not double_jump_shoes_active:
+		return
+	if NetworkManager.is_online():
+		var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+		if rm == null:
+			return
+		if not NetworkManager.is_host():
+			_perform_double_jump_shoes()
+		rm.request_online_double_jump(int(rm.get("online_round_epoch")))
+	else:
+		_perform_double_jump_shoes()
+
+
+func _perform_double_jump_shoes() -> void:
+	if not double_jump_shoes_active:
+		return
+	velocity.y = jump_velocity * GameConfig.DOUBLE_JUMP_SHOE_MULTIPLIER
+	clear_double_jump_shoes()
+	AudioManager.play_sfx("double_jump_boing")
+
+
+func confirm_online_double_jump_shoes() -> void:
+	# The owning client may already have consumed the charge optimistically.
+	if double_jump_shoes_active:
+		if is_locally_controlled():
+			velocity.y = jump_velocity * GameConfig.DOUBLE_JUMP_SHOE_MULTIPLIER
+		clear_double_jump_shoes()
+		if is_locally_controlled():
+			AudioManager.play_sfx("double_jump_boing")
 func clear_all_powerups() -> void:
 	speed_surge_timer = 0.0
 	silent_steps_timer = 0.0
 	vampire_timer = 0.0
-	magnet_timer = 0.0
+	reach_timer = 0.0
+	_reach_interactables.clear()
+	_rebuild_interactables()
 	second_wind_ready = false
 	melee_disarm_shields = 0
 	extra_dash_charge = 0
@@ -1127,41 +1705,68 @@ func consume_extra_life() -> bool:
 	lethal_immunity_timer = maxf(lethal_immunity_timer, 1.0)
 	return true
 
-func _ensure_magnet_area() -> void:
-	if _magnet_area != null:
-		return
-	_magnet_area = Area3D.new()
-	_magnet_area.name = "MagnetArea"
-	_magnet_area.collision_layer = 0
-	_magnet_area.set_collision_mask_value(3, true)  # pickups live on layer 4 (bit 3)
-	var col := CollisionShape3D.new()
-	var shape := SphereShape3D.new()
-	shape.radius = MAGNET_RADIUS
-	col.shape = shape
-	_magnet_area.add_child(col)
-	add_child(_magnet_area)
+func has_active_reach() -> bool:
+	return reach_timer > 0.0
 
-func _magnet_pull(delta: float) -> void:
-	if _magnet_area == null:
+
+func set_local_view_render_layer(render_layer: int) -> void:
+	local_view_render_layer = render_layer
+	if _reach_ring != null:
+		_reach_ring.layers = 1 << (render_layer - 1) if render_layer > 0 else 1
+
+
+func _ensure_reach_ring() -> void:
+	if _reach_ring != null or not is_locally_controlled():
 		return
-	if NetworkManager.is_online():
-		_online_magnet_request_timer -= delta
-		if _online_magnet_request_timer <= 0.0 and is_multiplayer_authority():
-			_online_magnet_request_timer = 0.1
-			var rm = get_tree().current_scene.get_node_or_null("RoundManager")
-			if rm != null:
-				rm.request_online_magnet_pull(actor_id)
+	_reach_ring = MeshInstance3D.new()
+	_reach_ring.name = "ReachRadius"
+	var ring := TorusMesh.new()
+	ring.inner_radius = REACH_PICKUP_RADIUS - 0.07
+	ring.outer_radius = REACH_PICKUP_RADIUS
+	ring.rings = 64
+	ring.ring_segments = 8
+	_reach_ring.mesh = ring
+	_reach_ring.position.y = 0.06
+	_reach_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color(0.15, 1.0, 0.35, 0.82)
+	material.emission_enabled = true
+	material.emission = Color(0.08, 0.8, 0.25)
+	material.emission_energy_multiplier = 1.5
+	_reach_ring.material_override = material
+	add_child(_reach_ring)
+	set_local_view_render_layer(local_view_render_layer)
+
+
+func _update_reach_candidates(delta: float) -> void:
+	_reach_scan_timer -= delta
+	if _reach_scan_timer > 0.0:
 		return
-	for body in _magnet_area.get_overlapping_bodies():
-		if body == self or not (body is RigidBody3D):
-			continue
-		if not body.has_method("get_interact_category"):
-			continue
-		if "is_held" in body and body.is_held:
-			continue
-		var to_me := global_position + Vector3(0, 0.4, 0) - body.global_position
-		if to_me.length() > 1.1:
-			body.global_position += to_me.normalized() * MAGNET_PULL_SPEED * delta
+	_reach_scan_timer = REACH_SCAN_INTERVAL
+	var next_candidates: Array = []
+	for group_name in ["gun", "melee", "item", "powerup"]:
+		for candidate in get_tree().get_nodes_in_group(group_name):
+			if candidate == self or not is_instance_valid(candidate) or not candidate is Node3D:
+				continue
+			if not candidate.visible or global_position.distance_to(candidate.global_position) > REACH_PICKUP_RADIUS:
+				continue
+			# Pickup types expose different state fields. Godot 4.7.1 rejects
+			# bool(null), so only read a state flag when that object owns it.
+			if ("is_held" in candidate and candidate.is_held) \
+					or ("is_in_flight" in candidate and candidate.is_in_flight) \
+					or ("collected" in candidate and candidate.collected):
+				continue
+			if not VisibilityRules.has_visual_contact(self, candidate):
+				continue
+			if candidate.is_in_group("powerup"):
+				if candidate.has_method("try_collect_for"):
+					candidate.try_collect_for(self)
+				continue
+			next_candidates.append(candidate)
+	_reach_interactables = next_candidates
+	_rebuild_interactables()
 
 func _on_melee_hit_for_vampire(hitter_name: String) -> void:
 	if vampire_timer > 0.0 and hitter_name == get_display_name():
@@ -1174,12 +1779,16 @@ func _start_dash():
 		dir = get_aim_direction()
 		dir.y = 0.0
 		dir = dir.normalized()
+	_dash_cancelled_spring_momentum = _spring_air_active and not is_on_floor()
+	if _dash_cancelled_spring_momentum:
+		_cancel_spring_launch_for_dash()
 	dash_direction = dir
 	if dash_charges > 0:
 		dash_charges -= 1
 	else:
-		extra_dash_charge = 0
-		active_powerup_order.erase("extra_dash")
+		extra_dash_charge = maxi(extra_dash_charge - 1, 0)
+		if extra_dash_charge <= 0:
+			active_powerup_order.erase("extra_dash")
 	is_dashing = true
 	is_sprinting = false
 	dash_timer = DASH_DURATION
@@ -1222,11 +1831,20 @@ func has_stamina():
 	return stamina > 0.0
 
 func register_interactable(obj):
-	if obj not in nearby_interactables:
-		nearby_interactables.append(obj)
+	if obj not in _normal_interactables:
+		_normal_interactables.append(obj)
+	_rebuild_interactables()
 
 func unregister_interactable(obj):
-	nearby_interactables.erase(obj)
+	_normal_interactables.erase(obj)
+	_rebuild_interactables()
+
+
+func _rebuild_interactables() -> void:
+	nearby_interactables.clear()
+	for obj in _normal_interactables + _reach_interactables:
+		if is_instance_valid(obj) and obj not in nearby_interactables:
+			nearby_interactables.append(obj)
 
 # Crosshair feedback is stricter than pickup eligibility: the candidate must be
 # registered, visible, valid, and be the first collider on the camera ray.
@@ -1235,7 +1853,8 @@ func get_valid_crosshair_interactable():
 	if camera == null or nearby_interactables.is_empty(): return null
 	var center := camera.get_viewport().get_visible_rect().size * 0.5
 	var origin := camera.project_ray_origin(center)
-	var end := origin + camera.project_ray_normal(center) * 5.0
+	var ray_distance := REACH_PICKUP_RADIUS if has_active_reach() else 5.0
+	var end := origin + camera.project_ray_normal(center) * ray_distance
 	var query := PhysicsRayQueryParameters3D.create(origin, end)
 	query.exclude = [get_rid()]
 	query.collide_with_areas = true
@@ -1306,6 +1925,9 @@ func _try_interact() -> bool:
 	return false
 
 func _drop_active_slot():
+	var committed_item = get_active_item() if active_slot in ["item1", "item2"] else null
+	if committed_item != null and committed_item.has_method("is_committed_use") and committed_item.is_committed_use():
+		return
 	match active_slot:
 		"weapon":
 			if holding_gun:
@@ -1383,14 +2005,42 @@ func _toggle_active_decoy_control() -> void:
 	else:
 		active_decoy.toggle_control()
 
-func eliminate(killer_name = "", weapon_icon = "💀", lethal_kind := "weapon"):
+func _consume_local_all_gun_heart() -> bool:
+	if all_gun_hearts <= 0:
+		return true
+	all_gun_hearts -= 1
+	if all_gun_hearts > 0:
+		lethal_immunity_timer = maxf(
+			lethal_immunity_timer, GameConfig.ALL_GUN_HIT_PROTECTION_TIME)
+		flash_hit()
+		return false
+	return true
+
+
+func eliminate(killer_name = "", weapon_icon = "💀", lethal_kind := "weapon", killer_actor_id: int = -1):
 	if is_eliminated:
 		return
 	_clear_steam_boost()
 	if lethal_kind == "weapon" and lethal_immunity_timer > 0.0:
 		return
+	if not is_online and GameConfig.game_mode == GameConfig.MODE_ONE_OF_US \
+			and lethal_kind == "weapon" \
+			and not has_meta("one_of_us_elimination_resolution"):
+		var round_manager = get_tree().current_scene.get_node_or_null("RoundManager")
+		if round_manager != null \
+				and round_manager.has_method("try_resolve_local_one_of_us_gun_hit") \
+				and round_manager.try_resolve_local_one_of_us_gun_hit(
+					self, str(killer_name), killer_actor_id):
+			return
 	# Extra Life: consume the charge, survive the hit with brief immunity.
 	# Online the SERVER resolves Extra Life (round_manager.server_eliminate →
+	if not is_online and GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+			and lethal_kind == "weapon":
+		if not _consume_local_all_gun_heart():
+			return
+	elif GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+			and lethal_kind == "environment":
+		all_gun_hearts = 0
 	# _net_consume_online_second_wind) before broadcasting the elimination; if
 	# this local branch also ran, a stale local charge could make the victim
 	# survive on their own screen while dead on every other peer.
@@ -1423,6 +2073,7 @@ func eliminate(killer_name = "", weapon_icon = "💀", lethal_kind := "weapon"):
 	held_item_1 = null
 	held_item_2 = null
 	active_decoy = null
+	clear_double_jump_shoes()
 	clear_all_powerups()
 	_elimination_generation += 1
 	is_eliminated = true
@@ -1431,6 +2082,7 @@ func eliminate(killer_name = "", weapon_icon = "💀", lethal_kind := "weapon"):
 	velocity = Vector3.ZERO
 	CombatPop.spawn(get_tree().current_scene, global_position)
 	GameEvents.player_eliminated.emit(get_display_name(), killer_name, weapon_icon)
+	GameEvents.actor_eliminated.emit(int(actor_id), killer_actor_id, str(weapon_icon))
 	visible = false
 	collision_layer = 0
 	collision_mask = 0
@@ -1443,8 +2095,18 @@ func eliminate(killer_name = "", weapon_icon = "💀", lethal_kind := "weapon"):
 		add_child(_spectator)
 		_spectator.setup(self)
 
+
+func set_transient_spectator_filter(role: String) -> void:
+	if _spectator != null and is_instance_valid(_spectator) \
+			and _spectator.has_method("set_role_filter"):
+		_spectator.set_role_filter(role)
+
 func respawn(spawn_transform):
 	_elimination_generation += 1
+	_hit_flash_generation += 1
+	_restore_hit_flash_materials()
+	_apply_character_skin(character_skin_id)
+	_victory_dance_active = false
 	if _spectator != null and is_instance_valid(_spectator):
 		_spectator.cleanup()
 		_spectator = null
@@ -1472,22 +2134,25 @@ func respawn(spawn_transform):
 	$AimPivot/SpringArm3D.rotation.x = 0.0
 	velocity = Vector3.ZERO
 	_clear_steam_boost()
-	_jump_cooldown_remaining = 0.0
-	_jump_airborne_time = 0.0
-	_was_on_floor = false
+	_clear_spring_launch_state()
+	_dash_cancelled_spring_momentum = false
 	stamina = MAX_STAMINA
 	stamina_regen_timer = 0.0
 	is_sprinting = false
 	dash_charges = max_dash_charges
 	dash_recharge_timer = 0.0
 	extra_dash_charge = 0
+	_one_of_us_final_bonus_active = false
 	is_dashing = false
 	knockback_timer = 0.0
 	stagger_timer = 0.0
 	bullet_immune_timer = 0.0
 	lethal_immunity_timer = 0.0
+	clear_double_jump_shoes()
 	clear_all_powerups()
 	slow_timer = 0.0
+	all_gun_hearts = GameConfig.ALL_GUN_MAX_HEARTS \
+		if GameConfig.game_mode == GameConfig.MODE_ALL_GUN else 0
 	slow_multiplier_value = 1.0
 	holding_gun = false
 	held_melee_weapon = null
@@ -1501,5 +2166,7 @@ func respawn(spawn_transform):
 	ads_blend = 0.0
 	ads_blend_target = 0.0
 	_current_anim = ""
+	_action_animation_time = 0.0
+	_idle_animation_time = 0.0
 	if model_anim_player != null:
 		model_anim_player.stop()

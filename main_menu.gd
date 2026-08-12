@@ -1,6 +1,7 @@
 extends Control
 
 const ONLINE_PLAY_OVERLAY_SCRIPT = preload("res://UI/online_play_overlay.gd")
+const BuildInfo = preload("res://build_info.gd")
 
 # Main-menu presentation only. Gameplay, lobby, and networking behavior remains
 # delegated to the existing GameConfig and NetworkManager entry points below.
@@ -73,58 +74,10 @@ class MenuButtonIcon:
 		return points
 
 
-# Section 10 portrait placeholder. The project has no authored 2D profile
-# portrait yet, so this small code-drawn cat keeps the footer composition
-# asset-independent. Replace this node's contents when profile portraits land.
-class LocalProfilePortrait:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _draw() -> void:
-		var scale_factor := minf(size.x, size.y) / 48.0
-		var center := size * 0.5
-		var navy := Color(0.07, 0.09, 0.17)
-		var cream := Color(0.94, 0.83, 0.62)
-		var gold := Color(0.95, 0.65, 0.20)
-		var cheek := Color(0.84, 0.42, 0.38)
-		var left_ear := PackedVector2Array([
-			center + Vector2(-14.0, -7.0) * scale_factor,
-			center + Vector2(-11.0, -19.0) * scale_factor,
-			center + Vector2(-3.0, -11.0) * scale_factor,
-		])
-		var right_ear := PackedVector2Array([
-			center + Vector2(14.0, -7.0) * scale_factor,
-			center + Vector2(11.0, -19.0) * scale_factor,
-			center + Vector2(3.0, -11.0) * scale_factor,
-		])
-		draw_colored_polygon(left_ear, gold)
-		draw_colored_polygon(right_ear, gold)
-		draw_circle(center + Vector2(0.0, 2.0) * scale_factor, 15.0 * scale_factor, cream)
-		draw_circle(center + Vector2(-6.0, 1.0) * scale_factor, 2.1 * scale_factor, navy)
-		draw_circle(center + Vector2(6.0, 1.0) * scale_factor, 2.1 * scale_factor, navy)
-		draw_circle(center + Vector2(0.0, 6.0) * scale_factor, 2.0 * scale_factor, cheek)
-		draw_line(
-			center + Vector2(0.0, 8.0) * scale_factor,
-			center + Vector2(-4.0, 11.0) * scale_factor,
-			navy, 1.5 * scale_factor, true)
-		draw_line(
-			center + Vector2(0.0, 8.0) * scale_factor,
-			center + Vector2(4.0, 11.0) * scale_factor,
-			navy, 1.5 * scale_factor, true)
-
-
 const FONT_PATH := "res://fonts/Fredoka-VariableFont_wdth,wght.ttf"
-# The actual player cat model (same glb player.tscn instances). Its own file
-# only contains the firing animation — idle/dance get merged in at runtime
-# from the shared animation library, exactly like character_body_3d.gd does.
-const MASCOT_DISPLAY_PATH := "res://models/playerAnimations/cat model firing ani.glb"
-const MASCOT_ANIM_SOURCE := "res://models/playerAnimations/Dance.glb"
-const MASCOT_ANIM_IDLE_INDEX := 2    # idle_pistol — hands posed for the held gun
-const MASCOT_ANIM_DANCE_INDEX := 10
+# The actual shared V2 player visual from player.tscn. The showcase requests
+# only Idle so the main menu never pays to load every gameplay FBX.
 const SHOWCASE_PLAYER_SCENE := "res://player.tscn"   # the real cat, display-only
-const SHOWCASE_GUN_SCENE := "res://gun.tscn"
 # Section 4 trophy pedestal (menu-only; source .blend alongside, regenerate
 # with tools/gen_trophy_pedestal.py). Deck top sits at this height.
 const PEDESTAL_SCENE := "res://models/menu/TrophyPedestal.glb"
@@ -216,11 +169,13 @@ var _player_name_label: Label
 var _connection_label: Label
 var _secondary_status_label: Label
 var _status_dot: Panel
+var _local_profile_portrait = null
 var _version_label: Label
 var _build_channel_label: Label
 var _primary_buttons: Array[Button] = []
 var _local_menu_button: Button
 var _online_menu_button: Button
+var _character_customization_button: Button
 
 var _map_cycler: Node
 var _background_viewport: SubViewport
@@ -238,6 +193,8 @@ var _modal_center: CenterContainer
 var _local_panel: PanelContainer
 var _online_panel: PanelContainer
 var _player_settings_overlay: Control
+var _character_customization_overlay: Control
+var _showcase_actor: Node3D
 var _online_status: Label
 var _online_ip_field: LineEdit
 var _online_host_lobby_field: LineEdit
@@ -268,6 +225,8 @@ func _ready() -> void:
 		NetworkManager.connection_failed.connect(_refresh_connection_status)
 	if not NetworkManager.server_disconnected.is_connected(_refresh_connection_status):
 		NetworkManager.server_disconnected.connect(_refresh_connection_status)
+	if not NetworkManager.compatibility_rejected.is_connected(_on_main_compatibility_rejected):
+		NetworkManager.compatibility_rejected.connect(_on_main_compatibility_rejected)
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 	call_deferred("_finish_layout")
 	AudioManager.play_music("menu")
@@ -288,7 +247,9 @@ func _notification(what: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _modal_layer.visible or not event.is_action_pressed("ui_cancel"):
 		return
-	if _online_panel.visible:
+	if _character_customization_overlay != null:
+		_close_character_customization()
+	elif _online_panel.visible:
 		_on_online_back()
 	else:
 		_close_modal()
@@ -300,6 +261,9 @@ func _finish_layout() -> void:
 	_animate_entrance()
 	if OS.get_environment("ONEGUN_UI_CAPTURE") != "" and OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("online_"):
 		_on_online_pressed.call_deferred()
+	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
+			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE") == "character_customization":
+		_on_character_customization_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" and (OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("settings_") or OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("crosshair_")):
 		_on_player_settings_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" and OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("lobby_"):
@@ -347,7 +311,9 @@ func _clear_primary_focus_for_pointer() -> void:
 	if _modal_layer.visible:
 		return
 	var focus_owner := get_viewport().gui_get_focus_owner()
-	if focus_owner != null and focus_owner in _primary_buttons:
+	# Godot 4.7 validates TypedArray search values before comparing them. Avoid
+	# asking an Array[Button] to search for a focused LineEdit from the online UI.
+	if focus_owner is Button and (focus_owner as Button) in _primary_buttons:
 		focus_owner.release_focus()
 
 
@@ -794,10 +760,10 @@ func _make_ambient_particle_field(
 	return particles
 
 
-# Section 3 showcase: the ACTUAL player character + gun, display-only.
+# Section 3 showcase: the ACTUAL player character, display-only.
 # player.tscn is instanced with its gameplay script removed (no input, camera,
-# network, or combat code runs) — it brings the correct model scale and the
-# game's own hand-bone gun mount, so the held pose matches gameplay exactly.
+# network, combat, or held-equipment code runs), retaining the correct model
+# scale and authored idle presentation.
 func _build_showcase_character(showcase: Node3D) -> void:
 	if not ResourceLoader.exists(SHOWCASE_PLAYER_SCENE):
 		return
@@ -806,6 +772,9 @@ func _build_showcase_character(showcase: Node3D) -> void:
 		return
 	var actor := packed.instantiate()
 	actor.set_script(null)   # BEFORE entering the tree: no gameplay _ready runs
+	var actor_visual := actor.get_node_or_null("CharacterModel")
+	if actor_visual != null:
+		actor_visual.set("build_animation_library", false)
 	actor.name = "ShowcaseCat"
 	# Neutralize gameplay leftovers baked in the scene.
 	var cam := actor.find_child("Camera3D", true, false) as Camera3D
@@ -814,45 +783,15 @@ func _build_showcase_character(showcase: Node3D) -> void:
 	for shape in [actor.get_node_or_null("CollisionShape3D")]:
 		if shape != null:
 			shape.disabled = true
-	# Feet on the trophy deck (actor origin sits 1.04 above the feet), facing
+	# Feet on the trophy deck (the player capsule origin sits 1.09 above the
+	# visual/ground origin), facing
 	# the player with a slight three-quarter turn per the concept.
-	actor.position = Vector3(0.0, PEDESTAL_TOP + 1.04, 0.0)
+	actor.position = Vector3(0.0, PEDESTAL_TOP + 1.09, 0.0)
 	actor.rotation.y = -0.30
 	showcase.add_child(actor)
-	_mount_showcase_gun(actor)
-	if not _reduced_motion:
-		_setup_mascot_animations(actor)
-
-func _mount_showcase_gun(actor: Node) -> void:
-	var hold_point := actor.find_child("GunHoldPoint", true, false)
-	if hold_point == null or not ResourceLoader.exists(SHOWCASE_GUN_SCENE):
-		return
-	var packed: PackedScene = load(SHOWCASE_GUN_SCENE)
-	if packed == null:
-		return
-	var gun := packed.instantiate()
-	gun.set_script(null)   # display only — no firing, pickup, or physics logic
-	gun.name = "ShowcaseGun"
-	if gun is RigidBody3D:
-		gun.freeze = true
-		gun.collision_layer = 0
-		gun.collision_mask = 0
-	var pickup_label := gun.get_node_or_null("PickupLabel")
-	if pickup_label != null:
-		pickup_label.visible = false
-	var area := gun.get_node_or_null("Area3D")
-	if area != null:
-		area.monitoring = false
-	# Base mount matches the game (gun.gd _local_pickup: origin at the palm,
-	# yaw PI), but the gameplay idle points the muzzle UP — from the menu's
-	# front-facing camera that reads like the cat licking the gun. Pitch it
-	# forward into a readable "ready" diagonal across the torso instead.
-	hold_point.add_child(gun)
-	gun.position = Vector3.ZERO
-	# NOTE: this axis is amplified by the bone space — -70 swung the muzzle
-	# ~150 degrees (fully downward). -30 gives the approved ~40-degree diagonal.
-	gun.rotation_degrees = Vector3(-30.0, 180.0, 0.0)
-	gun.scale = Vector3.ONE
+	_showcase_actor = actor
+	_apply_showcase_skin()
+	_setup_mascot_animations(actor)
 
 # Dedicated showcase lighting, parented to the camera-space anchor so the cat
 # reads identically on every cycling map (including the dark forest): warm key
@@ -1180,16 +1119,16 @@ func _build_brand_navigation() -> void:
 		"SOLO • BOTS • SPLITSCREEN", MenuIconKind.PLAY, _color("gold"))
 	_online_menu_button = _make_menu_button("ONLINE PLAY", _on_online_pressed, false,
 		"HOST OR JOIN A LOBBY", MenuIconKind.NETWORK, Color(0.16, 0.39, 0.82))
+	_character_customization_button = _make_menu_button(
+		"CHARACTER CUSTOMIZATION", _on_character_customization_pressed, false,
+		"CHOOSE YOUR COLOR", MenuIconKind.SETTINGS, Color(0.08, 0.55, 0.58))
 	_primary_buttons = [
 		_local_menu_button,
 		_online_menu_button,
+		_character_customization_button,
 		_make_menu_button("PLAYER SETTINGS", _on_player_settings_pressed, false,
 			"AUDIO • VIDEO • CONTROLS", MenuIconKind.SETTINGS, Color(0.46, 0.20, 0.76)),
 	]
-	if OS.is_debug_build() or Engine.is_editor_hint():
-		_primary_buttons.append(_make_menu_button("DEV TOOLS  →  COMBAT LAB",
-			_on_combat_lab_pressed, false, "RANGES • TARGETS • LIVE TUNING",
-			MenuIconKind.SETTINGS, Color(0.08, 0.55, 0.58)))
 	_primary_buttons.append(_make_menu_button("QUIT GAME", _on_quit_pressed, true,
 		"SEE YA LATER", MenuIconKind.EXIT, Color(0.78, 0.16, 0.22)))
 	for button in _primary_buttons:
@@ -1238,10 +1177,12 @@ func _build_brand_navigation() -> void:
 	portrait_frame.add_theme_stylebox_override(
 		"panel", _style_box(_color("panel"), _color("gold").darkened(0.12), 10, 2))
 	footer_row.add_child(portrait_frame)
-	var portrait := LocalProfilePortrait.new()
-	portrait.name = "LocalPortraitPlaceholder"
-	portrait.custom_minimum_size = Vector2(42, 42)
-	portrait_frame.add_child(portrait)
+	_local_profile_portrait = preload(
+		"res://UI/components/character_portrait.gd").new()
+	_local_profile_portrait.name = "LocalProfilePortrait"
+	_local_profile_portrait.custom_minimum_size = Vector2(42, 42)
+	_local_profile_portrait.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
+	portrait_frame.add_child(_local_profile_portrait)
 
 	var identity_column := VBoxContainer.new()
 	identity_column.name = "LocalIdentity"
@@ -1288,6 +1229,10 @@ func _build_brand_navigation() -> void:
 	_version_label = _make_label(_build_text(), 12, "gold", true)
 	_version_label.name = "BuildVersion"
 	_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_version_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	_version_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_version_label.tooltip_text = "View latest release notes"
+	_version_label.gui_input.connect(_on_version_gui_input)
 	build_column.add_child(_version_label)
 	_build_channel_label = _make_label(BUILD_CHANNEL, 10, "muted", true)
 	_build_channel_label.name = "BuildChannel"
@@ -1673,45 +1618,23 @@ func _configure_vertical_focus_cycle(controls: Array) -> void:
 # Safe, visual-only mascot display
 # -----------------------------------------------------------------------------
 
-# Merge idle + dance from the shared animation library into the cat's own
-# AnimationPlayer (its glb only ships the firing animation), then loop idle
-# with an occasional one-shot dance as the charm beat.
+# Add only the shared V2 Idle animation to the showcase player and loop it.
 func _setup_mascot_animations(actor: Node) -> void:
-	var animation_player := actor.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	var visual := actor.get_node_or_null("CharacterModel")
+	var animation_player: AnimationPlayer = null
+	if visual != null and visual.has_method("ensure_animations"):
+		animation_player = visual.ensure_animations(["idle"])
+	if animation_player == null:
+		animation_player = actor.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation_player == null:
 		return
 	_showcase_animation_player = animation_player
-	if not animation_player.has_animation_library(""):
-		animation_player.add_animation_library("", AnimationLibrary.new())
-	var lib := animation_player.get_animation_library("")
-
-	var packed = load(MASCOT_ANIM_SOURCE)
-	if packed == null:
-		_play_safe_mascot_idle(animation_player)
-		return
-	var source_instance = packed.instantiate()
-	var source_player := source_instance.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	if source_player == null:
-		source_instance.queue_free()
-		_play_safe_mascot_idle(animation_player)
-		return
-	var source_list := source_player.get_animation_list()
-	for entry in [["mascot_idle", MASCOT_ANIM_IDLE_INDEX, true], ["mascot_dance", MASCOT_ANIM_DANCE_INDEX, false]]:
-		var idx: int = entry[1]
-		if idx >= source_list.size():
-			continue
-		var anim := source_player.get_animation(source_list[idx]).duplicate()
-		anim.loop_mode = Animation.LOOP_LINEAR if entry[2] else Animation.LOOP_NONE
-		lib.add_animation(entry[0], anim)
-	source_instance.queue_free()
-
-	if animation_player.has_animation("mascot_idle"):
-		# Pure pistol-hold idle, looped. No dance interruptions — the dance clip
-		# raises the gun to face height mid-move, which reads as a wrong pose in
-		# still glances at the menu.
+	if animation_player.has_animation("idle"):
+		# Keep the showcase readable and inexpensive: looping Idle, no dance load.
 		animation_player.speed_scale = 1.0
 		animation_player.set_meta("ambient_speed_scale", 1.0)
-		animation_player.play("mascot_idle")
+		animation_player.play("idle")
+		animation_player.advance(0.0)
 	else:
 		_play_safe_mascot_idle(animation_player)
 
@@ -1724,6 +1647,7 @@ func _play_safe_mascot_idle(animation_player: AnimationPlayer) -> void:
 		animation_player.speed_scale = 0.72
 		animation_player.set_meta("ambient_speed_scale", 0.72)
 		animation_player.play(animation_name)
+		animation_player.advance(0.0)
 		return
 
 
@@ -2190,9 +2114,14 @@ func _button_rest_position(button: Button) -> Vector2:
 
 
 func _kill_button_tween(button: Button, meta_name: StringName) -> void:
-	var existing = button.get_meta(meta_name, null)
+	# In Godot 4.7, passing null as get_meta's default still reports a missing-meta
+	# error. Check explicitly so the first hover does not pollute the runtime log.
+	if not button.has_meta(meta_name):
+		return
+	var existing = button.get_meta(meta_name)
 	if existing is Tween and existing.is_valid():
 		existing.kill()
+	button.remove_meta(meta_name)
 
 
 func _advance_tagline() -> void:
@@ -2277,9 +2206,12 @@ func _apply_responsive_layout() -> void:
 			"separation", 6 if compact_height else clampi(roundi(10.0 * layout_scale), 8, 12))
 
 	var logo_size := clampi(roundi(96.0 * layout_scale), 68, 108)
+	var dense_navigation := _primary_buttons.size() >= 6
 	if _logo_stack != null:
 		_logo_stack.custom_minimum_size.y = (
-			230.0 if compact_height else clampf(viewport_size.y * 0.36, 300.0, 520.0))
+			210.0 if compact_height else clampf(
+				viewport_size.y * (0.30 if dense_navigation else 0.36),
+				260.0 if dense_navigation else 300.0, 520.0))
 	var ribbon_height := clampf(120.0 * layout_scale, 82.0, 140.0)
 	if ribbon_holder != null:
 		ribbon_holder.offset_top = -ribbon_height
@@ -2294,7 +2226,8 @@ func _apply_responsive_layout() -> void:
 		_title_label2.add_theme_font_size_override("font_size", logo_size)
 	_refresh_tagline_typography.call_deferred()
 
-	var button_height := clampf(88.0 * layout_scale, 58.0, 96.0)
+	var button_height := clampf(
+		(72.0 if dense_navigation else 88.0) * layout_scale, 56.0, 96.0)
 	var button_title_size := clampi(roundi(23.0 * layout_scale), 18, 24)
 	var button_subtitle_size := clampi(roundi(13.0 * layout_scale), 10, 14)
 	var icon_size := clampf(62.0 * layout_scale, 46.0, 66.0)
@@ -2390,7 +2323,9 @@ func _reduced_motion_enabled() -> bool:
 
 func _capture_name() -> String:
 	var state := OS.get_environment("ONEGUN_UI_CAPTURE_STATE")
-	return state if state.begins_with("online_") or state.begins_with("settings_") or state.begins_with("crosshair_") else "main_menu"
+	return state if state.begins_with("online_") or state.begins_with("settings_") \
+		or state.begins_with("crosshair_") or state == "character_customization" \
+		else "main_menu"
 
 
 func _bootstrap_lobby_capture() -> void:
@@ -2406,13 +2341,52 @@ func _bootstrap_lobby_capture() -> void:
 
 
 func _build_text() -> String:
-	var version := String(ProjectSettings.get_setting("application/config/version", "0.0.1"))
-	return "BUILD v%s" % version
+	return "BUILD %s" % BuildInfo.footer_text()
+
+
+func _on_version_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_open_release_notes()
+		_version_label.accept_event()
+	elif event is InputEventKey and event.pressed and event.is_action("ui_accept"):
+		_open_release_notes()
+
+
+func _open_release_notes() -> void:
+	var release := BuildInfo.load_latest_release()
+	var dialog := AcceptDialog.new()
+	dialog.name = "ReleaseNotesPopup"
+	dialog.title = "%s — v%s" % [str(release.get("title", "Latest Release")), str(release.get("version", BuildInfo.GAME_VERSION))]
+	dialog.ok_button_text = "CLOSE"
+	dialog.min_size = Vector2i(620, 480)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(580, 390)
+	dialog.add_child(scroll)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	scroll.add_child(column)
+	var categories: Dictionary = release.get("categories", {})
+	for category in ["Added", "Improved", "Fixed", "Removed", "Misc"]:
+		var entries: Array = categories.get(category, [])
+		if entries.is_empty():
+			continue
+		column.add_child(OneGunUI.make_heading(category.to_upper(), OneGunUI.TEXT_M, "gold"))
+		for entry in entries:
+			var line := OneGunUI.make_label("• %s" % str(entry), OneGunUI.TEXT_S, "text")
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			column.add_child(line)
+	add_child(dialog)
+	dialog.popup_centered()
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
 
 
 func _on_player_preference_changed(key: String, _value: Variant) -> void:
 	if key == "player_name":
 		_refresh_connection_status()
+	elif key == "character_skin_id":
+		_apply_showcase_skin()
+		_apply_profile_portrait()
 	elif key == "reduced_motion":
 		_reduced_motion = _reduced_motion_enabled()
 		_refresh_ambient_motion()
@@ -2489,9 +2463,41 @@ func _on_player_settings_pressed() -> void:
 	_player_settings_overlay.settings_closed.connect(_close_player_settings_overlay)
 
 
-func _on_combat_lab_pressed() -> void:
+func _on_character_customization_pressed() -> void:
 	AudioManager.play_click()
-	get_tree().change_scene_to_file("res://tools/combat_lab.tscn")
+	if _character_customization_overlay != null:
+		return
+	_last_modal_opener = _character_customization_button
+	_character_customization_overlay = preload(
+		"res://UI/character_customization_overlay.gd").new()
+	_character_customization_overlay.configure(false, 1)
+	_character_customization_overlay.closed.connect(_close_character_customization)
+	_modal_layer.add_child(_character_customization_overlay)
+	_local_panel.visible = false
+	_online_panel.visible = false
+	_modal_layer.visible = true
+	_refresh_ambient_motion()
+
+
+func _close_character_customization() -> void:
+	if _character_customization_overlay != null \
+			and is_instance_valid(_character_customization_overlay):
+		_character_customization_overlay.queue_free()
+	_character_customization_overlay = null
+	_close_modal()
+
+
+func _apply_showcase_skin() -> void:
+	if _showcase_actor == null or not is_instance_valid(_showcase_actor):
+		return
+	var visual := _showcase_actor.get_node_or_null("CharacterModel")
+	if visual != null and visual.has_method("set_skin"):
+		visual.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
+
+
+func _apply_profile_portrait() -> void:
+	if _local_profile_portrait != null and is_instance_valid(_local_profile_portrait):
+		_local_profile_portrait.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
 
 
 func _close_player_settings_overlay() -> void:
@@ -2563,6 +2569,11 @@ func _on_join_fail() -> void:
 	if NetworkManager.lobby_discovery_failed.is_connected(_on_lobby_discovery_fail):
 		NetworkManager.lobby_discovery_failed.disconnect(_on_lobby_discovery_fail)
 	_set_online_status("Connection failed. Check Tailscale and confirm the host clicked Host.", true)
+
+
+func _on_main_compatibility_rejected(message: String) -> void:
+	if _online_status != null:
+		_set_online_status(message, true)
 
 
 func _on_lobby_discovery_fail(message: String) -> void:

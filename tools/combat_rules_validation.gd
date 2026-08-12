@@ -27,12 +27,59 @@ class MockDecoyOwner:
 	var owner_peer_id := -1
 	var holding_gun := false
 
+class MockMeleePlayer:
+	extends Node3D
+	var holding_gun := false
+	var held_melee_weapon = null
+	var is_eliminated := false
+	var actor_id := 7101
+	var stamina := 100.0
+	var animation_calls := 0
+	var hold_point: Node3D
+
+	func _init() -> void:
+		hold_point = Node3D.new()
+		hold_point.name = "MeleeHoldPoint"
+		add_child(hold_point)
+
+	func get_melee_hold_point() -> Node3D:
+		return hold_point
+
+	func has_stamina() -> bool:
+		return stamina > 0.0
+
+	func drain_stamina(amount: float) -> void:
+		stamina = maxf(stamina - amount, 0.0)
+
+	func play_melee_animation(_duration := 0.0) -> void:
+		animation_calls += 1
+
+	func has_active_reach() -> bool:
+		return false
+
+	func get_aim_pitch() -> float:
+		return 0.0
+
+	func get_aim_direction() -> Vector3:
+		return Vector3.FORWARD
+
 var failures: Array[String] = []
 
 func _ready() -> void:
 	await get_tree().process_frame
+	if OS.get_environment("ONE_GUN_MELEE_ONLY") == "1":
+		await _test_melee_tuning()
+		if failures.is_empty():
+			print("MELEE WEAPON VALIDATION: PASS")
+			get_tree().quit(0)
+		else:
+			for failure in failures:
+				push_error("MELEE WEAPON VALIDATION: " + failure)
+			get_tree().quit(1)
+		return
 	_test_projectile_and_gun()
 	_test_protections_and_timers()
+	await _test_melee_tuning()
 	_test_stamina_and_dash()
 	_test_overtime_math_and_tiebreak()
 	_test_fire_height_and_warning()
@@ -79,10 +126,126 @@ func _test_protections_and_timers() -> void:
 	_check(is_equal_approx(player.speed_surge_timer, 20.0), "timed powerup exceeded or missed 2x cap")
 	_check(player.consume_extra_life(), "Extra Life did not consume")
 	_check(is_equal_approx(player.lethal_immunity_timer, 1.0), "Extra Life immunity is not one second")
+	_check(player.consume_sticky_hands(), "Sticky Hands did not consume")
+	_check(not player.consume_sticky_hands(), "Sticky Hands behaved like it had a hidden second charge")
 	player.clear_all_powerups()
 	_check(player.melee_disarm_shields == 0 and not player.second_wind_ready,
 		"full powerup clear left a protection behind")
 	player.free()
+
+func _test_melee_tuning() -> void:
+	var melee_scene := load("res://melee_weapon.tscn") as PackedScene
+	var weapon_names := ["Sword", "Baseball Bat", "Stick", "Crowbar", "Frying Pan"]
+	for weapon_name in weapon_names:
+		var melee = melee_scene.instantiate()
+		get_tree().current_scene.add_child(melee)
+		var data: WeaponData = MeleeWeaponRegistry.get_weapon_data_by_name(weapon_name)
+		for weapon_tier in range(1, 4):
+			melee.apply_weapon_data(data, "normal", weapon_tier)
+			_validate_scaled_melee_hitbox(melee, data, weapon_tier)
+		_check(is_equal_approx(data.raw_model_length * data.held_scale,
+			MeleeWeaponRegistry.HELD_WEAPON_TARGET_LENGTH),
+			"%s is not normalized to the shared held length" % weapon_name)
+		_check(is_equal_approx(melee.SWING_TIME_MULTIPLIER, 0.85),
+			"%s swing phases are not fifteen percent faster" % weapon_name)
+		_check(is_equal_approx(melee.HITBOX_WIDTH_MULTIPLIER, 1.20),
+			"%s hitbox is not twenty percent wider" % weapon_name)
+		_check(is_equal_approx(melee.NORMAL_MELEE_MIN_HITBOX_LENGTH, 3.0),
+			"%s does not use the 3.0m normal hitbox minimum" % weapon_name)
+		_check(is_equal_approx(melee.NORMAL_MELEE_MAX_HITBOX_LENGTH, 3.8),
+			"%s does not use the 3.8m normal hitbox cap" % weapon_name)
+
+		var model: Node3D = melee._model_instance
+		var anchored_grip: Vector3 = model.transform * data.held_grip_anchor
+		_check(anchored_grip.length() < 0.001,
+			"%s is not held from its authored handle base" % weapon_name)
+
+		var holder := MockMeleePlayer.new()
+		get_tree().current_scene.add_child(holder)
+		_check(melee._local_pickup(holder), "%s could not be picked up" % weapon_name)
+		var rest_rotation: Vector3 = melee.rotation
+		melee.swing()
+		_check(holder.animation_calls == 1,
+			"%s did not trigger the character melee animation" % weapon_name)
+		_check((melee.rotation - rest_rotation).length() < 0.001,
+			"%s added weapon-root rotation at swing start" % weapon_name)
+		var saw_active_window := false
+		var root_rotated := false
+		var swing_frames := 0
+		while melee.is_swinging and swing_frames < 180:
+			await get_tree().physics_frame
+			saw_active_window = saw_active_window \
+				or melee.get_node("HitBox").monitoring
+			root_rotated = root_rotated \
+				or (melee.rotation - rest_rotation).length() >= 0.001
+			swing_frames += 1
+		_check(saw_active_window,
+			"%s did not open its physical active hit window" % weapon_name)
+		_check(not root_rotated,
+			"%s still performs a separate weapon-object swing" % weapon_name)
+		_check(not melee.is_swinging and not melee.get_node("HitBox").monitoring,
+			"%s did not close its hit window after recovery" % weapon_name)
+		melee.drop()
+		_check(melee.get_parent() == get_tree().current_scene
+			and holder.held_melee_weapon == null,
+			"%s did not release cleanly after its swing" % weapon_name)
+		_check(melee._local_pickup(holder),
+			"%s could not be picked back up after dropping" % weapon_name)
+		melee.begin_throw_preview()
+		var preview: Dictionary = melee.get_throw_preview_data()
+		var preview_velocity: Vector3 = preview.get("velocity", Vector3.ZERO)
+		_check(not preview.is_empty() and preview_velocity.length() > 0.0,
+			"%s did not expose a valid throw preview" % weapon_name)
+		melee.release_throw()
+		_check(melee.is_in_flight and not melee.is_held
+			and melee.get_parent() == get_tree().current_scene
+			and holder.held_melee_weapon == null,
+			"%s did not enter flight cleanly after preview release" % weapon_name)
+		melee.is_in_flight = false
+		melee.free()
+		holder.free()
+
+
+func _validate_scaled_melee_hitbox(melee, data: WeaponData, weapon_tier: int) -> void:
+	var source := (load(data.model_scene_path) as PackedScene).instantiate()
+	var source_shape: CollisionShape3D = source.get_node("HitShape/CollisionShape3D")
+	var runtime_shape: CollisionShape3D = melee.get_node("HitBox/CollisionShape3D")
+	if source_shape.shape is CapsuleShape3D and runtime_shape.shape is CapsuleShape3D:
+		var source_capsule := source_shape.shape as CapsuleShape3D
+		var runtime_capsule := runtime_shape.shape as CapsuleShape3D
+		var tier_progress := clampf((float(weapon_tier) - 1.0) / 2.0, 0.0, 1.0)
+		var expected_normal_height := lerpf(melee.NORMAL_MELEE_MIN_HITBOX_LENGTH,
+			melee.NORMAL_MELEE_MAX_HITBOX_LENGTH, tier_progress)
+		_check(is_equal_approx(runtime_capsule.height, expected_normal_height),
+			"%s T%d normal hitbox is not the expected %.2fm" % [
+				data.weapon_name, weapon_tier, expected_normal_height])
+		_check(is_equal_approx(runtime_capsule.radius,
+			source_capsule.radius * data.held_scale * melee.HITBOX_WIDTH_MULTIPLIER),
+			"%s hitbox width does not match its visible scale" % data.weapon_name)
+		var normal_height := runtime_capsule.height
+		var normal_axis := runtime_shape.transform.basis.y.normalized()
+		var normal_center := absf(runtime_shape.position.dot(normal_axis))
+		_check(is_equal_approx(normal_center, normal_height * 0.5),
+			"%s normal hitbox does not extend outward from the paw" % data.weapon_name)
+		_check(normal_height <= melee.NORMAL_MELEE_MAX_HITBOX_LENGTH,
+			"%s T%d normal hitbox exceeds 3.8m" % [data.weapon_name, weapon_tier])
+		_check(melee.ONLINE_MELEE_MAX_HIT_DISTANCE >= normal_height,
+			"%s normal hitbox exceeds online host validation distance" % data.weapon_name)
+		melee._apply_powerup_reach(true)
+		var reach_shape := runtime_shape.shape as CapsuleShape3D
+		var reach_axis := runtime_shape.transform.basis.y.normalized()
+		var reach_center := absf(runtime_shape.position.dot(reach_axis))
+		_check(is_equal_approx(reach_shape.height,
+			melee.POWERUP_MELEE_MAX_HIT_DISTANCE)
+			and is_equal_approx(reach_center,
+				melee.POWERUP_MELEE_MAX_HIT_DISTANCE * 0.5),
+			"%s Reach hitbox does not extend from the paw to 8m" % data.weapon_name)
+		melee._restore_powerup_reach()
+		_check(is_equal_approx(
+			(runtime_shape.shape as CapsuleShape3D).height, normal_height)
+			and is_equal_approx(absf(runtime_shape.position.dot(normal_axis)), normal_center),
+			"%s did not restore its normal hitbox after Reach" % data.weapon_name)
+	source.free()
 
 func _test_stamina_and_dash() -> void:
 	var player = load("res://character_body_3d.gd").new()

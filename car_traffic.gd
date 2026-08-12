@@ -18,10 +18,13 @@ var _hit_cooldown := {}
 var _light: Node = null
 
 func _ready() -> void:
-	for wname in ["Wheel_FL", "Wheel_FR", "Wheel_RL", "Wheel_RR"]:
-		var w = find_child(wname, true, false)
-		if w:
-			_wheels.append(w)
+	# Support both the original short wheel names and the descriptive names used
+	# by the replacement City GLBs. Restrict the match to Node3D descendants so
+	# material/mesh resource names cannot be mistaken for transformable wheels.
+	for child in find_children("*", "Node3D", true, false):
+		var normalized_name := str(child.name).to_lower()
+		if "wheel" in normalized_name and not _wheels.has(child):
+			_wheels.append(child)
 	if traffic_light_path != NodePath(""):
 		_light = get_node_or_null(traffic_light_path)
 	# waypoints/stop zone are authored in parent-local space so the route

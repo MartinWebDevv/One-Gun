@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://models/cityAssets/GreenBackgroundBuilding.glb" id="1_visual"]
+
+[node name="GreenBackground_SkylineA" type="Node3D"]
+
+[node name="Visual" parent="." instance=ExtResource("1_visual")]
+position = Vector3(-0.2758565, 0.085295, 0.7603932)
+scale = Vector3(4.9668964, 6.9064748, 6.3930819)

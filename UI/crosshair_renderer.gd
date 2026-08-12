@@ -33,7 +33,8 @@ func _ready() -> void:
 
 func set_player(value) -> void:
 	player = value
-	_uses_personal_settings = not bool(value.get("is_player2")) if value != null else true
+	var is_player_two: bool = value != null and "is_player2" in value and value.is_player2
+	_uses_personal_settings = not is_player_two
 
 
 func set_preview_settings(values: Dictionary) -> void:

@@ -138,7 +138,7 @@ func _spawn_test_racks() -> void:
 	melee.global_position = Vector3(6.0, 0.7, -6.0)
 	melee.spawn_position = melee.global_position
 	var power_types := ["extra_dash", "sticky_hands", "speed_surge", "silent_steps",
-		"vampire_touch", "extra_life", "magnet_hands"]
+		"vampire_touch", "extra_life", "reach"]
 	for i in power_types.size():
 		var powerup = POWERUP_SCENE.instantiate()
 		powerup.fixed_power_type = power_types[i]

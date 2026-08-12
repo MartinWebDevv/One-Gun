@@ -1,16 +1,16 @@
 # One Gun
 
-A local arena shooter where **exactly one gun and one melee weapon** exist on the map at a time. Whoever holds the gun can end anyone in one shot — everyone else's job is to take it from them, dodge it, or beat them to death first.
+A local arena shooter where **exactly one gun** exists per match and authored melee supplies replenish after pickup. Whoever holds the gun can end anyone in one shot — everyone else's job is to take it from them, dodge it, or beat them to death first.
 
 Play solo against bots, or splitscreen with a friend (plus bots to fill out the arena). Rounds → sets → match, with house rules you can tune and save as presets.
 
 ## Requirements
 
-- [Godot 4.6](https://godotengine.org/download) (Forward+ rendering, Jolt physics)
+- [Godot 4.7.1](https://godotengine.org/download) (Forward+ rendering, Jolt physics)
 
 ## Running the game
 
-Clone/download this repo, open it in the Godot 4.6 editor, and run the project.
+Clone/download this repo, open it in the Godot 4.7.1 editor, and run the project.
 
 ## Controls
 

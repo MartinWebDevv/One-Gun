@@ -33,6 +33,13 @@ func _is_host_view() -> bool:
 	return (_capture_role == "pause_host") or (_capture_role != "pause_guest" and NetworkManager.is_host())
 
 
+
+func _is_playpen_view() -> bool:
+	var scene := get_tree().current_scene
+	var manager = scene.get_node_or_null("RoundManager") if scene != null else null
+	return manager != null and bool(manager.get("practice_mode"))
+
+
 func _build_ui() -> void:
 	for child in get_children():
 		child.queue_free()
@@ -41,6 +48,17 @@ func _build_ui() -> void:
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(veil)
+	var rules := OneGunUI.make_label(GameConfig.active_rules_summary(), OneGunUI.TEXT_XS, "muted", true)
+	rules.name = "ActiveRulesSummary"
+	rules.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	rules.anchor_left = 1.0
+	rules.anchor_right = 1.0
+	rules.offset_left = -290.0
+	rules.offset_right = -24.0
+	rules.offset_top = 24.0
+	rules.offset_bottom = 100.0
+	rules.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(rules)
 
 	var cabinet := OneGunCabinet.new()
 	cabinet.name = "PauseCabinet"
@@ -57,11 +75,13 @@ func _build_ui() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	cabinet.get_content().add_child(column)
-	var title := "GAME PAUSED" if not _is_online_view() else "MATCH MENU"
+	var playpen_view := _is_playpen_view()
+	var title := "THE PLAYPEN" if playpen_view else ("GAME PAUSED" if not _is_online_view() else "MATCH MENU")
 	var heading := OneGunUI.make_heading(title, OneGunUI.TEXT_TITLE)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
-	var status := "LOCAL MATCH PAUSED" if not _is_online_view() else "MATCH STILL IN PROGRESS"
+	var status := "PRACTICE CONTINUES ONLINE" if playpen_view \
+		else ("LOCAL MATCH PAUSED" if not _is_online_view() else "MATCH STILL IN PROGRESS")
 	var status_label := OneGunUI.make_label(status, OneGunUI.TEXT_XS, "gold" if not _is_online_view() else "red", true)
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(status_label)
@@ -70,11 +90,20 @@ func _build_ui() -> void:
 	var metadata := OneGunUI.make_label(_metadata_text(), OneGunUI.TEXT_S, "muted")
 	metadata.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(metadata)
-	_add_action(column, "RESUME", PauseManager.resume)
-	_add_action(column, "PLAYER SETTINGS", _open_settings_overlay)
-	if not _is_online_view():
+	_add_action(column, "RESUME", PauseManager.resume, "resume")
+	_add_action(column, "PLAYER SETTINGS", _open_settings_overlay, "player_settings")
+	if playpen_view:
+		_add_action(column, "LEAVE PLAYPEN", _leave_playpen, "leave_playpen")
+		if _is_host_view():
+			var start_label := "STARTING..." if NetworkManager._prelaunch_active \
+				else ("START MATCH" if NetworkManager.are_all_lobby_guests_ready() else "FORCE START MATCH")
+			_add_action(column, start_label, _start_playpen_match, "start_match")
+	elif not _is_online_view():
 		_add_destructive(column, "RETURN TO LOBBY", "CONFIRM RETURN", "res://game_setup.tscn")
 		_add_destructive(column, "RETURN TO MAIN MENU", "CONFIRM LEAVE", "res://main_menu.tscn")
+	elif NetworkManager.local_match_role == "spectator":
+		_add_action(column, "RETURN TO WAITING ROOM", _return_spectator_to_waiting_room, "return_waiting_room")
+		_add_destructive(column, "LEAVE MATCH", "CONFIRM LEAVE", "res://main_menu.tscn")
 	elif _is_host_view():
 		_add_destructive(column, "RETURN TO LOBBY  •  HOST ONLY", "CONFIRM FOR ALL", "res://game_setup.tscn")
 		_add_destructive(column, "LEAVE MATCH", "CONFIRM LEAVE", "res://main_menu.tscn")
@@ -98,10 +127,11 @@ func _metadata_text() -> String:
 	return "%s  •  ROUND %d  •  %s" % [map_name, round_number, mode]
 
 
-func _add_action(parent: VBoxContainer, label_text: String, callback: Callable) -> void:
+func _add_action(parent: VBoxContainer, label_text: String, callback: Callable, action_id := "") -> void:
 	var button := OneGunButton.new()
 	button.variant = "gold" if label_text == "RESUME" else "navy"
 	button.text = label_text
+	button.set_meta("action_id", action_id)
 	button.custom_minimum_size = Vector2(0, 48)
 	button.pressed.connect(callback)
 	parent.add_child(button)
@@ -111,6 +141,7 @@ func _add_destructive(parent: VBoxContainer, label_text: String, confirm_text: S
 	var button := OneGunConfirmButton.new()
 	button.variant = "navy"
 	button.text = label_text
+	button.set_meta("action_id", "return_lobby" if target == "res://game_setup.tscn" else "leave_match")
 	button.confirm_text = confirm_text
 	button.custom_minimum_size = Vector2(0, 48)
 	button.armed_changed.connect(_on_confirm_armed.bind(button))
@@ -142,7 +173,7 @@ func _open_settings_overlay() -> void:
 	settings_overlay.is_overlay = true
 	add_child(settings_overlay)
 	settings_overlay.settings_closed.connect(_close_settings_overlay)
-	PauseManager.set_escape_override(_close_settings_overlay)
+	PauseManager.set_escape_override(settings_overlay.request_cancel_close)
 
 
 func _close_settings_overlay() -> void:
@@ -150,6 +181,28 @@ func _close_settings_overlay() -> void:
 	settings_overlay.queue_free()
 	settings_overlay = null
 	PauseManager.clear_escape_override()
+
+
+
+func _leave_playpen() -> void:
+	PauseManager.reset_pause_state()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	NetworkManager.request_leave_playpen()
+
+
+func _start_playpen_match() -> void:
+	if not NetworkManager.is_host() or NetworkManager._prelaunch_active \
+			or NetworkManager.pending_map_path == "":
+		return
+	PauseManager.resume()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	NetworkManager.begin_prelaunch(NetworkManager.pending_map_path)
+
+
+func _return_spectator_to_waiting_room() -> void:
+	PauseManager.reset_pause_state()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	NetworkManager.return_spectator_to_waiting_room()
 
 
 func _commit_exit(target_scene: String) -> void:

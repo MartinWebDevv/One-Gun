@@ -8,22 +8,34 @@ extends PanelContainer
 
 enum ReadyState { NONE, NOT_READY, READY }
 
+const SkinRegistry = preload("res://player_skin_registry.gd")
+const CHARACTER_PORTRAIT_SCRIPT = preload("res://UI/components/character_portrait.gd")
+
 var _icon: OneGunIcon
+var _portrait = null
 var _name_label: Label
 var _badge_box: HBoxContainer
 var _trailing_box: HBoxContainer
 var _idle_style: StyleBoxFlat
 var _name_edit_callback := Callable()
+var _built := false
 
 
 func _ready() -> void:
+	_ensure_built()
+
+
+func _ensure_built() -> void:
+	if _built:
+		return
+	_built = true
 	custom_minimum_size = Vector2(0.0, 52.0)
 	focus_mode = Control.FOCUS_ALL
 	_idle_style = OneGunUI.style_box(
 		OneGunUI.color("well"), OneGunUI.color("well").darkened(0.35),
 		OneGunUI.RADIUS_INPUT, 1, 0, 0.0)
-	_idle_style.content_margin_left = OneGunUI.SPACE_M
-	_idle_style.content_margin_right = OneGunUI.SPACE_M
+	_idle_style.content_margin_left = 10
+	_idle_style.content_margin_right = 10
 	_idle_style.content_margin_top = OneGunUI.SPACE_S
 	_idle_style.content_margin_bottom = OneGunUI.SPACE_S
 	add_theme_stylebox_override("panel", _idle_style)
@@ -31,7 +43,7 @@ func _ready() -> void:
 	focus_exited.connect(_on_focus_changed)
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	add_child(row)
 
 	var icon_frame := PanelContainer.new()
@@ -41,6 +53,11 @@ func _ready() -> void:
 	_icon = OneGunIcon.new()
 	_icon.custom_minimum_size = Vector2(26.0, 26.0)
 	icon_frame.add_child(_icon)
+	_portrait = CHARACTER_PORTRAIT_SCRIPT.new()
+	_portrait.name = "PlayerPortrait"
+	_portrait.custom_minimum_size = Vector2(32.0, 32.0)
+	_portrait.visible = false
+	icon_frame.add_child(_portrait)
 	row.add_child(icon_frame)
 
 	_name_label = OneGunUI.make_label("", OneGunUI.TEXT_M, "text", true)
@@ -61,13 +78,14 @@ func _ready() -> void:
 
 
 func set_human(player_name: String, is_host := false, is_you := false,
-		ready_state: ReadyState = ReadyState.NONE) -> void:
+		ready_state: ReadyState = ReadyState.NONE,
+		skin_id := SkinRegistry.DEFAULT_SKIN_ID) -> void:
+	_ensure_built()
 	_reset()
 	focus_mode = Control.FOCUS_NONE
-	_icon.kind = OneGunIcon.Kind.PLAYER
-	_icon.icon_color = OneGunUI.color("text")
+	_show_human_portrait(skin_id)
 	_name_label.text = player_name
-	tooltip_text = player_name
+	tooltip_text = "%s — %s" % [player_name, SkinRegistry.display_name(skin_id)]
 	_name_label.add_theme_color_override("font_color", OneGunUI.color("text"))
 	if is_host:
 		var crown := OneGunIcon.new()
@@ -89,8 +107,10 @@ func set_human(player_name: String, is_host := false, is_you := false,
 
 
 func set_bot(bot_name: String, difficulty: String, show_ready := false) -> void:
+	_ensure_built()
 	_reset()
 	focus_mode = Control.FOCUS_NONE
+	_show_vector_icon()
 	_icon.kind = OneGunIcon.Kind.BOT
 	_icon.icon_color = OneGunUI.color("muted")
 	_name_label.text = bot_name
@@ -102,8 +122,10 @@ func set_bot(bot_name: String, difficulty: String, show_ready := false) -> void:
 
 
 func set_empty(slot_number: int) -> void:
+	_ensure_built()
 	_reset()
 	focus_mode = Control.FOCUS_NONE
+	_show_vector_icon()
 	_icon.kind = OneGunIcon.Kind.PLAYER
 	_icon.icon_color = Color(OneGunUI.color("muted"), 0.35)
 	_name_label.text = ""
@@ -114,11 +136,23 @@ func set_empty(slot_number: int) -> void:
 
 
 func add_trailing(control: Control) -> void:
+	_ensure_built()
 	control.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_trailing_box.add_child(control)
 
 
+func add_team_chip(team_id: int, uneven := false, show_team := true) -> void:
+	_ensure_built()
+	const TEAM_ROLES := ["blue", "red", "green", "gold"]
+	var safe_team := clampi(team_id, 0, 3)
+	if show_team:
+		_badge_box.add_child(_make_chip("T%d" % (safe_team + 1), TEAM_ROLES[safe_team]))
+	if uneven:
+		_badge_box.add_child(_make_chip("UNEVEN", "red"))
+
+
 func enable_name_editing(callback: Callable) -> void:
+	_ensure_built()
 	if not callback.is_valid():
 		return
 	_name_edit_callback = callback
@@ -141,8 +175,8 @@ func _make_chip(text: String, color_role: String) -> PanelContainer:
 	var chip := PanelContainer.new()
 	var accent := OneGunUI.color(color_role)
 	var style := OneGunUI.style_box(Color(accent, 0.16), accent.darkened(0.1), OneGunUI.RADIUS_CHIP, 1)
-	style.content_margin_left = 9
-	style.content_margin_right = 9
+	style.content_margin_left = 6
+	style.content_margin_right = 6
 	style.content_margin_top = 2
 	style.content_margin_bottom = 2
 	chip.add_theme_stylebox_override("panel", style)
@@ -161,6 +195,20 @@ func _reset() -> void:
 	for box in [_badge_box, _trailing_box]:
 		for child in box.get_children():
 			child.queue_free()
+
+
+func _show_human_portrait(skin_id: String) -> void:
+	_portrait.set_skin(skin_id)
+	_portrait.visible = _portrait.texture != null
+	_icon.visible = not _portrait.visible
+	if _icon.visible:
+		_icon.kind = OneGunIcon.Kind.PLAYER
+		_icon.icon_color = OneGunUI.color("text")
+
+
+func _show_vector_icon() -> void:
+	_portrait.visible = false
+	_icon.visible = true
 
 
 func _on_name_label_gui_input(event: InputEvent) -> void:

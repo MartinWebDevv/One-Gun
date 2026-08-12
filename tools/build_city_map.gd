@@ -5,7 +5,6 @@ extends Node
 
 const OUT_PATH := "res://maps/test/CityMap.tscn"
 const A := "res://models/cityAssets/"
-const F := "res://models/forestAssets/"
 
 const HALF_X := 38.0
 const HALF_Z := 27.0
@@ -290,7 +289,7 @@ func _add_perimeter_facades() -> void:
 	per.name = "PerimeterFacades"
 	root.add_child(per)
 	per.owner = root
-	var north := [["Facade_Tall.glb", -30.0], ["Facade_Mid_A.glb", -20.0], ["Facade_Short.glb", -10.0], ["Facade_Mid_B.glb", 0.0], ["Facade_Tall.glb", 9.0], ["Facade_Mid_A.glb", 19.0], ["Facade_Short.glb", 29.0]]
+	var north := [["BuildingD_FacadeTall.tscn", -30.0], ["BuildingB_FacadeMidA.tscn", -20.0], ["BuildingC_FacadeShort.tscn", -10.0], ["BuildingA_FacadeMidB.tscn", 0.0], ["BuildingD_FacadeTall.tscn", 9.0], ["BuildingB_FacadeMidA.tscn", 19.0], ["BuildingC_FacadeShort.tscn", 29.0]]
 	var fi := 0
 	for f in north:
 		# north edge row faces south (+Z): yrot 0; south edge row faces north: yrot PI
@@ -299,14 +298,14 @@ func _add_perimeter_facades() -> void:
 		var n2 := _instance_prop(A + f[0], Vector3(-f[1], 0, HALF_Z - 2.6), PI, 1.0, per, "FacS%d" % fi)
 		_add_box_collider(per, Vector3(-f[1], 5.0, HALF_Z - 2.6), Vector3(9.5, 14.0, 5.0), 0.0, "FacSCol%d" % fi)
 		fi += 1
-	for f in [["Facade_Mid_B.glb", -18.0], ["Facade_Short.glb", -8.0], ["Facade_Tall.glb", 2.0], ["Facade_Mid_A.glb", 12.0]]:
+	for f in [["BuildingA_FacadeMidB.tscn", -18.0], ["BuildingC_FacadeShort.tscn", -8.0], ["BuildingD_FacadeTall.tscn", 2.0], ["BuildingB_FacadeMidA.tscn", 12.0]]:
 		var e1 := _instance_prop(A + f[0], Vector3(HALF_X - 2.6, 0, f[1]), PI / 2.0, 1.0, per, "FacE%d" % fi)
 		_add_box_collider(per, Vector3(HALF_X - 2.6, 5.0, f[1]), Vector3(5.0, 14.0, 9.5), 0.0, "FacECol%d" % fi)
 		var w1 := _instance_prop(A + f[0], Vector3(-HALF_X + 2.6, 0, -f[1]), -PI / 2.0, 1.0, per, "FacW%d" % fi)
 		_add_box_collider(per, Vector3(-HALF_X + 2.6, 5.0, -f[1]), Vector3(5.0, 14.0, 9.5), 0.0, "FacWCol%d" % fi)
 		fi += 1
 	# distant skyline outside the walls
-	var sky := [["Skyline_A.glb", -52, -48], ["Skyline_B.glb", -20, -55], ["Skyline_C.glb", 18, -52], ["Skyline_B.glb", 50, -46], ["Skyline_A.glb", 55, 20], ["Skyline_C.glb", -55, 25], ["Skyline_B.glb", 40, 48], ["Skyline_A.glb", -35, 50]]
+	var sky := [["GreenBackground_SkylineA.tscn", -52, -48], ["RedBackground_SkylineB.tscn", -20, -55], ["GreenBackground_SkylineC.tscn", 18, -52], ["RedBackground_SkylineB.tscn", 50, -46], ["GreenBackground_SkylineA.tscn", 55, 20], ["GreenBackground_SkylineC.tscn", -55, 25], ["RedBackground_SkylineB.tscn", 40, 48], ["GreenBackground_SkylineA.tscn", -35, 50]]
 	var si := 0
 	for s in sky:
 		_instance_prop(A + s[0], Vector3(s[1], -0.5, s[2]), (si * 0.7), 1.0, per, "Sky%d" % si)
@@ -319,27 +318,31 @@ func _add_park() -> void:
 	park.owner = root
 	# fences along north (z 4.7) and east (x -4.7) edges, gaps for entrances
 	var pi2 := 0
-	for fx in [-22.0, -19.5, -17.0, -12.0, -9.5, -7.0]:  # gap at ~-14.5
-		_instance_prop(A + "ParkFence.glb", Vector3(fx, 0, 4.8), 0.0, 1.0, park, "FenceN%d" % pi2)
+	var north_fences := [[-22.0, true], [-19.5, false], [-17.0, true], [-12.0, true], [-9.5, false], [-7.0, true]]
+	for fence in north_fences:  # gap at ~-14.5
+		var fx: float = fence[0]
+		var fence_scene := "FenceEnd_New.tscn" if fence[1] else "FencePiece_New.tscn"
+		_instance_prop(A + fence_scene, Vector3(fx, 0, 4.8), 0.0, 1.0, park, "FenceN%d" % pi2)
 		_add_box_collider(park, Vector3(fx, 0.5, 4.8), Vector3(2.4, 1.0, 0.12), 0.0, "FenceNCol%d" % pi2)
 		pi2 += 1
 	for fz in [6.2, 8.6, 13.4, 15.8]:  # gap at ~11
-		_instance_prop(A + "ParkFence.glb", Vector3(-4.9, 0, fz), PI / 2.0, 1.0, park, "FenceE%d" % pi2)
+		_instance_prop(A + "FenceEnd_New.tscn", Vector3(-4.9, 0, fz), PI / 2.0, 1.0, park, "FenceE%d" % pi2)
 		_add_box_collider(park, Vector3(-4.9, 0.5, fz), Vector3(0.12, 1.0, 2.4), 0.0, "FenceECol%d" % pi2)
 		pi2 += 1
-	# trees / bushes / grass from the forest set
-	var greens := [["Tree_Med_A.glb", -19, 8, 1.0], ["Tree_Med_B.glb", -9, 13, 1.1], ["Tree_Large_C.glb", -20, 13.5, 0.9], ["Sapling_A.glb", -13, 7, 1.0], ["Bush_A.glb", -16, 11, 1.2], ["Bush_B.glb", -7, 8.5, 1.0], ["Grass_A.glb", -11, 10, 1.2], ["Grass_C.glb", -18, 6.5, 1.2], ["Fern_A.glb", -21.5, 10.5, 1.0]]
+	# New City pack trees and shrubs; compact shrubs replace the old grass/fern slots.
+	var greens := [["Tree2_Medium.tscn", -19, 8, 1.0], ["Tree3_Medium.tscn", -9, 13, 1.1], ["Tree4_Large.tscn", -20, 13.5, 0.9], ["Tree1_Sapling.tscn", -13, 7, 1.0], ["Bush_New.tscn", -16, 11, 1.2], ["BushWithBerries_New.tscn", -7, 8.5, 1.0], ["Bush_New.tscn", -11, 10, 0.6], ["BushWithBerries_New.tscn", -18, 6.5, 0.55], ["Bush_New.tscn", -21.5, 10.5, 0.65]]
 	var gi := 0
 	for g in greens:
-		var n := _instance_prop(F + g[0], Vector3(g[1], 0, g[2]), float(gi) * 0.9, g[3], park, "Green%d" % gi)
-		if g[0].begins_with("Tree"):
+		var n := _instance_prop(A + g[0], Vector3(g[1], 0, g[2]), float(gi) * 0.9, g[3], park, "Green%d" % gi)
+		if gi < 3:
 			_add_box_collider(park, Vector3(g[1], 1.5, g[2]), Vector3(0.7, 3.0, 0.7), 0.0, "TreeCol%d" % gi)
 		gi += 1
 	# benches + hoop on a small pad
-	_instance_prop("res://models/environment/Bench_01_GLB.glb", Vector3(-15, 0, 9.5), 0.6, 1.0, park, "Bench1")
-	_instance_prop("res://models/environment/Bench_01_GLB.glb", Vector3(-10.5, 0, 12.5), -1.2, 1.0, park, "Bench2")
+	_instance_prop(A + "Bench_New.tscn", Vector3(-15, 0, 9.5), 0.6, 1.0, park, "Bench1")
+	_instance_prop(A + "ParkBench_New.tscn", Vector3(-10.5, 0, 12.5), -1.2, 1.0, park, "Bench2")
+	_instance_prop(A + "Bench2_PicnicTable.tscn", Vector3(-8.5, 0, 7.2), 0.8, 1.0, park, "Bench3PicnicTable")
 	_add_marking(park, Vector3(-14.5, 0.03, 13.5), Vector3(5.0, 0.04, 4.0), Color(0.55, 0.54, 0.52), 0.0, "CourtPad")
-	var hoop := _instance_prop(A + "BasketballHoop.glb", Vector3(-14.5, 0, 15.2), PI, 1.0, park, "Hoop")
+	var hoop := _instance_prop(A + "BasketballHoop.glb", Vector3(-14.5, 0, 15.2), 0.0, 1.0, park, "Hoop")
 	_add_box_collider(park, Vector3(-14.5, 1.7, 15.2), Vector3(0.25, 3.4, 0.25), 0.0, "HoopCol")
 
 func _add_street_furniture() -> void:
@@ -350,12 +353,12 @@ func _add_street_furniture() -> void:
 	var i := 0
 	# lamp posts along the cross-street sidewalks
 	for lp in [[-16.0, -5.6, 0.0], [8.0, -5.6, 0.0], [22.0, -5.6, 0.0], [-16.0, 5.6, PI], [16.0, 5.6, PI], [-5.6, -16.0, PI / 2.0], [-5.6, 14.0, PI / 2.0], [5.6, -14.0, -PI / 2.0], [5.6, 20.0, -PI / 2.0], [28.0, 5.6, PI]]:
-		_instance_prop(A + "LampPost.glb", Vector3(lp[0], 0, lp[1]), lp[2], 1.0, sf, "Lamp%d" % i)
+		_instance_prop(A + "Streetlight.tscn", Vector3(lp[0], 0, lp[1]), lp[2], 1.0, sf, "Lamp%d" % i)
 		_add_box_collider(sf, Vector3(lp[0], 2.2, lp[1]), Vector3(0.22, 4.4, 0.22), 0.0, "LampCol%d" % i)
 		i += 1
 	# hydrants: one normal, one bursting (effects added later at the same spot)
 	for h in [[-6.2, -6.2], [20.0, 6.2]]:
-		_instance_prop(A + "FireHydrant.glb", Vector3(h[0], 0, h[1]), 0.0, 1.0, sf, "Hydrant%d" % i)
+		_instance_prop(A + "FireHydrant_New.tscn", Vector3(h[0], 0, h[1]), 0.0, 1.0, sf, "Hydrant%d" % i)
 		_add_box_collider(sf, Vector3(h[0], 0.4, h[1]), Vector3(0.4, 0.8, 0.4), 0.0, "HydrantCol%d" % i)
 		i += 1
 	# traffic lights at two intersection corners
@@ -371,7 +374,7 @@ func _add_street_furniture() -> void:
 		_instance_prop(A + "TrashCan.glb", Vector3(t[0], 0, t[1]), float(i), 1.0, sf, "Trash%d" % i)
 		_add_box_collider(sf, Vector3(t[0], 0.45, t[1]), Vector3(0.7, 0.9, 0.7), 0.0, "TrashCol%d" % i)
 		i += 1
-	_instance_prop(A + "Mailbox.glb", Vector3(-6.1, 0, 6.4), 0.4, 1.0, sf, "Mailbox")
+	_instance_prop(A + "Mailbox_New.tscn", Vector3(-6.1, 0, 6.4), 0.4, 1.0, sf, "Mailbox")
 	_add_box_collider(sf, Vector3(-6.1, 0.75, 6.4), Vector3(0.75, 1.5, 0.55), 0.4, "MailboxCol")
 	var bus := _instance_prop(A + "BusShelter.glb", Vector3(17.0, 0, -5.8), 0.0, 1.0, sf, "BusShelter")
 	_add_box_collider(sf, Vector3(17.0, 1.15, -5.4), Vector3(3.4, 2.3, 0.15), 0.0, "BusBackCol")
@@ -392,18 +395,18 @@ func _add_traffic() -> void:
 	traffic.owner = root
 	# ring loop (centerline x +/-28, z +/-20), clockwise
 	var ring: Array[Vector3] = [Vector3(28, 0, -20), Vector3(28, 0, 20), Vector3(-28, 0, 20), Vector3(-28, 0, -20)]
-	var sedan := _instance_prop(A + "Car_Sedan.glb", ring[0], 0.0, 1.0, traffic, "CarSedan")
+	var sedan := _instance_prop(A + "HatchbackCar.tscn", ring[0], 0.0, 1.0, traffic, "CarSedan")
 	sedan.set_script(load("res://car_traffic.gd"))
 	sedan.set("waypoints", ring)
 	sedan.set("speed", 7.5)
 	var van_wps: Array[Vector3] = [Vector3(-28, 0, 20), Vector3(-28, 0, -20), Vector3(28, 0, -20), Vector3(28, 0, 20)]
-	var van := _instance_prop(A + "Car_Van.glb", van_wps[0], 0.0, 1.0, traffic, "CarVan")
+	var van := _instance_prop(A + "StationwagonCar.tscn", van_wps[0], 0.0, 1.0, traffic, "CarVan")
 	van.set_script(load("res://car_traffic.gd"))
 	van.set("waypoints", van_wps)
 	van.set("speed", 6.2)
 	# taxi cuts through the intersection on the N-S street
 	var taxi_wps: Array[Vector3] = [Vector3(-1.8, 0, -20), Vector3(-1.8, 0, 20), Vector3(-28, 0, 20), Vector3(-28, 0, -20)]
-	var taxi := _instance_prop(A + "Car_Taxi.glb", taxi_wps[0], 0.0, 1.0, traffic, "CarTaxi")
+	var taxi := _instance_prop(A + "TaxiCar.tscn", taxi_wps[0], 0.0, 1.0, traffic, "CarTaxi")
 	taxi.set_script(load("res://car_traffic.gd"))
 	taxi.set("waypoints", taxi_wps)
 	taxi.set("speed", 8.0)

@@ -1,5 +1,8 @@
 extends RigidBody3D
 
+const VisibilityRules = preload("res://combat_visibility.gd")
+const HitboxDebug = preload("res://hitbox_debug_visual.gd")
+
 # ============================================================
 # melee_weapon.gd — data-driven melee weapon.
 #
@@ -35,12 +38,18 @@ const SLOW_MULTIPLIER = 0.85
 const SLOW_DURATION   = 3.0
 
 # ---- Fixed physics constants ----
-const THROW_IMPULSE         = 8.0
-const THROW_ARC_UPWARD_BOOST = 4.0
+const THROW_IMPULSE         = GameConfig.SHARED_THROW_FORWARD_SPEED
+const THROW_ARC_UPWARD_BOOST = GameConfig.SHARED_THROW_UPWARD_SPEED
 const THROW_PICKUP_LOCK_TIME = 1.0
 const BREAK_RESPAWN_TIME    = 5.0
 const ONLINE_PICKUP_MAX_DISTANCE = 2.25
 const ONLINE_MELEE_MAX_HIT_DISTANCE = 5.5
+const NORMAL_MELEE_MIN_HITBOX_LENGTH := 3.0
+const NORMAL_MELEE_MAX_HITBOX_LENGTH := 3.8
+const POWERUP_MELEE_MAX_HIT_DISTANCE := 8.0
+const SWING_TIME_MULTIPLIER := 0.85
+const HITBOX_WIDTH_MULTIPLIER := 1.20
+const POWERUP_REACH_MULTIPLIER := POWERUP_MELEE_MAX_HIT_DISTANCE / ONLINE_MELEE_MAX_HIT_DISTANCE
 
 # ---- Runtime state ----
 var player_ref = null
@@ -58,16 +67,25 @@ var despawn_timer_generation := 0
 
 var spawn_position := Vector3.ZERO
 var spawn_rotation := Vector3.ZERO
+var marker_refill_on_pickup := false
+var marker_refill_requested := false
+var overtime_marker_supply := false
 
 # ---- Held model reference ----
 var _model_instance: Node3D = null
 
+var _throw_collision_ignored_player: PhysicsBody3D = null
 # ---- Per-weapon custom hit box (see _apply_custom_hitbox) ----
 var _custom_hitbox_applied := false
 var _default_hitbox_shape: Shape3D = null
 var _default_hitbox_transform := Transform3D.IDENTITY
 var _online_hit_actor_ids: Dictionary = {}
 var overtime_disabled := false
+var personal_mode_melee := false
+var _hitbox_debug: HitboxDebugVisual = null
+var _swing_shape_restore: Shape3D = null
+var _swing_transform_restore := Transform3D.IDENTITY
+var _throw_preview_active := false
 
 # ============================================================
 # Initialisation
@@ -89,6 +107,11 @@ func _ready():
 	if $HitBox/CollisionShape3D.shape != null:
 		_default_hitbox_shape = $HitBox/CollisionShape3D.shape.duplicate()
 		_default_hitbox_transform = $HitBox/CollisionShape3D.transform
+	_hitbox_debug = HitboxDebug.new()
+	_hitbox_debug.name = "MeleeHitboxDebug"
+	$HitBox.add_child(_hitbox_debug)
+	_hitbox_debug.setup($HitBox/CollisionShape3D,
+		Color(1.0, 0.82, 0.08, 0.13), Color(1.0, 0.08, 0.03, 0.42))
 	# Online map instances stay model-free during the coordinated scene load.
 	# Once every peer is ready, the host activates every authored placement and
 	# supplies an independently rolled identity for each one.
@@ -110,16 +133,16 @@ func apply_weapon_data(data: WeaponData, effect: String, new_tier: int):
 
 	# Cache tier-adjusted stats.
 	var stats = MeleeWeaponRegistry.get_stats_for_tier(data, tier)
-	_windup_time   = stats["windup_time"]
-	_active_time   = stats["active_time"]
-	_recovery_time = stats["recovery_time"]
+	_windup_time   = float(stats["windup_time"]) * SWING_TIME_MULTIPLIER
+	_active_time   = float(stats["active_time"]) * SWING_TIME_MULTIPLIER
+	_recovery_time = float(stats["recovery_time"]) * SWING_TIME_MULTIPLIER
 	_stamina_cost  = stats["stamina_cost"]
 
 	# Swap in the correct visual model.
 	_swap_model(data)
 
 	# Resize the hit box to match this weapon's reach.
-	_apply_reach(data.reach_multiplier)
+	_apply_reach(tier)
 
 	_update_pickup_label()
 
@@ -142,9 +165,12 @@ func _swap_model(data: WeaponData):
 	_model_instance = packed.instantiate() if packed is PackedScene else packed
 	add_child(_model_instance)
 	_model_instance.scale = Vector3.ONE * data.held_scale
-	_apply_custom_hitbox(_model_instance)
+	# Put the authored base of the handle on this weapon root. The root is what
+	# gets attached to the animated paw socket.
+	_model_instance.position = -(_model_instance.basis * data.held_grip_anchor)
+	_apply_custom_hitbox(_model_instance, tier)
 
-func _apply_custom_hitbox(model: Node) -> void:
+func _apply_custom_hitbox(model: Node, weapon_tier: int) -> void:
 	# Convention: a per-weapon model scene may carry its own HitShape/CollisionShape3D,
 	# sized and positioned to match its actual geometry (see baseball_bat.tscn). When
 	# present it replaces the generic reach-scaled hit box below instead of stacking
@@ -154,14 +180,72 @@ func _apply_custom_hitbox(model: Node) -> void:
 	if hit_shape_node == null or hit_shape_node.shape == null:
 		return
 	var hit_box_shape: CollisionShape3D = $HitBox/CollisionShape3D
-	# Apply the unit-scale transform first. Assigning the new shape while the
-	# old non-uniform transform was still active made Jolt rebuild it with an
-	# unsupported scale and emit a warning before the transform was corrected.
-	hit_box_shape.transform = hit_shape_node.transform
-	hit_box_shape.shape = hit_shape_node.shape.duplicate()
+	# Match the visual's anchored scene-root rotation and held scale. Bake that
+	# uniform scale into the duplicated shape so Jolt receives an orthonormal
+	# CollisionShape3D transform.
+	var relative_transform: Transform3D = global_transform.affine_inverse() \
+		* hit_shape_node.global_transform
+	var shape_scale: float = relative_transform.basis.get_scale().x
+	relative_transform.basis = relative_transform.basis.orthonormalized()
+	hit_box_shape.transform = relative_transform
+	var widened_shape: Shape3D = hit_shape_node.shape.duplicate()
+	_scale_hitbox_shape(widened_shape, shape_scale)
+	_widen_hitbox_shape(widened_shape)
+	_set_outward_hitbox_length(hit_box_shape, widened_shape,
+		_normal_hitbox_length(weapon_tier))
+	hit_box_shape.shape = widened_shape
 	_custom_hitbox_applied = true
 
-func _apply_reach(multiplier: float):
+func _scale_hitbox_shape(shape: Shape3D, scale_factor: float) -> void:
+	if shape is BoxShape3D:
+		shape.size *= scale_factor
+	elif shape is SphereShape3D:
+		shape.radius *= scale_factor
+	elif shape is CapsuleShape3D or shape is CylinderShape3D:
+		shape.radius *= scale_factor
+		shape.height *= scale_factor
+
+func _widen_hitbox_shape(shape: Shape3D) -> void:
+	if shape is BoxShape3D:
+		shape.size.x *= HITBOX_WIDTH_MULTIPLIER
+	elif shape is SphereShape3D or shape is CapsuleShape3D or shape is CylinderShape3D:
+		shape.radius *= HITBOX_WIDTH_MULTIPLIER
+
+func _normal_hitbox_length(weapon_tier: int) -> float:
+	var tier_progress := clampf((float(weapon_tier) - 1.0) / 2.0, 0.0, 1.0)
+	return lerpf(NORMAL_MELEE_MIN_HITBOX_LENGTH,
+		NORMAL_MELEE_MAX_HITBOX_LENGTH, tier_progress)
+
+
+func _set_outward_hitbox_length(shape_node: CollisionShape3D, shape: Shape3D,
+		target_length: float) -> void:
+	var reach_axis := Vector3.ZERO
+	if shape is BoxShape3D:
+		reach_axis = shape_node.transform.basis.z.normalized()
+	elif shape is CapsuleShape3D or shape is CylinderShape3D:
+		reach_axis = shape_node.transform.basis.y.normalized()
+	elif shape is SphereShape3D:
+		reach_axis = shape_node.position.normalized()
+		if reach_axis.is_zero_approx():
+			reach_axis = shape_node.transform.basis.z.normalized()
+	if reach_axis.is_zero_approx():
+		return
+	if shape is BoxShape3D:
+		shape.size.z = target_length
+	elif shape is CapsuleShape3D or shape is CylinderShape3D:
+		shape.height = target_length
+	elif shape is SphereShape3D:
+		shape.radius = target_length * 0.5
+	# Anchor the near end at the paw so the normal attack shape only extends
+	# toward the target instead of growing backward through the holder.
+	var center := shape_node.position
+	var parallel_distance := center.dot(reach_axis)
+	var outward_sign := -1.0 if parallel_distance < 0.0 else 1.0
+	var lateral_offset := center - reach_axis * parallel_distance
+	shape_node.position = lateral_offset + reach_axis * outward_sign \
+		* (target_length * 0.5)
+
+func _apply_reach(weapon_tier: int):
 	if _custom_hitbox_applied:
 		return
 	var shape_node = $HitBox/CollisionShape3D
@@ -172,16 +256,22 @@ func _apply_reach(multiplier: float):
 	var shape = _default_hitbox_shape.duplicate()
 	shape_node.shape = shape
 	shape_node.transform = _default_hitbox_transform
-	if shape is SphereShape3D:
-		shape.radius *= multiplier
+	if shape is BoxShape3D:
+		shape.size.x *= HITBOX_WIDTH_MULTIPLIER
+	elif shape is SphereShape3D:
+		shape.radius *= HITBOX_WIDTH_MULTIPLIER
 	elif shape is CapsuleShape3D or shape is CylinderShape3D:
-		shape.radius *= multiplier
+		shape.radius *= HITBOX_WIDTH_MULTIPLIER
+	_set_outward_hitbox_length(shape_node, shape,
+		_normal_hitbox_length(weapon_tier))
 
 # ============================================================
 # Per-frame
 # ============================================================
 
 func _process(_delta):
+	if _hitbox_debug != null:
+		_hitbox_debug.set_active(is_swinging and $HitBox.monitoring)
 	if is_swinging or weapon_data == null:
 		return
 	if is_held and player_ref != null and player_ref.has_method("get_aim_pitch"):
@@ -265,7 +355,8 @@ func try_swing():
 	if not online_active or not is_held or is_swinging:
 		return
 	if NetworkManager.is_online():
-		if player_ref != null and player_ref.is_multiplayer_authority():
+		if player_ref != null and player_ref.has_method("is_locally_controlled") \
+				and player_ref.is_locally_controlled():
 			var epoch := _online_round_epoch()
 			var rm = _online_round_manager()
 			if rm != null:
@@ -277,10 +368,13 @@ func try_swing():
 	swing()
 
 func try_throw():
+	if personal_mode_melee:
+		return
 	if not online_active or not is_held or is_swinging:
 		return
 	if NetworkManager.is_online():
-		if player_ref != null and player_ref.is_multiplayer_authority():
+		if player_ref != null and player_ref.has_method("is_locally_controlled") \
+				and player_ref.is_locally_controlled():
 			var epoch := _online_round_epoch()
 			var rm = _online_round_manager()
 			if rm != null:
@@ -291,6 +385,35 @@ func try_throw():
 		return
 	throw()
 
+
+func begin_throw_preview() -> void:
+	if online_active and is_held and not is_swinging and not personal_mode_melee:
+		_throw_preview_active = true
+
+
+func release_throw() -> void:
+	if not _throw_preview_active:
+		return
+	_throw_preview_active = false
+	try_throw()
+
+
+func is_throw_preview_active() -> bool:
+	return _throw_preview_active and is_held
+
+
+func get_throw_preview_data() -> Dictionary:
+	if not is_throw_preview_active() or player_ref == null:
+		return {}
+	var direction: Vector3 = player_ref.get_aim_direction().normalized()
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
+	return {
+		"origin": player_ref.global_position + flat * 1.2 + Vector3.UP * 1.15,
+		"velocity": direction * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST,
+		"gravity": 9.8,
+	}
+
 func pick_up(p = null) -> bool:
 	if not online_active or pickup_locked or is_held:
 		return false
@@ -299,7 +422,7 @@ func pick_up(p = null) -> bool:
 	if p == null:
 		return false
 	if NetworkManager.is_online():
-		if p.is_multiplayer_authority():
+		if p.has_method("is_locally_controlled") and p.is_locally_controlled():
 			var epoch := _online_round_epoch()
 			var rm = _online_round_manager()
 			if rm != null:
@@ -342,6 +465,10 @@ func _local_pickup(p) -> bool:
 	p.held_melee_weapon = self
 	player_ref = p
 	_update_pickup_label()
+	if marker_refill_on_pickup and not marker_refill_requested:
+		marker_refill_requested = true
+		if not NetworkManager.is_online():
+			GameEvents.melee_marker_refill_requested.emit(self)
 	return true
 
 func _holder_peer_id() -> int:
@@ -367,8 +494,13 @@ func _server_try_pickup(sender_id: int, epoch: int) -> void:
 	var player = NetworkManager.find_actor(sender_id)
 	if player == null or player.is_eliminated or player.holding_gun:
 		return
-	if player.global_position.distance_to(global_position) > ONLINE_PICKUP_MAX_DISTANCE:
+	var max_distance := GameConfig.REACH_POWERUP_DISTANCE if player.has_method("has_active_reach") and player.has_active_reach() else ONLINE_PICKUP_MAX_DISTANCE
+	if player.global_position.distance_to(global_position) > max_distance:
 		return
+	if max_distance > ONLINE_PICKUP_MAX_DISTANCE and not VisibilityRules.has_visual_contact(player, self):
+		return
+	if marker_refill_on_pickup and not marker_refill_requested:
+		rm.server_schedule_online_melee_refill(self, epoch)
 	rm.broadcast_online_melee_action(online_candidate_id, "pickup", {"holder_actor_id": sender_id})
 
 func _net_do_pickup(holder_actor_id: int) -> void:
@@ -377,19 +509,20 @@ func _net_do_pickup(holder_actor_id: int) -> void:
 		_local_pickup(player)
 
 func drop(is_death_drop: bool = false):
-	if not is_held:
+	if not is_held or personal_mode_melee:
 		return
 	var p = player_ref
 	var world = get_tree().current_scene
 	if swing_tween != null and swing_tween.is_valid():
 		swing_tween.kill()
 	is_swinging = false
+	$HitBox.monitoring = false
+	_restore_powerup_reach()
+	_throw_preview_active = false
 	visible = true
 	scale = Vector3.ONE
 	var drop_transform = global_transform
-	var hold_point = get_parent()
-	hold_point.remove_child(self)
-	world.add_child(self)
+	reparent(world, true)
 	global_transform = drop_transform
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
@@ -406,6 +539,10 @@ func drop(is_death_drop: bool = false):
 	else:
 		despawn_timer_generation += 1
 		despawn_timer_active = false
+	if NetworkManager.is_online() and multiplayer.is_server():
+		var rm = _online_round_manager()
+		if rm != null and bool(rm.get("practice_mode")) and rm.has_method("server_schedule_playpen_melee_cleanup"):
+			rm.server_schedule_playpen_melee_cleanup(self)
 
 func _start_despawn_timer():
 	if GameConfig.dropped_melee_despawn_time <= 0.0:
@@ -476,18 +613,17 @@ func throw():
 	var p = player_ref
 	if p == null:
 		return
+	if p.has_method("play_throw_animation"):
+		p.play_throw_animation()
 	var forward = p.get_aim_direction()
 	var world = get_tree().current_scene
-	var hold_point = get_parent()
-	hold_point.remove_child(self)
-	world.add_child(self)
-	scale = Vector3.ONE
+	reparent(world, true)
 	var flat_forward = Vector3(forward.x, 0, forward.z)
 	if flat_forward.length() < 0.01:
 		flat_forward = Vector3.FORWARD
 	else:
 		flat_forward = flat_forward.normalized()
-	global_position = p.global_position + flat_forward * 0.6 + Vector3.UP * 1.0
+	global_position = p.global_position + flat_forward * 1.2 + Vector3.UP * 1.15
 	global_rotation = p.global_rotation
 	_enable_loose_physics()
 	$CollisionShape3D.disabled = false
@@ -496,10 +632,12 @@ func throw():
 	is_in_flight = true
 	if p.held_melee_weapon == self:
 		p.held_melee_weapon = null
-	linear_velocity = Vector3.ZERO
-	apply_impulse(forward * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST)
-	await get_tree().create_timer(0.15).timeout
+	_arm_thrower_collision_grace(p)
+	linear_velocity = forward.normalized() * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST
+	angular_velocity = Vector3.ZERO
+	await get_tree().create_timer(0.40).timeout
 	if is_in_flight:
+		_end_thrower_collision_grace()
 		set_collision_mask_value(2, true)
 
 func _server_try_throw(sender_id: int, epoch: int) -> void:
@@ -511,7 +649,7 @@ func _server_try_throw(sender_id: int, epoch: int) -> void:
 	var forward: Vector3 = player_ref.get_aim_direction().normalized()
 	var flat_forward := Vector3(forward.x, 0.0, forward.z)
 	flat_forward = Vector3.FORWARD if flat_forward.length() < 0.01 else flat_forward.normalized()
-	var start_pos: Vector3 = player_ref.global_position + flat_forward * 0.6 + Vector3.UP
+	var start_pos: Vector3 = player_ref.global_position + flat_forward * 1.2 + Vector3.UP * 1.15
 	var start_rot: Vector3 = player_ref.global_rotation
 	var launch_velocity := forward * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST
 	rm.broadcast_online_melee_action(online_candidate_id, "throw", {
@@ -524,10 +662,10 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 	if not is_held:
 		return
 	var p = player_ref
+	if p != null and p.has_method("play_throw_animation"):
+		p.play_throw_animation()
 	var world = get_tree().current_scene
-	get_parent().remove_child(self)
-	world.add_child(self)
-	scale = Vector3.ONE
+	reparent(world, true)
 	global_position = start_pos
 	global_rotation = start_rot
 	$CollisionShape3D.disabled = false
@@ -535,6 +673,7 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 	is_held = false
 	is_in_flight = true
 	_online_hit_actor_ids.clear()
+	_arm_thrower_collision_grace(p)
 	if p != null and p.held_melee_weapon == self:
 		p.held_melee_weapon = null
 	linear_velocity = launch_velocity
@@ -546,12 +685,36 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 		call_deferred("_online_enable_throw_player_collision")
 
 func _online_enable_throw_player_collision() -> void:
-	await get_tree().create_timer(0.15).timeout
+	await get_tree().create_timer(0.40).timeout
 	if is_in_flight:
+		_end_thrower_collision_grace()
 		set_collision_mask_value(2, true)
+
+
+func _arm_thrower_collision_grace(thrower) -> void:
+	_end_thrower_collision_grace()
+	if thrower is PhysicsBody3D:
+		_throw_collision_ignored_player = thrower
+		add_collision_exception_with(thrower)
+	set_collision_mask_value(2, false)
+
+
+func _end_thrower_collision_grace() -> void:
+	if is_instance_valid(_throw_collision_ignored_player):
+		remove_collision_exception_with(_throw_collision_ignored_player)
+	_throw_collision_ignored_player = null
+
+
+func _net_retire_playpen_drop() -> void:
+	if is_held or is_in_flight:
+		return
+	queue_free()
 
 func _on_flight_body_entered(body):
 	if not is_in_flight:
+		return
+	if body == player_ref:
+		add_collision_exception_with(body)
 		return
 	if body.is_in_group("combat_decoy"):
 		if body.has_method("pop_from_attack"):
@@ -567,6 +730,7 @@ func _on_flight_body_entered(body):
 		if rm != null:
 			rm.broadcast_online_melee_action(online_candidate_id, "land", {"position": global_position, "rotation": global_rotation})
 		return
+	_end_thrower_collision_grace()
 	is_in_flight = false
 	set_collision_mask_value(2, false)
 	if body.is_in_group("player") and GameConfig.can_affect(player_ref, body):
@@ -575,6 +739,7 @@ func _on_flight_body_entered(body):
 	_start_landed_cooldown()
 
 func _net_land_throw(land_pos: Vector3, land_rot: Vector3) -> void:
+	_end_thrower_collision_grace()
 	is_in_flight = false
 	set_collision_mask_value(2, false)
 	global_position = land_pos
@@ -582,6 +747,10 @@ func _net_land_throw(land_pos: Vector3, land_rot: Vector3) -> void:
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	freeze = true
+	if NetworkManager.is_online() and multiplayer.is_server():
+		var rm = _online_round_manager()
+		if rm != null and bool(rm.get("practice_mode")) and rm.has_method("server_schedule_playpen_melee_cleanup"):
+			rm.server_schedule_playpen_melee_cleanup(self)
 	_update_pickup_label()
 	_start_landed_cooldown()
 
@@ -665,32 +834,84 @@ func swing(should_break: bool = false):
 		else was_already_in_deficit and GameConfig.melee_weapon_breaking
 
 	is_swinging = true
+	if p.has_method("play_melee_animation"):
+		p.play_melee_animation(_windup_time + _active_time + _recovery_time)
 	_online_hit_actor_ids.clear()
+	_apply_powerup_reach(p.has_method("has_active_reach") and p.has_active_reach())
 
-	var base_pitch  = p.get_aim_pitch() if p.has_method("get_aim_pitch") else 0.0
-	var held_rot    = weapon_data.held_rotation if weapon_data != null else Vector3(-PI/2, PI, 0)
-	var windup_off  = weapon_data.swing_windup_offset if weapon_data != null else Vector3(-0.3, 0.5, -0.6)
-	var follow_off  = weapon_data.swing_followthrough_offset if weapon_data != null else Vector3(0.5, -0.5, 0.7)
-
-	var rest_rotation         = Vector3(held_rot.x + base_pitch, held_rot.y, held_rot.z)
-	var windup_rotation       = rest_rotation + windup_off
-	var followthrough_rotation = rest_rotation + follow_off
+	var base_pitch = p.get_aim_pitch() if p.has_method("get_aim_pitch") else 0.0
+	var held_rot = weapon_data.held_rotation if weapon_data != null \
+		else Vector3(-PI/2, PI, 0)
+	var rest_rotation = Vector3(held_rot.x + base_pitch, held_rot.y, held_rot.z)
+	# The character's authored melee clip owns the visible attack motion. Keep
+	# the weapon fixed to its paw socket; this tween only sequences gameplay.
+	rotation = rest_rotation
 
 	if swing_tween != null and swing_tween.is_valid():
 		swing_tween.kill()
 	AudioManager.play_sfx("melee_swing")
+	GameEvents.combat_noise.emit(p.global_position, int(p.get("actor_id")), "melee", 12.0)
 	swing_tween = create_tween()
-	swing_tween.tween_property(self, "rotation", windup_rotation,        _windup_time)
+	swing_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+	swing_tween.tween_interval(_windup_time)
 	swing_tween.tween_callback(func(): $HitBox.monitoring = true)
-	swing_tween.tween_property(self, "rotation", followthrough_rotation, _active_time)
-	swing_tween.tween_callback(func(): $HitBox.monitoring = false)
-	swing_tween.tween_property(self, "rotation", rest_rotation,          _recovery_time)
+	swing_tween.tween_interval(_active_time)
+	swing_tween.tween_callback(func():
+		$HitBox.monitoring = false
+		_restore_powerup_reach())
+	swing_tween.tween_interval(_recovery_time)
 
 	await swing_tween.finished
 	is_swinging = false
 	if _break_after_swing:
 		_break_after_swing = false
 		_break_weapon()
+
+
+func _apply_powerup_reach(enabled: bool) -> void:
+	_restore_powerup_reach()
+	var target_reach := POWERUP_MELEE_MAX_HIT_DISTANCE if enabled else 0.0
+	if target_reach <= 0.0 and player_ref != null and str(player_ref.get("one_of_us_role")) == "them":
+		target_reach = NORMAL_MELEE_MAX_HITBOX_LENGTH * GameConfig.ONE_OF_US_THEM_REACH_MULTIPLIER
+	if target_reach <= 0.0:
+		return
+	var shape_node: CollisionShape3D = $HitBox/CollisionShape3D
+	if shape_node.shape == null:
+		return
+	_swing_shape_restore = shape_node.shape.duplicate()
+	_swing_transform_restore = shape_node.transform
+	var extended := shape_node.shape.duplicate()
+	var reach_axis := Vector3.ZERO
+	if extended is BoxShape3D:
+		reach_axis = shape_node.transform.basis.z.normalized()
+		extended.size.z = target_reach
+	elif extended is CapsuleShape3D or extended is CylinderShape3D:
+		reach_axis = shape_node.transform.basis.y.normalized()
+		extended.height = target_reach
+	elif extended is SphereShape3D:
+		reach_axis = shape_node.position.normalized()
+		if reach_axis.is_zero_approx():
+			reach_axis = shape_node.transform.basis.z.normalized()
+		extended.radius = target_reach * 0.5
+	if not reach_axis.is_zero_approx():
+		# Keep the near end at the holder and put the far end at 8m. Merely
+		# multiplying each weapon's authored length left short weapons far below
+		# the advertised Reach distance and let long centered shapes extend back.
+		var center := shape_node.position
+		var parallel_distance := center.dot(reach_axis)
+		var outward_sign := -1.0 if parallel_distance < 0.0 else 1.0
+		var lateral_offset := center - reach_axis * parallel_distance
+		shape_node.position = lateral_offset + reach_axis * outward_sign \
+			* (target_reach * 0.5)
+	shape_node.shape = extended
+
+
+func _restore_powerup_reach() -> void:
+	if _swing_shape_restore == null:
+		return
+	$HitBox/CollisionShape3D.transform = _swing_transform_restore
+	$HitBox/CollisionShape3D.shape = _swing_shape_restore
+	_swing_shape_restore = null
 
 const HIT_SOUND_KEYS = {
 	"Sword": "hit_sword",
@@ -743,8 +964,23 @@ func _get_weapon_icon() -> String:
 		"Frying Pan":   return "🍳"
 		_:              return "💀"
 
+
+func _holder_max_hit_distance() -> float:
+	if player_ref != null and player_ref.has_method("has_active_reach") \
+			and player_ref.has_active_reach():
+		return POWERUP_MELEE_MAX_HIT_DISTANCE
+	if player_ref != null and str(player_ref.get("one_of_us_role")) == "them":
+		return NORMAL_MELEE_MAX_HITBOX_LENGTH * GameConfig.ONE_OF_US_THEM_REACH_MULTIPLIER
+	return ONLINE_MELEE_MAX_HIT_DISTANCE
+
 func _on_hit_landed(body):
 	if body == player_ref:
+
+		return
+	if player_ref == null or not body is Node3D:
+		return
+	var max_hit_distance := _holder_max_hit_distance()
+	if body.global_position.distance_to(player_ref.global_position) > max_hit_distance:
 		return
 	if body.is_in_group("combat_decoy"):
 		if body.has_method("pop_from_attack"):
@@ -761,6 +997,10 @@ func _on_hit_landed(body):
 	_resolve_local_hit(body, false)
 
 func _resolve_local_hit(body, is_thrown: bool) -> void:
+	var round_manager = get_tree().current_scene.get_node_or_null("RoundManager")
+	if round_manager != null and round_manager.has_method("try_resolve_one_of_us_melee") \
+			and round_manager.try_resolve_one_of_us_melee(player_ref, body):
+		return
 	if body.has_method("flash_hit"):
 		body.flash_hit()
 	_play_hit_sound()
@@ -771,8 +1011,10 @@ func _resolve_local_hit(body, is_thrown: bool) -> void:
 		or (was_holding_gun and GameConfig.melee_eliminates_gunholder))
 	if player_ref != null:
 		GameEvents.melee_hit_landed.emit(player_ref.get_display_name())
+		GameEvents.actor_melee_hit_landed.emit(int(player_ref.get("actor_id")) if player_ref.get("actor_id") != null else -1)
 		if not will_eliminate:
 			GameEvents.combat_feedback.emit(killer, "melee_hit")
+			GameEvents.actor_combat_feedback.emit(int(player_ref.get("actor_id")) if player_ref.get("actor_id") != null else -1, "melee_hit")
 
 	# Sticky Hands is independent from Extra Life. A lethal swing can consume
 	# both: Sticky prevents the disarm and Extra Life prevents the elimination.
@@ -787,9 +1029,12 @@ func _resolve_local_hit(body, is_thrown: bool) -> void:
 			_disarm_local_target(body, killer, icon)
 
 	if will_eliminate and body.has_method("eliminate"):
-		body.eliminate(killer, icon, "weapon")
+		var killer_actor_id := int(player_ref.get("actor_id")) if player_ref != null and player_ref.get("actor_id") != null else -1
+		body.eliminate(killer, icon, "weapon", killer_actor_id)
 		var eliminated := bool(body.get("is_eliminated"))
-		GameEvents.combat_feedback.emit(killer, "melee_elimination" if eliminated else "melee_hit")
+		var event_kind := "melee_elimination" if eliminated else "melee_hit"
+		GameEvents.combat_feedback.emit(killer, event_kind)
+		GameEvents.actor_combat_feedback.emit(killer_actor_id, event_kind)
 		if eliminated:
 			return
 
@@ -805,6 +1050,9 @@ func _disarm_local_target(body, killer: String, icon: String) -> void:
 			gun_node.drop()
 		var victim = body.get_display_name() if body.has_method("get_display_name") else body.name
 		GameEvents.player_disarmed.emit(victim, killer, icon)
+		var victim_actor_id := int(body.get("actor_id")) if body.get("actor_id") != null else -1
+		var disarmer_actor_id := int(player_ref.get("actor_id")) if player_ref != null and player_ref.get("actor_id") != null else -1
+		GameEvents.actor_disarmed.emit(victim_actor_id, disarmer_actor_id, icon)
 
 func _server_resolve_hit(body, is_thrown: bool) -> void:
 	if not multiplayer.is_server() or not online_active or player_ref == null or body == player_ref:
@@ -812,11 +1060,14 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 	var rm = _online_round_manager()
 	if rm == null or not rm.can_accept_online_combat(_online_round_epoch()):
 		return
+	if rm.has_method("try_resolve_one_of_us_melee") and rm.try_resolve_one_of_us_melee(player_ref, body):
+		return
 	if not is_thrown and not is_swinging:
 		return
 	if not body.is_in_group("player") or body.is_eliminated or not GameConfig.can_affect(player_ref, body):
 		return
-	if body.global_position.distance_to(player_ref.global_position) > ONLINE_MELEE_MAX_HIT_DISTANCE:
+	var max_hit_distance := _holder_max_hit_distance()
+	if body.global_position.distance_to(player_ref.global_position) > max_hit_distance:
 		return
 	var target_id := int(body.actor_id) if "actor_id" in body else -1
 	var attacker_id := _holder_actor_id()
@@ -882,12 +1133,14 @@ func _net_apply_melee_hit(
 	var victim_name: String = body.get_display_name() if body.has_method("get_display_name") else body.name
 	if meaningful_hit and attacker_name != "":
 		GameEvents.melee_hit_landed.emit(attacker_name)
+		GameEvents.actor_melee_hit_landed.emit(attacker_id)
 		# Ordinary melee feedback for the attacker's own machine; an elimination
 		# comes through round_manager's typed server-confirmed path instead.
 		if not will_eliminate and attacker != null \
 				and not ("is_bot" in attacker and attacker.is_bot) \
 				and int(attacker.get("owner_peer_id")) == NetworkManager.local_id():
 			GameEvents.combat_feedback.emit(attacker_name, "melee_hit")
+			GameEvents.actor_combat_feedback.emit(attacker_id, "melee_hit")
 	if shield_consumed:
 		if body.has_method("consume_sticky_hands"):
 			body.consume_sticky_hands()
@@ -895,6 +1148,7 @@ func _net_apply_melee_hit(
 			body.melee_disarm_shields = maxi(body.melee_disarm_shields - 1, 0)
 	if did_disarm:
 		GameEvents.player_disarmed.emit(victim_name, attacker_name, _get_weapon_icon())
+		GameEvents.actor_disarmed.emit(target_id, attacker_id, _get_weapon_icon())
 	if not will_eliminate or survives_lethal:
 		_apply_hit_effects(body, is_thrown, bool(body.holding_gun) or did_disarm, source_position)
 
@@ -956,6 +1210,7 @@ func set_online_pickup_locked(value: bool) -> void:
 
 func reset_to_spawn(randomize_identity: bool = true):
 	overtime_disabled = false
+	overtime_marker_supply = false
 	online_active = true
 	if is_held:
 		drop()
@@ -965,6 +1220,8 @@ func reset_to_spawn(randomize_identity: bool = true):
 		swing_tween.kill()
 	is_in_flight    = false
 	is_swinging     = false
+	$HitBox.monitoring = false
+	_restore_powerup_reach()
 	visible         = true
 	scale           = Vector3.ONE
 	set_collision_mask_value(2, false)
@@ -989,8 +1246,27 @@ func disable_for_overtime() -> void:
 		drop()
 	is_in_flight = false
 	is_swinging = false
+	_restore_powerup_reach()
 	visible = false
 	$HitBox.monitoring = false
+	$CollisionShape3D.disabled = true
+	$Area3D.monitoring = false
+	$Area3D/CollisionShape3D.disabled = true
+	freeze = true
+
+func preserve_held_for_overtime() -> void:
+	# Overtime shuts authored ground spawns down, but a melee weapon already in
+	# a survivor's hands remains fully usable in both Standard and Chaos OT.
+	if not is_held:
+		disable_for_overtime()
+		return
+	overtime_disabled = false
+	online_active = true
+	despawn_timer_generation += 1
+	despawn_timer_active = false
+	is_in_flight = false
+	pickup_locked = false
+	visible = true
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
 	$Area3D/CollisionShape3D.disabled = true

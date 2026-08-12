@@ -1,0 +1,277 @@
+[gd_scene format=3 uid="uid://camjsxll3htg4"]
+
+[ext_resource type="PackedScene" uid="uid://dnpinxkk7sftk" path="res://models/cityAssets/Building C.glb" id="1_source"]
+[ext_resource type="Shader" uid="uid://yfpr5uwquxoe" path="res://models/cityAssets/building_c_enterable.gdshader" id="2_shader"]
+[ext_resource type="Texture2D" uid="uid://f2ojak3xmpa7" path="res://models/cityAssets/Building C_citybits_texture.png" id="3_texture"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_exterior"]
+render_priority = 0
+shader = ExtResource("2_shader")
+shader_parameter/albedo_texture = ExtResource("3_texture")
+shader_parameter/window_opacity = 0.24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_a5ciu"]
+albedo_color = Color(0.28235295, 0.23921569, 0.3137255, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_g6ihy"]
+material = SubResource("StandardMaterial3D_a5ciu")
+size = Vector3(1.6013641, 0.06347656, 1.7800293)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial_floor"]
+albedo_color = Color(0.29, 0.32, 0.33, 1)
+roughness = 0.86
+
+[sub_resource type="BoxMesh" id="BoxMesh_unit"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial_interior"]
+albedo_color = Color(0.145, 0.205, 0.225, 1)
+roughness = 0.92
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial_glass"]
+transparency = 1
+cull_mode = 2
+albedo_color = Color(0.54, 0.76, 0.82, 0.2)
+metallic = 0.18
+roughness = 0.12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial_trim"]
+albedo_color = Color(0.255, 0.105, 0.055, 1)
+roughness = 0.72
+
+[sub_resource type="BoxShape3D" id="BoxShape_unit"]
+size = Vector3(1, 2.3233833, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_342r1"]
+size = Vector3(1.0233154, 1, 1.1650085)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_h6d5k"]
+size = Vector3(1.0539551, 2.8797238, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_315nx"]
+size = Vector3(1, 27.382542, 2.2128906)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qjmni"]
+size = Vector3(1.0410767, 27.677647, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_floor"]
+size = Vector3(5.34, 0.08, 2.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_slab"]
+size = Vector3(5.34, 0.12, 2.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_back"]
+size = Vector3(5.34, 6.2, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_left"]
+size = Vector3(0.1, 6.2, 2.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_right_segment"]
+size = Vector3(0.1, 6.2, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_right_header"]
+size = Vector3(0.1, 3.5, 1.42)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_front_left"]
+size = Vector3(0.25, 6.2, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_front_middle"]
+size = Vector3(0.76, 6.2, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_front_right"]
+size = Vector3(0.43, 6.2, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_front_upper"]
+size = Vector3(5.34, 3.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_c_window"]
+size = Vector3(2.66, 2.12, 0.08)
+
+[node name="BuildingC_Enterable" type="Node3D" unique_id=1429567664]
+
+[node name="Exterior" parent="." unique_id=157715526 instance=ExtResource("1_source")]
+transform = Transform3D(4.62, 0, 0, 0, 4.0606055, 0, 0, 0, 2.625, 0, 0, 0)
+
+[node name="building_A" parent="Exterior/RootNode" parent_id_path=PackedInt32Array(157715526, 1901367701) index="0" unique_id=2106366108]
+material_override = SubResource("ShaderMaterial_exterior")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Exterior" unique_id=1696983400]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, 0.19850385, 0.068, 0.109736584)
+mesh = SubResource("BoxMesh_g6ihy")
+
+[node name="Interior" type="Node3D" parent="." unique_id=1474182372]
+
+[node name="Floor" type="MeshInstance3D" parent="Interior" unique_id=1392277652]
+transform = Transform3D(5.34, 0, 0, 0, 0.08, 0, 0, 0, 2.9, 0, 0.375, 0)
+material_override = SubResource("StandardMaterial_floor")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="Ceiling" type="MeshInstance3D" parent="Interior" unique_id=1220477224]
+transform = Transform3D(5.34, 0, 0, 0, 0.12, 0, 0, 0, 2.9, 0, 3.43, 0)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="BackWall" type="MeshInstance3D" parent="Interior" unique_id=1027444861]
+transform = Transform3D(5.34, 0, 0, 0, 2.7, 0, 0, 0, 0.1, 0, 1.77, -1.46)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="LeftWall" type="MeshInstance3D" parent="Interior" unique_id=572865379]
+transform = Transform3D(0.1, 0, 0, 0, 2.7, 0, 0, 0, 2.9, -2.67, 1.77, 0)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="RightWallRear" type="MeshInstance3D" parent="Interior" unique_id=939838573]
+transform = Transform3D(0.1, 0, 0, 0, 2.7, 0, 0, 0, 0.75, 2.67, 1.77, -1.085)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="RightWallFront" type="MeshInstance3D" parent="Interior" unique_id=318406538]
+transform = Transform3D(0.1, 0, 0, 0, 2.7, 0, 0, 0, 0.75, 2.67, 1.77, 1.085)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="RightDoorHeader" type="MeshInstance3D" parent="Interior" unique_id=915616748]
+transform = Transform3D(0.1, 0, 0, 0, 0.14, 0, 0, 0, 1.42, 2.67, 3.05, 0)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="FrontWallLeft" type="MeshInstance3D" parent="Interior" unique_id=1906046585]
+transform = Transform3D(0.25, 0, 0, 0, 2.7, 0, 0, 0, 0.1, -2.545, 1.77, 1.46)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="FrontWallMiddle" type="MeshInstance3D" parent="Interior" unique_id=534505923]
+transform = Transform3D(0.76, 0, 0, 0, 2.7, 0, 0, 0, 0.1, -0.8, 1.77, 1.46)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="FrontWallRight" type="MeshInstance3D" parent="Interior" unique_id=447169022]
+transform = Transform3D(0.43, 0, 0, 0, 2.7, 0, 0, 0, 0.1, 2.455, 1.77, 1.46)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="FrontUpperBand" type="MeshInstance3D" parent="Interior" unique_id=964345544]
+transform = Transform3D(5.34, 0, 0, 0, 0.14, 0, 0, 0, 0.1, 0, 3.05, 1.46)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="GroundWindowGlass" type="MeshInstance3D" parent="Interior" unique_id=1913286243]
+transform = Transform3D(2.66, 0, 0, 0, 2.12, 0, 0, 0, 0.025, 0.91, 1.54, 1.515)
+material_override = SubResource("StandardMaterial_glass")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="UpperInteriorBack" type="MeshInstance3D" parent="Interior" unique_id=1704182887]
+transform = Transform3D(5.34, 0, 0, 0, 3, 0, 0, 0, 0.1, 0, 4.9, -1.46)
+material_override = SubResource("StandardMaterial_interior")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="DoorFrames" type="Node3D" parent="." unique_id=363970218]
+
+[node name="FrontLeftJamb" type="MeshInstance3D" parent="DoorFrames" unique_id=1339070766]
+transform = Transform3D(0.1, 0, 0, 0, 2.58, 0, 0, 0, 0.12, -2.46, 1.7, 1.64)
+material_override = SubResource("StandardMaterial_trim")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="FrontRightJamb" type="MeshInstance3D" parent="DoorFrames" unique_id=1616347167]
+transform = Transform3D(0.1, 0, 0, 0, 2.58, 0, 0, 0, 0.12, -1.14, 1.7, 1.64)
+material_override = SubResource("StandardMaterial_trim")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="FrontLintel" type="MeshInstance3D" parent="DoorFrames" unique_id=1744741551]
+transform = Transform3D(1.42, 0, 0, 0, 0.1, 0, 0, 0, 0.12, -1.8, 3, 1.64)
+material_override = SubResource("StandardMaterial_trim")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="SideRearJamb" type="MeshInstance3D" parent="DoorFrames" unique_id=1293014013]
+transform = Transform3D(0.12, 0, 0, 0, 2.58, 0, 0, 0, 0.1, 2.81, 1.7, -0.76)
+material_override = SubResource("StandardMaterial_trim")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="SideFrontJamb" type="MeshInstance3D" parent="DoorFrames" unique_id=176528206]
+transform = Transform3D(0.12, 0, 0, 0, 2.58, 0, 0, 0, 0.1, 2.81, 1.7, 0.76)
+material_override = SubResource("StandardMaterial_trim")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="SideLintel" type="MeshInstance3D" parent="DoorFrames" unique_id=1615994690]
+transform = Transform3D(0.12, 0, 0, 0, 0.1, 0, 0, 0, 1.62, 2.81, 3, 0)
+material_override = SubResource("StandardMaterial_trim")
+mesh = SubResource("BoxMesh_unit")
+
+[node name="InteriorLight" type="OmniLight3D" parent="." unique_id=1191838401]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 2.82, 0)
+light_color = Color(1, 0.9, 0.72, 1)
+light_energy = 0.72
+omni_range = 5.2
+
+[node name="Structure" type="StaticBody3D" parent="." unique_id=2146547232]
+
+[node name="Floor" type="CollisionShape3D" parent="Structure" unique_id=2104336523]
+position = Vector3(0, 0.375, 0)
+shape = SubResource("BoxShape_c_floor")
+
+[node name="Ceiling" type="CollisionShape3D" parent="Structure" unique_id=2037864659]
+position = Vector3(0, 3.43, 0)
+shape = SubResource("BoxShape_c_slab")
+
+[node name="Roof" type="CollisionShape3D" parent="Structure" unique_id=939021221]
+position = Vector3(0, 6.64, 0)
+shape = SubResource("BoxShape_c_slab")
+
+[node name="BackWall" type="CollisionShape3D" parent="Structure" unique_id=1873966301]
+position = Vector3(0, 3.52, -1.46)
+shape = SubResource("BoxShape_c_back")
+
+[node name="LeftWall" type="CollisionShape3D" parent="Structure" unique_id=59903825]
+position = Vector3(-2.67, 3.52, 0)
+shape = SubResource("BoxShape_c_left")
+
+[node name="RightWallRear" type="CollisionShape3D" parent="Structure" unique_id=1903293150]
+position = Vector3(2.67, 3.52, -1.085)
+shape = SubResource("BoxShape_c_right_segment")
+
+[node name="RightWallFront" type="CollisionShape3D" parent="Structure" unique_id=1111115042]
+position = Vector3(2.67, 3.52, 1.085)
+shape = SubResource("BoxShape_c_right_segment")
+
+[node name="RightDoorHeader" type="CollisionShape3D" parent="Structure" unique_id=1820909348]
+position = Vector3(2.67, 4.87, 0)
+shape = SubResource("BoxShape_c_right_header")
+
+[node name="FrontWallLeft" type="CollisionShape3D" parent="Structure" unique_id=1030787706]
+position = Vector3(-2.545, 3.52, 1.46)
+shape = SubResource("BoxShape_c_front_left")
+
+[node name="FrontWallMiddle" type="CollisionShape3D" parent="Structure" unique_id=1670157312]
+position = Vector3(-0.8, 3.52, 1.46)
+shape = SubResource("BoxShape_c_front_middle")
+
+[node name="FrontWallRight" type="CollisionShape3D" parent="Structure" unique_id=1511669807]
+position = Vector3(2.455, 3.52, 1.46)
+shape = SubResource("BoxShape_c_front_right")
+
+[node name="FrontUpperBand" type="CollisionShape3D" parent="Structure" unique_id=1817344634]
+position = Vector3(0, 4.87, 1.46)
+shape = SubResource("BoxShape_c_front_upper")
+
+[node name="GroundWindow" type="CollisionShape3D" parent="Structure" unique_id=1522001410]
+position = Vector3(0.91, 1.54, 1.49)
+shape = SubResource("BoxShape_c_window")
+
+[node name="NavigationEntries" type="Node3D" parent="." unique_id=89151312]
+
+[node name="FrontDoorOutside" type="Marker3D" parent="NavigationEntries" unique_id=2040252431]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0.43, 2.2)
+
+[node name="FrontDoorInside" type="Marker3D" parent="NavigationEntries" unique_id=838048737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0.43, 0.9)
+
+[node name="SideDoorOutside" type="Marker3D" parent="NavigationEntries" unique_id=1649223128]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.25, 0.43, 0)
+
+[node name="SideDoorInside" type="Marker3D" parent="NavigationEntries" unique_id=268775088]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.95, 0.43, 0)
+
+[node name="InteriorCenter" type="Marker3D" parent="NavigationEntries" unique_id=2105151222]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.43, 0)
+
+[editable path="Exterior"]
