@@ -1772,7 +1772,7 @@ func _build_legacy_online_panel() -> PanelContainer:
 	var join_row := HBoxContainer.new()
 	join_row.add_theme_constant_override("separation", 10)
 	column.add_child(join_row)
-	_online_ip_field = _make_line_edit("Lobby name (or 100.x address)", 64)
+	_online_ip_field = _make_line_edit("Lobby name or server:port", 128)
 	_online_ip_field.name = "JoinLobbyNameOrIp"
 	_online_ip_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	join_row.add_child(_online_ip_field)
@@ -1780,7 +1780,7 @@ func _build_legacy_online_panel() -> PanelContainer:
 	_online_join_button.name = "JoinLobby"
 	join_row.add_child(_online_join_button)
 
-	var direct_hint := _make_label("Use the host's lobby name. A direct Tailscale 100.x address remains available as fallback.", 13, "muted")
+	var direct_hint := _make_label("Use a lobby name, Tailscale address, or Edgegap hostname with its public port.", 13, "muted")
 	direct_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(direct_hint)
 
@@ -1799,7 +1799,7 @@ func _build_legacy_online_panel() -> PanelContainer:
 
 	_set_accessible_text(_online_host_lobby_field, "Host lobby name", "Enter the name other players will use to find this lobby")
 	_set_accessible_text(_online_host_button, "Host lobby", "Create an online lobby with the entered name")
-	_set_accessible_text(_online_ip_field, "Join lobby", "Enter a lobby name or direct Tailscale address")
+	_set_accessible_text(_online_ip_field, "Join lobby", "Enter a lobby name or direct server endpoint")
 	_set_accessible_text(_online_join_button, "Join lobby", "Connect to the entered lobby name or address")
 	_configure_tab_cycle([
 		_online_host_lobby_field, _online_host_button,
@@ -2544,10 +2544,13 @@ func _on_join_pressed() -> void:
 		NetworkManager.connection_failed.connect(_on_join_fail, CONNECT_ONE_SHOT)
 	if not NetworkManager.lobby_discovery_failed.is_connected(_on_lobby_discovery_fail):
 		NetworkManager.lobby_discovery_failed.connect(_on_lobby_discovery_fail, CONNECT_ONE_SHOT)
-	if lobby_or_address.begins_with("100.") or lobby_or_address.begins_with("127."):
+	var endpoint := NetworkManager.parse_direct_endpoint(lobby_or_address)
+	if not endpoint.is_empty():
 		_set_online_status("CONNECTING TO %s..." % lobby_or_address)
-		if not NetworkManager.join_game(lobby_or_address):
+		if not NetworkManager.join_game(str(endpoint["host"]), int(endpoint["port"])):
 			_set_online_status("Couldn't start the direct connection.", true)
+	elif lobby_or_address.contains(".") or lobby_or_address.contains(":"):
+		_set_online_status("Enter the server as hostname:port.", true)
 	else:
 		_set_online_status("SEARCHING TAILSCALE FOR '%s'..." % lobby_or_address)
 		if not NetworkManager.join_lobby_by_name(lobby_or_address):

@@ -30,7 +30,7 @@ func _is_online_view() -> bool:
 
 
 func _is_host_view() -> bool:
-	return (_capture_role == "pause_host") or (_capture_role != "pause_guest" and NetworkManager.is_host())
+	return (_capture_role == "pause_host") or (_capture_role != "pause_guest" and NetworkManager.can_manage_lobby())
 
 
 
@@ -191,7 +191,7 @@ func _leave_playpen() -> void:
 
 
 func _start_playpen_match() -> void:
-	if not NetworkManager.is_host() or NetworkManager._prelaunch_active \
+	if not NetworkManager.can_manage_lobby() or NetworkManager._prelaunch_active \
 			or NetworkManager.pending_map_path == "":
 		return
 	PauseManager.resume()
@@ -209,7 +209,7 @@ func _commit_exit(target_scene: String) -> void:
 	PauseManager.clear_escape_override()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if NetworkManager.is_online():
-		if target_scene == "res://game_setup.tscn" and NetworkManager.is_host():
+		if target_scene == "res://game_setup.tscn" and NetworkManager.can_manage_lobby():
 			NetworkManager.host_return_everyone_to_lobby()
 		else:
 			NetworkManager.leave_online_to_main_menu()

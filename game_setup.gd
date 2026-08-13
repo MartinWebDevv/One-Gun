@@ -123,7 +123,7 @@ func _setup_online_mode():
 	NetworkManager.match_config_received.connect(_on_net_config_synced)
 	NetworkManager.server_disconnected.connect(_on_net_host_left)
 	NetworkManager.prelaunch_countdown_changed.connect(_on_prelaunch_countdown_changed)
-	if NetworkManager.is_host():
+	if NetworkManager.can_manage_lobby():
 		_net_broadcast_config()   # seed clients with the starting config/map
 	else:
 		_apply_client_lock()
@@ -145,7 +145,7 @@ func _planned_actor_count() -> int:
 func _clamp_bot_count_to_capacity() -> void:
 	# Never let a stale preset or a splitscreen toggle create more actors than
 	# the lobby can render/start. Online clients only display host-owned state.
-	if _is_net() and not NetworkManager.is_host():
+	if _is_net() and not NetworkManager.can_manage_lobby():
 		return
 	var capacity := _max_online_bots()
 	if GameConfig.bot_configs.size() > capacity:
@@ -153,7 +153,7 @@ func _clamp_bot_count_to_capacity() -> void:
 
 
 func _on_online_lobby_changed() -> void:
-	if NetworkManager.is_host() and GameConfig.bot_count > _max_online_bots():
+	if NetworkManager.can_manage_lobby() and GameConfig.bot_count > _max_online_bots():
 		GameConfig.set_bot_count(_max_online_bots())
 		_net_broadcast_config()
 	_refresh_roster()
@@ -175,7 +175,7 @@ func _on_lobby_notice(message: String) -> void:
 
 
 func _net_broadcast_config():
-	if _is_net() and NetworkManager.is_host():
+	if _is_net() and NetworkManager.can_manage_lobby():
 		var sync_path := RANDOM_MAP_SENTINEL if map_select_mode == MapSelectMode.RANDOM \
 			else _resolve_map_scene_path()
 		NetworkManager.broadcast_match_config(GameConfig.snapshot_for_network(), sync_path)
@@ -365,7 +365,7 @@ func _build_left_cabinet() -> void:
 
 	_back_button = OneGunButton.new()
 	_back_button.variant = "navy"
-	_back_button.text = "LEAVE LOBBY" if _is_net() and not NetworkManager.is_host() else "BACK"
+	_back_button.text = "LEAVE LOBBY" if _is_net() and (NetworkManager.is_dedicated_session() or not NetworkManager.can_manage_lobby()) else "BACK"
 	var back_icon := OneGunIcon.new()
 	back_icon.kind = OneGunIcon.Kind.CHEVRON_LEFT
 	back_icon.icon_color = OneGunUI.color("text")
@@ -411,7 +411,7 @@ func _build_online_session_controls(column: VBoxContainer) -> void:
 	privacy_row.add_child(OneGunUI.make_label("PRIVACY", OneGunUI.TEXT_XS, "muted", true))
 	_privacy_dropdown = OneGunUI.make_dropdown(PackedStringArray(["PUBLIC", "PRIVATE"]))
 	_privacy_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_privacy_dropdown.disabled = not NetworkManager.is_host()
+	_privacy_dropdown.disabled = not NetworkManager.can_manage_lobby()
 	_privacy_dropdown.item_selected.connect(_on_privacy_selected)
 	privacy_row.add_child(_privacy_dropdown)
 	box.add_child(privacy_row)
@@ -429,7 +429,7 @@ func _refresh_online_session_ui() -> void:
 		_lobby_code_label.text = "CODE: %s" % (NetworkManager.lobby_share_code if NetworkManager.lobby_share_code != "" else "--")
 	if _privacy_dropdown != null:
 		_privacy_dropdown.select(1 if NetworkManager.lobby_privacy == "private" else 0)
-		_privacy_dropdown.disabled = not NetworkManager.is_host()
+		_privacy_dropdown.disabled = not NetworkManager.can_manage_lobby()
 
 
 func _copy_lobby_code() -> void:
@@ -440,7 +440,7 @@ func _copy_lobby_code() -> void:
 
 
 func _on_privacy_selected(index: int) -> void:
-	if not NetworkManager.is_host():
+	if not NetworkManager.can_manage_lobby():
 		_refresh_online_session_ui()
 		return
 	NetworkManager.set_lobby_privacy("private" if index == 1 else "public")
@@ -682,9 +682,9 @@ func _make_chevron_button(icon_kind: OneGunIcon.Kind) -> OneGunButton:
 
 
 func _build_play_action() -> void:
-	_play_button = CONFIRM_BUTTON.new() if _is_net() and NetworkManager.is_host() else OneGunButton.new()
+	_play_button = CONFIRM_BUTTON.new() if _is_net() and NetworkManager.can_manage_lobby() else OneGunButton.new()
 	_play_button.name = "PlayButton"
-	_play_button.set_meta("action_id", "start_match" if _is_net() and NetworkManager.is_host() else "ready")
+	_play_button.set_meta("action_id", "start_match" if _is_net() and NetworkManager.can_manage_lobby() else "ready")
 	_play_button.variant = "gold"
 	_play_button.text = "PLAY"
 	_play_button.font_size = 30
@@ -827,7 +827,7 @@ func _on_mode_dropdown_selected(item_index: int) -> void:
 
 
 func _on_map_card_selected(map_index: int) -> void:
-	if _is_net() and not NetworkManager.is_host():
+	if _is_net() and not NetworkManager.can_manage_lobby():
 		return
 	if map_index < 0 or map_index >= MAPS.size():
 		return
@@ -944,7 +944,7 @@ func _update_play_availability() -> void:
 	if _play_button == null:
 		return
 	if _is_net():
-		if NetworkManager.is_host():
+		if NetworkManager.can_manage_lobby():
 			_update_lobby_action()
 		else:
 			_play_button.disabled = false
@@ -993,13 +993,13 @@ func _refresh_roster() -> void:
 			var peer_name := str(NetworkManager.peers[id]["name"])
 			var is_me: bool = id == NetworkManager.local_id()
 			var ready_state := OneGunRosterRow.ReadyState.NONE
-			if id != 1:
+			if not NetworkManager.is_lobby_controller(id):
 				ready_state = OneGunRosterRow.ReadyState.READY if NetworkManager.is_peer_lobby_ready(id) else OneGunRosterRow.ReadyState.NOT_READY
-			row.set_human(peer_name, id == 1, is_me, ready_state,
+			row.set_human(peer_name, NetworkManager.is_lobby_controller(id), is_me, ready_state,
 				NetworkManager.peer_skin_id(id))
 			if GameConfig.teams_enabled:
 				var team_id := int(NetworkManager.peers[id].get("team_id", 0))
-				var can_edit_team := NetworkManager.is_host() or is_me
+				var can_edit_team := NetworkManager.can_manage_lobby() or is_me
 				row.add_team_chip(team_id, _is_team_uneven(team_id), not can_edit_team)
 				if can_edit_team:
 					var roster_actor_id := int(NetworkManager.peers[id].get("actor_id", -1))
@@ -1007,7 +1007,7 @@ func _refresh_roster() -> void:
 			if is_me:
 				row.enable_name_editing(_on_edit_online_name)
 				row.add_trailing(_make_edit_name_button(_on_edit_online_name))
-			if NetworkManager.is_host() and id != 1:
+			if NetworkManager.can_manage_lobby() and not NetworkManager.is_lobby_controller(id):
 				row.add_trailing(_make_kick_button(id, peer_name))
 			used += 1
 	else:
@@ -1046,7 +1046,7 @@ func _refresh_roster() -> void:
 		bot_row.set_bot("Bot %d" % (i + 1), difficulty, _is_net())
 		if GameConfig.teams_enabled:
 			var bot_team := int(GameConfig.bot_configs[i].get("team_id", 0))
-			var can_edit_bot_team := not _is_net() or NetworkManager.is_host()
+			var can_edit_bot_team := not _is_net() or NetworkManager.can_manage_lobby()
 			bot_row.add_team_chip(bot_team, _is_team_uneven(bot_team), not can_edit_bot_team)
 			if can_edit_bot_team:
 				bot_row.add_trailing(_make_team_dropdown(bot_team, _on_bot_team_selected.bind(i)))
@@ -1088,7 +1088,7 @@ func _make_team_dropdown(team_id: int, callback: Callable) -> OptionButton:
 
 
 func _on_online_roster_team_selected(value: int, actor_id: int) -> void:
-	if NetworkManager.is_host():
+	if NetworkManager.can_manage_lobby():
 		NetworkManager.set_actor_team(actor_id, value)
 	else:
 		NetworkManager.request_local_team(value)
@@ -1145,7 +1145,7 @@ func _on_settings_changed() -> void:
 	_clamp_bot_count_to_capacity()
 	_refresh_roster()
 	_update_map_info()
-	if _is_net() and NetworkManager.is_host():
+	if _is_net() and NetworkManager.can_manage_lobby():
 		NetworkManager.reset_lobby_readiness("Map or match rules changed — ready up again")
 	_net_broadcast_config()
 
@@ -1220,7 +1220,7 @@ func _open_settings_slideout(kind: int) -> void:
 	_settings_slideout.initial_tab = 4 if kind == LOBBY_SETTINGS_SLIDEOUT.Kind.BOT else 0
 	_settings_slideout.maximum_bots = _max_online_bots()
 	_settings_slideout.online_mode = _is_net()
-	_settings_slideout.read_only = _is_net() and not NetworkManager.is_host()
+	_settings_slideout.read_only = _is_net() and not NetworkManager.can_manage_lobby()
 	_settings_slideout.z_index = 15
 	_settings_slideout.applied.connect(_on_settings_slideout_applied)
 	_settings_slideout.closed.connect(_close_settings_slideout)
@@ -1744,20 +1744,25 @@ func _prompt_edit_name(current_name: String, on_confirmed: Callable):
 func _update_playpen_availability() -> void:
 	if _playpen_button == null:
 		return
+	if not NetworkManager.is_playpen_supported():
+		_playpen_button.disabled = true
+		_playpen_button.text = "THE PLAYPEN — LISTEN HOSTS ONLY"
+		_playpen_button.tooltip_text = "Dedicated-server Playpen support is intentionally deferred."
+		return
 	var host_open := NetworkManager.is_playpen_open()
 	_playpen_button.disabled = NetworkManager._prelaunch_active \
-		or (not NetworkManager.is_host() and not host_open)
+		or (not NetworkManager.can_manage_lobby() and not host_open)
 	_playpen_button.text = "ENTER THE PLAYPEN"
-	if not NetworkManager.is_host() and not host_open:
+	if not NetworkManager.can_manage_lobby() and not host_open:
 		_playpen_button.tooltip_text = "The host must open The Playpen first."
 	else:
 		_playpen_button.tooltip_text = "Practice with the lobby while waiting for the match."
 
 
 func _on_playpen_pressed() -> void:
-	if not _is_net() or NetworkManager.lobby_in_progress:
+	if not _is_net() or NetworkManager.lobby_in_progress or not NetworkManager.is_playpen_supported():
 		return
-	if not NetworkManager.is_host() and not NetworkManager.is_playpen_open():
+	if not NetworkManager.can_manage_lobby() and not NetworkManager.is_playpen_open():
 		_on_lobby_notice("The host must open The Playpen first.")
 		return
 	var dialog := ConfirmationDialog.new()
@@ -1803,7 +1808,7 @@ func _on_play_button_pressed():
 	if NetworkManager.lobby_in_progress and not NetworkManager.is_match_participant(NetworkManager.local_id()):
 		NetworkManager.request_spectate_current_match()
 		return
-	if NetworkManager.is_host():
+	if NetworkManager.can_manage_lobby():
 		if NetworkManager._prelaunch_active:
 			NetworkManager.cancel_prelaunch("Host cancelled the start countdown")
 			return
@@ -1819,7 +1824,7 @@ func _on_play_button_pressed():
 func _update_lobby_action() -> void:
 	if _play_button == null or not _is_net():
 		return
-	if NetworkManager.is_host():
+	if NetworkManager.can_manage_lobby():
 		var all_ready := NetworkManager.are_all_lobby_guests_ready()
 		if _play_button is OneGunConfirmButton:
 			(_play_button as OneGunConfirmButton).set_idle(
@@ -1859,15 +1864,15 @@ func _on_prelaunch_countdown_changed(active: bool, seconds: int) -> void:
 		if control != null:
 			control.disabled = active
 	for card in _map_cards:
-		card.disabled = active or (_is_net() and not NetworkManager.is_host())
+		card.disabled = active or (_is_net() and not NetworkManager.can_manage_lobby())
 	_refresh_one_of_us_preference_panel()
 	if not active:
-		if _is_net() and not NetworkManager.is_host():
+		if _is_net() and not NetworkManager.can_manage_lobby():
 			_apply_client_lock()
 		_update_lobby_action()
 		return
 	_reset_force_start_confirmation()
-	if NetworkManager.is_host():
+	if NetworkManager.can_manage_lobby():
 		_play_button.disabled = false
 		_play_button.text = "CANCEL — %d" % seconds
 		_play_button.variant = "red"
@@ -1900,7 +1905,7 @@ func _launch_match():
 		push_warning("GameSetup: cannot start; selected map is unavailable: %s" % map_path)
 		return
 	if _is_net():
-		if NetworkManager.is_host():
+		if NetworkManager.can_manage_lobby():
 			NetworkManager.begin_prelaunch(map_path)
 			return   # clients never launch directly
 	AudioManager.stop_music(0.8)

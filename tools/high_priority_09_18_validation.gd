@@ -86,6 +86,13 @@ func _validate_smoke_rules() -> void:
 func _validate_build_metadata() -> void:
 	_check(BuildInfo.GAME_VERSION == "0.0.4", "build metadata does not match the current release")
 	_check(BuildInfo.NETWORK_PROTOCOL > 0, "network protocol has no explicit version")
+	_check(BuildInfo.build_id() != "", "build identifier is empty")
+	_check(BuildInfo.compatibility_payload().get("build_id", "") == BuildInfo.build_id(),
+		"compatibility payload omits the build identifier")
+	_check(BuildInfo.summary().contains(BuildInfo.build_id()),
+		"server summary omits the build identifier")
+	_check(BuildInfo.footer_text().contains(BuildInfo.build_id()),
+		"client footer omits the build identifier")
 	_check(BuildInfo.compatibility_error(BuildInfo.compatibility_payload()) == "", "matching builds reject each other")
 	_check(BuildInfo.host_compatibility_error(BuildInfo.compatibility_payload()) == "", "host rejects a matching client build")
 	var mismatch := BuildInfo.compatibility_payload()
@@ -93,6 +100,10 @@ func _validate_build_metadata() -> void:
 	_check(BuildInfo.compatibility_error(mismatch) != "", "protocol mismatch is accepted")
 	var host_error := BuildInfo.host_compatibility_error(mismatch)
 	_check(host_error.contains("Host: %d" % BuildInfo.NETWORK_PROTOCOL), "host-side rejection swaps the host and client protocol labels")
+	var different_build := BuildInfo.compatibility_payload()
+	different_build["build_id"] = "dev-different"
+	_check(BuildInfo.compatibility_error(different_build) == "",
+		"commit build IDs are incorrectly treated as network incompatibility")
 	var notes := BuildInfo.load_latest_release()
 	_check(str(notes.get("version", "")) == BuildInfo.GAME_VERSION, "release notes version does not match the game")
 	var categories: Dictionary = notes.get("categories", {})

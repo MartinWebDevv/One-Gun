@@ -13,3 +13,5 @@ Godot/app_userdata/
 *.py[cod]
 *.blend1
 addons/terrain_3d/bin/~*
+/build/
+build_metadata.json

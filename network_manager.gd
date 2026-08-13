@@ -6,9 +6,9 @@ const BuildInfo = preload("res://build_info.gd")
 # ============================================================
 # NetworkManager — Autoload singleton (online multiplayer)
 #
-# High-level Godot MultiplayerAPI over ENet (UDP). Designed for a
-# Tailscale network: peers normally discover a host-chosen lobby name across
-# their tailnet; direct 100.x.x.x entry remains available as a fallback.
+# High-level Godot MultiplayerAPI over ENet (UDP).
+# Listen-host peers may discover a host-chosen lobby name across Tailscale;
+# direct ENet endpoints and dedicated servers do not require Tailscale.
 #
 # Transport-neutral online session coordinator. It owns ENet/Tailscale host
 # and join flow today, plus the roster, actor identity, compatibility gate,
@@ -51,8 +51,8 @@ var peers: Dictionary = {}
 var _provisional_peers: Dictionary = {}
 var _one_of_us_volunteers: Dictionary = {}
 var _next_human_actor_id := 2
-# peer_id -> bool. The host is always ready because its primary lobby action
-# is Start/Force Start; guests explicitly toggle their own state.
+# peer_id -> bool. The lobby controller is always ready because its primary
+# action is Start/Force Start; other players explicitly toggle their state.
 var lobby_ready: Dictionary = {}
 var pending_map_path: String = ""
 var pending_match_id := 0
@@ -73,6 +73,10 @@ var lobby_privacy := "public"
 var lobby_share_code := ""
 var lobby_max_players := MAX_PEERS
 var lobby_in_progress := false
+var lobby_controller_peer_id := 1
+var dedicated_session := false
+var _dedicated_server_process := false
+var server_build: Dictionary = {}
 var _discovery_responder: PacketPeerUDP = null
 var _discovery_attempt := 0
 var _host_port := DEFAULT_PORT
@@ -127,6 +131,10 @@ func _process(_delta: float) -> void:
 func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "",
 		options: Dictionary = {}) -> bool:
 	_reset_session(false)
+	dedicated_session = false
+	_dedicated_server_process = false
+	server_build = BuildInfo.compatibility_payload()
+	lobby_controller_peer_id = 1
 	lobby_privacy = str(options.get("privacy", "public")).to_lower()
 	if lobby_privacy not in ["public", "private"]:
 		lobby_privacy = "public"
@@ -165,6 +173,46 @@ func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "",
 	_net_log("hosting '%s' on UDP %d as '%s'" % [lobby_name, port, local_name()])
 	lobby_changed.emit()
 	return true
+
+
+func host_dedicated_game(port: int = DEFAULT_PORT, requested_lobby_name := "OneGun-Dev",
+		max_players: int = MAX_PEERS, initial_map_path := "") -> bool:
+	_reset_session(false)
+	dedicated_session = true
+	_dedicated_server_process = true
+	server_build = BuildInfo.compatibility_payload()
+	lobby_controller_peer_id = 0
+	lobby_privacy = "private"
+	lobby_max_players = clampi(max_players, MatchLimitsData.MIN_ONLINE_HUMANS, MAX_PEERS)
+	lobby_share_code = _generate_share_code()
+	lobby_in_progress = false
+	var peer := ENetMultiplayerPeer.new()
+	# A dedicated process does not consume a human roster slot, so all configured
+	# slots are available to remote clients.
+	var err := peer.create_server(port, lobby_max_players)
+	if err != OK:
+		push_error("[DEDICATED] ENet create_server failed on UDP %d (error %d)." % [port, err])
+		_reset_session(false)
+		return false
+	multiplayer.multiplayer_peer = peer
+	_online = true
+	_joining = false
+	_host_port = port
+	peers.clear()
+	_one_of_us_volunteers.clear()
+	_next_human_actor_id = 1
+	lobby_ready.clear()
+	lobby_name = _clean_lobby_name(requested_lobby_name)
+	if lobby_name == "":
+		lobby_name = "OneGun-Dev"
+	pending_map_path = initial_map_path
+	print("[DEDICATED] %s" % BuildInfo.summary())
+	print("[DEDICATED] Listening on UDP %d | max players %d | lobby '%s'" % [
+		port, lobby_max_players, lobby_name])
+	print("[DEDICATED] Initial map: %s" % pending_map_path)
+	lobby_changed.emit()
+	return true
+
 
 func join_lobby_by_name(requested_name: String) -> bool:
 	var cleaned := _clean_lobby_name(requested_name)
@@ -362,6 +410,7 @@ func _parse_discovery_response(response_text: String, response_ip: String,
 	var build_payload := {
 		"game_version": str(payload.get("game_version", payload.get("version", "unknown"))),
 		"protocol": int(payload.get("protocol", -1)),
+		"build_id": str(payload.get("build_id", "unknown")),
 	}
 	var incompatibility := BuildInfo.compatibility_error(build_payload)
 	var joinability := "incompatible" if incompatibility != "" else ("full" if current_players >= maximum_players else ("in_progress" if in_progress else "joinable"))
@@ -377,6 +426,7 @@ func _parse_discovery_response(response_text: String, response_ip: String,
 		"joinability": joinability,
 		"game_version": build_payload["game_version"],
 		"protocol": build_payload["protocol"],
+		"build_id": build_payload["build_id"],
 		"compatibility_error": incompatibility,
 	}
 
@@ -394,6 +444,7 @@ func _discovery_payload(nonce: String) -> Dictionary:
 		"version": BuildInfo.GAME_VERSION,
 		"game_version": BuildInfo.GAME_VERSION,
 		"protocol": BuildInfo.NETWORK_PROTOCOL,
+		"build_id": BuildInfo.build_id(),
 	}
 
 func _start_discovery_responder() -> void:
@@ -457,6 +508,39 @@ func _is_tailscale_ipv4(address: String) -> bool:
 	var second := int(parts[1])
 	return second >= 64 and second <= 127
 
+func parse_direct_endpoint(value: String) -> Dictionary:
+	var endpoint := value.strip_edges()
+	if endpoint == "":
+		return {}
+	if endpoint.begins_with("100.") or endpoint.begins_with("127."):
+		if endpoint.is_valid_ip_address():
+			return {"host": endpoint, "port": DEFAULT_PORT}
+		return {}
+	var separator := endpoint.rfind(":")
+	if separator <= 0 or endpoint.find(":") != separator:
+		return {}
+	var host := endpoint.substr(0, separator).strip_edges()
+	var port_text := endpoint.substr(separator + 1).strip_edges()
+	if not _is_valid_direct_host(host) or not port_text.is_valid_int():
+		return {}
+	var parsed_port := int(port_text)
+	if parsed_port < 1 or parsed_port > 65535:
+		return {}
+	return {"host": host, "port": parsed_port}
+
+
+func _is_valid_direct_host(host: String) -> bool:
+	if host.is_valid_ip_address():
+		return true
+	if host.length() > 253 or not host.contains(".") \
+			or host.begins_with(".") or host.ends_with("."):
+		return false
+	for character in host:
+		if not character in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-":
+			return false
+	return true
+
+
 func join_game(ip: String, port: int = DEFAULT_PORT) -> bool:
 	_reset_session(false)
 	var peer := ENetMultiplayerPeer.new()
@@ -480,6 +564,8 @@ func disconnect_net() -> void:
 
 func host_return_everyone_to_lobby() -> void:
 	if not is_host():
+		if can_manage_lobby():
+			_request_controller_return_to_lobby.rpc_id(1)
 		return
 	for peer_id in peers:
 		peers[peer_id]["role"] = "lobby"
@@ -487,13 +573,55 @@ func host_return_everyone_to_lobby() -> void:
 	match_load_status.clear()
 	_match_load_watch_generation += 1
 	reset_lobby_readiness("Returned to lobby — ready up again")
+	_return_everyone_to_lobby_after_despawn()
+
+
+func _return_everyone_to_lobby_after_despawn() -> void:
+	# Hand client-owned movement synchronizers back to the server before actors
+	# are removed. Otherwise a final client delta can arrive after the matching
+	# NetSync node has been despawned and produce stale replication-cache errors.
+	_net_suspend_match_replication.rpc()
+	await get_tree().create_timer(0.15).timeout
+	# Let MultiplayerSpawner send valid despawns while every peer still has
+	# the match scene and its replication cache. The lobby-change RPC follows
+	# on the next frame, after queued actors have left the tree.
+	var scene := get_tree().current_scene
+	var net_players := scene.get_node_or_null("NetPlayers") if scene != null else null
+	if net_players != null:
+		for actor in net_players.get_children():
+			actor.free()
+		await get_tree().process_frame
 	_net_return_everyone_to_lobby.rpc()
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_suspend_match_replication() -> void:
+	var scene := get_tree().current_scene
+	var net_players := scene.get_node_or_null("NetPlayers") if scene != null else null
+	if net_players == null:
+		return
+	for actor in net_players.get_children():
+		var sync := actor.get_node_or_null("NetSync") as MultiplayerSynchronizer
+		if sync == null or not sync.is_multiplayer_authority():
+			continue
+		for peer_id in multiplayer.get_peers():
+			sync.set_visibility_for(int(peer_id), false)
+			sync.update_visibility(int(peer_id))
+
+
+@rpc("any_peer", "reliable")
+func _request_controller_return_to_lobby() -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		host_return_everyone_to_lobby()
 
 @rpc("authority", "reliable", "call_local")
 func _net_return_everyone_to_lobby() -> void:
 	lobby_in_progress = false
-	local_match_role = "lobby"
+	local_match_role = "server" if is_dedicated_server() else "lobby"
 	set_accepting_new_peers(true)
+	if is_dedicated_server():
+		get_tree().change_scene_to_file("res://app_bootstrap.tscn")
+		return
 	PauseManager.reset_pause_state()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_music(0.5)
@@ -559,6 +687,10 @@ func _reset_session(emit_change: bool) -> void:
 	lobby_share_code = ""
 	lobby_max_players = MAX_PEERS
 	lobby_in_progress = false
+	lobby_controller_peer_id = 1
+	dedicated_session = false
+	_dedicated_server_process = false
+	server_build.clear()
 	_host_port = DEFAULT_PORT
 	if _discovery_responder != null:
 		_discovery_responder.close()
@@ -575,7 +707,7 @@ func _join_timeout(attempt: int) -> void:
 	connection_failed.emit()
 
 func _net_log(message: String) -> void:
-	if OS.is_debug_build():
+	if OS.is_debug_build() or _dedicated_server_process:
 		print("[ONLINE %d] %s" % [Time.get_ticks_msec(), message])
 
 # ------------------------------------------------------------
@@ -587,6 +719,46 @@ func is_online() -> bool:
 
 func is_host() -> bool:
 	return is_online() and multiplayer.is_server()
+
+
+func is_dedicated_server() -> bool:
+	return _dedicated_server_process
+
+
+func is_dedicated_session() -> bool:
+	return dedicated_session
+
+
+func listening_port() -> int:
+	return _host_port
+
+
+func connected_server_build_id() -> String:
+	return BuildInfo.payload_build_id(server_build) if not server_build.is_empty() else ""
+
+
+func is_lobby_controller(peer_id: int) -> bool:
+	if not dedicated_session:
+		return peer_id == 1
+	return lobby_controller_peer_id > 0 and peer_id == lobby_controller_peer_id
+
+
+func can_manage_lobby() -> bool:
+	if not is_online():
+		return false
+	if not dedicated_session:
+		return is_host()
+	return not _dedicated_server_process and is_lobby_controller(local_id())
+
+
+func is_playpen_supported() -> bool:
+	return not dedicated_session
+
+
+func _is_remote_lobby_controller() -> bool:
+	return dedicated_session \
+		and lobby_controller_peer_id > 0 \
+		and multiplayer.get_remote_sender_id() == lobby_controller_peer_id
 
 
 func set_one_of_us_volunteer(active: bool) -> void:
@@ -722,7 +894,12 @@ func is_match_participant(peer_id: int) -> bool:
 
 
 func set_actor_team(actor_id: int, team_id: int) -> bool:
-	if not is_host() or lobby_in_progress:
+	if not is_host():
+		if can_manage_lobby() and not lobby_in_progress:
+			_request_controller_actor_team.rpc_id(1, actor_id, team_id)
+			return true
+		return false
+	if lobby_in_progress:
 		return false
 	for peer_id in peers:
 		if int(peers[peer_id].get("actor_id", -1)) == actor_id:
@@ -730,6 +907,12 @@ func set_actor_team(actor_id: int, team_id: int) -> bool:
 			reset_lobby_readiness("Team assignments changed — ready up again")
 			return true
 	return false
+
+
+@rpc("any_peer", "reliable")
+func _request_controller_actor_team(actor_id: int, team_id: int) -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		set_actor_team(actor_id, team_id)
 
 
 func request_local_team(team_id: int) -> void:
@@ -773,7 +956,7 @@ func is_playpen_open() -> bool:
 
 
 func request_enter_playpen(ready_choice: bool) -> void:
-	if not is_online() or lobby_in_progress or _prelaunch_active:
+	if not is_online() or dedicated_session or lobby_in_progress or _prelaunch_active:
 		return
 	var peer_id := local_id()
 	lobby_ready[peer_id] = ready_choice if peer_id != 1 else true
@@ -796,7 +979,7 @@ func request_enter_playpen(ready_choice: bool) -> void:
 
 @rpc("any_peer", "reliable")
 func _request_enter_playpen(ready_choice: bool) -> void:
-	if not multiplayer.is_server() or lobby_in_progress:
+	if not multiplayer.is_server() or dedicated_session or lobby_in_progress:
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if not peers.has(sender):
@@ -914,7 +1097,7 @@ func _lobby_notice_target(message: String) -> void:
 
 func is_peer_lobby_ready(peer_id: int) -> bool:
 	# The host's start controls replace a separate Ready Up action.
-	return peer_id == 1 or bool(lobby_ready.get(peer_id, false))
+	return is_lobby_controller(peer_id) or bool(lobby_ready.get(peer_id, false))
 
 
 func are_all_lobby_guests_ready() -> bool:
@@ -924,13 +1107,13 @@ func are_all_lobby_guests_ready() -> bool:
 		if str(peers[peer_id].get("role", "lobby")) \
 				not in ["lobby", "playpen", "playpen_loading", "playpen_hosting"]:
 			continue
-		if int(peer_id) != 1 and not is_peer_lobby_ready(int(peer_id)):
+		if not is_lobby_controller(int(peer_id)) and not is_peer_lobby_ready(int(peer_id)):
 			return false
 	return true
 
 
 func set_local_lobby_ready(ready: bool) -> void:
-	if not is_online() or local_id() == 1 or lobby_in_progress or _prelaunch_active:
+	if not is_online() or is_lobby_controller(local_id()) or lobby_in_progress or _prelaunch_active:
 		return
 	var id := local_id()
 	# Optimistic local feedback is reconciled by the host's authoritative
@@ -945,7 +1128,7 @@ func _set_lobby_ready(ready: bool) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
-	if sender == 1 or not peers.has(sender):
+	if is_lobby_controller(sender) or not peers.has(sender):
 		return
 	lobby_ready[sender] = ready
 	lobby_readiness_changed.emit()
@@ -954,11 +1137,14 @@ func _set_lobby_ready(ready: bool) -> void:
 
 func reset_lobby_readiness(reason: String = "Lobby settings changed") -> void:
 	if not is_host():
+		if can_manage_lobby():
+			_request_reset_lobby_readiness.rpc_id(1, reason)
 		return
 	lobby_ready.clear()
-	lobby_ready[1] = true
+	if lobby_controller_peer_id > 0:
+		lobby_ready[lobby_controller_peer_id] = true
 	for peer_id in peers:
-		if int(peer_id) != 1 and str(peers[peer_id].get("role", "lobby")) \
+		if not is_lobby_controller(int(peer_id)) and str(peers[peer_id].get("role", "lobby")) \
 				in ["lobby", "playpen", "playpen_loading", "playpen_hosting"]:
 			lobby_ready[peer_id] = false
 	lobby_readiness_changed.emit()
@@ -967,11 +1153,20 @@ func reset_lobby_readiness(reason: String = "Lobby settings changed") -> void:
 	_broadcast_lobby_state(reason)
 
 
+@rpc("any_peer", "reliable")
+func _request_reset_lobby_readiness(reason: String) -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		reset_lobby_readiness(reason.substr(0, 96))
+
+
 func set_lobby_privacy(privacy: String) -> bool:
-	if not is_host():
-		return false
 	var cleaned := privacy.to_lower()
 	if cleaned not in ["public", "private"]:
+		return false
+	if not is_host():
+		if can_manage_lobby():
+			_request_controller_privacy.rpc_id(1, cleaned)
+			return true
 		return false
 	if cleaned == lobby_privacy:
 		return true
@@ -981,14 +1176,31 @@ func set_lobby_privacy(privacy: String) -> bool:
 	return true
 
 
+@rpc("any_peer", "reliable")
+func _request_controller_privacy(privacy: String) -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		set_lobby_privacy(privacy)
+
+
 func kick_peer(peer_id: int) -> bool:
-	if not is_host() or peer_id == 1 or not peers.has(peer_id):
+	if not is_host():
+		if can_manage_lobby() and peer_id != lobby_controller_peer_id:
+			_request_controller_kick.rpc_id(1, peer_id)
+			return true
+		return false
+	if peer_id == lobby_controller_peer_id or not peers.has(peer_id):
 		return false
 	var peer = multiplayer.multiplayer_peer
 	if not peer is ENetMultiplayerPeer:
 		return false
 	peer.disconnect_peer(peer_id)
 	return true
+
+
+@rpc("any_peer", "reliable")
+func _request_controller_kick(peer_id: int) -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		kick_peer(peer_id)
 
 # Find the in-map human controlled by a transport peer. Gameplay systems that
 # already have a match actor ID must call find_actor() instead.
@@ -1058,6 +1270,8 @@ func _on_peer_disconnected(id: int) -> void:
 	if peers.has(id):
 		peers.erase(id)
 		lobby_ready.erase(id)
+		if dedicated_session and id == lobby_controller_peer_id:
+			_assign_dedicated_lobby_controller()
 		_playpen_ready_peers.erase(id)
 		match_participant_peers.erase(id)
 		match_load_status.erase(id)
@@ -1067,6 +1281,17 @@ func _on_peer_disconnected(id: int) -> void:
 		if multiplayer.is_server():
 			_broadcast_lobby_state()
 	match_readiness_changed.emit()
+
+func _assign_dedicated_lobby_controller() -> void:
+	lobby_controller_peer_id = 0
+	var candidates := peer_ids_sorted()
+	if candidates.is_empty():
+		print("[DEDICATED] Lobby has no controller; waiting for a player.")
+		return
+	lobby_controller_peer_id = int(candidates[0])
+	lobby_ready[lobby_controller_peer_id] = true
+	print("[DEDICATED] Peer %d became lobby controller." % lobby_controller_peer_id)
+
 
 func _on_connected_to_server() -> void:
 	_net_log("connected to host as peer %d" % multiplayer.get_unique_id())
@@ -1131,6 +1356,11 @@ func _register_client_hello(
 		_reject_provisional_peer.rpc_id(sender, error)
 		_disconnect_rejected_peer(sender)
 		return
+	_net_log("peer %d admitted | client build %s" % [
+		sender, BuildInfo.payload_build_id(compatibility)])
+	if dedicated_session and lobby_controller_peer_id <= 0:
+		lobby_controller_peer_id = sender
+		print("[DEDICATED] Peer %d became lobby controller." % sender)
 	var cleaned := pname.strip_edges().substr(0, 24)
 	if cleaned == "":
 		cleaned = "Player"
@@ -1145,7 +1375,7 @@ func _register_client_hello(
 	_one_of_us_volunteers[sender] = false
 	_next_human_actor_id += 1
 	_provisional_peers.erase(sender)
-	lobby_ready[sender] = false
+	lobby_ready[sender] = is_lobby_controller(sender)
 	if _prelaunch_active:
 		cancel_prelaunch("Roster changed — start countdown cancelled")
 	lobby_changed.emit()
@@ -1226,6 +1456,11 @@ func _send_roster(roster: Dictionary, session_name: String = "",
 	if session_name != "":
 		lobby_name = session_name
 	if not metadata.is_empty():
+		var advertised_build = metadata.get("server_build", {})
+		if advertised_build is Dictionary:
+			server_build = advertised_build.duplicate(true)
+		dedicated_session = bool(metadata.get("dedicated", dedicated_session))
+		lobby_controller_peer_id = int(metadata.get("controller_peer_id", lobby_controller_peer_id))
 		lobby_privacy = str(metadata.get("privacy", lobby_privacy))
 		lobby_share_code = str(metadata.get("share_code", lobby_share_code))
 		lobby_max_players = clampi(int(metadata.get("max_players", lobby_max_players)),
@@ -1249,6 +1484,12 @@ func _send_roster(roster: Dictionary, session_name: String = "",
 # peers and waiting-room peers must remain invisible until they have loaded the
 # map and completed the spectator-ready handshake.
 func is_gameplay_replication_visible_to_peer(peer_id: int) -> bool:
+	# Client-owned movement synchronizers must always replicate back to peer 1,
+	# the authoritative server. Dedicated servers are intentionally absent from
+	# the player roster, so applying roster visibility to peer 1 leaves the
+	# server with the actor's spawn position and rejects valid combat requests.
+	if peer_id == 1:
+		return true
 	if not lobby_in_progress:
 		if local_match_role in ["playpen", "playpen_loading", "playpen_hosting"]:
 			return peers.has(peer_id) \
@@ -1261,8 +1502,11 @@ func is_gameplay_replication_visible_to_peer(peer_id: int) -> bool:
 
 func active_match_peer_ids() -> Array:
 	var result: Array = []
+	var connected_peer_ids := multiplayer.get_peers()
 	for peer_key in peers:
 		var peer_id := int(peer_key)
+		if not connected_peer_ids.has(peer_id):
+			continue
 		if not lobby_in_progress and local_match_role in ["playpen", "playpen_loading", "playpen_hosting"]:
 			if str(peers[peer_id].get("role", "lobby")) == "playpen":
 				result.append(peer_id)
@@ -1318,16 +1562,19 @@ func _refresh_gameplay_replication_visibility(peer_id: int = 0) -> void:
 
 func _lobby_metadata() -> Dictionary:
 	return {
+		"dedicated": dedicated_session,
+		"controller_peer_id": lobby_controller_peer_id,
 		"privacy": lobby_privacy,
 		"share_code": lobby_share_code,
 		"max_players": lobby_max_players,
 		"in_progress": lobby_in_progress,
 		"participants": match_participant_peers.duplicate(),
+		"server_build": BuildInfo.compatibility_payload(),
 	}
 
 
 func _broadcast_lobby_state(notice := "") -> void:
-	if not is_host():
+	if not is_host() or multiplayer.get_peers().is_empty():
 		return
 	_send_roster.rpc(peers, lobby_name, lobby_ready, _lobby_metadata(), notice)
 
@@ -1343,6 +1590,18 @@ func _send_current_match_config(peer_id: int) -> void:
 
 func broadcast_match_config(config: Dictionary, map_path: String) -> void:
 	if not is_host():
+		if can_manage_lobby() and not lobby_in_progress:
+			_request_controller_match_config.rpc_id(1, config, map_path)
+		return
+	pending_map_path = map_path
+	_apply_match_config.rpc(config, map_path)
+
+
+@rpc("any_peer", "reliable")
+func _request_controller_match_config(config: Dictionary, map_path: String) -> void:
+	if not multiplayer.is_server() or not _is_remote_lobby_controller() or lobby_in_progress:
+		return
+	if map_path != "__random_map_pending__" and not ResourceLoader.exists(map_path):
 		return
 	pending_map_path = map_path
 	_apply_match_config.rpc(config, map_path)
@@ -1358,11 +1617,21 @@ func _apply_match_config(config: Dictionary, map_path: String) -> void:
 # ------------------------------------------------------------
 
 func begin_prelaunch(map_path: String) -> void:
-	if not is_host() or _prelaunch_active or lobby_in_progress:
+	if not is_host():
+		if can_manage_lobby() and not _prelaunch_active and not lobby_in_progress:
+			_request_controller_begin_prelaunch.rpc_id(1, map_path)
+		return
+	if _prelaunch_active or lobby_in_progress or not ResourceLoader.exists(map_path):
 		return
 	_prelaunch_active = true
 	_prelaunch_generation += 1
 	_run_prelaunch(map_path, _prelaunch_generation)
+
+
+@rpc("any_peer", "reliable")
+func _request_controller_begin_prelaunch(map_path: String) -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		begin_prelaunch(map_path)
 
 
 func _run_prelaunch(map_path: String, generation: int) -> void:
@@ -1380,11 +1649,21 @@ func _run_prelaunch(map_path: String, generation: int) -> void:
 
 
 func cancel_prelaunch(reason := "Start countdown cancelled") -> void:
-	if not is_host() or not _prelaunch_active:
+	if not is_host():
+		if can_manage_lobby() and _prelaunch_active:
+			_request_controller_cancel_prelaunch.rpc_id(1, reason)
+		return
+	if not _prelaunch_active:
 		return
 	_prelaunch_active = false
 	_prelaunch_generation += 1
 	_net_prelaunch_state.rpc(false, 0, reason)
+
+
+@rpc("any_peer", "reliable")
+func _request_controller_cancel_prelaunch(reason: String) -> void:
+	if multiplayer.is_server() and _is_remote_lobby_controller():
+		cancel_prelaunch(reason.substr(0, 96))
 
 
 @rpc("authority", "reliable", "call_local")
@@ -1408,7 +1687,7 @@ func start_game(map_path: String) -> void:
 	for peer_id in match_participant_peers:
 		peers[peer_id]["role"] = "participant"
 		match_load_status[peer_id] = {"state": "loading", "attempt": 1, "reason": ""}
-	local_match_role = "participant"
+	local_match_role = "server" if is_dedicated_server() else "participant"
 	_broadcast_lobby_state()
 	_match_load_watch_generation += 1
 	_watch_match_load(pending_match_id, _match_load_watch_generation)
@@ -1430,7 +1709,7 @@ func _start_game(map_path: String, match_id: int, spectator: bool = false) -> vo
 	pending_match_id = match_id
 	if not spectator:
 		_match_ready_peers.clear()
-	local_match_role = "spectator" if spectator else "participant"
+	local_match_role = "server" if is_dedicated_server() else ("spectator" if spectator else "participant")
 	set_accepting_new_peers(true)
 	var error := get_tree().change_scene_to_file(map_path)
 	if error != OK:

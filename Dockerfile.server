@@ -1,0 +1,29 @@
+FROM debian:bookworm-slim AS runtime-tools
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends tini \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM gcr.io/distroless/base-debian12:nonroot
+
+LABEL org.opencontainers.image.title="One Gun Dedicated Server"
+LABEL org.opencontainers.image.description="Headless ENet/UDP dedicated server for One Gun"
+
+WORKDIR /server
+
+COPY --from=runtime-tools /usr/bin/tini /usr/bin/tini
+COPY --chown=nonroot:nonroot --chmod=0555 build/server/OneGunServer.x86_64 ./OneGunServer.x86_64
+COPY --chown=nonroot:nonroot --chmod=0444 build/server/OneGunServer.pck ./OneGunServer.pck
+
+ENV HOME=/tmp/onegun
+ENV XDG_DATA_HOME=/tmp/onegun/data
+ENV XDG_CONFIG_HOME=/tmp/onegun/config
+ENV XDG_CACHE_HOME=/tmp/onegun/cache
+
+USER nonroot:nonroot
+
+EXPOSE 24545/udp
+STOPSIGNAL SIGTERM
+
+ENTRYPOINT ["/usr/bin/tini", "-e", "143", "--", "/server/OneGunServer.x86_64", "--headless", "--", "--server"]
+CMD ["--port=24545", "--max-players=10", "--lobby-name=OneGun-Dev"]

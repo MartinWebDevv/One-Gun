@@ -116,6 +116,21 @@ func _run() -> void:
 	await get_tree().process_frame
 	_check(overlay._page == overlay.Page.CODE and overlay._code_field != null,
 		"Join by Code stays inside the same cabinet")
+	var edgegap_endpoint: Dictionary = NetworkManager.parse_direct_endpoint(
+		"abc123.pr.edgegap.net:31504")
+	_check(edgegap_endpoint.get("host", "") == "abc123.pr.edgegap.net"
+		and int(edgegap_endpoint.get("port", 0)) == 31504,
+		"Edgegap hostname and external port parse as a direct ENet endpoint")
+	var local_endpoint: Dictionary = NetworkManager.parse_direct_endpoint("127.0.0.1")
+	_check(local_endpoint.get("host", "") == "127.0.0.1"
+		and int(local_endpoint.get("port", 0)) == NetworkManager.DEFAULT_PORT,
+		"plain loopback keeps the default local ENet port")
+	_check(NetworkManager.parse_direct_endpoint("abc123.pr.edgegap.net:70000").is_empty(),
+		"out-of-range external ports are rejected")
+	overlay._code_field.text = "abc123.pr.edgegap.net:31504"
+	await get_tree().process_frame
+	_check(overlay._code_field.text == "abc123.pr.edgegap.net:31504",
+		"join field preserves a pasted Edgegap endpoint")
 	overlay.open("")
 	await get_tree().process_frame
 	overlay._on_lobby_list_updated([])

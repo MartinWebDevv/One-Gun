@@ -1,0 +1,6 @@
+**
+!Dockerfile.server
+!build/
+!build/server/
+!build/server/OneGunServer.x86_64
+!build/server/OneGunServer.pck

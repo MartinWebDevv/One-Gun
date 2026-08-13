@@ -12,8 +12,9 @@ config_version=5
 
 config/name="OneGun"
 config/version="0.0.4"
-run/main_scene="uid://d1fwhxci8mk6h"
+run/main_scene="res://app_bootstrap.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
+run/flush_stdout_on_print=true
 config/icon="res://icon.svg"
 
 [autoload]

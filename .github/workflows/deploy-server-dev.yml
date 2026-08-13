@@ -1,0 +1,151 @@
+name: Deploy Development Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: one-gun-server-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  GODOT_VERSION: 4.7.1
+  GODOT_STATUS: stable
+  EDGEGAP_APP_NAME: onegun-dev
+  EDGEGAP_VERSION_NAME: dev
+
+jobs:
+  build-publish-register:
+    name: Build, publish, and register
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Prepare immutable build identity
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="${GITHUB_SHA:0:7}"
+          build_id="dev-${short_sha,,}"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="ghcr.io/$owner/one-gun-server"
+          docker_image="$owner/one-gun-server"
+          echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "docker_image=$docker_image" >> "$GITHUB_OUTPUT"
+          echo "BUILD_ID=$build_id" >> "$GITHUB_ENV"
+          echo "SERVER_IMAGE=$image" >> "$GITHUB_ENV"
+
+      - name: Stamp server build metadata
+        shell: pwsh
+        run: >-
+          ./tools/stamp_build.ps1
+          -BuildId $env:BUILD_ID
+          -Channel dev
+          -CommitSha $env:GITHUB_SHA
+
+      - name: Install Godot and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="${GODOT_VERSION}-${GODOT_STATUS}"
+          base_url="https://github.com/godotengine/godot/releases/download/$release"
+          editor_zip="Godot_v${release}_linux.x86_64.zip"
+          templates="Godot_v${release}_export_templates.tpz"
+
+          curl --fail --location --retry 3 --silent --show-error \
+            --output "$RUNNER_TEMP/$editor_zip" "$base_url/$editor_zip"
+          curl --fail --location --retry 3 --silent --show-error \
+            --output "$RUNNER_TEMP/$templates" "$base_url/$templates"
+
+          mkdir -p "$RUNNER_TEMP/godot" "$RUNNER_TEMP/export-templates"
+          unzip -q "$RUNNER_TEMP/$editor_zip" -d "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/$templates" -d "$RUNNER_TEMP/export-templates"
+
+          godot_binary="$RUNNER_TEMP/godot/Godot_v${release}_linux.x86_64"
+          chmod +x "$godot_binary"
+          sudo install -m 0755 "$godot_binary" /usr/local/bin/godot
+
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          mkdir -p "$template_dir"
+          cp -R "$RUNNER_TEMP/export-templates/templates/." "$template_dir/"
+
+          version="$(godot --headless --version)"
+          [[ "$version" == "${GODOT_VERSION}.${GODOT_STATUS}"* ]]
+
+      - name: Validate Godot project
+        shell: bash
+        run: godot --headless --path . --editor --quit
+
+      - name: Export Linux dedicated server
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/server
+          godot --headless --path . \
+            --export-release "One Gun - Linux Server" \
+            "build/server/OneGunServer.x86_64"
+          test -x build/server/OneGunServer.x86_64
+          test -s build/server/OneGunServer.pck
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push immutable server image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile.server
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.identity.outputs.image }}:${{ steps.identity.outputs.build_id }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.identity.outputs.build_id }}
+          cache-from: type=gha,scope=one-gun-server
+          cache-to: type=gha,mode=max,scope=one-gun-server
+
+      - name: Create or update Edgegap development version
+        shell: pwsh
+        env:
+          EDGEGAP_API_TOKEN: ${{ secrets.EDGEGAP_API_TOKEN }}
+          EDGEGAP_GHCR_TOKEN: ${{ secrets.EDGEGAP_GHCR_TOKEN }}
+          EDGEGAP_GHCR_USERNAME: ${{ github.repository_owner }}
+          EDGEGAP_DOCKER_IMAGE: ${{ steps.identity.outputs.docker_image }}
+        run: >-
+          ./tools/register_edgegap_version.ps1
+          -ApplicationName $env:EDGEGAP_APP_NAME
+          -VersionName $env:EDGEGAP_VERSION_NAME
+          -DockerImage $env:EDGEGAP_DOCKER_IMAGE
+          -DockerTag $env:BUILD_ID
+
+      - name: Write workflow summary
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "## One Gun development server"
+            echo ""
+            echo "- Build: $BUILD_ID"
+            echo "- Image: $SERVER_IMAGE:$BUILD_ID"
+            echo "- Edgegap: $EDGEGAP_APP_NAME / $EDGEGAP_VERSION_NAME"
+            echo "- Deployment restart: deferred to Phase 7"
+          } >> "$GITHUB_STEP_SUMMARY"

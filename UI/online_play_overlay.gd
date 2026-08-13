@@ -529,8 +529,8 @@ func _show_code() -> void:
 	_busy = false
 	_clear_page()
 	_build_header("JOIN BY CODE", "PRIVATE ENTRY", true)
-	_add_form_heading("LOBBY CODE", "Paste the host's 4–12 character code. Private hosts never appear in the public browser.")
-	_code_field = _make_line_edit("LOBBY CODE OR 100.x ADDRESS", 64)
+	_add_form_heading("LOBBY CODE", "Paste a private code, direct Tailscale address, or server hostname with its public port.")
+	_code_field = _make_line_edit("LOBBY CODE OR SERVER:PORT", 128)
 	_code_field.name = "JoinByCode"
 	_code_field.text_changed.connect(_normalize_join_value)
 	_page_root.add_child(_code_field)
@@ -568,7 +568,7 @@ func _show_code() -> void:
 
 
 func _normalize_join_value(value: String) -> void:
-	if value.begins_with("100.") or value.begins_with("127."):
+	if value.contains(".") or value.contains(":"):
 		return
 	var cleaned := _clean_code(value)
 	if cleaned != value:
@@ -581,15 +581,22 @@ func _join_by_code() -> void:
 		return
 	_code_error.clear()
 	var value := _code_field.text.strip_edges()
-	if value.begins_with("100.") or value.begins_with("127."):
+	var endpoint := NetworkManager.parse_direct_endpoint(value)
+	if not endpoint.is_empty():
 		_busy = true
-		if not NetworkManager.join_game(value):
+		_code_field.editable = false
+		if not NetworkManager.join_game(str(endpoint["host"]), int(endpoint["port"])):
 			_busy = false
+			_code_field.editable = true
 			_code_error.show_error("The direct connection could not start.")
+		return
+	if value.contains(".") or value.contains(":"):
+		_code_error.show_error("Enter the server as hostname:port, for example server.pr.edgegap.net:31504.")
+		_code_field.grab_focus()
 		return
 	var code := _clean_code(value)
 	if code.length() < 4:
-		_code_error.show_error("Enter a 4–12 character lobby code or a direct 100.x address.")
+		_code_error.show_error("Enter a 4–12 character lobby code or a direct server endpoint.")
 		_code_field.grab_focus()
 		return
 	_busy = true

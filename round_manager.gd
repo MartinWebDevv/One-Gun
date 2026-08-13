@@ -139,17 +139,23 @@ func _setup_online_freeroam() -> void:
 	_player_spawner.spawn_path = NodePath("../NetPlayers")
 	_player_spawner.spawn_function = Callable(self, "_net_spawn_player")
 	root.add_child(_player_spawner)
-	_build_online_hud(root)
+	# Scene children exit in reverse order. Keep NetPlayers after the spawner so
+	# tracked actors emit tree_exiting and untrack themselves before the spawner
+	# performs its own exit cleanup during a match-to-lobby scene change.
+	root.move_child(_player_spawner, net_players.get_index())
+	if not NetworkManager.is_dedicated_server():
+		_build_online_hud(root)
 	if not NetworkManager.server_disconnected.is_connected(_on_online_host_left):
 		NetworkManager.server_disconnected.connect(_on_online_host_left)
 	if NetworkManager.local_match_role == "spectator":
 		_setup_late_online_spectator(root)
 		return
-	var load_overlay := preload("res://online_load_overlay.gd").new()
-	load_overlay.name = "OnlineLoadOverlay"
-	root.add_child(load_overlay)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	NetworkManager.report_match_scene_ready()
+	if not NetworkManager.is_dedicated_server():
+		var load_overlay := preload("res://online_load_overlay.gd").new()
+		load_overlay.name = "OnlineLoadOverlay"
+		root.add_child(load_overlay)
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		NetworkManager.report_match_scene_ready()
 	if NetworkManager.is_host():
 		# Wait for every connected peer to build the identical spawner path.
 		# A readiness signal also fires on disconnect, so setup cannot remain
@@ -1841,6 +1847,9 @@ func _net_play_online_victory(actor_id: int) -> void:
 @rpc("authority", "reliable", "call_local")
 func _net_return_online_lobby() -> void:
 	NetworkManager.set_accepting_new_peers(true)
+	if NetworkManager.is_dedicated_server():
+		get_tree().change_scene_to_file("res://app_bootstrap.tscn")
+		return
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_music(0.5)
 	get_tree().change_scene_to_file("res://game_setup.tscn")

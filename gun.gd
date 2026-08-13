@@ -156,16 +156,25 @@ func _net_request_pickup(epoch: int) -> void:
 	_server_try_pickup(NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), epoch)
 
 func _server_try_pickup(sender_id: int, epoch: int) -> void:
-	if not multiplayer.is_server() or overtime_disabled or is_held:
+	if not multiplayer.is_server():
+		return
+	if overtime_disabled or is_held:
+		print("[ONLINE] gun pickup rejected for actor %d: unavailable" % sender_id)
 		return
 	var rm = _online_round_manager()
 	if rm == null or not rm.can_accept_online_combat(epoch):
+		print("[ONLINE] gun pickup rejected for actor %d: combat/epoch not active (request %d)" \
+			% [sender_id, epoch])
 		return
 	var player = NetworkManager.find_actor(sender_id)
 	if player == null or player.get("is_eliminated"):
+		print("[ONLINE] gun pickup rejected for actor %d: actor unavailable" % sender_id)
 		return
 	var max_distance := GameConfig.REACH_POWERUP_DISTANCE if player.has_method("has_active_reach") and player.has_active_reach() else ONLINE_PICKUP_MAX_DISTANCE
-	if player.global_position.distance_to(global_position) > max_distance:
+	var pickup_distance: float = player.global_position.distance_to(global_position)
+	if pickup_distance > max_distance:
+		print("[ONLINE] gun pickup rejected for actor %d: distance %.2f > %.2f" \
+			% [sender_id, pickup_distance, max_distance])
 		return
 	if max_distance > ONLINE_PICKUP_MAX_DISTANCE and not VisibilityRules.has_visual_contact(player, self):
 		return
