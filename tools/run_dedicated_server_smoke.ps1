@@ -61,6 +61,28 @@ if ($combined["controller"] -notmatch "DEDICATED_SERVER_PASS controller") { exit
 if ($combined["guest"] -notmatch "DEDICATED_SERVER_PASS guest") { exit 1 }
 if ($combined["controller"] -notmatch "DEDICATED_RETURN_PASS controller") { exit 1 }
 if ($combined["guest"] -notmatch "DEDICATED_RETURN_PASS guest") { exit 1 }
+foreach ($role in @("controller", "guest")) {
+    foreach ($marker in @(
+        "DEDICATED_INPUT_PICKUP_PASS",
+        "DEDICATED_INPUT_FIRE_PASS",
+        "DEDICATED_INPUT_DROP_PASS",
+        "DEDICATED_MELEE_PICKUP_PASS",
+        "DEDICATED_MELEE_SWING_PASS",
+        "DEDICATED_MELEE_DROP_PASS",
+        "DEDICATED_ITEM_PICKUP_PASS",
+        "DEDICATED_ITEM_DROP_PASS",
+        "DEDICATED_ITEM_THROW_PASS"
+    )) {
+        if ($combined[$role] -notmatch "$marker $role") { exit 1 }
+    }
+}
+foreach ($request in @(
+    "gun pickup", "gun fire", "gun drop",
+    "melee pickup", "melee swing", "melee drop",
+    "item pickup", "item drop", "item throw"
+)) {
+    if ($combined["server"] -notmatch "\[DEDICATED ACTION\] $request requested") { exit 1 }
+}
 if ($combined["server"] -match "Attempt to disconnect a nonexistent connection") { exit 1 }
 if (($combined.Values -join "`n") -match "Failed to get cached node|Node not found: .*NetSync|Ignoring sync data from non-authority or for missing node") { exit 1 }
 if ($combined["controller"] -match "on_despawn_receive") { exit 1 }

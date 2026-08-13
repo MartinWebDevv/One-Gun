@@ -236,6 +236,8 @@ func stop_ambient():
 # ============================================================
 
 func play_sfx(key: String, pitch_scale: float = 1.0, volume_scale: float = 1.0):
+	if NetworkManager.is_dedicated_server():
+		return
 	if not SFX_PATHS.has(key):
 		push_warning("AudioManager: no sfx key '%s'" % key)
 		return

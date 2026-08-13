@@ -291,6 +291,88 @@ func can_accept_online_combat(epoch: int) -> bool:
 		and epoch == online_round_epoch
 	)
 
+func _online_loose_gun():
+	var guns := get_tree().get_nodes_in_group("gun")
+	guns.sort_custom(func(a, b): return str(a.get_path()) < str(b.get_path()))
+	for gun in guns:
+		if not bool(gun.get("personal_mode_gun")) and not bool(gun.get("is_held")) \
+				and not bool(gun.get("overtime_disabled")) and bool(gun.get("visible")):
+			return gun
+	return null
+
+
+func _online_gun_for_actor(actor_id: int):
+	for gun in get_tree().get_nodes_in_group("gun"):
+		if not bool(gun.get("is_held")):
+			continue
+		var holder = gun.get("player_ref")
+		if holder != null and int(holder.get("actor_id")) == actor_id:
+			return gun
+	return null
+
+
+# Gun nodes move between the map and a holder's hand. Route requests through
+# this stable RoundManager path so dedicated and client scene-tree differences
+# cannot invalidate RPC delivery after a pickup.
+func request_online_gun_action(action: String, epoch: int, direction: Vector3 = Vector3.ZERO) -> void:
+	if NetworkManager.is_host():
+		_server_route_online_gun_action(NetworkManager.local_actor_id(), action, epoch, direction)
+	else:
+		_net_request_online_gun_action.rpc_id(1, action, epoch, direction)
+
+
+@rpc("any_peer", "reliable")
+func _net_request_online_gun_action(action: String, epoch: int, direction: Vector3) -> void:
+	_server_route_online_gun_action(
+		NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()),
+		action, epoch, direction)
+
+
+func _server_route_online_gun_action(sender_id: int, action: String, epoch: int, direction: Vector3) -> void:
+	if not multiplayer.is_server():
+		return
+	var gun = _online_loose_gun() if action == "pickup" else _online_gun_for_actor(sender_id)
+	if gun == null:
+		if NetworkManager.is_dedicated_server():
+			print("[DEDICATED ACTION] gun %s rejected for actor %d: matching gun not found" % [action, sender_id])
+		return
+	if NetworkManager.is_dedicated_server():
+		print("[DEDICATED ACTION] gun %s requested by actor %d (epoch %d)" % [action, sender_id, epoch])
+	match action:
+		"pickup": gun._server_try_pickup(sender_id, epoch)
+		"fire": gun._server_try_fire(sender_id, direction, epoch)
+		"drop": gun._server_try_drop(sender_id, epoch)
+
+
+func broadcast_online_gun_action(action: String, data: Dictionary = {}) -> void:
+	if multiplayer.is_server():
+		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_gun_action", [action, data])
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_apply_online_gun_action(action: String, data: Dictionary) -> void:
+	var holder_actor_id := int(data.get("holder_actor_id", -1))
+	var gun = _online_loose_gun() if action in ["pickup", "return_loose"] \
+		else _online_gun_for_actor(holder_actor_id)
+	if gun == null and action in ["set_can_fire", "return_loose"]:
+		gun = _online_loose_gun()
+	if gun == null:
+		if NetworkManager.is_dedicated_server():
+			print("[DEDICATED ACTION] gun %s apply skipped: matching gun not found" % action)
+		return
+	match action:
+		"pickup": gun._net_do_pickup(holder_actor_id)
+		"fire": gun._net_spawn_bullet(
+			data.get("origin", Vector3.ZERO), data.get("direction", Vector3.ZERO),
+			holder_actor_id, int(data.get("epoch", -1)))
+		"drop": gun._net_do_drop(data.get("position", Vector3.ZERO))
+		"force_disarm": gun._net_do_force_disarm(
+			data.get("position", Vector3.ZERO), holder_actor_id)
+		"force_reload": gun._net_force_full_reload()
+		"set_can_fire": gun._net_set_can_fire(bool(data.get("value", false)))
+		"return_loose": gun._net_return_loose_to_spawn()
+
+
 func _online_melee_weapon():
 	var weapons := get_tree().get_nodes_in_group("melee")
 	for weapon in weapons:
@@ -395,7 +477,11 @@ func _server_route_online_melee_action(sender_id: int, candidate_id: int, action
 		return
 	var melee = _online_melee_by_id(candidate_id)
 	if melee == null:
+		if NetworkManager.is_dedicated_server():
+			print("[DEDICATED ACTION] melee %s rejected for actor %d: candidate %d not found" % [action, sender_id, candidate_id])
 		return
+	if NetworkManager.is_dedicated_server():
+		print("[DEDICATED ACTION] melee %s requested by actor %d for candidate %d (epoch %d)" % [action, sender_id, candidate_id, epoch])
 	match action:
 		"pickup": melee._server_try_pickup(sender_id, epoch)
 		"swing": melee._server_try_swing(sender_id, epoch)
@@ -484,7 +570,11 @@ func _server_route_online_item_action(sender_id: int, item_id: int, action: Stri
 		return
 	var item = _online_item(item_id)
 	if item == null:
+		if NetworkManager.is_dedicated_server():
+			print("[DEDICATED ACTION] item %s rejected for actor %d: item %d not found" % [action, sender_id, item_id])
 		return
+	if NetworkManager.is_dedicated_server():
+		print("[DEDICATED ACTION] item %s requested by actor %d for item %d (epoch %d)" % [action, sender_id, item_id, epoch])
 	match action:
 		"pickup": item._server_try_pickup(sender_id, epoch)
 		"drop": item._server_try_drop(sender_id, epoch)

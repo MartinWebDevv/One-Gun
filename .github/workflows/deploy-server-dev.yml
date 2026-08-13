@@ -84,9 +84,9 @@ jobs:
           version="$(godot --headless --version)"
           [[ "$version" == "${GODOT_VERSION}.${GODOT_STATUS}"* ]]
 
-      - name: Validate Godot project
+      - name: Import and validate Godot project
         shell: bash
-        run: godot --headless --path . --editor --quit
+        run: godot --headless --path . --import
 
       - name: Export Linux dedicated server
         shell: bash

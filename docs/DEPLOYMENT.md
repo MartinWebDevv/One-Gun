@@ -42,7 +42,7 @@ Rendered-client verification passed on 2026-08-12: a normal Windows client joine
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\run_dedicated_server_smoke.ps1
 ```
 
-The runner starts one real `--server` process and two headless clients on test UDP port `24756`. It succeeds only when both clients reach a synchronized live two-human match, client-owned movement reaches peer 1, a real client input action completes an authoritative gun pickup, both clients observe the held state, and the session returns to the persistent lobby without replication-cache cleanup errors. Passing logs include `DEDICATED_SERVER_PASS`, `DEDICATED_MOVEMENT_SYNC_PASS`, `DEDICATED_INPUT_PICKUP_PASS`, and `DEDICATED_RETURN_PASS` for both clients.
+The runner starts one real `--server` process and two headless clients on test UDP port `24756`. It succeeds only when both clients reach a synchronized live two-human match, client-owned movement reaches peer 1, and both peers observe the controller complete gun pickup/fire/drop, melee pickup/swing/drop, and item pickup/drop/throw before returning to the persistent lobby. It also rejects unstable RPC paths and replication-cache cleanup errors. Passing logs include the `DEDICATED_INPUT_*`, `DEDICATED_MELEE_*`, `DEDICATED_ITEM_*`, and `DEDICATED_RETURN_PASS` markers for both clients.
 
 ## Linux dedicated-server export
 
@@ -54,7 +54,9 @@ Then export from the repository root:
 & ".\Godot_v4.7.1-stable_win64.exe" --headless --path "." --export-release "One Gun - Linux Server" "build/server/OneGunServer.x86_64"
 ```
 
-Verified on 2026-08-12 with Godot 4.7.1: the command produced a valid Linux x86_64 ELF executable and OneGunServer.pck with no export errors.
+Verified on 2026-08-13 with Godot 4.7.1: the command produced a valid Linux x86_64 ELF executable and `OneGunServer.pck` with no export errors, and the resulting Docker image passed the complete two-client gun/melee/item action suite.
+
+The Linux preset intentionally keeps `export_filter="all_resources"` and uses the `dedicated_server` custom feature instead of Godot's resource-stripping dedicated export mode. One Gun currently keeps gameplay attachment points and replicated object hierarchy beneath visual scene branches; stripping those resources produced placeholder-load errors and broke held-object action replication. The process still starts headlessly. The larger PCK is an accepted development tradeoff until gameplay-only nodes are separated from presentation assets.
 
 Run the exported server on Linux:
 
@@ -197,7 +199,7 @@ Phases 4–5 passed on 2026-08-13. The private GHCR image was pulled by Edgegap,
 
 Phase 6 automation is implemented in `.github/workflows/deploy-server-dev.yml`. A push to `main` stamps `dev-<short-sha>`, installs the exact Godot 4.7.1 editor and export templates, validates and exports the Linux server, builds and pushes `ghcr.io/<github-user>/one-gun-server:dev-<short-sha>`, then creates or updates Edgegap version `onegun-dev/dev` to reference that immutable tag. GitHub Actions run `31679224169` passed on 2026-08-13 and published build `dev-ebd4a8c`.
 
-Phase 7 extends that workflow with development-only replacement. It stops only deployments matching application `onegun-dev`, version `dev`, and tag `onegun-dev-ci`; waits for termination; creates the replacement through Edgegap's v2 deployment API; waits for `READY`; and prints the new FQDN plus dynamic external UDP port in the GitHub Actions summary. The retained manual fallback version `dev-4868d24-pickupfix1` does not match that scope and is never stopped by the workflow. Production applications and versions must not use the `onegun-dev-ci` tag.
+Phase 7 extends that workflow with development-only replacement. It stops only deployments matching application `onegun-dev`, version `dev`, and tag `onegun-dev-ci`; waits for termination; creates the replacement through Edgegap's v2 deployment API; waits for `READY`; and prints the new FQDN plus dynamic external UDP port in the GitHub Actions summary. Automatic replacement was verified by GitHub Actions run `31684303253` for build `dev-d7c7867`. Production applications and versions must not use the `onegun-dev-ci` tag.
 
 Placement defaults to broad Fremont, California coordinates, matching the successful manual public test. To override the development location without changing source, create optional GitHub Actions repository variables named `EDGEGAP_DEV_LATITUDE` and `EDGEGAP_DEV_LONGITUDE`. These are configuration values, not secrets.
 
@@ -210,9 +212,11 @@ EDGEGAP_GHCR_TOKEN
 
 `EDGEGAP_GHCR_TOKEN` is a classic GitHub PAT with `read:packages` only. GHCR publication uses the workflow's short-lived `GITHUB_TOKEN` with `packages: write`; no package-write PAT is stored in GitHub Secrets. The Edgegap API token must remain in GitHub Actions only and must never enter the project export or shipped client.
 
+Current checkpoint: the first automatic deployment exposed a dedicated-export regression where stripped resources produced placeholder scene branches and the reparented gun sent RPCs from divergent client/server paths. The Linux preset now retains the full resource graph, gun actions use the stable `RoundManager` coordinator, dedicated presentation audio is skipped, and the exported Docker image passes gun/melee/item actions on both test peers. The next automatic deployment still needs one rendered Edgegap client confirmation.
+
 Remaining checkpoints:
 
-- First live Phase 7 automatic replacement and verification of the generated public endpoint.
+- Rendered verification of gun, melee, and item actions on the next automatic Edgegap deployment.
 - itch.io or Butler publishing.
 - GitHub Actions Windows-client publishing.
 - The later player-facing version-mismatch flow and secure dynamic-deployment backend.
@@ -235,4 +239,5 @@ Do not begin itch.io or client automation until the Phase 7 workflow creates a R
 - Edgegap free tier reports one active deployment: terminate the old development deployment, wait for termination, then deploy the new version.
 - Edgegap is Ready but the client cannot connect: use the deployment Host FQDN plus its dynamic **external** UDP port. Do not substitute internal port `24545` unless Edgegap actually assigned it externally.
 - Client moves locally but authoritative pickups are rejected as too far away: verify both client and server include the peer-1 movement-visibility fix and inspect the server's pickup-rejection distance log. Build `dev-4868d24-pickupfix1` contains the verified fix.
+- Client can move and pick up objects but cannot fire, swing, activate, or drop them: inspect server/client logs for `Failed to get path from RPC`. Gun, melee, and item requests must route through stable `RoundManager` RPCs, and the Linux server must use the full-resource preset rather than stripped placeholder resources.
 - `Cannot create pipe from command: "xdg-user-dir"`: this single startup line is expected in the shell-free distroless runtime and does not affect ENet or server data. Any other `ERROR:` line still needs investigation.

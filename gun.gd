@@ -91,11 +91,9 @@ func try_fire():
 				and player_ref.is_locally_controlled():
 			var dir = _calculate_fire_direction()
 			var epoch := _online_round_epoch()
-			if NetworkManager.is_host():
-				var acting_id := _holder_actor_id()
-				_server_try_fire(acting_id, dir, epoch)
-			else:
-				_net_request_fire.rpc_id(1, dir, epoch)
+			var rm = _online_round_manager()
+			if rm != null:
+				rm.request_online_gun_action("fire", epoch, dir)
 		return
 	fire()
 
@@ -133,8 +131,12 @@ func _server_try_fire(sender_id: int, dir: Vector3, epoch: int) -> void:
 	if server_aim.dot(shot_dir) < ONLINE_FIRE_MIN_AIM_DOT:
 		return
 	var origin := _calculate_fire_origin(shot_dir)
-	NetworkManager.broadcast_match_rpc(self, &"_net_spawn_bullet",
-		[origin, shot_dir, _holder_actor_id(), epoch])
+	rm.broadcast_online_gun_action("fire", {
+		"holder_actor_id": _holder_actor_id(),
+		"origin": origin,
+		"direction": shot_dir,
+		"epoch": epoch,
+	})
 
 @rpc("authority", "reliable", "call_local")
 func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: int) -> void:
@@ -180,7 +182,7 @@ func _server_try_pickup(sender_id: int, epoch: int) -> void:
 		return
 	if player == disarm_lock_player and disarm_lock_timer > 0.0:
 		return
-	NetworkManager.broadcast_match_rpc(self, &"_net_do_pickup", [sender_id])
+	rm.broadcast_online_gun_action("pickup", {"holder_actor_id": sender_id})
 
 func _online_round_manager():
 	var scene := get_tree().current_scene
@@ -217,11 +219,9 @@ func request_online_drop() -> void:
 	if not NetworkManager.is_online() or not is_held or player_ref == null:
 		return
 	var epoch := _online_round_epoch()
-	if NetworkManager.is_host():
-		var acting_id := _holder_actor_id()
-		_server_try_drop(acting_id, epoch)
-	else:
-		_net_request_drop.rpc_id(1, epoch)
+	var rm = _online_round_manager()
+	if rm != null:
+		rm.request_online_gun_action("drop", epoch)
 
 @rpc("any_peer", "reliable")
 func _net_request_drop(epoch: int) -> void:
@@ -234,7 +234,10 @@ func _server_try_drop(sender_id: int, epoch: int) -> void:
 	if rm == null or not rm.can_accept_online_combat(epoch):
 		return
 	var pos = player_ref.global_position + Vector3(0.0, 0.6, 0.0)
-	NetworkManager.broadcast_match_rpc(self, &"_net_do_drop", [pos])
+	rm.broadcast_online_gun_action("drop", {
+		"holder_actor_id": sender_id,
+		"position": pos,
+	})
 
 # Server-side: drop the gun for everyone (on elimination / disarm).
 func net_force_drop() -> void:
@@ -243,7 +246,12 @@ func net_force_drop() -> void:
 	var pos = global_position
 	if player_ref != null:
 		pos = player_ref.global_position + Vector3(0, 0.6, 0)
-	NetworkManager.broadcast_match_rpc(self, &"_net_do_drop", [pos])
+	var rm = _online_round_manager()
+	if rm != null:
+		rm.broadcast_online_gun_action("drop", {
+			"holder_actor_id": _holder_actor_id(),
+			"position": pos,
+		})
 
 # Server-side melee disarm. Unlike a normal drop, this also replicates the
 # configured lock that prevents the victim immediately reclaiming the gun.
@@ -255,8 +263,12 @@ func net_force_disarm() -> void:
 	if personal_mode_gun:
 		force_full_reload()
 		return
-	NetworkManager.broadcast_match_rpc(self, &"_net_do_force_disarm",
-		[pos, holder_actor_id])
+	var rm = _online_round_manager()
+	if rm != null:
+		rm.broadcast_online_gun_action("force_disarm", {
+			"holder_actor_id": holder_actor_id,
+			"position": pos,
+		})
 
 @rpc("authority", "reliable", "call_local")
 func _net_do_force_disarm(drop_pos: Vector3, holder_actor_id: int) -> void:
@@ -285,7 +297,11 @@ func fire():
 func force_full_reload() -> void:
 	if NetworkManager.is_online():
 		if multiplayer.is_server():
-			NetworkManager.broadcast_match_rpc(self, &"_net_force_full_reload")
+			var rm = _online_round_manager()
+			if rm != null:
+				rm.broadcast_online_gun_action("force_reload", {
+					"holder_actor_id": _holder_actor_id(),
+				})
 		return
 	_apply_forced_reload()
 
@@ -333,7 +349,12 @@ func _calculate_fire_origin(direction: Vector3) -> Vector3:
 func _on_reload_finished():
 	if NetworkManager.is_online():
 		if multiplayer.is_server():
-			NetworkManager.broadcast_match_rpc(self, &"_net_set_can_fire", [true])
+			var rm = _online_round_manager()
+			if rm != null:
+				rm.broadcast_online_gun_action("set_can_fire", {
+					"holder_actor_id": _holder_actor_id(),
+					"value": true,
+				})
 		return
 	can_fire = true
 
@@ -372,11 +393,9 @@ func pick_up(p = null) -> bool:
 		# Online: don't pick up locally — ask the server to grant it to everyone.
 		if p.has_method("is_locally_controlled") and p.is_locally_controlled():
 			var epoch := _online_round_epoch()
-			if NetworkManager.is_host():
-				var acting_id := int(p.actor_id)
-				_server_try_pickup(acting_id, epoch)
-			else:
-				_net_request_pickup.rpc_id(1, epoch)
+			var rm = _online_round_manager()
+			if rm != null:
+				rm.request_online_gun_action("pickup", epoch)
 		return true   # "handled" so _try_interact stops probing other objects
 	return _local_pickup(p)
 
@@ -472,7 +491,9 @@ func _finish_loose_return_after_delay(generation: int) -> void:
 	if generation != _loose_generation or is_held:
 		return
 	if NetworkManager.is_online():
-		NetworkManager.broadcast_match_rpc(self, &"_net_return_loose_to_spawn")
+		var rm = _online_round_manager()
+		if rm != null:
+			rm.broadcast_online_gun_action("return_loose")
 	else:
 		_return_loose_to_spawn()
 

@@ -2,7 +2,7 @@ extends Node
 
 const TEST_PORT := 24756
 const TEST_MAP := "res://node_3d.tscn"
-const TIMEOUT_MSEC := 45000
+const TIMEOUT_MSEC := 65000
 
 var role := ""
 var deadline := 0
@@ -37,6 +37,8 @@ func _detach_and_run() -> void:
 		GameConfig.bot_configs = []
 		GameConfig.rounds_per_set = 1
 		GameConfig.sets_per_match = 1
+		for item_type in GameConfig.item_registry:
+			GameConfig.item_registry[item_type]["enabled"] = item_type == "smoke_bomb"
 		NetworkManager.broadcast_match_config(GameConfig.snapshot_for_network(), TEST_MAP)
 		if not await _wait_until(NetworkManager.are_all_lobby_guests_ready):
 			_fail("guest never became ready")
@@ -58,11 +60,68 @@ func _detach_and_run() -> void:
 	print("DEDICATED_MOVEMENT_SYNC_PASS %s" % role)
 	await get_tree().create_timer(1.0).timeout
 	var pickup_ok := await _controller_pickup_through_input() \
-		if role == "controller" else await _wait_until(_any_gun_is_held)
+		if role == "controller" else await _wait_until(_controller_gun_is_held)
 	if not pickup_ok:
-		_fail("rendered-client pickup path did not complete")
+		_fail("rendered-client pickup path did not complete for the controller")
 		return
 	print("DEDICATED_INPUT_PICKUP_PASS %s" % role)
+	var fire_ok := await _controller_fire_through_input() \
+		if role == "controller" else await _wait_until(_controller_gun_is_reloading)
+	if not fire_ok:
+		_fail("controller gun fire did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_INPUT_FIRE_PASS %s" % role)
+	if role == "controller" and not await _wait_until(_controller_gun_is_ready):
+		_fail("controller gun reload did not replicate")
+		return
+	var drop_ok := await _controller_drop_gun() \
+		if role == "controller" else await _wait_until(_controller_gun_is_dropped)
+	if not drop_ok:
+		_fail("controller gun drop did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_INPUT_DROP_PASS %s" % role)
+	var melee_pickup_ok := await _controller_pickup_melee_through_input() \
+		if role == "controller" else await _wait_until(_controller_melee_is_held)
+	if not melee_pickup_ok:
+		_fail("controller melee pickup did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_MELEE_PICKUP_PASS %s" % role)
+	var melee_swing_ok := await _controller_swing_melee_through_input() \
+		if role == "controller" else await _wait_until(_controller_melee_is_swinging)
+	if not melee_swing_ok:
+		_fail("controller melee swing did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_MELEE_SWING_PASS %s" % role)
+	if role == "controller" and not await _wait_until(_controller_melee_is_ready):
+		_fail("controller melee recovery did not replicate")
+		return
+	var melee_drop_ok := await _controller_drop_melee() \
+		if role == "controller" else await _wait_until(_controller_melee_is_dropped)
+	if not melee_drop_ok:
+		_fail("controller melee drop did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_MELEE_DROP_PASS %s" % role)
+	var item_pickup_ok := await _controller_pickup_item_through_input() \
+		if role == "controller" else await _wait_until(_controller_item_is_held)
+	if not item_pickup_ok:
+		_fail("controller item pickup did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_ITEM_PICKUP_PASS %s" % role)
+	var item_drop_ok := await _controller_drop_item() \
+		if role == "controller" else await _wait_until(_controller_item_is_dropped)
+	if not item_drop_ok:
+		_fail("controller item drop did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_ITEM_DROP_PASS %s" % role)
+	if role == "controller" and not await _controller_pickup_item_through_input():
+		_fail("controller item repickup did not complete")
+		return
+	var item_throw_ok := await _controller_throw_item_through_input() \
+		if role == "controller" else await _wait_until(_controller_item_is_in_flight)
+	if not item_throw_ok:
+		_fail("controller item activation/throw did not replicate through the stable coordinator")
+		return
+	print("DEDICATED_ITEM_THROW_PASS %s" % role)
 	if role == "controller":
 		await get_tree().create_timer(0.75).timeout
 		NetworkManager.host_return_everyone_to_lobby()
@@ -128,14 +187,189 @@ func _controller_pickup_through_input() -> bool:
 	Input.action_press("p1_interact")
 	await get_tree().physics_frame
 	Input.action_release("p1_interact")
-	return await _wait_until(_any_gun_is_held)
+	return await _wait_until(_controller_gun_is_held)
 
 
-func _any_gun_is_held() -> bool:
+func _controller_actor_id() -> int:
+	return NetworkManager.actor_id_for_peer(NetworkManager.lobby_controller_peer_id)
+
+
+func _controller_gun():
+	var controller_id := _controller_actor_id()
 	for gun in get_tree().get_nodes_in_group("gun"):
-		if bool(gun.get("is_held")):
+		var holder = gun.get("player_ref")
+		if bool(gun.get("is_held")) and holder != null \
+				and int(holder.get("actor_id")) == controller_id:
+			return gun
+	return null
+
+
+func _controller_gun_is_held() -> bool:
+	return _controller_gun() != null
+
+
+func _controller_gun_is_reloading() -> bool:
+	var gun = _controller_gun()
+	return gun != null and not bool(gun.get("can_fire"))
+
+
+func _controller_gun_is_ready() -> bool:
+	var gun = _controller_gun()
+	return gun != null and bool(gun.get("can_fire"))
+
+
+func _controller_gun_is_dropped() -> bool:
+	return _controller_gun() == null
+
+
+func _controller_fire_through_input() -> bool:
+	if not _controller_gun_is_ready():
+		return false
+	Input.action_press("p1_fire")
+	await get_tree().physics_frame
+	Input.action_release("p1_fire")
+	return await _wait_until(_controller_gun_is_reloading)
+
+
+func _controller_drop_gun() -> bool:
+	var gun = _controller_gun()
+	if gun == null:
+		return false
+	gun.request_online_drop()
+	return await _wait_until(_controller_gun_is_dropped)
+
+
+func _controller_actor():
+	return NetworkManager.find_actor(_controller_actor_id())
+
+
+func _loose_online_melee():
+	for melee in get_tree().get_nodes_in_group("melee"):
+		if bool(melee.get("online_active")) and not bool(melee.get("is_held")) \
+				and not bool(melee.get("is_in_flight")) and not bool(melee.get("pickup_locked")):
+			return melee
+	return null
+
+
+func _controller_melee():
+	var actor = _controller_actor()
+	return actor.get("held_melee_weapon") if actor != null else null
+
+
+func _controller_melee_is_held() -> bool:
+	return _controller_melee() != null
+
+
+func _controller_melee_is_swinging() -> bool:
+	var melee = _controller_melee()
+	return melee != null and bool(melee.get("is_swinging"))
+
+
+func _controller_melee_is_ready() -> bool:
+	var melee = _controller_melee()
+	return melee != null and not bool(melee.get("is_swinging"))
+
+
+func _controller_melee_is_dropped() -> bool:
+	return _controller_melee() == null
+
+
+func _controller_pickup_melee_through_input() -> bool:
+	var actor = _controller_actor() as Node3D
+	var melee = _loose_online_melee() as Node3D
+	if actor == null or melee == null:
+		return false
+	actor.global_position = melee.global_position
+	if not await _wait_until(func(): return actor.nearby_interactables.has(melee)):
+		return false
+	Input.action_press("p1_interact")
+	await get_tree().physics_frame
+	Input.action_release("p1_interact")
+	return await _wait_until(_controller_melee_is_held)
+
+
+func _controller_swing_melee_through_input() -> bool:
+	if not _controller_melee_is_ready():
+		return false
+	Input.action_press("p1_fire")
+	await get_tree().physics_frame
+	Input.action_release("p1_fire")
+	return await _wait_until(_controller_melee_is_swinging)
+
+
+func _controller_drop_melee() -> bool:
+	var melee = _controller_melee()
+	if melee == null:
+		return false
+	melee.request_online_drop()
+	return await _wait_until(_controller_melee_is_dropped)
+
+
+func _loose_online_item():
+	for item in get_tree().get_nodes_in_group("online_item"):
+		if str(item.get("item_type")) == "smoke_bomb" and bool(item.get("visible")) \
+				and not bool(item.get("is_held")) and not bool(item.get("is_in_flight")):
+			return item
+	return null
+
+
+func _controller_item():
+	var actor = _controller_actor()
+	if actor == null:
+		return null
+	if actor.get("held_item_1") != null:
+		return actor.get("held_item_1")
+	return actor.get("held_item_2")
+
+
+func _controller_item_is_held() -> bool:
+	return _controller_item() != null
+
+
+func _controller_item_is_dropped() -> bool:
+	return _controller_item() == null
+
+
+func _controller_item_is_in_flight() -> bool:
+	for item in get_tree().get_nodes_in_group("online_item"):
+		if int(item.get("online_owner_actor_id")) == _controller_actor_id() \
+				and bool(item.get("is_in_flight")):
 			return true
 	return false
+
+
+func _controller_pickup_item_through_input() -> bool:
+	var actor = _controller_actor() as Node3D
+	var item = _loose_online_item() as Node3D
+	if actor == null or item == null:
+		return false
+	actor.global_position = item.global_position
+	if not await _wait_until(func(): return actor.nearby_interactables.has(item)):
+		return false
+	Input.action_press("p1_interact")
+	await get_tree().physics_frame
+	Input.action_release("p1_interact")
+	return await _wait_until(_controller_item_is_held)
+
+
+func _controller_drop_item() -> bool:
+	var item = _controller_item()
+	if item == null:
+		return false
+	item.request_online_drop()
+	return await _wait_until(_controller_item_is_dropped)
+
+
+func _controller_throw_item_through_input() -> bool:
+	var actor = _controller_actor()
+	var item = _controller_item()
+	if actor == null or item == null:
+		return false
+	actor.active_slot = "item1" if actor.held_item_1 == item else "item2"
+	Input.action_press("p1_fire")
+	await get_tree().physics_frame
+	Input.action_release("p1_fire")
+	return await _wait_until(_controller_item_is_in_flight)
 
 
 func _wait_until(predicate: Callable) -> bool:
