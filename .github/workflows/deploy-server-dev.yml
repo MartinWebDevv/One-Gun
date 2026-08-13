@@ -19,10 +19,11 @@ env:
   GODOT_STATUS: stable
   EDGEGAP_APP_NAME: onegun-dev
   EDGEGAP_VERSION_NAME: dev
+  EDGEGAP_MANAGED_TAG: onegun-dev-ci
 
 jobs:
-  build-publish-register:
-    name: Build, publish, and register
+  build-publish-register-deploy:
+    name: Build, publish, register, and deploy
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -137,6 +138,22 @@ jobs:
           -DockerImage $env:EDGEGAP_DOCKER_IMAGE
           -DockerTag $env:BUILD_ID
 
+      - name: Replace Edgegap development deployment
+        id: edgegap_deploy
+        shell: pwsh
+        env:
+          EDGEGAP_API_TOKEN: ${{ secrets.EDGEGAP_API_TOKEN }}
+          EDGEGAP_DEV_LATITUDE: ${{ vars.EDGEGAP_DEV_LATITUDE || '37.5485' }}
+          EDGEGAP_DEV_LONGITUDE: ${{ vars.EDGEGAP_DEV_LONGITUDE || '-121.9886' }}
+        run: >-
+          ./tools/redeploy_edgegap_dev.ps1
+          -ApplicationName $env:EDGEGAP_APP_NAME
+          -VersionName $env:EDGEGAP_VERSION_NAME
+          -BuildId $env:BUILD_ID
+          -ManagedTag $env:EDGEGAP_MANAGED_TAG
+          -Latitude $env:EDGEGAP_DEV_LATITUDE
+          -Longitude $env:EDGEGAP_DEV_LONGITUDE
+
       - name: Write workflow summary
         if: success()
         shell: bash
@@ -147,5 +164,7 @@ jobs:
             echo "- Build: $BUILD_ID"
             echo "- Image: $SERVER_IMAGE:$BUILD_ID"
             echo "- Edgegap: $EDGEGAP_APP_NAME / $EDGEGAP_VERSION_NAME"
-            echo "- Deployment restart: deferred to Phase 7"
+            echo "- Request ID: ${{ steps.edgegap_deploy.outputs.request_id }}"
+            echo "- Public UDP endpoint: ${{ steps.edgegap_deploy.outputs.endpoint }}"
+            echo "- Managed deployment tag: $EDGEGAP_MANAGED_TAG"
           } >> "$GITHUB_STEP_SUMMARY"

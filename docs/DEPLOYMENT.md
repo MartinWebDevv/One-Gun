@@ -1,6 +1,6 @@
 # One Gun Deployment
 
-This document records the deployment pipeline as each layer is verified. Phases 1–5 established the Godot 4.7.1 headless dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, and a verified public Edgegap UDP deployment. GitHub Actions, itch.io, and Butler remain deferred to later phases.
+This document records the deployment pipeline as each layer is verified. Phases 1–6 established the Godot 4.7.1 headless dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, a verified public Edgegap UDP deployment, and a successful GitHub Actions server build. Development deployment replacement is automated in Phase 7; itch.io and Butler remain deferred to later phases.
 
 ## Local dedicated server
 
@@ -195,7 +195,11 @@ Manual public verification passed on 2026-08-13 with build `dev-4868d24-pickupfi
 
 Phases 4–5 passed on 2026-08-13. The private GHCR image was pulled by Edgegap, internal UDP `24545` received a dynamic public mapping, and build `dev-4868d24-pickupfix1` passed the rendered public lobby/match/gameplay/lobby test. Tailscale is no longer required for this development-server path. Commit hashes remain informational while `GAME_VERSION` and `NETWORK_PROTOCOL` are the compatibility gate.
 
-Phase 6 automation is implemented in `.github/workflows/deploy-server-dev.yml`. A push to `main` stamps `dev-<short-sha>`, installs the exact Godot 4.7.1 editor and export templates, validates and exports the Linux server, builds and pushes `ghcr.io/<github-user>/one-gun-server:dev-<short-sha>`, then creates or updates Edgegap version `onegun-dev/dev` to reference that immutable tag. The workflow never stops or creates a deployment; development restart behavior belongs to Phase 7.
+Phase 6 automation is implemented in `.github/workflows/deploy-server-dev.yml`. A push to `main` stamps `dev-<short-sha>`, installs the exact Godot 4.7.1 editor and export templates, validates and exports the Linux server, builds and pushes `ghcr.io/<github-user>/one-gun-server:dev-<short-sha>`, then creates or updates Edgegap version `onegun-dev/dev` to reference that immutable tag. GitHub Actions run `31679224169` passed on 2026-08-13 and published build `dev-ebd4a8c`.
+
+Phase 7 extends that workflow with development-only replacement. It stops only deployments matching application `onegun-dev`, version `dev`, and tag `onegun-dev-ci`; waits for termination; creates the replacement through Edgegap's v2 deployment API; waits for `READY`; and prints the new FQDN plus dynamic external UDP port in the GitHub Actions summary. The retained manual fallback version `dev-4868d24-pickupfix1` does not match that scope and is never stopped by the workflow. Production applications and versions must not use the `onegun-dev-ci` tag.
+
+Placement defaults to broad Fremont, California coordinates, matching the successful manual public test. To override the development location without changing source, create optional GitHub Actions repository variables named `EDGEGAP_DEV_LATITUDE` and `EDGEGAP_DEV_LONGITUDE`. These are configuration values, not secrets.
 
 Required GitHub Actions repository secrets:
 
@@ -208,13 +212,12 @@ EDGEGAP_GHCR_TOKEN
 
 Remaining checkpoints:
 
-- First live Phase 6 GitHub Actions run and verification of the generated GHCR image plus Edgegap `dev` version.
-- Phase 7 development-only deployment replacement.
+- First live Phase 7 automatic replacement and verification of the generated public endpoint.
 - itch.io or Butler publishing.
 - GitHub Actions Windows-client publishing.
 - The later player-facing version-mismatch flow and secure dynamic-deployment backend.
 
-Do not begin Phase 7, itch.io, or client automation until the Phase 6 workflow succeeds from a GitHub push.
+Do not begin itch.io or client automation until the Phase 7 workflow creates a Ready deployment and a normal client connects to its reported endpoint.
 
 ## Troubleshooting
 
