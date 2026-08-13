@@ -68,7 +68,12 @@ function Get-DeploymentState {
     foreach ($propertyName in @("current_status", "status")) {
         $property = $Deployment.PSObject.Properties[$propertyName]
         if ($null -ne $property -and -not [string]::IsNullOrWhiteSpace([string]$property.Value)) {
-            return ([string]$property.Value).ToUpperInvariant()
+            $state = ([string]$property.Value).Trim().ToUpperInvariant()
+            $separator = $state.LastIndexOf(".")
+            if ($separator -ge 0 -and $separator -lt ($state.Length - 1)) {
+                $state = $state.Substring($separator + 1)
+            }
+            return $state
         }
     }
     return "UNKNOWN"
