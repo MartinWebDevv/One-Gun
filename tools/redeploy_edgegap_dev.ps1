@@ -95,11 +95,17 @@ function Get-DeploymentRequestId {
 }
 
 function Test-IsManagedDeployment {
-    param([Parameter(Mandatory = $true)]$Deployment)
+    param(
+        [Parameter(Mandatory = $true)]$ListDeployment,
+        [Parameter(Mandatory = $true)]$Status
+    )
 
-    $applicationProperty = $Deployment.PSObject.Properties["application"]
-    $versionProperty = $Deployment.PSObject.Properties["version"]
-    $tagsProperty = $Deployment.PSObject.Properties["tags"]
+    # Edgegap's deployment-list items contain the request ID and tags, but not
+    # the application/version identity. Verify that identity from /v1/status
+    # before allowing the deployment to be stopped.
+    $applicationProperty = $Status.PSObject.Properties["app_name"]
+    $versionProperty = $Status.PSObject.Properties["app_version"]
+    $tagsProperty = $ListDeployment.PSObject.Properties["tags"]
     if ($null -eq $applicationProperty -or $null -eq $versionProperty -or $null -eq $tagsProperty) {
         return $false
     }
@@ -205,21 +211,32 @@ if ($Mode -ne "Deploy") {
     $listUri = "https://api.edgegap.com/v1/deployments?query=$([Uri]::EscapeDataString($queryJson))"
     $listResult = Invoke-RestMethod -Method Get -Uri $listUri -Headers $headers
 
-    $managedDeployments = @()
-    if ($null -ne $listResult.PSObject.Properties["data"]) {
-        $managedDeployments = @($listResult.data)
+    $dataProperty = $listResult.PSObject.Properties["data"]
+    if ($null -eq $dataProperty) {
+        throw "Edgegap deployment-list response did not contain 'data'; refusing to stop any deployment."
     }
-    elseif ($listResult -is [System.Array]) {
-        $managedDeployments = @($listResult)
-    }
+    $managedDeployments = @($dataProperty.Value)
+    Write-Output "[EDGEGAP] Found $($managedDeployments.Count) candidate deployment(s) for '$ApplicationName/$VersionName' with tag '$ManagedTag'."
 
     foreach ($deployment in $managedDeployments) {
         $requestId = Get-DeploymentRequestId -Deployment $deployment
-        if (-not (Test-IsManagedDeployment -Deployment $deployment)) {
+        try {
+            $status = Get-DeploymentStatus -RequestId $requestId
+        }
+        catch {
+            $statusCode = Get-HttpStatusCode -ErrorRecord $_
+            if ($statusCode -in @(404, 410)) {
+                Write-Output "[EDGEGAP] Candidate deployment '$requestId' is no longer active."
+                continue
+            }
+            throw
+        }
+
+        if (-not (Test-IsManagedDeployment -ListDeployment $deployment -Status $status)) {
             Write-Warning "Skipping deployment '$requestId' because its returned identity did not exactly match '$ApplicationName/$VersionName' with tag '$ManagedTag'."
             continue
         }
-        $state = Get-DeploymentState -Deployment $deployment
+        $state = Get-DeploymentState -Deployment $status
         if ($state -in @("TERMINATED", "STOPPED")) {
             continue
         }
