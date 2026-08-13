@@ -88,7 +88,6 @@ $payload = [ordered]@{
     termination_grace_period_seconds = 10
     will_deploy_in_mainland_china = $false
 }
-$json = $payload | ConvertTo-Json -Depth 8 -Compress
 
 $existing = $null
 try {
@@ -117,8 +116,10 @@ if ($null -ne $existing) {
     }
     $requestMethod = "Patch"
     $requestUri = $versionUri
+    $payload.Remove("ports")
 }
 
+$json = $payload | ConvertTo-Json -Depth 8 -Compress
 Write-Output ("[EDGEGAP] {0} development version '{1}/{2}' -> {3}/{4}:{5}" -f $requestMethod, $ApplicationName, $VersionName, $DockerRepository, $DockerImage, $DockerTag)
 $request = @{
     Method = $requestMethod
