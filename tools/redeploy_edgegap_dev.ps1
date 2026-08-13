@@ -8,6 +8,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$BuildId,
 
+    [ValidateSet("Replace", "Stop", "Deploy")]
+    [string]$Mode = "Replace",
+
     [string]$ManagedTag = "onegun-dev-ci",
     [double]$Latitude = 37.5485,
     [double]$Longitude = -121.9886,
@@ -187,53 +190,59 @@ function Find-ExternalGamePort {
     return $null
 }
 
-$query = [ordered]@{
-    filters = @(
-        [ordered]@{ field = "application"; operator = "eq"; value = $ApplicationName }
-        [ordered]@{ field = "version"; operator = "eq"; value = $VersionName }
-        [ordered]@{ field = "tags"; operator = "eq"; value = $ManagedTag }
-    )
-    order_by = @(
-        [ordered]@{ field = "created_at"; order = "desc" }
-    )
-}
-$queryJson = $query | ConvertTo-Json -Depth 6 -Compress
-$listUri = "https://api.edgegap.com/v1/deployments?query=$([Uri]::EscapeDataString($queryJson))"
-$listResult = Invoke-RestMethod -Method Get -Uri $listUri -Headers $headers
-
-$managedDeployments = @()
-if ($null -ne $listResult.PSObject.Properties["data"]) {
-    $managedDeployments = @($listResult.data)
-}
-elseif ($listResult -is [System.Array]) {
-    $managedDeployments = @($listResult)
-}
-
-foreach ($deployment in $managedDeployments) {
-    $requestId = Get-DeploymentRequestId -Deployment $deployment
-    if (-not (Test-IsManagedDeployment -Deployment $deployment)) {
-        Write-Warning "Skipping deployment '$requestId' because its returned identity did not exactly match '$ApplicationName/$VersionName' with tag '$ManagedTag'."
-        continue
+if ($Mode -ne "Deploy") {
+    $query = [ordered]@{
+        filters = @(
+            [ordered]@{ field = "application"; operator = "eq"; value = $ApplicationName }
+            [ordered]@{ field = "version"; operator = "eq"; value = $VersionName }
+            [ordered]@{ field = "tags"; operator = "eq"; value = $ManagedTag }
+        )
+        order_by = @(
+            [ordered]@{ field = "created_at"; order = "desc" }
+        )
     }
-    $state = Get-DeploymentState -Deployment $deployment
-    if ($state -in @("TERMINATED", "STOPPED")) {
-        continue
+    $queryJson = $query | ConvertTo-Json -Depth 6 -Compress
+    $listUri = "https://api.edgegap.com/v1/deployments?query=$([Uri]::EscapeDataString($queryJson))"
+    $listResult = Invoke-RestMethod -Method Get -Uri $listUri -Headers $headers
+
+    $managedDeployments = @()
+    if ($null -ne $listResult.PSObject.Properties["data"]) {
+        $managedDeployments = @($listResult.data)
+    }
+    elseif ($listResult -is [System.Array]) {
+        $managedDeployments = @($listResult)
     }
 
-    Write-Output "[EDGEGAP] Stopping workflow-managed development deployment '$requestId' (state=$state)."
-    $escapedRequestId = [Uri]::EscapeDataString($requestId)
-    try {
-        Invoke-RestMethod -Method Delete -Uri "https://api.edgegap.com/v1/stop/$escapedRequestId" -Headers $headers | Out-Null
-    }
-    catch {
-        $statusCode = Get-HttpStatusCode -ErrorRecord $_
-        if ($statusCode -notin @(404, 410)) {
-            throw
+    foreach ($deployment in $managedDeployments) {
+        $requestId = Get-DeploymentRequestId -Deployment $deployment
+        if (-not (Test-IsManagedDeployment -Deployment $deployment)) {
+            Write-Warning "Skipping deployment '$requestId' because its returned identity did not exactly match '$ApplicationName/$VersionName' with tag '$ManagedTag'."
+            continue
         }
+        $state = Get-DeploymentState -Deployment $deployment
+        if ($state -in @("TERMINATED", "STOPPED")) {
+            continue
+        }
+
+        Write-Output "[EDGEGAP] Stopping workflow-managed development deployment '$requestId' (state=$state)."
+        $escapedRequestId = [Uri]::EscapeDataString($requestId)
+        try {
+            Invoke-RestMethod -Method Delete -Uri "https://api.edgegap.com/v1/stop/$escapedRequestId" -Headers $headers | Out-Null
+        }
+        catch {
+            $statusCode = Get-HttpStatusCode -ErrorRecord $_
+            if ($statusCode -notin @(404, 410)) {
+                throw
+            }
+        }
+        Wait-DeploymentTerminated -RequestId $requestId
     }
-    Wait-DeploymentTerminated -RequestId $requestId
 }
 
+if ($Mode -eq "Stop") {
+    Write-Output "[EDGEGAP] Workflow-managed development deployments are stopped."
+    exit 0
+}
 $deployPayload = [ordered]@{
     application = $ApplicationName
     version = $VersionName

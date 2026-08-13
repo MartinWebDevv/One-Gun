@@ -124,6 +124,18 @@ jobs:
           cache-from: type=gha,scope=one-gun-server
           cache-to: type=gha,mode=max,scope=one-gun-server
 
+      - name: Stop previous Edgegap development deployment
+        shell: pwsh
+        env:
+          EDGEGAP_API_TOKEN: ${{ secrets.EDGEGAP_API_TOKEN }}
+        run: >-
+          ./tools/redeploy_edgegap_dev.ps1
+          -ApplicationName $env:EDGEGAP_APP_NAME
+          -VersionName $env:EDGEGAP_VERSION_NAME
+          -BuildId $env:BUILD_ID
+          -Mode Stop
+          -ManagedTag $env:EDGEGAP_MANAGED_TAG
+
       - name: Create or update Edgegap development version
         shell: pwsh
         env:
@@ -138,7 +150,7 @@ jobs:
           -DockerImage $env:EDGEGAP_DOCKER_IMAGE
           -DockerTag $env:BUILD_ID
 
-      - name: Replace Edgegap development deployment
+      - name: Deploy Edgegap development server
         id: edgegap_deploy
         shell: pwsh
         env:
@@ -150,6 +162,7 @@ jobs:
           -ApplicationName $env:EDGEGAP_APP_NAME
           -VersionName $env:EDGEGAP_VERSION_NAME
           -BuildId $env:BUILD_ID
+          -Mode Deploy
           -ManagedTag $env:EDGEGAP_MANAGED_TAG
           -Latitude $env:EDGEGAP_DEV_LATITUDE
           -Longitude $env:EDGEGAP_DEV_LONGITUDE
