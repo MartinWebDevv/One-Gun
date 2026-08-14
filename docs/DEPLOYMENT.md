@@ -1,6 +1,6 @@
 # One Gun Deployment
 
-This document records the deployment pipeline as each layer is verified. Phases 1–7 established the Godot 4.7.1 dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, public Edgegap UDP deployment, and automatic development-server replacement. Phase 8 verified restricted itch.io distribution and Butler updates. GitHub Actions client publishing is the next checkpoint.
+This document records the deployment pipeline as each layer is verified. Phases 1–7 established the Godot 4.7.1 dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, public Edgegap UDP deployment, and automatic development-server replacement. Phase 8 verified restricted itch.io distribution and Butler updates. Phase 9 verified automatic Windows-client export, package validation, and itch.io publishing from GitHub Actions.
 
 ## Local dedicated server
 
@@ -139,6 +139,33 @@ The status command takes the project target without a channel suffix. A successf
 
 Manual Phase 8 verification passed on 2026-08-13. Butler `15.30.0` published the initial `dev-2318743` client, the itch app installed and launched it from a user-selected D-drive install location, and a second corrected build became active as itch build `1881779`. The second upload reused `99.92%` of the previous build and produced a `336.94 KiB` patch (`99.94%` savings). After the itch app applied that update, the main-menu footer displayed `BUILD v0.0.4 | dev-2318743`.
 
+## Automatic GitHub client publishing
+
+A push to `main` runs `.github/workflows/deploy-client-dev.yml` alongside the development-server workflow. Both artifacts receive the same immutable `dev-<7-character-commit-SHA>` build identity. The server image is published to GHCR and deployed through Edgegap; the Windows client is published to `one-gun/one-gun:windows-dev` with Butler.
+
+Normal development publishing is:
+
+```powershell
+git add .
+git commit -m "description"
+git push origin main
+```
+
+The client workflow fails before Butler can publish unless every correctness gate passes:
+
+- The exact Godot `4.7.1.stable` Windows editor, console executable, export templates, and repository source are present.
+- The tracked checkout contains at least 2,000 files and 600 MiB, preventing a partial asset checkout from being packaged.
+- The `.godot` import cache is rebuilt from scratch. A previous imported cache is never trusted for a release artifact.
+- Editable `.blend` authoring sources are staged outside `res://` during CI. Runtime GLB, PNG, texture, and material deliverables remain in the project, so a clean headless runner does not require Blender.
+- The imported cache contains at least 500 files and 100 MiB, and representative logo, portrait, pedestal, animation, and audio imports exist and are non-empty.
+- The exported `OneGun.pck` is at least 100 MiB and physically contains the expected build ID.
+- `tools/validate_client_package.gd` opens the PCK and loads 18 critical resources, including menu art, character presentation, audio, animation, and every playable map.
+- Butler validates the output directory before pushing it to itch.io.
+
+The only itch credential stored in GitHub Actions is `BUTLER_API_KEY`. The itch account, project, and channel identifiers are non-secret workflow configuration. Never place the Butler key in the project, exported client, documentation, or chat.
+
+Phase 9 verification passed on 2026-08-14. GitHub Actions client run `31777491692` published itch user version `dev-d08790a` as upload `18797537` / build `1881974`. The itch app updated the installed D-drive client; its footer displayed `dev-d08790a`; all logo, portrait, character, podium, background, and map imagery rendered; and Local Play launched successfully.
+
 ## Local Docker server
 
 Prerequisites:
@@ -244,6 +271,7 @@ Required GitHub Actions repository secrets:
 ```text
 EDGEGAP_API_TOKEN
 EDGEGAP_GHCR_TOKEN
+BUTLER_API_KEY
 ```
 
 `EDGEGAP_GHCR_TOKEN` is a classic GitHub PAT with `read:packages` only. GHCR publication uses the workflow's short-lived `GITHUB_TOKEN` with `packages: write`; no package-write PAT is stored in GitHub Secrets. The Edgegap API token must remain in GitHub Actions only and must never enter the project export or shipped client.
@@ -252,12 +280,14 @@ Phase 7 and the dedicated action regression are verified complete. GitHub Action
 
 Phase 8 manual client distribution is verified. The restricted `windows-dev` channel installs through the itch desktop app, launches successfully, and applies Butler binary patches while retaining the matching server build identity.
 
+Phase 9 automatic client publishing is verified. A push to `main` now produces matching commit-derived development server and client artifacts, deploys the server through Edgegap, and publishes the guarded Windows client to the restricted itch channel.
+
 Remaining checkpoints:
 
-- GitHub Actions Windows-client publishing.
-- The later player-facing version-mismatch flow and secure dynamic-deployment backend.
+- Phase 10 player-facing version-mismatch protection.
+- The later secure dynamic-deployment backend for per-match Edgegap servers.
 
-The manual server and client distribution paths are now stable enough to begin GitHub Actions client publishing. Dynamic match-server deployment remains deferred until the automatic client pipeline is also verified.
+The development build-and-deploy pipeline is complete. Dynamic match-server deployment remains intentionally deferred until the compatibility flow is finished.
 
 ## Troubleshooting
 
@@ -278,6 +308,9 @@ The manual server and client distribution paths are now stable enough to begin G
 - Butler refuses the first upload with `Please verify your account's email address`: verify the creator account email in itch.io account settings, then rerun the same push command. No partial build is published.
 - A restricted itch.io page says the owner has no access from its ordinary URL: open the project from the itch app's **Creations** tab. Give testers individual download keys; the bare restricted URL does not grant permission.
 - The itch app does not show an update immediately: close the running game, refresh or restart the itch app, and reopen the Library entry. Confirm the new build from its in-game footer after updating.
+- GitHub client import reports `Blender path is invalid or not set`: do not install Blender just to package the game. Keep editable `.blend` sources staged outside `res://` during CI and keep their checked-in runtime GLB/PNG/material deliverables in the project.
+- The exported client has missing images/models/audio or crashes when Local Play loads: inspect `OneGun.pck` before publishing. The broken Phase 9 artifact was only about 3.5 MiB; a complete development PCK is hundreds of MiB. The workflow now rejects an incomplete import cache, a PCK below 100 MiB, or a package that cannot load its critical resources.
+- GitHub client export or package validation fails: open the failed step and read its annotated Godot output tail. Butler is intentionally skipped after any import, export, identity, or resource-validation failure, so the existing itch build remains active.
 - Client moves locally but authoritative pickups are rejected as too far away: verify both client and server include the peer-1 movement-visibility fix and inspect the server's pickup-rejection distance log. Build `dev-4868d24-pickupfix1` contains the verified fix.
 - Client can move and pick up objects but cannot fire, swing, activate, or drop them: inspect server/client logs for `Failed to get path from RPC`. Gun, melee, and item requests must route through stable `RoundManager` RPCs, and the Linux server must use the full-resource preset rather than stripped placeholder resources.
 - `Cannot create pipe from command: "xdg-user-dir"`: this single startup line is expected in the shell-free distroless runtime and does not affect ENet or server data. Any other `ERROR:` line still needs investigation.
