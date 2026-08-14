@@ -1,0 +1,167 @@
+name: Deploy Development Client
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: one-gun-client-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.1
+  GODOT_STATUS: stable
+  ITCH_TARGET: one-gun/one-gun
+  ITCH_CHANNEL: windows-dev
+  BUTLER_URL: https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+
+jobs:
+  build-and-publish:
+    name: Build and publish Windows client
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Prepare immutable build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="${GITHUB_SHA:0:7}"
+          build_id="dev-${short_sha,,}"
+          echo "BUILD_ID=$build_id" >> "$GITHUB_ENV"
+
+      - name: Stamp client build metadata
+        shell: pwsh
+        run: >-
+          ./tools/stamp_build.ps1
+          -BuildId $env:BUILD_ID
+          -Channel dev
+          -CommitSha $env:GITHUB_SHA
+
+      - name: Verify generated build metadata
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath ./build_metadata.json)) {
+            throw "build_metadata.json is missing after stamping."
+          }
+          $metadata = Get-Content -LiteralPath ./build_metadata.json -Raw | ConvertFrom-Json
+          if ($metadata.build_id -ne $env:BUILD_ID) {
+            throw "Stamped build '$($metadata.build_id)' does not match '$env:BUILD_ID'."
+          }
+
+      - name: Install Godot and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="${GODOT_VERSION}-${GODOT_STATUS}"
+          base_url="https://github.com/godotengine/godot/releases/download/$release"
+          editor_zip="Godot_v${release}_linux.x86_64.zip"
+          templates="Godot_v${release}_export_templates.tpz"
+
+          curl --fail --location --retry 3 --silent --show-error \
+            --output "$RUNNER_TEMP/$editor_zip" "$base_url/$editor_zip"
+          curl --fail --location --retry 3 --silent --show-error \
+            --output "$RUNNER_TEMP/$templates" "$base_url/$templates"
+
+          mkdir -p "$RUNNER_TEMP/godot" "$RUNNER_TEMP/export-templates"
+          unzip -q "$RUNNER_TEMP/$editor_zip" -d "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/$templates" -d "$RUNNER_TEMP/export-templates"
+
+          godot_binary="$RUNNER_TEMP/godot/Godot_v${release}_linux.x86_64"
+          chmod +x "$godot_binary"
+          sudo install -m 0755 "$godot_binary" /usr/local/bin/godot
+
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          mkdir -p "$template_dir"
+          cp -R "$RUNNER_TEMP/export-templates/templates/." "$template_dir/"
+
+          version="$(godot --headless --version)"
+          [[ "$version" == "${GODOT_VERSION}.${GODOT_STATUS}"* ]]
+
+      - name: Import and validate Godot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --import 2>&1 | tee "$RUNNER_TEMP/godot-import.log"
+          if grep --extended-regexp --quiet \
+            'SCRIPT ERROR:|ERROR: Failed to load script' \
+            "$RUNNER_TEMP/godot-import.log"; then
+            echo "::error::Godot reported a script load error during import."
+            exit 1
+          fi
+
+      - name: Export Windows client
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/client-windows
+          godot --headless --path . \
+            --export-release "One Gun - Windows" \
+            "build/client-windows/OneGun.exe" \
+            2>&1 | tee "$RUNNER_TEMP/godot-windows-export.log"
+          if grep --extended-regexp --quiet \
+            'SCRIPT ERROR:|ERROR: Failed to load script|Export failed' \
+            "$RUNNER_TEMP/godot-windows-export.log"; then
+            echo "::error::Godot reported an error during Windows export."
+            exit 1
+          fi
+          test -s build/client-windows/OneGun.exe
+          test -s build/client-windows/OneGun.pck
+
+      - name: Verify packaged build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! grep --binary-files=text --fixed-strings --quiet \
+            "$BUILD_ID" build/client-windows/OneGun.pck; then
+            echo "::error::OneGun.pck does not contain expected build ID '$BUILD_ID'."
+            exit 1
+          fi
+
+      - name: Install Butler
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/butler"
+          curl --fail --location --retry 3 --silent --show-error \
+            --output "$RUNNER_TEMP/butler.zip" "$BUTLER_URL"
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          echo "BUTLER_BIN=$RUNNER_TEMP/butler/butler" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/butler/butler" --version
+
+      - name: Publish Windows client to itch.io
+        shell: bash
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$BUTLER_API_KEY" ]]; then
+            echo "::error::Required repository secret BUTLER_API_KEY is missing."
+            exit 1
+          fi
+          "$BUTLER_BIN" validate build/client-windows
+          "$BUTLER_BIN" push build/client-windows \
+            "$ITCH_TARGET:$ITCH_CHANNEL" \
+            --userversion "$BUILD_ID"
+          "$BUTLER_BIN" status "$ITCH_TARGET"
+
+      - name: Write workflow summary
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "## One Gun development client"
+            echo ""
+            echo "- Build: $BUILD_ID"
+            echo "- Godot: $GODOT_VERSION.$GODOT_STATUS"
+            echo "- itch.io target: $ITCH_TARGET:$ITCH_CHANNEL"
+          } >> "$GITHUB_STEP_SUMMARY"
