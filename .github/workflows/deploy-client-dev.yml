@@ -86,15 +86,21 @@ jobs:
           version="$(godot --headless --version)"
           [[ "$version" == "${GODOT_VERSION}.${GODOT_STATUS}"* ]]
 
-      - name: Import and validate Godot project
+      - name: Warm Godot import cache
         shell: bash
         run: |
           set -euo pipefail
-          godot --headless --path . --import 2>&1 | tee "$RUNNER_TEMP/godot-import.log"
+          godot --headless --path . --import
+
+      - name: Validate imported Godot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path . --import 2>&1 | tee "$RUNNER_TEMP/godot-validation.log"
           if grep --extended-regexp --quiet \
             'SCRIPT ERROR:|ERROR: Failed to load script' \
-            "$RUNNER_TEMP/godot-import.log"; then
-            echo "::error::Godot reported a script load error during import."
+            "$RUNNER_TEMP/godot-validation.log"; then
+            echo "::error::Godot reported a persistent script load error after cache warm-up."
             exit 1
           fi
 
