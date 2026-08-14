@@ -1,6 +1,6 @@
 # One Gun Deployment
 
-This document records the deployment pipeline as each layer is verified. Phases 1–6 established the Godot 4.7.1 headless dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, a verified public Edgegap UDP deployment, and a successful GitHub Actions server build. Development deployment replacement is automated in Phase 7; itch.io and Butler remain deferred to later phases.
+This document records the deployment pipeline as each layer is verified. Phases 1–7 established the Godot 4.7.1 dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, public Edgegap UDP deployment, and automatic development-server replacement. Phase 8 verified restricted itch.io distribution and Butler updates. GitHub Actions client publishing is the next checkpoint.
 
 ## Local dedicated server
 
@@ -102,6 +102,42 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stamp_build.ps1 
 ```
 
 A different commit-derived `build_id` is metadata, not automatically a protocol break. Admission still rejects mismatched `GAME_VERSION` or `NETWORK_PROTOCOL`; the stricter player-facing mismatch flow remains a later compatibility phase.
+
+## itch.io development client
+
+The restricted development project is `https://one-gun.itch.io/one-gun`. Its Butler target is:
+
+```text
+one-gun/one-gun:windows-dev
+```
+
+Restricted projects do not grant access from the ordinary game-page URL. The project owner installs from the itch app's **Creations** tab. Testers must receive an individual download key from **Edit game -> Distribute -> Download keys**, claim that key while signed into their own itch.io account, and then install through the itch desktop app. Do not enable a shared page password or make the project public for development testing.
+
+Install Butler by installing and signing into the itch desktop app. The app keeps its selected Butler version in `%APPDATA%\itch\broth\butler\.chosen-version`. Resolve that version instead of assuming a permanent executable path:
+
+```powershell
+$butlerVersion = (Get-Content "$env:APPDATA\itch\broth\butler\.chosen-version" -Raw).Trim()
+$butler = "$env:APPDATA\itch\broth\butler\versions\$butlerVersion\butler.exe"
+& $butler login
+```
+
+Never paste the resulting credential into chat, source files, or documentation. Before a manual client upload, stamp the intended server-compatible build, confirm the generated metadata exists, export, validate, and push the output directory:
+
+```powershell
+$buildId = "dev-<server-build-id>"
+$commitSha = "<full-server-commit-sha>"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stamp_build.ps1 -BuildId $buildId -CommitSha $commitSha
+if (-not (Test-Path .\build_metadata.json)) { throw "build_metadata.json is missing" }
+
+& ".\Godot_v4.7.1-stable_win64.exe" --headless --path "." --export-release "One Gun - Windows" "build/client-windows/OneGun.exe"
+& $butler validate ".\build\client-windows"
+& $butler push ".\build\client-windows" "one-gun/one-gun:windows-dev" --userversion $buildId
+& $butler status "one-gun/one-gun"
+```
+
+The status command takes the project target without a channel suffix. A successful table lists `windows-dev`, its build number, and the supplied user version. The installed client footer must show the stamped build ID; `dev` means the export did not contain valid generated metadata.
+
+Manual Phase 8 verification passed on 2026-08-13. Butler `15.30.0` published the initial `dev-2318743` client, the itch app installed and launched it from a user-selected D-drive install location, and a second corrected build became active as itch build `1881779`. The second upload reused `99.92%` of the previous build and produced a `336.94 KiB` patch (`99.94%` savings). After the itch app applied that update, the main-menu footer displayed `BUILD v0.0.4 | dev-2318743`.
 
 ## Local Docker server
 
@@ -214,19 +250,21 @@ EDGEGAP_GHCR_TOKEN
 
 Phase 7 and the dedicated action regression are verified complete. GitHub Actions run `31764060357` published build `dev-2318743`, replaced the existing free-tier development deployment, and produced a Ready public UDP endpoint. A normal rendered Windows client connected through Edgegap and successfully used the gun; authoritative logs reported `gun fire requested` rather than `matching gun not found`. The same attachment path is covered locally and in the exported Linux Docker image for gun pickup/fire/drop, melee pickup/swing/drop, and item pickup/drop/throw.
 
+Phase 8 manual client distribution is verified. The restricted `windows-dev` channel installs through the itch desktop app, launches successfully, and applies Butler binary patches while retaining the matching server build identity.
+
 Remaining checkpoints:
 
-- itch.io or Butler publishing.
 - GitHub Actions Windows-client publishing.
 - The later player-facing version-mismatch flow and secure dynamic-deployment backend.
 
-The server pipeline is now stable enough to begin the itch.io and Butler client-distribution phases. Dynamic match-server deployment remains deferred until the earlier client pipeline is also verified.
+The manual server and client distribution paths are now stable enough to begin GitHub Actions client publishing. Dynamic match-server deployment remains deferred until the automatic client pipeline is also verified.
 
 ## Troubleshooting
 
 - `Couldn't bind to UDP 24545`: stop the other host/server using that port or choose another local test port. The current menu joins `127.0.0.1` on the default `24545` port.
 - `No export template found`: install the exact Godot `4.7.1.stable` export-template package, not templates for another Godot version.
 - Build displays `dev`: this is correct for an unstamped local run. Run `tools\stamp_build.ps1` before exporting; if the wrong commit remains, run it again with the intended `-CommitSha`.
+- An exported or itch-installed client unexpectedly displays `dev`: confirm `build_metadata.json` exists after stamping and before exporting. The Windows preset explicitly includes that file, but it cannot package a generated file that is absent.
 - Client never reaches the lobby: verify client/server game and network protocol versions match and allow the Godot executable through the local UDP firewall.
 - Client joins but cannot start: the first connected client is the lobby controller; every other lobby participant must be Ready unless the controller confirms Force Start.
 - Executable permission denied on Linux: run `chmod +x` on `OneGunServer.x86_64`.
@@ -237,6 +275,9 @@ The server pipeline is now stable enough to begin the itch.io and Butler client-
 - Edgegap cannot pull the image: confirm the registry profile uses `ghcr.io`, the package-reading username, a classic PAT with `read:packages`, and the exact immutable image tag.
 - Edgegap free tier reports one active deployment: terminate the old development deployment, wait for termination, then deploy the new version.
 - Edgegap is Ready but the client cannot connect: use the deployment Host FQDN plus its dynamic **external** UDP port. Do not substitute internal port `24545` unless Edgegap actually assigned it externally.
+- Butler refuses the first upload with `Please verify your account's email address`: verify the creator account email in itch.io account settings, then rerun the same push command. No partial build is published.
+- A restricted itch.io page says the owner has no access from its ordinary URL: open the project from the itch app's **Creations** tab. Give testers individual download keys; the bare restricted URL does not grant permission.
+- The itch app does not show an update immediately: close the running game, refresh or restart the itch app, and reopen the Library entry. Confirm the new build from its in-game footer after updating.
 - Client moves locally but authoritative pickups are rejected as too far away: verify both client and server include the peer-1 movement-visibility fix and inspect the server's pickup-rejection distance log. Build `dev-4868d24-pickupfix1` contains the verified fix.
 - Client can move and pick up objects but cannot fire, swing, activate, or drop them: inspect server/client logs for `Failed to get path from RPC`. Gun, melee, and item requests must route through stable `RoundManager` RPCs, and the Linux server must use the full-resource preset rather than stripped placeholder resources.
 - `Cannot create pipe from command: "xdg-user-dir"`: this single startup line is expected in the shell-free distroless runtime and does not affect ENet or server data. Any other `ERROR:` line still needs investigation.
