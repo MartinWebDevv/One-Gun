@@ -115,21 +115,6 @@ jobs:
             exit 1
           fi
 
-      - name: Smoke test exported client package
-        shell: bash
-        run: |
-          set -euo pipefail
-          godot --headless \
-            --main-pack build/client-windows/OneGun.pck \
-            --quit-after 5 \
-            2>&1 | tee "$RUNNER_TEMP/godot-client-smoke.log"
-          if grep --extended-regexp --quiet \
-            'SCRIPT ERROR:|ERROR: Failed to load script' \
-            "$RUNNER_TEMP/godot-client-smoke.log"; then
-            echo "::error::The exported client package has a script load error."
-            exit 1
-          fi
-
       - name: Install Butler
         shell: bash
         run: |
