@@ -113,16 +113,28 @@ jobs:
             Remove-Item -LiteralPath $importCache -Recurse -Force
           }
 
-          $importOut = Join-Path $env:RUNNER_TEMP "godot-client-import.stdout.log"
-          $importErr = Join-Path $env:RUNNER_TEMP "godot-client-import.stderr.log"
-          $importProcess = Start-Process -FilePath $env:GODOT_BIN `
-            -ArgumentList @("--headless", "--path", ".", "--import") `
-            -WorkingDirectory $PWD -Wait -PassThru -WindowStyle Hidden `
-            -RedirectStandardOutput $importOut -RedirectStandardError $importErr
-          Get-Content -LiteralPath $importOut
-          Get-Content -LiteralPath $importErr
-          if ($importProcess.ExitCode -ne 0) {
-            Write-Output "::error::Godot asset import failed with exit code $($importProcess.ExitCode)."
+          $trackedFiles = @(git ls-files)
+          if ($LASTEXITCODE -ne 0) { throw "Could not enumerate tracked project files." }
+          $missingTrackedFiles = @($trackedFiles | Where-Object {
+            -not (Test-Path -LiteralPath (Join-Path $projectRoot $_))
+          })
+          if ($missingTrackedFiles.Count -gt 0) {
+            throw "Git checkout is missing $($missingTrackedFiles.Count) tracked files."
+          }
+          [long]$trackedBytes = ($trackedFiles | ForEach-Object {
+            (Get-Item -LiteralPath (Join-Path $projectRoot $_)).Length
+          } | Measure-Object -Sum).Sum
+          if ($trackedFiles.Count -lt 2000 -or $trackedBytes -lt 600MB) {
+            throw "Git checkout is unexpectedly small: $($trackedFiles.Count) files, $trackedBytes bytes."
+          }
+          Write-Output "Verified source checkout: $($trackedFiles.Count) files, $trackedBytes bytes."
+
+          $importLines = @(& $env:GODOT_BIN --headless --verbose `
+            --path $projectRoot --import 2>&1)
+          $importExitCode = $LASTEXITCODE
+          $importLines | ForEach-Object { Write-Output $_ }
+          if ($importExitCode -ne 0) {
+            Write-Output "::error::Godot asset import failed with exit code $importExitCode."
             throw "Godot asset import failed."
           }
 
@@ -135,7 +147,13 @@ jobs:
           [long]$importedBytes = ($importedFiles | Measure-Object Length -Sum).Sum
           if ($importedFiles.Count -lt 500 -or $importedBytes -lt 100MB) {
             $message = "Godot import cache is incomplete: $($importedFiles.Count) files, $importedBytes bytes."
-            Write-Output "::error title=Incomplete Godot import cache::$message"
+            $outputTail = if ($importLines.Count -gt 0) {
+              ($importLines | Select-Object -Last 20) -join "`n"
+            } else {
+              "<Godot produced no output>"
+            }
+            $escapedTail = $outputTail.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
+            Write-Output "::error title=Incomplete Godot import cache::$message Godot output tail: $escapedTail"
             throw $message
           }
 
