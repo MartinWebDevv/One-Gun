@@ -29,6 +29,9 @@ const DISCOVERY_REQUEST_PREFIX := "ONEGUN_DISCOVER:"
 const DISCOVERY_RESPONSE_PREFIX := "ONEGUN_LOBBY:"
 const REJECTION_LOBBY_FULL := "lobby_full"
 const REJECTION_HANDSHAKE_TIMEOUT := "handshake_timeout"
+const REJECTION_MATCH_TICKET_REQUIRED := "match_ticket_required"
+const REJECTION_MATCH_TICKET_INVALID := "match_ticket_invalid"
+const REJECTION_MATCH_TICKET_IN_USE := "match_ticket_in_use"
 
 signal lobby_changed                     # roster added/removed/renamed
 signal lobby_readiness_changed           # host-authoritative pre-match ready state
@@ -83,6 +86,12 @@ var _discovery_responder: PacketPeerUDP = null
 var _discovery_attempt := 0
 var _host_port := DEFAULT_PORT
 var local_one_of_us_volunteer := false
+var match_server_mode := false
+var match_server_id := ""
+var _expected_match_tickets: Dictionary = {}
+var _claimed_match_tickets: Dictionary = {}
+var _peer_match_tickets: Dictionary = {}
+var _local_match_ticket_id := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -178,10 +187,16 @@ func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "",
 
 
 func host_dedicated_game(port: int = DEFAULT_PORT, requested_lobby_name := "OneGun-Dev",
-		max_players: int = MAX_PEERS, initial_map_path := "") -> bool:
+		max_players: int = MAX_PEERS, initial_map_path := "",
+		match_context: Dictionary = {}) -> bool:
 	_reset_session(false)
 	dedicated_session = true
 	_dedicated_server_process = true
+	if bool(match_context.get("active", false)):
+		match_server_mode = true
+		match_server_id = str(match_context.get("match_id", ""))
+		for ticket_id_value in match_context.get("ticket_ids", []):
+			_expected_match_tickets[str(ticket_id_value)] = true
 	server_build = BuildInfo.compatibility_payload()
 	lobby_controller_peer_id = 0
 	lobby_privacy = "private"
@@ -212,6 +227,9 @@ func host_dedicated_game(port: int = DEFAULT_PORT, requested_lobby_name := "OneG
 	print("[DEDICATED] Listening on UDP %d | max players %d | lobby '%s'" % [
 		port, lobby_max_players, lobby_name])
 	print("[DEDICATED] Initial map: %s" % pending_map_path)
+	if match_server_mode:
+		print("[MATCH SERVER] Assignment accepted | expected players %d | map %s" % [
+			_expected_match_tickets.size(), pending_map_path])
 	lobby_changed.emit()
 	return true
 
@@ -547,8 +565,9 @@ func _is_valid_direct_host(host: String) -> bool:
 	return true
 
 
-func join_game(ip: String, port: int = DEFAULT_PORT) -> bool:
+func join_game(ip: String, port: int = DEFAULT_PORT, match_ticket_id := "") -> bool:
 	_reset_session(false)
+	_local_match_ticket_id = match_ticket_id.strip_edges().substr(0, 128)
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(ip, port)
 	if err != OK:
@@ -697,6 +716,12 @@ func _reset_session(emit_change: bool) -> void:
 	dedicated_session = false
 	_dedicated_server_process = false
 	server_build.clear()
+	match_server_mode = false
+	match_server_id = ""
+	_expected_match_tickets.clear()
+	_claimed_match_tickets.clear()
+	_peer_match_tickets.clear()
+	_local_match_ticket_id = ""
 	_host_port = DEFAULT_PORT
 	if _discovery_responder != null:
 		_discovery_responder.close()
@@ -1270,6 +1295,7 @@ func _on_peer_connected(id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	_net_log("peer %d disconnected" % id)
 	_provisional_peers.erase(id)
+	_peer_match_tickets.erase(id)
 	_one_of_us_volunteers.erase(id)
 	if _prelaunch_active:
 		cancel_prelaunch("Roster changed — start countdown cancelled")
@@ -1314,7 +1340,8 @@ func _pull_roster() -> void:
 		if not is_online() or attempt != _connection_attempt:
 			return
 		_register_client_hello.rpc_id(
-			1, BuildInfo.compatibility_payload(), local_name(), local_skin_id())
+			1, BuildInfo.compatibility_payload(), local_name(), local_skin_id(),
+			_local_match_ticket_id)
 		_request_roster.rpc_id(1)
 		await get_tree().create_timer(0.4).timeout
 		if peers.size() >= 1:
@@ -1349,7 +1376,8 @@ func _on_server_disconnected() -> void:
 
 @rpc("any_peer", "reliable")
 func _register_client_hello(
-		compatibility: Dictionary, pname: String, requested_skin_id := "blue") -> void:
+		compatibility: Dictionary, pname: String, requested_skin_id := "blue",
+		match_ticket_id := "") -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
@@ -1361,6 +1389,8 @@ func _register_client_hello(
 			"reason": REJECTION_LOBBY_FULL,
 			"detail": "This lobby is full.",
 		}
+	if rejection.is_empty():
+		rejection = _match_ticket_rejection(match_ticket_id)
 	if not rejection.is_empty():
 		var reason := str(rejection.get("reason", "unknown"))
 		var detail := str(rejection.get("detail", "The server rejected this connection."))
@@ -1371,13 +1401,13 @@ func _register_client_hello(
 		return
 	_net_log("peer %d admitted | client build %s" % [
 		sender, BuildInfo.payload_build_id(compatibility)])
-	if dedicated_session and lobby_controller_peer_id <= 0:
+	if dedicated_session and not match_server_mode and lobby_controller_peer_id <= 0:
 		lobby_controller_peer_id = sender
 		print("[DEDICATED] Peer %d became lobby controller." % sender)
 	var cleaned := pname.strip_edges().substr(0, 24)
 	if cleaned == "":
 		cleaned = "Player"
-	var role := "waiting" if lobby_in_progress else "lobby"
+	var role := "participant" if match_server_mode else ("waiting" if lobby_in_progress else "lobby")
 	peers[sender] = {
 		"name": cleaned,
 		"skin_id": PlayerSkinRegistry.sanitize_skin_id(requested_skin_id),
@@ -1386,6 +1416,12 @@ func _register_client_hello(
 		"role": role,
 	}
 	_one_of_us_volunteers[sender] = false
+	if match_server_mode:
+		var cleaned_ticket := match_ticket_id.strip_edges()
+		_claimed_match_tickets[cleaned_ticket] = sender
+		_peer_match_tickets[sender] = cleaned_ticket
+		match_participant_peers.append(sender)
+		match_load_status[sender] = {"state": "loading", "attempt": 1, "reason": ""}
 	_next_human_actor_id += 1
 	_provisional_peers.erase(sender)
 	lobby_ready[sender] = is_lobby_controller(sender)
@@ -1394,8 +1430,37 @@ func _register_client_hello(
 	lobby_changed.emit()
 	_broadcast_lobby_state()   # rebroadcast the updated roster to everyone
 	_send_current_match_config(sender)
-	if lobby_in_progress:
+	if match_server_mode:
+		match_readiness_changed.emit()
+		_start_game.rpc_id(sender, pending_map_path, pending_match_id, false)
+		_net_log("match participant admitted (%d/%d assigned tickets)" % [
+			_claimed_match_tickets.size(), _expected_match_tickets.size()])
+		if _claimed_match_tickets.size() >= _expected_match_tickets.size():
+			set_accepting_new_peers(false)
+	elif lobby_in_progress:
 		_set_peer_actor_replication.call_deferred(sender, false)
+
+
+func _match_ticket_rejection(match_ticket_id: String) -> Dictionary:
+	if not match_server_mode:
+		return {}
+	var cleaned := match_ticket_id.strip_edges()
+	if cleaned == "":
+		return {
+			"reason": REJECTION_MATCH_TICKET_REQUIRED,
+			"detail": "This match requires its assigned matchmaking ticket.",
+		}
+	if not _expected_match_tickets.has(cleaned):
+		return {
+			"reason": REJECTION_MATCH_TICKET_INVALID,
+			"detail": "This matchmaking ticket was not assigned to this server.",
+		}
+	if _claimed_match_tickets.has(cleaned):
+		return {
+			"reason": REJECTION_MATCH_TICKET_IN_USE,
+			"detail": "This matchmaking ticket is already connected.",
+		}
+	return {}
 
 
 @rpc("any_peer", "reliable")
@@ -1483,6 +1548,8 @@ func _send_roster(roster: Dictionary, session_name: String = "",
 			MatchLimitsData.MIN_ONLINE_HUMANS, MAX_PEERS)
 		lobby_in_progress = bool(metadata.get("in_progress", lobby_in_progress))
 		match_participant_peers = metadata.get("participants", match_participant_peers).duplicate()
+		match_server_mode = bool(metadata.get("match_server", match_server_mode))
+		match_server_id = str(metadata.get("match_id", match_server_id))
 	if peers.has(local_id()):
 		local_match_role = str(peers[local_id()].get("role", "lobby"))
 		if _joining:
@@ -1585,6 +1652,9 @@ func _lobby_metadata() -> Dictionary:
 		"max_players": lobby_max_players,
 		"in_progress": lobby_in_progress,
 		"participants": match_participant_peers.duplicate(),
+		"match_server": match_server_mode,
+		"match_id": match_server_id,
+		"match_size": _expected_match_tickets.size(),
 		"server_build": BuildInfo.compatibility_payload(),
 	}
 
@@ -1776,6 +1846,9 @@ func _mark_match_scene_ready(peer_id: int, match_id: int) -> void:
 
 func are_all_match_peers_ready() -> bool:
 	if pending_match_id <= 0 or match_participant_peers.is_empty():
+		return false
+	if is_host() and match_server_mode \
+			and match_participant_peers.size() != _expected_match_tickets.size():
 		return false
 	for peer_id in match_participant_peers:
 		if is_host():

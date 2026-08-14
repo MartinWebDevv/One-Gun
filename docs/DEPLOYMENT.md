@@ -207,7 +207,7 @@ docker run --rm --name one-gun-server-local --publish 24545:24545/udp one-gun-se
 Expected logs include:
 
 ```text
-[DEDICATED] One Gun 0.0.4 | build dev-<7-character-sha> | protocol 1
+[DEDICATED] One Gun 0.0.4 | build dev-<7-character-sha> | protocol 2
 [DEDICATED] Listening on UDP 24545 | max players 10 | lobby 'OneGun-Dev'
 ```
 
@@ -292,11 +292,16 @@ Phase 9 automatic client publishing is verified. A push to `main` now produces m
 
 Phase 10 compatibility protection is implemented and locally verified. Client hello now carries explicit game version, network protocol, and informational build ID. The server holds every newcomer as provisional, returns a typed rejection for incompatible game/protocol versions, and admits the peer only after that check succeeds. The online panel recovers cleanly for browser and direct-endpoint joins, and the main menu displays the player-facing restart/update dialog. The two-process ENet mismatch smoke passed on 2026-08-14 without roster admission or cleanup errors.
 
-Remaining checkpoints:
+Phase 11 architecture and security boundaries are documented in `docs/MATCH_DEPLOYMENT.md`. The persistent Godot deployment remains the fallback. A separate Matchmaker-aware server path now parses Edgegap's `MM_*` assignment variables, starts directly in the selected map, and requires a unique assigned ticket before admitting each player. Dynamic client migration still requires an external coordinator/lobby layer, and all Edgegap/Matchmaker management credentials remain backend-only.
 
-- The later secure dynamic-deployment backend for per-match Edgegap servers.
+Remaining Phase 11 checkpoints:
 
-The development build-and-deploy pipeline and compatibility gate are complete. Dynamic match-server deployment remains intentionally deferred to the later secure-backend phase.
+- The free `onegun-matchmaker-dev` instance and generated Matchmaker 3.2.5 OpenAPI contract are verified. `tools/run_edgegap_matchmaker_smoke.ps1 -ValidateOnly` passes locally.
+- The live two-ticket assignment and public endpoint are verified: build `dev-42bd2ca` admitted the matching Windows client, loaded City, and received an authoritative gun-fire action.
+- The local ticket-aware server gate is verified: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\run_match_server_smoke.ps1` rejects an invalid ticket, admits two assigned tickets, and ends with `MATCH SERVER SMOKE: PASS`.
+- Remaining: select and authenticate the persistent coordinator, add the client transfer/loading state behind a development feature flag, then repeat the ticket-aware gate on a live protocol-2 Edgegap deployment.
+
+The development build-and-deploy pipeline, persistent development-server fallback, and compatibility gate remain complete and unchanged.
 
 ## Troubleshooting
 

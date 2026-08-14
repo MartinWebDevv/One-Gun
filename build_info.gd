@@ -5,7 +5,7 @@ extends RefCounted
 # A transport (ENet/Tailscale today, Steam later) only needs to exchange this
 # neutral payload before a connection is admitted to the gameplay roster.
 const GAME_VERSION := "0.0.4"
-const NETWORK_PROTOCOL := 1
+const NETWORK_PROTOCOL := 2
 const DEFAULT_BUILD_ID := "dev"
 const REJECTION_GAME_VERSION := "game_version"
 const REJECTION_NETWORK_PROTOCOL := "network_protocol"

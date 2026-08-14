@@ -6,12 +6,21 @@ const TIMEOUT_MSEC := 65000
 
 var role := ""
 var deadline := 0
+var match_server_test := false
+var match_ticket_id := ""
+var test_port := TEST_PORT
 
 
 func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--role="):
 			role = argument.trim_prefix("--role=")
+		elif argument == "--match-server":
+			match_server_test = true
+		elif argument.begins_with("--ticket="):
+			match_ticket_id = argument.trim_prefix("--ticket=")
+		elif argument.begins_with("--port="):
+			test_port = int(argument.trim_prefix("--port="))
 	if role not in ["controller", "guest"]:
 		_fail("missing --role=controller|guest")
 		return
@@ -21,7 +30,7 @@ func _ready() -> void:
 func _detach_and_run() -> void:
 	reparent(get_tree().root)
 	deadline = Time.get_ticks_msec() + TIMEOUT_MSEC
-	if not NetworkManager.join_game("127.0.0.1", TEST_PORT):
+	if not NetworkManager.join_game("127.0.0.1", test_port, match_ticket_id):
 		_fail("join_game failed")
 		return
 	if not await _wait_until(func(): return NetworkManager.peers.size() == 2):
@@ -30,7 +39,14 @@ func _detach_and_run() -> void:
 	if not NetworkManager.is_dedicated_session():
 		_fail("server did not advertise a dedicated session")
 		return
-	if role == "controller":
+	if match_server_test:
+		if not NetworkManager.match_server_mode:
+			_fail("server did not advertise match-server mode")
+			return
+		if NetworkManager.can_manage_lobby():
+			_fail("match-server client incorrectly received lobby control")
+			return
+	elif role == "controller":
 		if not NetworkManager.can_manage_lobby():
 			_fail("first client was not assigned lobby control")
 			return
@@ -116,12 +132,26 @@ func _detach_and_run() -> void:
 	if role == "controller" and not await _controller_pickup_item_through_input():
 		_fail("controller item repickup did not complete")
 		return
-	var item_throw_ok := await _controller_throw_item_through_input() \
-		if role == "controller" else await _wait_until(_controller_item_is_in_flight)
-	if not item_throw_ok:
+	var item_action_ok: bool
+	if match_server_test:
+		item_action_ok = await _controller_use_item_through_input() \
+			if role == "controller" else await _wait_until(_controller_item_action_completed)
+	else:
+		item_action_ok = await _controller_throw_item_through_input() \
+			if role == "controller" else await _wait_until(_controller_item_is_in_flight)
+	if not item_action_ok:
 		_fail("controller item activation/throw did not replicate through the stable coordinator")
 		return
-	print("DEDICATED_ITEM_THROW_PASS %s" % role)
+	var item_marker := "DEDICATED_ITEM_ACTION_PASS" \
+		if match_server_test else "DEDICATED_ITEM_THROW_PASS"
+	print("%s %s" % [item_marker, role])
+	if match_server_test:
+		print("MATCH_SERVER_ACTIONS_PASS %s" % role)
+		await get_tree().create_timer(0.5).timeout
+		NetworkManager.disconnect_net()
+		await get_tree().process_frame
+		get_tree().quit(0)
+		return
 	if role == "controller":
 		await get_tree().create_timer(0.75).timeout
 		NetworkManager.host_return_everyone_to_lobby()
@@ -191,6 +221,12 @@ func _controller_pickup_through_input() -> bool:
 
 
 func _controller_actor_id() -> int:
+	if match_server_test:
+		var actor_ids: Array[int] = []
+		for peer_id in NetworkManager.participant_peer_ids():
+			actor_ids.append(NetworkManager.actor_id_for_peer(int(peer_id)))
+		actor_ids.sort()
+		return actor_ids[0] if not actor_ids.is_empty() else -1
 	return NetworkManager.actor_id_for_peer(NetworkManager.lobby_controller_peer_id)
 
 
@@ -306,11 +342,20 @@ func _controller_drop_melee() -> bool:
 
 
 func _loose_online_item():
+	var fallback = null
 	for item in get_tree().get_nodes_in_group("online_item"):
-		if str(item.get("item_type")) == "smoke_bomb" and bool(item.get("visible")) \
-				and not bool(item.get("is_held")) and not bool(item.get("is_in_flight")):
+		if not bool(item.get("visible")) or bool(item.get("is_held")) \
+				or bool(item.get("is_in_flight")):
+			continue
+		if not match_server_test:
+			if str(item.get("item_type")) == "smoke_bomb":
+				return item
+			continue
+		if str(item.get("item_type")) not in ["flash_camera", "double_jump_shoes"]:
 			return item
-	return null
+		if fallback == null:
+			fallback = item
+	return fallback
 
 
 func _controller_item():
@@ -336,6 +381,10 @@ func _controller_item_is_in_flight() -> bool:
 				and bool(item.get("is_in_flight")):
 			return true
 	return false
+
+
+func _controller_item_action_completed() -> bool:
+	return _controller_item_is_in_flight() or _controller_item() == null
 
 
 func _controller_pickup_item_through_input() -> bool:
@@ -366,10 +415,31 @@ func _controller_throw_item_through_input() -> bool:
 	if actor == null or item == null:
 		return false
 	actor.active_slot = "item1" if actor.held_item_1 == item else "item2"
+	await _pulse_fire()
+	return await _wait_until(_controller_item_is_in_flight)
+
+
+func _controller_use_item_through_input() -> bool:
+	var actor = _controller_actor()
+	var item = _controller_item()
+	if actor == null or item == null:
+		return false
+	var item_type := str(item.get("item_type"))
+	actor.active_slot = "item1" if actor.held_item_1 == item else "item2"
+	await _pulse_fire()
+	if item_type == "flash_camera":
+		if not await _wait_until(func(): return bool(item.get("camera_mode"))):
+			return false
+		await _pulse_fire()
+	if item_type in ["flash_camera", "double_jump_shoes"]:
+		return await _wait_until(func(): return _controller_item() == null)
+	return await _wait_until(_controller_item_is_in_flight)
+
+
+func _pulse_fire() -> void:
 	Input.action_press("p1_fire")
 	await get_tree().physics_frame
 	Input.action_release("p1_fire")
-	return await _wait_until(_controller_item_is_in_flight)
 
 
 func _wait_until(predicate: Callable) -> bool:
