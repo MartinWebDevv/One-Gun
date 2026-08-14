@@ -109,17 +109,18 @@ jobs:
       - name: Import and verify client assets
         shell: pwsh
         run: |
-          # A first clean scan logs missing-cache errors before reimporting the
-          # corresponding assets. Let Godot finish, then validate its exit code
-          # and the completed cache below.
-          $ErrorActionPreference = "Continue"
-          $PSNativeCommandUseErrorActionPreference = $false
-          $importLog = Join-Path $env:RUNNER_TEMP "godot-client-import.log"
-          & $env:GODOT_BIN --headless --path . --import 2>&1 |
-            Tee-Object -FilePath $importLog
-          $importExit = $LASTEXITCODE
-          if ($importExit -ne 0) {
-            throw "Godot asset import failed with exit code $importExit."
+          $ErrorActionPreference = "Stop"
+          $importOut = Join-Path $env:RUNNER_TEMP "godot-client-import.stdout.log"
+          $importErr = Join-Path $env:RUNNER_TEMP "godot-client-import.stderr.log"
+          $importProcess = Start-Process -FilePath $env:GODOT_BIN `
+            -ArgumentList @("--headless", "--path", ".", "--import") `
+            -WorkingDirectory $PWD -Wait -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput $importOut -RedirectStandardError $importErr
+          Get-Content -LiteralPath $importOut
+          Get-Content -LiteralPath $importErr
+          if ($importProcess.ExitCode -ne 0) {
+            Write-Output "::error::Godot asset import failed with exit code $($importProcess.ExitCode)."
+            throw "Godot asset import failed."
           }
 
           $importedDir = Join-Path $PWD ".godot/imported"
@@ -158,17 +159,21 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $PSNativeCommandUseErrorActionPreference = $false
           $outputDir = Join-Path $PWD "build/client-windows"
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-          $exportLog = Join-Path $env:RUNNER_TEMP "godot-windows-export.log"
-          & $env:GODOT_BIN --headless --path . `
-            --export-release "One Gun - Windows" `
-            (Join-Path $outputDir "OneGun.exe") 2>&1 |
-            Tee-Object -FilePath $exportLog
-          $exportExit = $LASTEXITCODE
-          if ($exportExit -ne 0) {
-            throw "Godot Windows export failed with exit code $exportExit."
+          $exportOut = Join-Path $env:RUNNER_TEMP "godot-windows-export.stdout.log"
+          $exportErr = Join-Path $env:RUNNER_TEMP "godot-windows-export.stderr.log"
+          $exportProcess = Start-Process -FilePath $env:GODOT_BIN `
+            -ArgumentList @(
+              "--headless", "--path", ".", "--export-release",
+              "One Gun - Windows", (Join-Path $outputDir "OneGun.exe")) `
+            -WorkingDirectory $PWD -Wait -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput $exportOut -RedirectStandardError $exportErr
+          Get-Content -LiteralPath $exportOut
+          Get-Content -LiteralPath $exportErr
+          if ($exportProcess.ExitCode -ne 0) {
+            Write-Output "::error::Godot Windows export failed with exit code $($exportProcess.ExitCode)."
+            throw "Godot Windows export failed."
           }
 
           $exe = Get-Item -LiteralPath (Join-Path $outputDir "OneGun.exe")
@@ -195,17 +200,22 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $PSNativeCommandUseErrorActionPreference = $false
-          $validationLog = Join-Path $env:RUNNER_TEMP "godot-client-package-validation.log"
+          $validationOut = Join-Path $env:RUNNER_TEMP "godot-client-validation.stdout.log"
+          $validationErr = Join-Path $env:RUNNER_TEMP "godot-client-validation.stderr.log"
           $pck = Join-Path $PWD "build/client-windows/OneGun.pck"
           $validator = Join-Path $PWD "tools/validate_client_package.gd"
-          & $env:GODOT_BIN --headless --main-pack $pck `
-            --script $validator 2>&1 | Tee-Object -FilePath $validationLog
-          $validationExit = $LASTEXITCODE
-          if ($validationExit -ne 0) {
-            throw "Packaged client resource validation failed with exit code $validationExit."
+          $validationProcess = Start-Process -FilePath $env:GODOT_BIN `
+            -ArgumentList @(
+              "--headless", "--main-pack", $pck, "--script", $validator) `
+            -WorkingDirectory $PWD -Wait -PassThru -WindowStyle Hidden `
+            -RedirectStandardOutput $validationOut -RedirectStandardError $validationErr
+          Get-Content -LiteralPath $validationOut
+          Get-Content -LiteralPath $validationErr
+          if ($validationProcess.ExitCode -ne 0) {
+            Write-Output "::error::Packaged client resource validation failed with exit code $($validationProcess.ExitCode)."
+            throw "Packaged client resource validation failed."
           }
-          if (-not (Select-String -LiteralPath $validationLog `
+          if (-not (Select-String -LiteralPath $validationOut `
               -SimpleMatch "CLIENT_PACKAGE_VALIDATION_OK" -Quiet)) {
             throw "Packaged client validator did not report success."
           }
