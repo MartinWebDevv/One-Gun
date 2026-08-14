@@ -94,27 +94,23 @@ function Get-DeploymentRequestId {
     throw "Edgegap returned a deployment without a request ID."
 }
 
-function Test-IsManagedDeployment {
-    param(
-        [Parameter(Mandatory = $true)]$ListDeployment,
-        [Parameter(Mandatory = $true)]$Status
-    )
+function Test-IsTargetDevelopmentDeployment {
+    param([Parameter(Mandatory = $true)]$Status)
 
-    # Edgegap's deployment-list items contain the request ID and tags, but not
-    # the application/version identity. Verify that identity from /v1/status
-    # before allowing the deployment to be stopped.
+    # Edgegap's deployment-list items contain the request ID, but not a trusted
+    # application/version identity. Verify that identity from /v1/status before
+    # allowing any deployment to be stopped. This intentionally includes manual
+    # deployments of the exact development alias so they cannot consume the
+    # free tier's only slot and block CI.
     $applicationProperty = $Status.PSObject.Properties["app_name"]
     $versionProperty = $Status.PSObject.Properties["app_version"]
-    $tagsProperty = $ListDeployment.PSObject.Properties["tags"]
-    if ($null -eq $applicationProperty -or $null -eq $versionProperty -or $null -eq $tagsProperty) {
+    if ($null -eq $applicationProperty -or $null -eq $versionProperty) {
         return $false
     }
 
-    $tags = @($tagsProperty.Value | ForEach-Object { [string]$_ })
     return (
         [string]$applicationProperty.Value -ceq $ApplicationName -and
-        [string]$versionProperty.Value -ceq $VersionName -and
-        $tags -ccontains $ManagedTag
+        [string]$versionProperty.Value -ceq $VersionName
     )
 }
 
@@ -201,7 +197,6 @@ if ($Mode -ne "Deploy") {
         filters = @(
             [ordered]@{ field = "application"; operator = "eq"; value = $ApplicationName }
             [ordered]@{ field = "version"; operator = "eq"; value = $VersionName }
-            [ordered]@{ field = "tags"; operator = "eq"; value = $ManagedTag }
         )
         order_by = @(
             [ordered]@{ field = "created_at"; order = "desc" }
@@ -215,10 +210,10 @@ if ($Mode -ne "Deploy") {
     if ($null -eq $dataProperty) {
         throw "Edgegap deployment-list response did not contain 'data'; refusing to stop any deployment."
     }
-    $managedDeployments = @($dataProperty.Value)
-    Write-Output "[EDGEGAP] Found $($managedDeployments.Count) candidate deployment(s) for '$ApplicationName/$VersionName' with tag '$ManagedTag'."
+    $developmentDeployments = @($dataProperty.Value)
+    Write-Output "[EDGEGAP] Found $($developmentDeployments.Count) candidate deployment(s) for exact development target '$ApplicationName/$VersionName'."
 
-    foreach ($deployment in $managedDeployments) {
+    foreach ($deployment in $developmentDeployments) {
         $requestId = Get-DeploymentRequestId -Deployment $deployment
         try {
             $status = Get-DeploymentStatus -RequestId $requestId
@@ -232,8 +227,8 @@ if ($Mode -ne "Deploy") {
             throw
         }
 
-        if (-not (Test-IsManagedDeployment -ListDeployment $deployment -Status $status)) {
-            Write-Warning "Skipping deployment '$requestId' because its returned identity did not exactly match '$ApplicationName/$VersionName' with tag '$ManagedTag'."
+        if (-not (Test-IsTargetDevelopmentDeployment -Status $status)) {
+            Write-Warning "Skipping deployment '$requestId' because its returned identity did not exactly match development target '$ApplicationName/$VersionName'."
             continue
         }
         $state = Get-DeploymentState -Deployment $status
@@ -241,7 +236,7 @@ if ($Mode -ne "Deploy") {
             continue
         }
 
-        Write-Output "[EDGEGAP] Stopping workflow-managed development deployment '$requestId' (state=$state)."
+        Write-Output "[EDGEGAP] Stopping development deployment '$requestId' (state=$state)."
         $escapedRequestId = [Uri]::EscapeDataString($requestId)
         try {
             Invoke-RestMethod -Method Delete -Uri "https://api.edgegap.com/v1/stop/$escapedRequestId" -Headers $headers | Out-Null
@@ -257,7 +252,7 @@ if ($Mode -ne "Deploy") {
 }
 
 if ($Mode -eq "Stop") {
-    Write-Output "[EDGEGAP] Workflow-managed development deployments are stopped."
+    Write-Output "[EDGEGAP] Development deployments for '$ApplicationName/$VersionName' are stopped."
     exit 0
 }
 $deployPayload = [ordered]@{
