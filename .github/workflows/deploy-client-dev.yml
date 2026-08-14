@@ -109,7 +109,10 @@ jobs:
       - name: Import and verify client assets
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
+          # A first clean scan logs missing-cache errors before reimporting the
+          # corresponding assets. Let Godot finish, then validate its exit code
+          # and the completed cache below.
+          $ErrorActionPreference = "Continue"
           $PSNativeCommandUseErrorActionPreference = $false
           $importLog = Join-Path $env:RUNNER_TEMP "godot-client-import.log"
           & $env:GODOT_BIN --headless --path . --import 2>&1 |
