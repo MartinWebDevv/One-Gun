@@ -99,19 +99,20 @@ jobs:
             throw "Unexpected Godot version: $version"
           }
 
-      - name: Restore Godot import cache
-        uses: actions/cache@v5
-        with:
-          path: .godot
-          key: >-
-            one-gun-client-imports-${{ runner.os }}-${{ env.GODOT_VERSION }}-${{ hashFiles('project.godot', '**/*.import') }}
-          restore-keys: |
-            one-gun-client-imports-${{ runner.os }}-${{ env.GODOT_VERSION }}-
-
       - name: Import and verify client assets
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          $projectRoot = [IO.Path]::GetFullPath($env:GITHUB_WORKSPACE)
+          $importCache = [IO.Path]::GetFullPath((Join-Path $projectRoot ".godot"))
+          $workspacePrefix = $projectRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+          if (-not $importCache.StartsWith($workspacePrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to clear import cache outside the GitHub workspace: $importCache"
+          }
+          if (Test-Path -LiteralPath $importCache) {
+            Remove-Item -LiteralPath $importCache -Recurse -Force
+          }
+
           $importOut = Join-Path $env:RUNNER_TEMP "godot-client-import.stdout.log"
           $importErr = Join-Path $env:RUNNER_TEMP "godot-client-import.stderr.log"
           $importProcess = Start-Process -FilePath $env:GODOT_BIN `
