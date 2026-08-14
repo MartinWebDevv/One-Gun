@@ -129,6 +129,27 @@ jobs:
           }
           Write-Output "Verified source checkout: $($trackedFiles.Count) files, $trackedBytes bytes."
 
+          # Editable Blender sources are preserved in Git, but the game uses
+          # checked-in GLB/PNG/material deliverables. A clean headless editor
+          # cannot configure Blender and aborts its first import scan if these
+          # authoring files remain visible inside res://.
+          $authoringStage = Join-Path $env:RUNNER_TEMP "godot-authoring-sources"
+          $blendSources = @(Get-ChildItem -LiteralPath $projectRoot `
+            -Filter "*.blend" -File -Recurse)
+          foreach ($source in $blendSources) {
+            $relativePath = [IO.Path]::GetRelativePath($projectRoot, $source.FullName)
+            $destination = Join-Path $authoringStage $relativePath
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) `
+              -Force | Out-Null
+            Move-Item -LiteralPath $source.FullName -Destination $destination
+
+            $sidecar = "$($source.FullName).import"
+            if (Test-Path -LiteralPath $sidecar) {
+              Move-Item -LiteralPath $sidecar -Destination "$destination.import"
+            }
+          }
+          Write-Output "Staged $($blendSources.Count) Blender authoring sources outside res://."
+
           $importLines = @(& $env:GODOT_BIN --headless --verbose `
             --path $projectRoot --import 2>&1)
           $importExitCode = $LASTEXITCODE
