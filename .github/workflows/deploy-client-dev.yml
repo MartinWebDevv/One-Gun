@@ -18,25 +18,23 @@ env:
   GODOT_STATUS: stable
   ITCH_TARGET: one-gun/one-gun
   ITCH_CHANNEL: windows-dev
-  BUTLER_URL: https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+  BUTLER_URL: https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
 
 jobs:
   build-and-publish:
     name: Build and publish Windows client
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: windows-latest
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
       - name: Prepare immutable build identity
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          short_sha="${GITHUB_SHA:0:7}"
-          build_id="dev-${short_sha,,}"
-          echo "BUILD_ID=$build_id" >> "$GITHUB_ENV"
+          $shortSha = $env:GITHUB_SHA.Substring(0, 7).ToLowerInvariant()
+          "BUILD_ID=dev-$shortSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Stamp client build metadata
         shell: pwsh
@@ -58,52 +56,127 @@ jobs:
           }
 
       - name: Install Godot and export templates
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          release="${GODOT_VERSION}-${GODOT_STATUS}"
-          base_url="https://github.com/godotengine/godot/releases/download/$release"
-          editor_zip="Godot_v${release}_linux.x86_64.zip"
-          templates="Godot_v${release}_export_templates.tpz"
+          $ErrorActionPreference = "Stop"
+          $release = "$env:GODOT_VERSION-$env:GODOT_STATUS"
+          $baseUrl = "https://github.com/godotengine/godot/releases/download/$release"
+          $editorZipName = "Godot_v${release}_win64.exe.zip"
+          $templatesName = "Godot_v${release}_export_templates.tpz"
+          $editorZip = Join-Path $env:RUNNER_TEMP $editorZipName
+          $templatesArchive = Join-Path $env:RUNNER_TEMP $templatesName
+          $editorDir = Join-Path $env:RUNNER_TEMP "godot"
+          $templatesDir = Join-Path $env:RUNNER_TEMP "export-templates"
 
-          curl --fail --location --retry 3 --silent --show-error \
-            --output "$RUNNER_TEMP/$editor_zip" "$base_url/$editor_zip"
-          curl --fail --location --retry 3 --silent --show-error \
-            --output "$RUNNER_TEMP/$templates" "$base_url/$templates"
+          curl.exe --fail --location --retry 3 --silent --show-error `
+            --output $editorZip "$baseUrl/$editorZipName"
+          if ($LASTEXITCODE -ne 0) { throw "Godot editor download failed." }
+          curl.exe --fail --location --retry 3 --silent --show-error `
+            --output $templatesArchive "$baseUrl/$templatesName"
+          if ($LASTEXITCODE -ne 0) { throw "Godot export-template download failed." }
 
-          mkdir -p "$RUNNER_TEMP/godot" "$RUNNER_TEMP/export-templates"
-          unzip -q "$RUNNER_TEMP/$editor_zip" -d "$RUNNER_TEMP/godot"
-          unzip -q "$RUNNER_TEMP/$templates" -d "$RUNNER_TEMP/export-templates"
+          Expand-Archive -LiteralPath $editorZip -DestinationPath $editorDir
+          $templatesZip = Join-Path $env:RUNNER_TEMP "export-templates.zip"
+          Copy-Item -LiteralPath $templatesArchive -Destination $templatesZip
+          Expand-Archive -LiteralPath $templatesZip -DestinationPath $templatesDir
 
-          godot_binary="$RUNNER_TEMP/godot/Godot_v${release}_linux.x86_64"
-          chmod +x "$godot_binary"
-          sudo install -m 0755 "$godot_binary" /usr/local/bin/godot
+          $godotBinary = Join-Path $editorDir "Godot_v${release}_win64.exe"
+          if (-not (Test-Path -LiteralPath $godotBinary)) {
+            throw "Godot executable is missing at $godotBinary."
+          }
+          $templateTarget = Join-Path $env:APPDATA `
+            "Godot/export_templates/$env:GODOT_VERSION.$env:GODOT_STATUS"
+          New-Item -ItemType Directory -Path $templateTarget -Force | Out-Null
+          Copy-Item -Path (Join-Path $templatesDir "templates/*") `
+            -Destination $templateTarget -Recurse -Force
 
-          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
-          mkdir -p "$template_dir"
-          cp -R "$RUNNER_TEMP/export-templates/templates/." "$template_dir/"
+          "GODOT_BIN=$godotBinary" | Out-File `
+            -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $version = (& $godotBinary --headless --version | Out-String).Trim()
+          if (-not $version.StartsWith("$env:GODOT_VERSION.$env:GODOT_STATUS")) {
+            throw "Unexpected Godot version: $version"
+          }
 
-          version="$(godot --headless --version)"
-          [[ "$version" == "${GODOT_VERSION}.${GODOT_STATUS}"* ]]
+      - name: Restore Godot import cache
+        uses: actions/cache@v5
+        with:
+          path: .godot
+          key: >-
+            one-gun-client-imports-${{ runner.os }}-${{ env.GODOT_VERSION }}-${{ hashFiles('project.godot', '**/*.import') }}
+          restore-keys: |
+            one-gun-client-imports-${{ runner.os }}-${{ env.GODOT_VERSION }}-
 
-      - name: Warm Godot import cache
-        shell: bash
+      - name: Import and verify client assets
+        shell: pwsh
         run: |
-          set -euo pipefail
-          godot --headless --path . --import
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+          $importLog = Join-Path $env:RUNNER_TEMP "godot-client-import.log"
+          & $env:GODOT_BIN --headless --path . --import 2>&1 |
+            Tee-Object -FilePath $importLog
+          $importExit = $LASTEXITCODE
+          if ($importExit -ne 0) {
+            throw "Godot asset import failed with exit code $importExit."
+          }
 
+          $importedDir = Join-Path $PWD ".godot/imported"
+          $importedFiles = @(Get-ChildItem -LiteralPath $importedDir -File)
+          [long]$importedBytes = ($importedFiles | Measure-Object Length -Sum).Sum
+          if ($importedFiles.Count -lt 500 -or $importedBytes -lt 100MB) {
+            throw "Godot import cache is incomplete: $($importedFiles.Count) files, $importedBytes bytes."
+          }
+
+          $requiredImports = @(
+            "UI/MainMenu/OneGunLogoV2.png.import",
+            "UI/assets/character_portraits/green.png.import",
+            "models/menu/TrophyPedestal.glb.import",
+            "models/player_v2/animations/Idle.fbx.import",
+            "audio/MainMenu.wav.import"
+          )
+          foreach ($sidecar in $requiredImports) {
+            $contents = Get-Content -LiteralPath $sidecar -Raw
+            $match = [regex]::Match($contents, '(?m)^path="res://([^"]+)"')
+            if (-not $match.Success) {
+              throw "Could not resolve imported resource path from $sidecar."
+            }
+            $relativePath = $match.Groups[1].Value.Replace('/', [IO.Path]::DirectorySeparatorChar)
+            $importedPath = Join-Path $PWD $relativePath
+            if (-not (Test-Path -LiteralPath $importedPath)) {
+              throw "Required imported resource is missing: $importedPath"
+            }
+            if ((Get-Item -LiteralPath $importedPath).Length -lt 32) {
+              throw "Required imported resource is empty or truncated: $importedPath"
+            }
+          }
+
+          Write-Output "Verified $($importedFiles.Count) imported files ($importedBytes bytes)."
 
       - name: Export Windows client
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p build/client-windows
-          godot --headless --path . \
-            --export-release "One Gun - Windows" \
-            "build/client-windows/OneGun.exe" \
-            2>&1 | tee "$RUNNER_TEMP/godot-windows-export.log"
-          test -s build/client-windows/OneGun.exe
-          test -s build/client-windows/OneGun.pck
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+          $outputDir = Join-Path $PWD "build/client-windows"
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          $exportLog = Join-Path $env:RUNNER_TEMP "godot-windows-export.log"
+          & $env:GODOT_BIN --headless --path . `
+            --export-release "One Gun - Windows" `
+            (Join-Path $outputDir "OneGun.exe") 2>&1 |
+            Tee-Object -FilePath $exportLog
+          $exportExit = $LASTEXITCODE
+          if ($exportExit -ne 0) {
+            throw "Godot Windows export failed with exit code $exportExit."
+          }
+
+          $exe = Get-Item -LiteralPath (Join-Path $outputDir "OneGun.exe")
+          $pck = Get-Item -LiteralPath (Join-Path $outputDir "OneGun.pck")
+          if ($exe.Length -le 0 -or $pck.Length -le 0) {
+            throw "Godot exported an empty Windows artifact."
+          }
+          if ($pck.Length -lt 100MB) {
+            throw "OneGun.pck is unexpectedly small ($($pck.Length) bytes); client assets were not packaged."
+          }
+          Write-Output "Exported OneGun.pck: $($pck.Length) bytes."
 
       - name: Verify packaged build identity
         shell: bash
@@ -115,42 +188,71 @@ jobs:
             exit 1
           fi
 
-      - name: Install Butler
-        shell: bash
+      - name: Validate packaged client resources
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/butler"
-          curl --fail --location --retry 3 --silent --show-error \
-            --output "$RUNNER_TEMP/butler.zip" "$BUTLER_URL"
-          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
-          chmod +x "$RUNNER_TEMP/butler/butler"
-          echo "BUTLER_BIN=$RUNNER_TEMP/butler/butler" >> "$GITHUB_ENV"
-          "$RUNNER_TEMP/butler/butler" --version
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $false
+          $validationLog = Join-Path $env:RUNNER_TEMP "godot-client-package-validation.log"
+          $pck = Join-Path $PWD "build/client-windows/OneGun.pck"
+          $validator = Join-Path $PWD "tools/validate_client_package.gd"
+          & $env:GODOT_BIN --headless --main-pack $pck `
+            --script $validator 2>&1 | Tee-Object -FilePath $validationLog
+          $validationExit = $LASTEXITCODE
+          if ($validationExit -ne 0) {
+            throw "Packaged client resource validation failed with exit code $validationExit."
+          }
+          if (-not (Select-String -LiteralPath $validationLog `
+              -SimpleMatch "CLIENT_PACKAGE_VALIDATION_OK" -Quiet)) {
+            throw "Packaged client validator did not report success."
+          }
+
+      - name: Install Butler
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $archive = Join-Path $env:RUNNER_TEMP "butler.zip"
+          $butlerDir = Join-Path $env:RUNNER_TEMP "butler"
+          curl.exe --fail --location --retry 3 --silent --show-error `
+            --output $archive $env:BUTLER_URL
+          if ($LASTEXITCODE -ne 0) { throw "Butler download failed." }
+          Expand-Archive -LiteralPath $archive -DestinationPath $butlerDir
+          $butlerBinary = Join-Path $butlerDir "butler.exe"
+          if (-not (Test-Path -LiteralPath $butlerBinary)) {
+            throw "Butler executable is missing."
+          }
+          "BUTLER_BIN=$butlerBinary" | Out-File `
+            -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          & $butlerBinary --version
+          if ($LASTEXITCODE -ne 0) { throw "Butler failed to start." }
 
       - name: Publish Windows client to itch.io
-        shell: bash
+        shell: pwsh
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
-          set -euo pipefail
-          if [[ -z "$BUTLER_API_KEY" ]]; then
-            echo "::error::Required repository secret BUTLER_API_KEY is missing."
-            exit 1
-          fi
-          "$BUTLER_BIN" validate build/client-windows
-          "$BUTLER_BIN" push build/client-windows \
-            "$ITCH_TARGET:$ITCH_CHANNEL" \
-            --userversion "$BUILD_ID"
-          "$BUTLER_BIN" status "$ITCH_TARGET"
+          if ([string]::IsNullOrWhiteSpace($env:BUTLER_API_KEY)) {
+            throw "Required repository secret BUTLER_API_KEY is missing."
+          }
+          $target = "$($env:ITCH_TARGET):$($env:ITCH_CHANNEL)"
+          & $env:BUTLER_BIN validate "build/client-windows"
+          if ($LASTEXITCODE -ne 0) { throw "Butler validation failed." }
+          & $env:BUTLER_BIN push "build/client-windows" $target `
+            --userversion $env:BUILD_ID
+          if ($LASTEXITCODE -ne 0) { throw "Butler upload failed." }
+          & $env:BUTLER_BIN status $env:ITCH_TARGET
+          if ($LASTEXITCODE -ne 0) { throw "Butler status check failed." }
 
       - name: Write workflow summary
         if: success()
-        shell: bash
+        shell: pwsh
         run: |
-          {
-            echo "## One Gun development client"
-            echo ""
-            echo "- Build: $BUILD_ID"
-            echo "- Godot: $GODOT_VERSION.$GODOT_STATUS"
-            echo "- itch.io target: $ITCH_TARGET:$ITCH_CHANNEL"
-          } >> "$GITHUB_STEP_SUMMARY"
+          @"
+          ## One Gun development client
+
+          - Build: $env:BUILD_ID
+          - Godot: $env:GODOT_VERSION.$env:GODOT_STATUS
+          - itch.io target: $($env:ITCH_TARGET):$($env:ITCH_CHANNEL)
+          - Client runner: Windows
+          - Package validation: passed
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
