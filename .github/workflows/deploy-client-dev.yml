@@ -80,7 +80,9 @@ jobs:
           Copy-Item -LiteralPath $templatesArchive -Destination $templatesZip
           Expand-Archive -LiteralPath $templatesZip -DestinationPath $templatesDir
 
-          $godotBinary = Join-Path $editorDir "Godot_v${release}_win64.exe"
+          # The console wrapper is the synchronous CLI entry point. The GUI
+          # executable can return before a non-interactive import has finished.
+          $godotBinary = Join-Path $editorDir "Godot_v${release}_win64_console.exe"
           if (-not (Test-Path -LiteralPath $godotBinary)) {
             throw "Godot executable is missing at $godotBinary."
           }
