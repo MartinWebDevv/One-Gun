@@ -97,9 +97,19 @@ func _validate_build_metadata() -> void:
 	_check(BuildInfo.host_compatibility_error(BuildInfo.compatibility_payload()) == "", "host rejects a matching client build")
 	var mismatch := BuildInfo.compatibility_payload()
 	mismatch["protocol"] = BuildInfo.NETWORK_PROTOCOL + 1
+	var rejection := BuildInfo.compatibility_rejection(mismatch)
+	_check(str(rejection.get("reason", "")) == BuildInfo.REJECTION_NETWORK_PROTOCOL,
+		"protocol mismatch does not return a structured rejection reason")
 	_check(BuildInfo.compatibility_error(mismatch) != "", "protocol mismatch is accepted")
 	var host_error := BuildInfo.host_compatibility_error(mismatch)
 	_check(host_error.contains("Host: %d" % BuildInfo.NETWORK_PROTOCOL), "host-side rejection swaps the host and client protocol labels")
+	var version_mismatch := BuildInfo.compatibility_payload()
+	version_mismatch["game_version"] = "0.0.0-test"
+	_check(str(BuildInfo.compatibility_rejection(version_mismatch).get("reason", "")) == BuildInfo.REJECTION_GAME_VERSION,
+		"game-version mismatch does not return a structured rejection reason")
+	var player_message := BuildInfo.version_mismatch_message(host_error)
+	_check(player_message.contains("Restart the game to download the newest update."),
+		"version mismatch omits the player update instruction")
 	var different_build := BuildInfo.compatibility_payload()
 	different_build["build_id"] = "dev-different"
 	_check(BuildInfo.compatibility_error(different_build) == "",
@@ -134,7 +144,7 @@ func _validate_pickup_supply_and_random_map() -> void:
 		"melee marker refill is not five seconds")
 	_check(is_equal_approx(RoundManagerScript.PICKUP_MARKER_REFILL_TIME, 8.0),
 		"item/powerup marker refill is not eight seconds")
-	var round_source := FileAccess.get_file_as_string("res://round_manager.gd")
+	var round_source := FileAccess.get_file_as_string("res://round_manager.gd").replace("\r\n", "\n")
 	_check(round_source.contains("for marker in markers:\n\t\t_spawn_local_melee_at"),
 		"local rounds do not populate every melee marker")
 	_check(round_source.contains("for i in markers.size():\n\t\tvar marker = markers[i]"),

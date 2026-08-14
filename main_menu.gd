@@ -2574,9 +2574,29 @@ func _on_join_fail() -> void:
 	_set_online_status("Connection failed. Check Tailscale and confirm the host clicked Host.", true)
 
 
-func _on_main_compatibility_rejected(message: String) -> void:
-	if _online_status != null:
-		_set_online_status(message, true)
+func _on_main_compatibility_rejected(reason: String, detail: String) -> void:
+	if BuildInfo.is_version_rejection(reason):
+		_show_version_mismatch_dialog(detail)
+	elif _online_status != null:
+		_set_online_status(detail, true)
+
+
+func _show_version_mismatch_dialog(detail: String) -> void:
+	var existing := get_node_or_null("VersionMismatchPopup") as AcceptDialog
+	if existing != null:
+		existing.dialog_text = BuildInfo.version_mismatch_message(detail)
+		existing.popup_centered()
+		return
+	var dialog := AcceptDialog.new()
+	dialog.name = "VersionMismatchPopup"
+	dialog.title = "VERSION MISMATCH"
+	dialog.dialog_text = BuildInfo.version_mismatch_message(detail)
+	dialog.ok_button_text = "OK"
+	dialog.min_size = Vector2i(600, 260)
+	add_child(dialog)
+	dialog.popup_centered()
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
 
 
 func _on_lobby_discovery_fail(message: String) -> void:

@@ -27,6 +27,8 @@ const DISCOVERY_TIMEOUT_SECONDS := 3.0
 const PLAYPEN_SCENE := "res://maps/playpen/playpen.tscn"
 const DISCOVERY_REQUEST_PREFIX := "ONEGUN_DISCOVER:"
 const DISCOVERY_RESPONSE_PREFIX := "ONEGUN_LOBBY:"
+const REJECTION_LOBBY_FULL := "lobby_full"
+const REJECTION_HANDSHAKE_TIMEOUT := "handshake_timeout"
 
 signal lobby_changed                     # roster added/removed/renamed
 signal lobby_readiness_changed           # host-authoritative pre-match ready state
@@ -39,7 +41,7 @@ signal match_readiness_changed            # a peer finished building the match s
 signal lobby_discovery_failed(message: String)
 signal lobby_list_updated(lobbies: Array)
 signal lobby_list_failed(message: String)
-signal compatibility_rejected(message: String)
+signal compatibility_rejected(reason: String, detail: String)
 signal prelaunch_countdown_changed(active: bool, seconds: int)
 signal match_load_status_changed
 signal spectator_state_changed
@@ -233,9 +235,11 @@ func join_lobby_by_code(requested_code: String) -> bool:
 
 
 func join_discovered_lobby(lobby: Dictionary) -> bool:
-	var incompatibility := BuildInfo.compatibility_error(lobby)
-	if incompatibility != "":
-		compatibility_rejected.emit(incompatibility)
+	var rejection := BuildInfo.compatibility_rejection(lobby)
+	if not rejection.is_empty():
+		compatibility_rejected.emit(
+			str(rejection.get("reason", "unknown")),
+			str(rejection.get("detail", "The server rejected this connection.")))
 		return false
 	var address := str(lobby.get("address", ""))
 	var port := int(lobby.get("port", DEFAULT_PORT))
@@ -412,8 +416,9 @@ func _parse_discovery_response(response_text: String, response_ip: String,
 		"protocol": int(payload.get("protocol", -1)),
 		"build_id": str(payload.get("build_id", "unknown")),
 	}
-	var incompatibility := BuildInfo.compatibility_error(build_payload)
-	var joinability := "incompatible" if incompatibility != "" else ("full" if current_players >= maximum_players else ("in_progress" if in_progress else "joinable"))
+	var rejection := BuildInfo.compatibility_rejection(build_payload)
+	var incompatibility := str(rejection.get("detail", ""))
+	var joinability := "incompatible" if not rejection.is_empty() else ("full" if current_players >= maximum_players else ("in_progress" if in_progress else "joinable"))
 	return {
 		"address": response_ip,
 		"port": int(payload.get("port", DEFAULT_PORT)),
@@ -427,6 +432,7 @@ func _parse_discovery_response(response_text: String, response_ip: String,
 		"game_version": build_payload["game_version"],
 		"protocol": build_payload["protocol"],
 		"build_id": build_payload["build_id"],
+		"compatibility_reason": str(rejection.get("reason", "")),
 		"compatibility_error": incompatibility,
 	}
 
@@ -1349,11 +1355,18 @@ func _register_client_hello(
 	var sender := multiplayer.get_remote_sender_id()
 	if peers.has(sender):
 		return
-	var error := BuildInfo.host_compatibility_error(compatibility)
-	if error == "" and peers.size() >= lobby_max_players:
-		error = "This lobby is full."
-	if error != "":
-		_reject_provisional_peer.rpc_id(sender, error)
+	var rejection := BuildInfo.host_compatibility_rejection(compatibility)
+	if rejection.is_empty() and peers.size() >= lobby_max_players:
+		rejection = {
+			"reason": REJECTION_LOBBY_FULL,
+			"detail": "This lobby is full.",
+		}
+	if not rejection.is_empty():
+		var reason := str(rejection.get("reason", "unknown"))
+		var detail := str(rejection.get("detail", "The server rejected this connection."))
+		_net_log("peer %d rejected | reason %s | client build %s" % [
+			sender, reason, BuildInfo.payload_build_id(compatibility)])
+		_reject_provisional_peer.rpc_id(sender, reason, detail)
 		_disconnect_rejected_peer(sender)
 		return
 	_net_log("peer %d admitted | client build %s" % [
@@ -1414,15 +1427,15 @@ func _request_skin_change(requested_id: String) -> void:
 
 
 @rpc("authority", "reliable")
-func _reject_provisional_peer(message: String) -> void:
-	compatibility_rejected.emit(message)
+func _reject_provisional_peer(reason: String, detail: String) -> void:
+	compatibility_rejected.emit(reason, detail)
 	_reset_session(true)
 
 
 func _disconnect_rejected_peer(peer_id: int) -> void:
 	await get_tree().create_timer(0.15).timeout
 	var peer = multiplayer.multiplayer_peer
-	if peer is ENetMultiplayerPeer:
+	if peer is ENetMultiplayerPeer and multiplayer.get_peers().has(peer_id):
 		peer.disconnect_peer(peer_id)
 
 
@@ -1430,7 +1443,10 @@ func _expire_provisional_peer(peer_id: int) -> void:
 	await get_tree().create_timer(COMPATIBILITY_TIMEOUT_SECONDS).timeout
 	if not is_host() or not _provisional_peers.has(peer_id) or peers.has(peer_id):
 		return
-	_reject_provisional_peer.rpc_id(peer_id, "Compatibility handshake timed out after 5 seconds.")
+	_reject_provisional_peer.rpc_id(
+		peer_id,
+		REJECTION_HANDSHAKE_TIMEOUT,
+		"Compatibility handshake timed out after 5 seconds.")
 	_disconnect_rejected_peer(peer_id)
 
 

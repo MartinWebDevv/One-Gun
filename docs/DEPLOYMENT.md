@@ -101,7 +101,15 @@ Return local editor runs to the `dev` fallback by deleting generated metadata th
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\stamp_build.ps1 -Reset
 ```
 
-A different commit-derived `build_id` is metadata, not automatically a protocol break. Admission still rejects mismatched `GAME_VERSION` or `NETWORK_PROTOCOL`; the stricter player-facing mismatch flow remains a later compatibility phase.
+A different commit-derived `build_id` is metadata, not automatically a protocol break. Admission rejects mismatched `GAME_VERSION` or `NETWORK_PROTOCOL` before adding the peer to the lobby roster. Rejected clients close their ENet peer and display `VERSION MISMATCH` with an instruction to restart so itch can apply the current development build. Lobby-full and handshake-timeout failures remain separate connection errors and do not incorrectly tell the player to update.
+
+To run the real two-process mismatch regression locally:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\run_version_mismatch_smoke.ps1
+```
+
+Expected output ends with `VERSION MISMATCH SMOKE: PASS`. The test starts a dedicated server on UDP `24757`, sends a deliberately incorrect protocol from a real ENet client, confirms the server logs `reason network_protocol`, confirms no `admitted` log is produced, and confirms the client resets without receiving a lobby roster.
 
 ## itch.io development client
 
@@ -282,12 +290,13 @@ Phase 8 manual client distribution is verified. The restricted `windows-dev` cha
 
 Phase 9 automatic client publishing is verified. A push to `main` now produces matching commit-derived development server and client artifacts, deploys the server through Edgegap, and publishes the guarded Windows client to the restricted itch channel.
 
+Phase 10 compatibility protection is implemented and locally verified. Client hello now carries explicit game version, network protocol, and informational build ID. The server holds every newcomer as provisional, returns a typed rejection for incompatible game/protocol versions, and admits the peer only after that check succeeds. The online panel recovers cleanly for browser and direct-endpoint joins, and the main menu displays the player-facing restart/update dialog. The two-process ENet mismatch smoke passed on 2026-08-14 without roster admission or cleanup errors.
+
 Remaining checkpoints:
 
-- Phase 10 player-facing version-mismatch protection.
 - The later secure dynamic-deployment backend for per-match Edgegap servers.
 
-The development build-and-deploy pipeline is complete. Dynamic match-server deployment remains intentionally deferred until the compatibility flow is finished.
+The development build-and-deploy pipeline and compatibility gate are complete. Dynamic match-server deployment remains intentionally deferred to the later secure-backend phase.
 
 ## Troubleshooting
 
@@ -295,7 +304,8 @@ The development build-and-deploy pipeline is complete. Dynamic match-server depl
 - `No export template found`: install the exact Godot `4.7.1.stable` export-template package, not templates for another Godot version.
 - Build displays `dev`: this is correct for an unstamped local run. Run `tools\stamp_build.ps1` before exporting; if the wrong commit remains, run it again with the intended `-CommitSha`.
 - An exported or itch-installed client unexpectedly displays `dev`: confirm `build_metadata.json` exists after stamping and before exporting. The Windows preset explicitly includes that file, but it cannot package a generated file that is absent.
-- Client never reaches the lobby: verify client/server game and network protocol versions match and allow the Godot executable through the local UDP firewall.
+- `VERSION MISMATCH` appears: close One Gun completely, let the itch desktop app update the restricted `windows-dev` install, then relaunch. If it persists, compare the client footer with the Edgegap server startup log and confirm both pipelines were produced from the intended `main` commit. Different build IDs are diagnostic; the actual rejection gates are `GAME_VERSION` and `NETWORK_PROTOCOL`.
+- Client never reaches the lobby without a mismatch dialog: confirm the Edgegap deployment is Ready, use its current Host FQDN plus dynamic external UDP port, and allow the Godot executable through the local UDP firewall.
 - Client joins but cannot start: the first connected client is the lobby controller; every other lobby participant must be Ready unless the controller confirms Force Start.
 - Executable permission denied on Linux: run `chmod +x` on `OneGunServer.x86_64`.
 - `docker` is not recognized: install and start Docker Desktop, then open a new PowerShell window.

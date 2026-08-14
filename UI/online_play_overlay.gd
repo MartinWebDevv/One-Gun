@@ -1,6 +1,8 @@
 class_name OneGunOnlinePlayOverlay
 extends OneGunCabinet
 
+const BuildInfo = preload("res://build_info.gd")
+
 # Phase 4 online entry cabinet. Lobby rows come only from NetworkManager's
 # real Tailscale/loopback discovery responder; no sample data is created here.
 
@@ -375,8 +377,7 @@ func _join_selected() -> void:
 		return
 	_busy = true
 	_set_browser_connecting("CONNECTING TO %s…" % str(_selected_lobby.get("name", "LOBBY")).to_upper())
-	if not NetworkManager.join_discovered_lobby(_selected_lobby):
-		_busy = false
+	if not NetworkManager.join_discovered_lobby(_selected_lobby) and _busy:
 		_on_connection_failed()
 
 
@@ -613,13 +614,19 @@ func _on_connection_succeeded() -> void:
 	session_started.emit()
 
 
-func _on_compatibility_rejected(message: String) -> void:
+func _on_compatibility_rejected(reason: String, detail: String) -> void:
 	_busy = false
+	var is_version_mismatch := BuildInfo.is_version_rejection(reason)
+	var title := "VERSION MISMATCH" if is_version_mismatch else "CONNECTION REJECTED"
+	var message := BuildInfo.version_mismatch_message(detail) if is_version_mismatch else detail
+	if _page == Page.CODE and _code_error != null:
+		_code_field.editable = true
+		_code_error.show_error("%s\n\n%s" % [title, message])
 	if _page == Page.BROWSER and _browser_state != null:
 		_browser_state.visible = true
 		if _rows_box != null:
 			_rows_box.visible = false
-		_browser_state.show_error("INCOMPATIBLE BUILD", message, true)
+		_browser_state.show_error(title, message, true)
 
 
 func _on_connection_failed() -> void:

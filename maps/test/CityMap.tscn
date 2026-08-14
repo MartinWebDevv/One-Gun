@@ -1430,6 +1430,9 @@ transform = Transform3D(0.9978015, 0, -0.066273905, 0, 1, 0, 0.066273905, 0, 0.9
 [node name="Sky3" parent="PerimeterFacades" unique_id=1232266219 instance=ExtResource("12_tmleo")]
 transform = Transform3D(0.7046342, 0, -0.7095707, 0, 1, 0, 0.7095707, 0, 0.7046342, 50, -0.5, -46)
 
+[node name="Sky9" parent="PerimeterFacades" unique_id=745809648 instance=ExtResource("12_tmleo")]
+transform = Transform3D(-0.07567027, 0, -0.9990343, 0, 1.4215441, 0, 1.7207184, 0, -0.043933466, 77.06592, -0.5, 2.3100708)
+
 [node name="Sky4" parent="PerimeterFacades" unique_id=1577822154 instance=ExtResource("11_urtau")]
 transform = Transform3D(-0.31895927, 0, -0.94776845, 0, 1, 0, 0.94776845, 0, -0.31895927, 55, -0.5, 20)
 
@@ -1439,8 +1442,20 @@ transform = Transform3D(-0.3507832, 0, 0.9364567, 0, 1, 0, -0.9364567, 0, -0.350
 [node name="Sky6" parent="PerimeterFacades" unique_id=1109015141 instance=ExtResource("12_tmleo")]
 transform = Transform3D(-0.68072087, 0, -0.7325428, 0, 1, 0, 0.7325428, 0, -0.68072087, 40, -0.5, 48)
 
+[node name="Sky12" parent="PerimeterFacades" unique_id=453116996 instance=ExtResource("12_tmleo")]
+transform = Transform3D(-3.299588, 0, 0.042882055, 0, 1.8372346, 0, -0.14162341, 0, -0.9990801, 0.87749195, -0.5, 68.4933)
+
+[node name="Sky11" parent="PerimeterFacades" unique_id=1463001838 instance=ExtResource("12_tmleo")]
+transform = Transform3D(-0.3507559, 0, -0.7325428, 0, 1.962527, 0, 0.37745824, 0, -0.68072087, 84.342636, -0.5, 62.73216)
+
 [node name="Sky7" parent="PerimeterFacades" unique_id=1568547007 instance=ExtResource("11_urtau")]
 transform = Transform3D(-0.9645575, 0, 0.26387304, 0, 1, 0, -0.26387304, 0, -0.9645575, -35, -0.5, 50)
+
+[node name="Sky10" parent="PerimeterFacades" unique_id=1030751463 instance=ExtResource("11_urtau")]
+transform = Transform3D(-0.39361942, 0, -0.78410363, 0, 2.306044, 0, 0.4972987, 0, -0.62062997, 83.711815, -0.5, 49.2183)
+
+[node name="Sky8" parent="PerimeterFacades" unique_id=359953135 instance=ExtResource("11_urtau")]
+transform = Transform3D(0.12597927, 0, -0.992033, 0, 1, 0, 0.992033, 0, 0.12597927, 62.28301, -0.5, -17.497433)
 
 [node name="Park" type="Node3D" parent="." unique_id=227847163]
 

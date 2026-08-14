@@ -7,6 +7,8 @@ extends RefCounted
 const GAME_VERSION := "0.0.4"
 const NETWORK_PROTOCOL := 1
 const DEFAULT_BUILD_ID := "dev"
+const REJECTION_GAME_VERSION := "game_version"
+const REJECTION_NETWORK_PROTOCOL := "network_protocol"
 const BUILD_METADATA_PATH := "res://build_metadata.json"
 const RELEASE_NOTES_PATH := "res://release_notes.json"
 
@@ -38,23 +40,53 @@ static func compatibility_payload() -> Dictionary:
 
 
 static func compatibility_error(remote: Dictionary) -> String:
+	return str(compatibility_rejection(remote).get("detail", ""))
+
+
+static func compatibility_rejection(remote: Dictionary) -> Dictionary:
 	var remote_version := str(remote.get("game_version", "unknown"))
 	var remote_protocol := int(remote.get("protocol", -1))
 	if remote_version != GAME_VERSION:
-		return "Incompatible game version. Host: v%s | Yours: v%s" % [remote_version, GAME_VERSION]
+		return {
+			"reason": REJECTION_GAME_VERSION,
+			"detail": "Incompatible game version. Host: v%s | Yours: v%s" % [remote_version, GAME_VERSION],
+		}
 	if remote_protocol != NETWORK_PROTOCOL:
-		return "Incompatible network protocol. Host: %d | Yours: %d" % [remote_protocol, NETWORK_PROTOCOL]
-	return ""
+		return {
+			"reason": REJECTION_NETWORK_PROTOCOL,
+			"detail": "Incompatible network protocol. Host: %d | Yours: %d" % [remote_protocol, NETWORK_PROTOCOL],
+		}
+	return {}
 
 
 static func host_compatibility_error(client: Dictionary) -> String:
+	return str(host_compatibility_rejection(client).get("detail", ""))
+
+
+static func host_compatibility_rejection(client: Dictionary) -> Dictionary:
 	var client_version := str(client.get("game_version", "unknown"))
 	var client_protocol := int(client.get("protocol", -1))
 	if client_version != GAME_VERSION:
-		return "Incompatible game version. Host: v%s | Yours: v%s" % [GAME_VERSION, client_version]
+		return {
+			"reason": REJECTION_GAME_VERSION,
+			"detail": "Incompatible game version. Host: v%s | Yours: v%s" % [GAME_VERSION, client_version],
+		}
 	if client_protocol != NETWORK_PROTOCOL:
-		return "Incompatible network protocol. Host: %d | Yours: %d" % [NETWORK_PROTOCOL, client_protocol]
-	return ""
+		return {
+			"reason": REJECTION_NETWORK_PROTOCOL,
+			"detail": "Incompatible network protocol. Host: %d | Yours: %d" % [NETWORK_PROTOCOL, client_protocol],
+		}
+	return {}
+
+
+static func is_version_rejection(reason: String) -> bool:
+	return reason in [REJECTION_GAME_VERSION, REJECTION_NETWORK_PROTOCOL]
+
+
+static func version_mismatch_message(detail := "") -> String:
+	var message := "Your copy of One Gun does not match the server.\n\nRestart the game to download the newest update."
+	var cleaned_detail := str(detail).strip_edges()
+	return "%s\n\n%s" % [message, cleaned_detail] if cleaned_detail != "" else message
 
 
 static func footer_text() -> String:
