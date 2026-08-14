@@ -1248,14 +1248,29 @@ func get_aim_direction():
 func get_aim_pitch():
 	return $AimPivot/SpringArm3D.rotation.x
 
+func _dedicated_hold_point(point_name: String, local_position: Vector3) -> Marker3D:
+	var point := $AimPivot.get_node_or_null(point_name) as Marker3D
+	if point == null:
+		point = Marker3D.new()
+		point.name = point_name
+		point.position = local_position
+		$AimPivot.add_child(point)
+	return point
+
 func get_hold_point():
+	if NetworkManager.is_dedicated_server():
+		return _dedicated_hold_point("DedicatedGunHoldPoint", Vector3(0.0, 0.55, -0.45))
 	return $CharacterModel.find_child("GunHoldPoint", true, false)
 
 func get_melee_hold_point():
+	if NetworkManager.is_dedicated_server():
+		return _dedicated_hold_point("DedicatedMeleeHoldPoint", Vector3(0.0, 0.45, -0.55))
 	var melee_point = $CharacterModel.find_child("MeleeHoldPoint", true, false)
 	return melee_point if melee_point != null else get_hold_point()
 
 func get_item_hold_point():
+	if NetworkManager.is_dedicated_server():
+		return _dedicated_hold_point("DedicatedItemHoldPoint", Vector3(0.0, 0.45, -0.35))
 	return $CharacterModel.find_child("ItemHoldPoint", true, false)
 
 func get_camera():

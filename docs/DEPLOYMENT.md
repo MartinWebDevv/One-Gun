@@ -56,7 +56,7 @@ Then export from the repository root:
 
 Verified on 2026-08-13 with Godot 4.7.1: the command produced a valid Linux x86_64 ELF executable and `OneGunServer.pck` with no export errors, and the resulting Docker image passed the complete two-client gun/melee/item action suite.
 
-The Linux preset intentionally keeps `export_filter="all_resources"` and uses the `dedicated_server` custom feature instead of Godot's resource-stripping dedicated export mode. One Gun currently keeps gameplay attachment points and replicated object hierarchy beneath visual scene branches; stripping those resources produced placeholder-load errors and broke held-object action replication. The process still starts headlessly. The larger PCK is an accepted development tradeoff until gameplay-only nodes are separated from presentation assets.
+The Linux preset intentionally keeps `export_filter="all_resources"` and uses the `dedicated_server` custom feature instead of Godot's resource-stripping dedicated export mode. Stripping previously produced placeholder-loaded presentation branches and broke gameplay paths that still referenced them. Authoritative held gun/melee/item state no longer depends on animated hand sockets: dedicated actors create invisible gameplay-only attachment markers under `AimPivot`, while rendered clients retain the existing visual sockets. The process still starts headlessly. The larger PCK remains an accepted development tradeoff until every gameplay dependency has been separated from presentation assets and the stripped export can be revalidated safely.
 
 Run the exported server on Linux:
 
@@ -212,7 +212,7 @@ EDGEGAP_GHCR_TOKEN
 
 `EDGEGAP_GHCR_TOKEN` is a classic GitHub PAT with `read:packages` only. GHCR publication uses the workflow's short-lived `GITHUB_TOKEN` with `packages: write`; no package-write PAT is stored in GitHub Secrets. The Edgegap API token must remain in GitHub Actions only and must never enter the project export or shipped client.
 
-Current checkpoint: the first automatic deployment exposed a dedicated-export regression where stripped resources produced placeholder scene branches and the reparented gun sent RPCs from divergent client/server paths. The Linux preset now retains the full resource graph, gun actions use the stable `RoundManager` coordinator, dedicated presentation audio is skipped, and the exported Docker image passes gun/melee/item actions on both test peers. The next automatic deployment still needs one rendered Edgegap client confirmation.
+Current checkpoint: rendered Edgegap logs proved client input and RPC delivery reached the server, but authoritative held objects were orphaned after pickup because the headless actor lacked the presentation-backed hand socket. Fire/drop/throw then failed group lookup with `matching gun not found` or `item ... not found`. Dedicated actors now create gameplay-only attachment markers under `AimPivot`, and all pickup paths validate the socket before removing an object from its world parent. The exported Linux executable running in Docker passes controller/guest gun pickup/fire/drop, melee pickup/swing/drop, and item pickup/drop/throw. The next automatic deployment still needs one rendered Edgegap client confirmation.
 
 Remaining checkpoints:
 

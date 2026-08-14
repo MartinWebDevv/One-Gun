@@ -402,6 +402,10 @@ func pick_up(p = null) -> bool:
 func _local_pickup(p, preserve_melee: bool = false) -> bool:
 	if is_held or p == null:
 		return false
+	var hold_point = p.get_hold_point()
+	if hold_point == null or not hold_point.is_inside_tree():
+		push_error("Gun pickup aborted: holder has no active gun attachment socket.")
+		return false
 	_cancel_loose_return()
 	# Picking up the gun is always an instant swap, even from a melee weapon —
 	# only giving up the gun requires the deliberate hold (see character_body_3d.gd).
@@ -416,7 +420,6 @@ func _local_pickup(p, preserve_melee: bool = false) -> bool:
 	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
-	var hold_point = p.get_hold_point()
 	var prev_parent = get_parent()
 	if prev_parent != null:
 		prev_parent.remove_child(self)

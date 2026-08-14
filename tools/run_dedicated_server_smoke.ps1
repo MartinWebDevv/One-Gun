@@ -83,6 +83,8 @@ foreach ($request in @(
 )) {
     if ($combined["server"] -notmatch "\[DEDICATED ACTION\] $request requested") { exit 1 }
 }
+if ($combined["server"] -match "\[DEDICATED ACTION\].*rejected.*(matching gun not found|matching melee not found|item \d+ not found)") { exit 1 }
+if (($combined.Values -join "`n") -match "pickup aborted: holder has no active .* attachment socket") { exit 1 }
 if ($combined["server"] -match "Attempt to disconnect a nonexistent connection") { exit 1 }
 if (($combined.Values -join "`n") -match "Failed to get cached node|Node not found: .*NetSync|Ignoring sync data from non-authority or for missing node") { exit 1 }
 if ($combined["controller"] -match "on_despawn_receive") { exit 1 }

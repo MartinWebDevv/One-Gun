@@ -109,6 +109,10 @@ func pick_up(p = null) -> bool:
 func _do_pickup(p) -> bool:
 	if p == null or is_held or is_in_flight or not visible:
 		return false
+	var hold_point = p.get_item_hold_point()
+	if hold_point == null or not hold_point.is_inside_tree():
+		push_error("Item pickup aborted: holder has no active item attachment socket.")
+		return false
 	_drop_token += 1  # cancel any pending dropped-return timer
 	if p.has_method("can_pick_up_item"):
 		# Slot-aware controller (human, up to 2 item slots). If both are
@@ -131,7 +135,6 @@ func _do_pickup(p) -> bool:
 	freeze = true
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
-	var hold_point = p.get_item_hold_point()
 	var prev_parent = get_parent()
 	if prev_parent != null:
 		prev_parent.remove_child(self)

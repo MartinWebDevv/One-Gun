@@ -440,6 +440,10 @@ func _local_pickup(p) -> bool:
 	# deliberately hold-drop it first (see character_body_3d.gd). No auto-drop here.
 	if p.holding_gun:
 		return false
+	var hold_point = p.get_melee_hold_point()
+	if hold_point == null or not hold_point.is_inside_tree():
+		push_error("Melee pickup aborted: holder has no active melee attachment socket.")
+		return false
 	despawn_timer_generation += 1
 	despawn_timer_active = false
 	var swap_position = global_position
@@ -454,7 +458,6 @@ func _local_pickup(p) -> bool:
 	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
-	var hold_point = p.get_melee_hold_point()
 	var prev_parent = get_parent()
 	if prev_parent != null:
 		prev_parent.remove_child(self)
