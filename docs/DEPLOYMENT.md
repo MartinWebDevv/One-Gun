@@ -212,16 +212,15 @@ EDGEGAP_GHCR_TOKEN
 
 `EDGEGAP_GHCR_TOKEN` is a classic GitHub PAT with `read:packages` only. GHCR publication uses the workflow's short-lived `GITHUB_TOKEN` with `packages: write`; no package-write PAT is stored in GitHub Secrets. The Edgegap API token must remain in GitHub Actions only and must never enter the project export or shipped client.
 
-Current checkpoint: rendered Edgegap logs proved client input and RPC delivery reached the server, but authoritative held objects were orphaned after pickup because the headless actor lacked the presentation-backed hand socket. Fire/drop/throw then failed group lookup with `matching gun not found` or `item ... not found`. Dedicated actors now create gameplay-only attachment markers under `AimPivot`, and all pickup paths validate the socket before removing an object from its world parent. The exported Linux executable running in Docker passes controller/guest gun pickup/fire/drop, melee pickup/swing/drop, and item pickup/drop/throw. The next automatic deployment still needs one rendered Edgegap client confirmation.
+Phase 7 and the dedicated action regression are verified complete. GitHub Actions run `31764060357` published build `dev-2318743`, replaced the existing free-tier development deployment, and produced a Ready public UDP endpoint. A normal rendered Windows client connected through Edgegap and successfully used the gun; authoritative logs reported `gun fire requested` rather than `matching gun not found`. The same attachment path is covered locally and in the exported Linux Docker image for gun pickup/fire/drop, melee pickup/swing/drop, and item pickup/drop/throw.
 
 Remaining checkpoints:
 
-- Rendered verification of gun, melee, and item actions on the next automatic Edgegap deployment.
 - itch.io or Butler publishing.
 - GitHub Actions Windows-client publishing.
 - The later player-facing version-mismatch flow and secure dynamic-deployment backend.
 
-Do not begin itch.io or client automation until the Phase 7 workflow creates a Ready deployment and a normal client connects to its reported endpoint.
+The server pipeline is now stable enough to begin the itch.io and Butler client-distribution phases. Dynamic match-server deployment remains deferred until the earlier client pipeline is also verified.
 
 ## Troubleshooting
 
