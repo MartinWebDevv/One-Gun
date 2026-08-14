@@ -124,10 +124,16 @@ jobs:
           }
 
           $importedDir = Join-Path $PWD ".godot/imported"
+          if (-not (Test-Path -LiteralPath $importedDir)) {
+            Write-Output "::error title=Missing Godot import cache::.godot/imported was not created."
+            throw "Godot import cache directory is missing."
+          }
           $importedFiles = @(Get-ChildItem -LiteralPath $importedDir -File)
           [long]$importedBytes = ($importedFiles | Measure-Object Length -Sum).Sum
           if ($importedFiles.Count -lt 500 -or $importedBytes -lt 100MB) {
-            throw "Godot import cache is incomplete: $($importedFiles.Count) files, $importedBytes bytes."
+            $message = "Godot import cache is incomplete: $($importedFiles.Count) files, $importedBytes bytes."
+            Write-Output "::error title=Incomplete Godot import cache::$message"
+            throw $message
           }
 
           $requiredImports = @(
@@ -141,15 +147,21 @@ jobs:
             $contents = Get-Content -LiteralPath $sidecar -Raw
             $match = [regex]::Match($contents, '(?m)^path="res://([^"]+)"')
             if (-not $match.Success) {
-              throw "Could not resolve imported resource path from $sidecar."
+              $message = "Could not resolve imported resource path from $sidecar."
+              Write-Output "::error title=Invalid Godot import sidecar::$message"
+              throw $message
             }
             $relativePath = $match.Groups[1].Value.Replace('/', [IO.Path]::DirectorySeparatorChar)
             $importedPath = Join-Path $PWD $relativePath
             if (-not (Test-Path -LiteralPath $importedPath)) {
-              throw "Required imported resource is missing: $importedPath"
+              $message = "Required imported resource is missing: $importedPath"
+              Write-Output "::error title=Missing imported client resource::$message"
+              throw $message
             }
             if ((Get-Item -LiteralPath $importedPath).Length -lt 32) {
-              throw "Required imported resource is empty or truncated: $importedPath"
+              $message = "Required imported resource is empty or truncated: $importedPath"
+              Write-Output "::error title=Truncated imported client resource::$message"
+              throw $message
             }
           }
 
