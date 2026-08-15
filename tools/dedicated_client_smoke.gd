@@ -102,12 +102,21 @@ func _detach_and_run() -> void:
 		_fail("controller melee pickup did not replicate through the stable coordinator")
 		return
 	print("DEDICATED_MELEE_PICKUP_PASS %s" % role)
+	if not await _prepare_melee_hit_positions():
+		_fail("clients could not establish the close-range melee hit setup")
+		return
+	var melee_hits_before := _controller_melee_hit_count()
 	var melee_swing_ok := await _controller_swing_melee_through_input() \
 		if role == "controller" else await _wait_until(_controller_melee_is_swinging)
 	if not melee_swing_ok:
 		_fail("controller melee swing did not replicate through the stable coordinator")
 		return
 	print("DEDICATED_MELEE_SWING_PASS %s" % role)
+	if not await _wait_until(func():
+		return _controller_melee_hit_count() > melee_hits_before):
+		_fail("controller melee swing did not register an authoritative hit on the nearby guest")
+		return
+	print("DEDICATED_MELEE_HIT_PASS %s" % role)
 	if role == "controller" and not await _wait_until(_controller_melee_is_ready):
 		_fail("controller melee recovery did not replicate")
 		return
@@ -308,6 +317,56 @@ func _controller_melee_is_ready() -> bool:
 
 func _controller_melee_is_dropped() -> bool:
 	return _controller_melee() == null
+
+
+func _other_actor():
+	for peer_id in NetworkManager.participant_peer_ids():
+		var candidate_id := NetworkManager.actor_id_for_peer(int(peer_id))
+		if candidate_id != _controller_actor_id():
+			return NetworkManager.find_actor(candidate_id)
+	return null
+
+
+func _prepare_melee_hit_positions() -> bool:
+	var controller := _controller_actor() as Node3D
+	var local_actor := NetworkManager.find_actor(NetworkManager.local_actor_id()) as Node3D
+	if controller == null or local_actor == null:
+		return false
+	if role == "controller":
+		var aim_pivot := controller.get_node_or_null("AimPivot") as Node3D
+		var pitch_pivot := controller.get_node_or_null("AimPivot/SpringArm3D") as Node3D
+		if aim_pivot != null:
+			aim_pivot.rotation = Vector3.ZERO
+		if pitch_pivot != null:
+			pitch_pivot.rotation = Vector3.ZERO
+	else:
+		var forward: Vector3 = controller.get_aim_direction()
+		forward.y = 0.0
+		forward = Vector3.FORWARD if forward.length_squared() < 0.01 else forward.normalized()
+		local_actor.global_position = controller.global_position + forward * 1.35
+	return await _wait_until(func():
+		var current_controller := _controller_actor() as Node3D
+		var target := _other_actor() as Node3D
+		if current_controller == null or target == null:
+			return false
+		var to_target := target.global_position - current_controller.global_position
+		var flat_delta := Vector3(to_target.x, 0.0, to_target.z)
+		var current_forward: Vector3 = current_controller.get_aim_direction()
+		current_forward.y = 0.0
+		if flat_delta.length_squared() < 0.01 or current_forward.length_squared() < 0.01:
+			return false
+		return flat_delta.length() < 2.0 \
+			and flat_delta.normalized().dot(current_forward.normalized()) > 0.8 \
+			and absf(to_target.y) < 0.75)
+
+
+func _controller_melee_hit_count() -> int:
+	var scene := get_tree().current_scene
+	var manager = scene.get_node_or_null("RoundManager") if scene != null else null
+	if manager == null:
+		return -1
+	var entry: Dictionary = manager.online_actor_state.get(_controller_actor_id(), {})
+	return int(entry.get("melee", 0))
 
 
 func _controller_pickup_melee_through_input() -> bool:

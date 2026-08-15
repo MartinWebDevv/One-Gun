@@ -49,6 +49,8 @@ const NORMAL_MELEE_MAX_HITBOX_LENGTH := 3.8
 const POWERUP_MELEE_MAX_HIT_DISTANCE := 8.0
 const SWING_TIME_MULTIPLIER := 0.85
 const HITBOX_WIDTH_MULTIPLIER := 1.20
+const DEDICATED_SWING_ORIGIN_HEIGHT := 0.45
+const DEDICATED_SWING_MIN_RADIUS := 0.18
 const POWERUP_REACH_MULTIPLIER := POWERUP_MELEE_MAX_HIT_DISTANCE / ONLINE_MELEE_MAX_HIT_DISTANCE
 
 # ---- Runtime state ----
@@ -857,7 +859,7 @@ func swing(should_break: bool = false):
 	swing_tween = create_tween()
 	swing_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	swing_tween.tween_interval(_windup_time)
-	swing_tween.tween_callback(func(): $HitBox.monitoring = true)
+	swing_tween.tween_callback(_begin_active_swing_window)
 	swing_tween.tween_interval(_active_time)
 	swing_tween.tween_callback(func():
 		$HitBox.monitoring = false
@@ -869,6 +871,78 @@ func swing(should_break: bool = false):
 	if _break_after_swing:
 		_break_after_swing = false
 		_break_weapon()
+
+
+func _begin_active_swing_window() -> void:
+	$HitBox.monitoring = true
+	if NetworkManager.is_online() and multiplayer.is_server() \
+			and NetworkManager.is_dedicated_server():
+		_scan_dedicated_swing_window()
+
+
+func _scan_dedicated_swing_window() -> void:
+	# A dedicated server has no animated hand socket, so the held weapon's Area3D
+	# cannot reproduce the rendered client's paw arc. Sweep the authored reach
+	# along the synchronized aim every physics frame while the hit window is open.
+	while is_swinging and $HitBox.monitoring:
+		for body in _dedicated_swing_candidates():
+			_on_hit_landed(body)
+		await get_tree().physics_frame
+
+
+func _dedicated_swing_candidates() -> Array:
+	if player_ref == null or not player_ref is CollisionObject3D \
+			or not player_ref.has_method("get_aim_direction"):
+		return []
+	var forward: Vector3 = player_ref.get_aim_direction()
+	if forward.length_squared() < 0.01:
+		return []
+	forward = forward.normalized()
+	var shape_node := $HitBox/CollisionShape3D as CollisionShape3D
+	if shape_node == null or shape_node.shape == null:
+		return []
+	var reach := _dedicated_swing_reach(shape_node.shape)
+	var radius := _dedicated_swing_radius(shape_node.shape)
+	if reach <= 0.0:
+		return []
+	var sweep := CapsuleShape3D.new()
+	sweep.radius = radius
+	sweep.height = maxf(reach, radius * 2.0)
+	var origin: Vector3 = player_ref.global_position \
+		+ Vector3.UP * DEDICATED_SWING_ORIGIN_HEIGHT
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sweep
+	query.transform = Transform3D(
+		Basis(Quaternion(Vector3.UP, forward)), origin + forward * reach * 0.5)
+	query.collision_mask = 2
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.exclude = [player_ref.get_rid()]
+	var candidates: Array = []
+	for result in get_world_3d().direct_space_state.intersect_shape(query, 16):
+		var collider = result.get("collider")
+		if collider != null and not candidates.has(collider):
+			candidates.append(collider)
+	return candidates
+
+
+func _dedicated_swing_reach(shape: Shape3D) -> float:
+	if shape is BoxShape3D:
+		return shape.size.z
+	if shape is CapsuleShape3D or shape is CylinderShape3D:
+		return shape.height
+	if shape is SphereShape3D:
+		return shape.radius * 2.0
+	return 0.0
+
+
+func _dedicated_swing_radius(shape: Shape3D) -> float:
+	var radius := DEDICATED_SWING_MIN_RADIUS
+	if shape is BoxShape3D:
+		radius = maxf(shape.size.x, shape.size.y) * 0.5
+	elif shape is CapsuleShape3D or shape is CylinderShape3D or shape is SphereShape3D:
+		radius = shape.radius
+	return maxf(radius, DEDICATED_SWING_MIN_RADIUS)
 
 
 func _apply_powerup_reach(enabled: bool) -> void:
@@ -1077,6 +1151,9 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 	if target_id < 0 or attacker_id < 0 or _online_hit_actor_ids.has(target_id):
 		return
 	_online_hit_actor_ids[target_id] = true
+	if NetworkManager.is_dedicated_server():
+		print("[DEDICATED ACTION] melee hit confirmed actor %d -> actor %d (candidate %d, epoch %d)" % [
+			attacker_id, target_id, online_candidate_id, _online_round_epoch()])
 
 	var was_holding_gun := bool(body.holding_gun)
 	var meaningful_hit := true

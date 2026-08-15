@@ -68,6 +68,7 @@ foreach ($role in @("controller", "guest")) {
         "DEDICATED_INPUT_DROP_PASS",
         "DEDICATED_MELEE_PICKUP_PASS",
         "DEDICATED_MELEE_SWING_PASS",
+        "DEDICATED_MELEE_HIT_PASS",
         "DEDICATED_MELEE_DROP_PASS",
         "DEDICATED_ITEM_PICKUP_PASS",
         "DEDICATED_ITEM_DROP_PASS",
