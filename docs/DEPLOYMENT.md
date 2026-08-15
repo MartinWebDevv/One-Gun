@@ -292,16 +292,19 @@ Phase 9 automatic client publishing is verified. A push to `main` now produces m
 
 Phase 10 compatibility protection is implemented and locally verified. Client hello now carries explicit game version, network protocol, and informational build ID. The server holds every newcomer as provisional, returns a typed rejection for incompatible game/protocol versions, and admits the peer only after that check succeeds. The online panel recovers cleanly for browser and direct-endpoint joins, and the main menu displays the player-facing restart/update dialog. The two-process ENet mismatch smoke passed on 2026-08-14 without roster admission or cleanup errors.
 
-Phase 11 architecture and security boundaries are documented in `docs/MATCH_DEPLOYMENT.md`. The persistent Godot deployment remains the fallback. A separate Matchmaker-aware server path now parses Edgegap's `MM_*` assignment variables, starts directly in the selected map, and requires a unique assigned ticket before admitting each player. Dynamic client migration still requires an external coordinator/lobby layer, and all Edgegap/Matchmaker management credentials remain backend-only.
+Phase 11 development quick-match code is locally complete. The Matchmaker-aware server requires a unique assigned ticket; `services/match-coordinator` keeps the limited Matchmaker token behind encrypted Cloudflare Worker secrets; and `matchmaking_client.gd` transfers a queued client to the assigned FQDN and dynamic external UDP port. The persistent Godot deployment, Tailscale discovery, listen hosting, and direct endpoint remain the default and fallback.
 
-Remaining Phase 11 checkpoints:
+Verified local gates:
 
-- The free `onegun-matchmaker-dev` instance and generated Matchmaker 3.2.5 OpenAPI contract are verified. `tools/run_edgegap_matchmaker_smoke.ps1 -ValidateOnly` passes locally.
-- The live two-ticket assignment and public endpoint are verified: build `dev-42bd2ca` admitted the matching Windows client, loaded City, and received an authoritative gun-fire action.
-- The local ticket-aware server gate is verified: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\run_match_server_smoke.ps1` rejects an invalid ticket, admits two assigned tickets, and ends with `MATCH SERVER SMOKE: PASS`.
-- Remaining: select and authenticate the persistent coordinator, add the client transfer/loading state behind a development feature flag, then repeat the ticket-aware gate on a live protocol-2 Edgegap deployment.
+- Matchmaker 3.2.5 generated contract and live two-ticket assignment/public endpoint;
+- `tools/run_match_server_smoke.ps1`: invalid-ticket rejection plus two assigned clients completing movement and combat;
+- `npm.cmd test` in `services/match-coordinator`: signed capability, secret non-disclosure, protocol rejection, and UDP mapping validation;
+- `tools/run_matchmaking_client_smoke.ps1`: real Godot HTTP polling through deploying to ready with ticket/endpoint preservation;
+- Godot 4.7.1 headless parse and existing version-mismatch regression.
 
-The development build-and-deploy pipeline, persistent development-server fallback, and compatibility gate remain complete and unchanged.
+The remaining website checkpoint is intentionally manual: deploy the Worker with `EDGEGAP_MATCHMAKER_TOKEN` and `COORDINATOR_SIGNING_KEY` as Cloudflare secrets, verify `/health`, enable only its public URL in `matchmaking/coordinator_config.json`, then run the live two-client gate. Keep repository variable `EDGEGAP_SERVER_MODE` absent/`persistent` until that succeeds; set it to `matchmaker` only after cutover. Exact commands are in `services/match-coordinator/README.md` and the full security boundary is in `docs/MATCH_DEPLOYMENT.md`.
+
+The development build-and-publish pipelines and compatibility gate remain complete. Production player authentication, rich persistent lobby state, reconnect policy, match-completion reporting, and no-kill rollout policy remain later backend hardening.
 
 ## Troubleshooting
 

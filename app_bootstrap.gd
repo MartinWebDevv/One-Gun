@@ -18,6 +18,12 @@ func _route_startup() -> void:
 		return
 
 	if NetworkManager.is_dedicated_server() and NetworkManager.is_online():
+		if NetworkManager.match_server_mode:
+			print("[MATCH SERVER] Match finished; shutting down assigned server.")
+			NetworkManager.disconnect_net()
+			await get_tree().process_frame
+			get_tree().quit()
+			return
 		print("[DEDICATED] Lobby runtime restored; ENet remains active on UDP %d." \
 			% NetworkManager.listening_port())
 		return

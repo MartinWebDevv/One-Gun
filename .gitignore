@@ -15,3 +15,9 @@ Godot/app_userdata/
 addons/terrain_3d/bin/~*
 /build/
 build_metadata.json
+
+# Cloudflare Worker local secrets and generated dependencies
+services/match-coordinator/.dev.vars
+services/match-coordinator/.env
+services/match-coordinator/node_modules/
+services/match-coordinator/.wrangler/

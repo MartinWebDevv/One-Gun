@@ -120,18 +120,19 @@ The implemented match-server mode:
 - rejects missing, unknown, duplicate, and replayed tickets before roster admission;
 - keeps raw ticket IDs server-only and out of normal logs/roster replication;
 - waits for every assigned participant before completing scene readiness;
+- exits the assigned Godot process after match completion so Edgegap can reclaim the on-demand deployment;
 - prints a clear `[MATCH SERVER]` error and terminates with a nonzero exit code when active Matchmaker assignment data is invalid.
 
-An ordinary `--server` launch with no `MM_MATCH_ID` continues to use the existing persistent lobby-and-match flow. Match completion reporting, sanitized map/rules injection, deployment cleanup, and automatic client endpoint migration remain coordinator work.
+An ordinary `--server` launch with no `MM_MATCH_ID` continues to use the existing persistent lobby-and-match flow. Platform completion reporting, abandoned-deployment cleanup, and sanitized map/rules injection remain production coordinator work.
 
 ## Migration stages and gates
 
 1. **Current fallback (verified):** `onegun-dev/dev` remains a persistent lobby-and-match server deployed by pushes to `main`.
 2. **Matchmaker sandbox (verified):** the development Matchmaker API, two-ticket assignment, dynamic external UDP endpoint, and public ENet connection all pass.
-3. **Coordinator contract (next):** add an authenticated proxy or lobby service, server-side application/version allowlists, idempotency, rate limiting, and deployment cleanup. Test it locally with fake Edgegap responses before using a real token.
+3. **Coordinator contract (locally verified):** the development Cloudflare Worker proxies only allowlisted Matchmaker ticket operations, keeps both backend secrets encrypted, signs expiring queue capabilities, rate-limits anonymous playtest requests, and sanitizes every response.
 4. **Match-server boot (locally verified):** a valid `MM_*` assignment starts directly in the map, requires one assigned ticket per client, and passes two-client movement/combat coverage. Normal Windows and ordinary `--server` behavior remain unchanged.
-5. **Endpoint migration:** have lobby clients show a transfer/loading state, disconnect, connect to the assigned endpoint with their one-time ticket, and recover gracefully on timeout.
-6. **Development cutover:** enable dynamic deployment only behind an explicit development feature flag. Retain direct endpoint entry as the emergency fallback.
+5. **Endpoint migration (locally verified):** the Online Play development queue shows search/deploy/connect states, polls the credential-free coordinator contract, then calls `NetworkManager.join_game(host, external_port, one_time_ticket)`. Cancellation and retry preserve the working host/join/direct paths.
+6. **Development cutover (live gate pending):** deploy the coordinator, enable its public HTTPS URL in the client config, run two current itch clients through a live ticket-aware match, then set GitHub variable `EDGEGAP_SERVER_MODE=matchmaker`.
 7. **Production hardening:** add real player authentication, replay protection, metrics, cleanup webhooks, reconnect policy, and a no-kill deployment/version rollout policy.
 
 Do not advance a stage until its preceding layer passes locally and then on Edgegap.
@@ -218,6 +219,56 @@ MATCH SERVER SMOKE: PASS
 
 This test starts one match server, proves an unknown ticket is rejected, admits two distinct assigned tickets, waits for both participants, and completes movement plus gun/melee/item action coverage. A final live gate will exercise this protocol-2 ticket path after the coordinator can securely deliver each player's ticket and assigned endpoint.
 
+## Trusted development coordinator (local gate complete)
+
+The development coordinator lives in `services/match-coordinator`. It is a small Cloudflare Worker with exactly three public queue operations plus `/health`. The shipped game knows only the public HTTPS origin. It never receives `EDGEGAP_MATCHMAKER_TOKEN`, `COORDINATOR_SIGNING_KEY`, the Edgegap organization token, or registry credentials.
+
+The Worker enforces:
+
+- allowlisted Matchmaker URL/profile, game version, protocol, and internal UDP port;
+- encrypted Worker secrets declared as required bindings;
+- a six-per-minute queue-create limit and a separate status-poll limit;
+- HMAC-signed ten-minute queue capabilities;
+- no-store JSON responses and no credential logging;
+- server-derived player IP, fixed development beacon schema, and sanitized errors;
+- external UDP mapping validation against internal port `24545`;
+- output limited to state, retry delay, assigned FQDN/external port, and that player's one-time ticket.
+
+This anonymous capability model is appropriate only for the restricted development playtest. Production still requires authenticated player identity, durable lobby ownership, idempotent match launch, map/rules/skin validation, reconnect policy, completion reporting, and cleanup webhooks.
+
+The client side is `matchmaking/matchmaking_client.gd`. `UI/online_play_overlay.gd` exposes `FIND DEV MATCH` only when `matchmaking/coordinator_config.json` is enabled. The existing Tailscale browser, listen hosting, lobby code, and direct `hostname:port` fallback are unchanged.
+
+Local credential-free gates:
+
+```powershell
+cd "D:\Godot Projects\one-gun\services\match-coordinator"
+npm.cmd test
+
+cd "D:\Godot Projects\one-gun"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\run_matchmaking_client_smoke.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\run_match_server_smoke.ps1
+```
+
+Expected final markers:
+
+```text
+4 coordinator tests passed
+MATCHMAKING CLIENT SMOKE: PASS
+MATCH SERVER SMOKE: PASS
+```
+
+## Reversible development cutover
+
+`.github/workflows/deploy-server-dev.yml` reads repository variable `EDGEGAP_SERVER_MODE`. When absent or set to `persistent`, pushes keep the verified persistent `onegun-dev/dev` deployment. After the live dynamic gate passes, set it to `matchmaker`; pushes will still stop the old development deployment, publish an immutable image, and update Edgegap version `dev`, but will skip creating a permanent deployment. Edgegap Matchmaker then creates one server on demand. Production must use a separate app/version and must never inherit this development stop policy.
+
+## Cloudflare deployment checkpoint
+
+The Worker cannot be made live without the account owner signing into Cloudflare and entering the Matchmaker Auth Token as an encrypted secret. Follow `services/match-coordinator/README.md`. After `wrangler deploy`, verify `/health`, then put only the public `https://*.workers.dev` origin into `matchmaking/coordinator_config.json` and set `enabled` to `true`. The URL is public configuration; neither backend secret belongs in that file.
+
+The development Worker was deployed and passed its public health check on 2026-08-14 at `https://one-gun-match-coordinator-dev.one-gun-dev.workers.dev`. Its temporary local `.dev.vars` file was removed immediately after deployment.
+
+Do not switch `EDGEGAP_SERVER_MODE` yet. First push the enabled client, terminate the persistent free-tier deployment, keep `onegun-matchmaker-dev` online, and prove two itch-installed clients reach the same new server with distinct assigned tickets.
+
 ## Phase 11 checkpoint
 
-Dynamic deployment is now isolated rather than globally enabled. The persistent `onegun-dev/dev` server remains the default and direct endpoint fallback. When documented `MM_*` assignment variables are present, the Linux server starts the ticket-aware match path and fails closed on malformed data. Matchmaker contract validation, live assignment/public UDP, and local two-ticket gameplay now pass. The next layer is the trusted coordinator and client transfer state; no privileged Edgegap or Matchmaker token will be placed in the shipped client.
+The backend boundary, client transfer state, version/protocol gate, ticket-aware match server, and reversible CI cutover are locally implemented and verified. The working persistent server and direct endpoint remain the default because `coordinator_config.json` is still disabled. Remaining manual gates are: deploy the Worker once, enable its public URL, push the matching client/server build, and run the two-player live ticket-aware test. Rich authenticated lobby-to-match orchestration remains production work rather than part of this development quick-match slice.

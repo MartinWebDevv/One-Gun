@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "one-gun-match-coordinator-dev",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-14",
+  "workers_dev": true,
+  "vars": {
+    "MATCHMAKER_API_URL": "https://om-te7fpgo2ru.edgegap.net",
+    "MATCHMAKER_PROFILE": "simple-example",
+    "MATCHMAKER_BEACONS": "{\"Montreal\":12.3,\"Toronto\":45.6,\"Quebec\":78.9}",
+    "GAME_VERSION": "0.0.4",
+    "NETWORK_PROTOCOL": "2",
+    "GAME_PORT": "24545"
+  },
+  "secrets": {
+    "required": ["EDGEGAP_MATCHMAKER_TOKEN", "COORDINATOR_SIGNING_KEY"]
+  },
+  "ratelimits": [
+    {
+      "name": "QUEUE_RATE_LIMITER",
+      "namespace_id": "1045211",
+      "simple": { "limit": 6, "period": 60 }
+    },
+    {
+      "name": "STATUS_RATE_LIMITER",
+      "namespace_id": "1045212",
+      "simple": { "limit": 120, "period": 60 }
+    }
+  ]
+}

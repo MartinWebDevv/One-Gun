@@ -20,6 +20,7 @@ env:
   EDGEGAP_APP_NAME: onegun-dev
   EDGEGAP_VERSION_NAME: dev
   EDGEGAP_MANAGED_TAG: onegun-dev-ci
+  EDGEGAP_SERVER_MODE: ${{ vars.EDGEGAP_SERVER_MODE || 'persistent' }}
 
 jobs:
   build-publish-register-deploy:
@@ -151,6 +152,7 @@ jobs:
           -DockerTag $env:BUILD_ID
 
       - name: Deploy Edgegap development server
+        if: env.EDGEGAP_SERVER_MODE == 'persistent'
         id: edgegap_deploy
         shell: pwsh
         env:
@@ -177,7 +179,12 @@ jobs:
             echo "- Build: $BUILD_ID"
             echo "- Image: $SERVER_IMAGE:$BUILD_ID"
             echo "- Edgegap: $EDGEGAP_APP_NAME / $EDGEGAP_VERSION_NAME"
-            echo "- Request ID: ${{ steps.edgegap_deploy.outputs.request_id }}"
-            echo "- Public UDP endpoint: ${{ steps.edgegap_deploy.outputs.endpoint }}"
+            echo "- Server mode: $EDGEGAP_SERVER_MODE"
+            if [[ "$EDGEGAP_SERVER_MODE" == "persistent" ]]; then
+              echo "- Request ID: ${{ steps.edgegap_deploy.outputs.request_id }}"
+              echo "- Public UDP endpoint: ${{ steps.edgegap_deploy.outputs.endpoint }}"
+            else
+              echo "- Persistent deployment: skipped; Edgegap Matchmaker starts servers on demand"
+            fi
             echo "- Managed deployment tag: $EDGEGAP_MANAGED_TAG"
           } >> "$GITHUB_STEP_SUMMARY"

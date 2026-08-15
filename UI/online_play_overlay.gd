@@ -2,6 +2,7 @@ class_name OneGunOnlinePlayOverlay
 extends OneGunCabinet
 
 const BuildInfo = preload("res://build_info.gd")
+const MATCHMAKING_CLIENT_SCRIPT = preload("res://matchmaking/matchmaking_client.gd")
 
 # Phase 4 online entry cabinet. Lobby rows come only from NetworkManager's
 # real Tailscale/loopback discovery responder; no sample data is created here.
@@ -9,7 +10,7 @@ const BuildInfo = preload("res://build_info.gd")
 signal close_requested
 signal session_started
 
-enum Page { BROWSER, HOST, CODE }
+enum Page { BROWSER, HOST, CODE, MATCHMAKING }
 
 var _page := Page.BROWSER
 var _page_root: VBoxContainer
@@ -31,6 +32,9 @@ var _private_code_section: VBoxContainer
 var _privacy_buttons: Dictionary = {}
 var _code_field: LineEdit
 var _code_error: OneGunInlineError
+var _matchmaking: OneGunMatchmakingClient
+var _matchmaking_state: OneGunStatusPanel
+var _matchmaking_cancel_button: OneGunButton
 var _busy := false
 
 
@@ -40,11 +44,18 @@ func _ready() -> void:
 	content_padding = OneGunUI.SPACE_L
 	show_bolts = true
 	_connect_network_signals()
+	_matchmaking = MATCHMAKING_CLIENT_SCRIPT.new()
+	_matchmaking.progress_changed.connect(_on_matchmaking_progress)
+	_matchmaking.assignment_ready.connect(_on_matchmaking_assignment)
+	_matchmaking.queue_failed.connect(_on_matchmaking_failed)
+	add_child(_matchmaking)
 	_build_shell()
 	_show_browser()
 
 
 func _exit_tree() -> void:
+	if _matchmaking != null:
+		_matchmaking.cancel_queue()
 	_disconnect_network_signals()
 
 
@@ -55,6 +66,7 @@ func open(capture_state := "") -> void:
 			_show_host()
 			_set_host_privacy("private")
 		"code": _show_code()
+		"matchmaking": _show_matchmaking()
 		_:
 			_show_browser()
 
@@ -62,6 +74,8 @@ func open(capture_state := "") -> void:
 func handle_cancel() -> void:
 	if _page == Page.BROWSER:
 		close_requested.emit()
+	elif _page == Page.MATCHMAKING:
+		_cancel_matchmaking()
 	else:
 		_show_browser(false)
 
@@ -70,6 +84,7 @@ func initial_focus() -> Control:
 	match _page:
 		Page.HOST: return _host_name
 		Page.CODE: return _code_field
+		Page.MATCHMAKING: return _matchmaking_cancel_button
 		_: return _search_field
 
 
@@ -130,6 +145,8 @@ func _clear_page() -> void:
 	_privacy_buttons.clear()
 	_code_field = null
 	_code_error = null
+	_matchmaking_state = null
+	_matchmaking_cancel_button = null
 
 
 func _build_header(title: String, badge: String, show_back := false) -> void:
@@ -141,7 +158,7 @@ func _build_header(title: String, badge: String, show_back := false) -> void:
 		back.variant = "navy"
 		back.text = "BACK"
 		back.font_size = OneGunUI.TEXT_S
-		back.pressed.connect(func() -> void: _show_browser(false))
+		back.pressed.connect(_request_back)
 		row.add_child(back)
 	var title_label := OneGunUI.make_heading(title, OneGunUI.TEXT_TITLE, "gold")
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -160,8 +177,21 @@ func _build_header(title: String, badge: String, show_back := false) -> void:
 	close.variant = "navy"
 	close.text = "CLOSE"
 	close.font_size = OneGunUI.TEXT_S
-	close.pressed.connect(close_requested.emit)
+	close.pressed.connect(_request_close)
 	row.add_child(close)
+
+
+func _request_back() -> void:
+	if _page == Page.MATCHMAKING:
+		_cancel_matchmaking()
+	else:
+		_show_browser(false)
+
+
+func _request_close() -> void:
+	if _page == Page.MATCHMAKING and _matchmaking != null:
+		_matchmaking.cancel_queue()
+	close_requested.emit()
 
 
 func _show_browser(refresh := true) -> void:
@@ -186,6 +216,10 @@ func _show_browser(refresh := true) -> void:
 	var code := _make_button("JOIN BY CODE", "purple", _show_code)
 	code.tooltip_text = "Find a public or private host using its share code"
 	actions.add_child(code)
+	var matchmake := _make_button("FIND DEV MATCH", "green", _show_matchmaking)
+	matchmake.disabled = _matchmaking == null or not _matchmaking.is_configured()
+	matchmake.tooltip_text = "This build has no development coordinator URL configured" if matchmake.disabled else "Queue for a dynamically assigned Edgegap server"
+	actions.add_child(matchmake)
 	var action_spacer := Control.new()
 	action_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(action_spacer)
@@ -568,6 +602,73 @@ func _show_code() -> void:
 	_code_field.grab_focus.call_deferred()
 
 
+func _show_matchmaking() -> void:
+	_page = Page.MATCHMAKING
+	_busy = true
+	_clear_page()
+	_build_header("DEVELOPMENT MATCH", "DYNAMIC EDGEGAP", true)
+	var explanation := OneGunUI.make_label(
+		"This development queue pairs two current-build players, starts a fresh server, and connects each player using a one-time ticket.",
+		OneGunUI.TEXT_S, "muted")
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_page_root.add_child(explanation)
+	_matchmaking_state = OneGunStatusPanel.new()
+	_matchmaking_state.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_matchmaking_state.retry_requested.connect(_retry_matchmaking)
+	_matchmaking_state.show_loading("JOINING THE DEVELOPMENT QUEUE...")
+	_page_root.add_child(_matchmaking_state)
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_page_root.add_child(footer)
+	footer.add_child(OneGunUI.make_label(
+		"The coordinator receives no Edgegap credential from this game.", OneGunUI.TEXT_XS, "muted"))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.add_child(spacer)
+	_matchmaking_cancel_button = _make_button("CANCEL QUEUE", "navy", _cancel_matchmaking)
+	footer.add_child(_matchmaking_cancel_button)
+	_matchmaking_cancel_button.grab_focus.call_deferred()
+	if _matchmaking == null or not _matchmaking.start_queue():
+		_busy = false
+
+
+func _retry_matchmaking() -> void:
+	if _matchmaking_state == null:
+		return
+	_busy = true
+	_matchmaking_state.show_loading("REJOINING THE DEVELOPMENT QUEUE...")
+	if not _matchmaking.start_queue():
+		_busy = false
+
+
+func _cancel_matchmaking() -> void:
+	if _matchmaking != null:
+		_matchmaking.cancel_queue()
+	_busy = false
+	_show_browser(false)
+
+
+func _on_matchmaking_progress(message: String) -> void:
+	if _page == Page.MATCHMAKING and _matchmaking_state != null:
+		_matchmaking_state.show_loading(message)
+
+
+func _on_matchmaking_assignment(host: String, port: int, ticket: String) -> void:
+	if _page != Page.MATCHMAKING or _matchmaking_state == null:
+		return
+	_busy = true
+	_matchmaking_state.show_loading("SERVER READY - CONNECTING...")
+	if not NetworkManager.join_game(host, port, ticket):
+		_busy = false
+		_matchmaking_state.show_error("CONNECTION FAILED",
+			"The assigned ENet connection could not start. Try the queue again.", true)
+
+
+func _on_matchmaking_failed(title: String, message: String) -> void:
+	_busy = false
+	if _page == Page.MATCHMAKING and _matchmaking_state != null:
+		_matchmaking_state.show_error(title, message, true)
+
 func _normalize_join_value(value: String) -> void:
 	if value.contains(".") or value.contains(":"):
 		return
@@ -627,6 +728,8 @@ func _on_compatibility_rejected(reason: String, detail: String) -> void:
 		if _rows_box != null:
 			_rows_box.visible = false
 		_browser_state.show_error(title, message, true)
+	elif _page == Page.MATCHMAKING and _matchmaking_state != null:
+		_matchmaking_state.show_error(title, message, true)
 
 
 func _on_connection_failed() -> void:
@@ -638,6 +741,9 @@ func _on_connection_failed() -> void:
 		_rows_box.visible = false
 		_browser_state.visible = true
 		_browser_state.show_error("CONNECTION FAILED", "The selected host did not accept the connection.", true)
+	elif _page == Page.MATCHMAKING and _matchmaking_state != null:
+		_matchmaking_state.show_error("CONNECTION FAILED",
+			"The assigned server did not accept the connection. Rejoin the queue.", true)
 
 
 func _on_discovery_failed(message: String) -> void:
@@ -657,6 +763,9 @@ func _on_server_disconnected() -> void:
 		_rows_box.visible = false
 		_browser_state.visible = true
 		_browser_state.show_error("DISCONNECTED", "The host ended the online session.", true)
+	elif _page == Page.MATCHMAKING and _matchmaking_state != null:
+		_matchmaking_state.show_error("DISCONNECTED",
+			"The assigned match server ended the session.", true)
 
 
 func _add_form_heading(title: String, description: String) -> void:
