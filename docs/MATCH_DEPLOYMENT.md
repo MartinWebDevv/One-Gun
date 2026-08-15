@@ -267,8 +267,16 @@ The Worker cannot be made live without the account owner signing into Cloudflare
 
 The development Worker was deployed and passed its public health check on 2026-08-14 at `https://one-gun-match-coordinator-dev.one-gun-dev.workers.dev`. Its temporary local `.dev.vars` file was removed immediately after deployment.
 
-Do not switch `EDGEGAP_SERVER_MODE` yet. First push the enabled client, terminate the persistent free-tier deployment, keep `onegun-matchmaker-dev` online, and prove two itch-installed clients reach the same new server with distinct assigned tickets.
+For a repeatable live gate that follows the same public coordinator and one-time-ticket path as the shipped game, first keep the Matchmaker healthy and ensure no persistent game deployment occupies the free plan's single slot, then run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\run_live_matchmaking_headless.ps1
+```
+
+The runner starts two hidden Godot clients and passes only after both receive the same dynamic endpoint, are admitted with distinct assigned tickets, and reach live combat together on Forest. It prints the generated endpoint. The successful test server is a real Edgegap deployment; terminate its request-ID prefix in the Edgegap dashboard afterward to free the development slot.
+
+The development cutover is complete: repository variable `EDGEGAP_SERVER_MODE=matchmaker` keeps future pushes from occupying the free plan's game-deployment slot. Keep `onegun-matchmaker-dev` online before a playtest and confirm no stale game deployment remains before two players enter the queue.
 
 ## Phase 11 checkpoint
 
-The backend boundary, client transfer state, version/protocol gate, ticket-aware match server, and reversible CI cutover are locally implemented and verified. The working persistent server and direct endpoint remain the default because `coordinator_config.json` is still disabled. Remaining manual gates are: deploy the Worker once, enable its public URL, push the matching client/server build, and run the two-player live ticket-aware test. Rich authenticated lobby-to-match orchestration remains production work rather than part of this development quick-match slice.
+The backend boundary, public Worker, client transfer state, version/protocol gate, ticket-aware match server, live two-client Forest admission, and reversible CI cutover are implemented and verified. `Find Dev Match` now uses on-demand Edgegap deployments while direct endpoint and listen-host paths remain available as fallbacks. Rich authenticated lobby-to-match orchestration remains production work rather than part of this development quick-match slice.
