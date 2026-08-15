@@ -281,7 +281,7 @@ After stabilization, pipeline, and scope decisions:
 - New maps can follow the marker and asset-budget contracts.
 - Additional VFX/audio polish can replace approved placeholders.
 - Legacy maps can be either archived as test content or migrated deliberately.
-- Any melee purchase/upgrade concept should begin with a design decision; the existing `upgrade_tier()` hook is not a complete system.
+- Any future melee purchase/upgrade concept should begin with a new design decision; the old tier and `upgrade_tier()` systems have been removed.
 
 ## Recommended phase gates
 

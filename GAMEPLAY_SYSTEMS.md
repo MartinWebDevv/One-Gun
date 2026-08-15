@@ -183,7 +183,7 @@ Online behavior:
 - Crowbar.
 - Frying pan.
 
-Each spawn rolls weapon identity, tier, and effect. Effects include control/displacement behavior such as knockback, stagger, and slow. Weapon data contains reach/timing, stamina cost, pose offsets, and model path.
+Each spawn rolls weapon type and effect. Effects include control/displacement behavior such as knockback, stagger, and slow. Weapon data contains base timing, stamina cost, pose offsets, and model path; the generic scene owns the shared mode-aware hit capsule.
 
 The melee lifecycle includes:
 
@@ -198,7 +198,7 @@ The melee lifecycle includes:
 
 Online melee uses `RoundManager` as a stable RPC endpoint because melee nodes move between the map and actor hands. Every authored placement receives a stable candidate ID. The host assigns and broadcasts each identity and validates pickup/action/epoch/ownership before resolving hits and effects.
 
-`upgrade_tier()` exists for a commented future purchase/upgrade system, but no purchase system is implemented.
+Melee tiers and the unused `upgrade_tier()` hook are retired. Extra tier keys in stale dictionary payloads are ignored because melee identity reads only type and effect.
 
 ## Item system
 

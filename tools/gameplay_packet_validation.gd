@@ -53,9 +53,10 @@ func _validate_config_and_reach() -> void:
 		"bot Reach pickup radius is not 8m")
 	_check(is_equal_approx(MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE, 8.0),
 		"Reach melee hit limit is not 8m")
-	_check(is_equal_approx(MeleeScript.POWERUP_REACH_MULTIPLIER,
-			MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE / MeleeScript.ONLINE_MELEE_MAX_HIT_DISTANCE),
-		"physical Reach hitbox scaling is out of sync with its hit limits")
+	_check(is_equal_approx(MeleeScript.DEFAULT_MELEE_HITBOX_LENGTH, 5.0),
+		"normal melee hit limit is not 5m")
+	_check(is_equal_approx(MeleeScript.ONE_OF_US_MELEE_HITBOX_LENGTH, 5.7),
+		"One of Us melee hit limit is not 5.7m")
 	_check(is_equal_approx(PlayerScript.SPRING_AIR_CONTROL, 0.60),
 		"human spring air steering is not 60 percent")
 	_check(is_equal_approx(DummyScript.SPRING_AIR_CONTROL, 0.60),

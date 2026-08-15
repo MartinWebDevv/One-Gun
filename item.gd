@@ -95,6 +95,10 @@ func pick_up(p = null) -> bool:
 		p = player_ref
 	if p == null:
 		return false
+	if p.has_method("is_manual_pickup_request_active") \
+			and not p.is_manual_pickup_request_active():
+		return false
+
 	if NetworkManager.is_online():
 		if p.has_method("is_locally_controlled") and p.is_locally_controlled():
 			var rm = _online_round_manager()

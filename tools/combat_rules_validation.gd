@@ -63,6 +63,38 @@ class MockMeleePlayer:
 	func get_aim_direction() -> Vector3:
 		return Vector3.FORWARD
 
+class MockManualPickupPlayer:
+	extends Node3D
+	var pickup_request_active := false
+	var holding_gun := false
+	var held_melee_weapon = null
+	var actor_id := 7201
+	var hold_point: Node3D
+
+	func _init() -> void:
+		hold_point = Node3D.new()
+		add_child(hold_point)
+
+
+	func is_manual_pickup_request_active() -> bool:
+		return pickup_request_active
+
+	func get_hold_point() -> Node3D:
+		return hold_point
+
+	func get_display_name() -> String:
+		return "Pickup Gate Mock"
+
+class MockLooseMelee:
+	extends Node3D
+	var holder = null
+	var drop_calls := 0
+
+	func drop() -> void:
+		drop_calls += 1
+		if holder != null:
+			holder.held_melee_weapon = null
+
 var failures: Array[String] = []
 
 func _ready() -> void:
@@ -105,12 +137,34 @@ func _test_projectile_and_gun() -> void:
 	_check(is_equal_approx(bullet.projectile_speed, 200.0), "projectile default is not 200")
 	_check(is_equal_approx(bullet.emergency_lifetime, 10.0), "projectile emergency lifetime is not 10 seconds")
 	var gun = load("res://gun.tscn").instantiate()
+	get_tree().current_scene.add_child(gun)
 	_check(is_equal_approx(gun.projectile_speed, 200.0), "gun and projectile speed defaults differ")
 	_check(is_equal_approx(gun.reload_time, 2.0), "reload default changed")
+	var player := MockManualPickupPlayer.new()
+	var old_melee := MockLooseMelee.new()
+	get_tree().current_scene.add_child(player)
+	get_tree().current_scene.add_child(old_melee)
+	old_melee.holder = player
+	player.held_melee_weapon = old_melee
+
+	_check(not gun.pick_up(player),
+		"gun equipped from proximity without an explicit Interact request")
+	_check(not gun.is_held and not player.holding_gun and old_melee.drop_calls == 0,
+		"rejected proximity pickup changed held state or dropped the melee weapon")
+
+	player.pickup_request_active = true
+	_check(gun.pick_up(player),
+		"explicit Interact request did not pick up the gun")
+	_check(gun.is_held and player.holding_gun and old_melee.drop_calls == 1,
+		"explicit gun pickup did not perform exactly one melee-for-gun swap")
+	player.pickup_request_active = false
+
 	_check(is_equal_approx(gun.loose_return_time, 5.0), "loose gun return is not five seconds")
 	_check(gun.reload_time != gun.loose_return_time, "reload and loose-return tuning are coupled")
 	bullet.free()
 	gun.free()
+	old_melee.free()
+	player.free()
 
 func _test_protections_and_timers() -> void:
 	var player = load("res://character_body_3d.gd").new()
@@ -136,24 +190,25 @@ func _test_protections_and_timers() -> void:
 func _test_melee_tuning() -> void:
 	var melee_scene := load("res://melee_weapon.tscn") as PackedScene
 	var weapon_names := ["Sword", "Baseball Bat", "Stick", "Crowbar", "Frying Pan"]
+	var original_mode: String = GameConfig.game_mode
+	GameConfig.game_mode = GameConfig.MODE_ONE_GUN
 	for weapon_name in weapon_names:
 		var melee = melee_scene.instantiate()
 		get_tree().current_scene.add_child(melee)
 		var data: WeaponData = MeleeWeaponRegistry.get_weapon_data_by_name(weapon_name)
-		for weapon_tier in range(1, 4):
-			melee.apply_weapon_data(data, "normal", weapon_tier)
-			_validate_scaled_melee_hitbox(melee, data, weapon_tier)
+		melee.apply_weapon_data(data, "normal")
+		_validate_shared_melee_hitbox(
+			melee, weapon_name, GameConfig.DEFAULT_MELEE_HITBOX_LENGTH)
+		_check(not ("tier" in melee), "%s still exposes a tier" % weapon_name)
 		_check(is_equal_approx(data.raw_model_length * data.held_scale,
 			MeleeWeaponRegistry.HELD_WEAPON_TARGET_LENGTH),
 			"%s is not normalized to the shared held length" % weapon_name)
 		_check(is_equal_approx(melee.SWING_TIME_MULTIPLIER, 0.85),
 			"%s swing phases are not fifteen percent faster" % weapon_name)
-		_check(is_equal_approx(melee.HITBOX_WIDTH_MULTIPLIER, 1.20),
-			"%s hitbox is not twenty percent wider" % weapon_name)
-		_check(is_equal_approx(melee.NORMAL_MELEE_MIN_HITBOX_LENGTH, 3.0),
-			"%s does not use the 3.0m normal hitbox minimum" % weapon_name)
-		_check(is_equal_approx(melee.NORMAL_MELEE_MAX_HITBOX_LENGTH, 3.8),
-			"%s does not use the 3.8m normal hitbox cap" % weapon_name)
+		_check(is_equal_approx(melee.MELEE_HITBOX_RADIUS, 0.45),
+			"%s does not use the shared melee width" % weapon_name)
+		_check(not melee.get_network_identity().has("tier"),
+			"%s still sends a tier over the network" % weapon_name)
 
 		var model: Node3D = melee._model_instance
 		var anchored_grip: Vector3 = model.transform * data.held_grip_anchor
@@ -205,47 +260,57 @@ func _test_melee_tuning() -> void:
 		melee.free()
 		holder.free()
 
+	GameConfig.game_mode = GameConfig.MODE_ONE_OF_US
+	for weapon_name in weapon_names:
+		var melee = melee_scene.instantiate()
+		get_tree().current_scene.add_child(melee)
+		melee.apply_weapon_data(
+			MeleeWeaponRegistry.get_weapon_data_by_name(weapon_name), "normal")
+		_validate_shared_melee_hitbox(
+			melee, weapon_name, GameConfig.ONE_OF_US_MELEE_HITBOX_LENGTH)
+		melee.free()
+	GameConfig.game_mode = original_mode
 
-func _validate_scaled_melee_hitbox(melee, data: WeaponData, weapon_tier: int) -> void:
-	var source := (load(data.model_scene_path) as PackedScene).instantiate()
-	var source_shape: CollisionShape3D = source.get_node("HitShape/CollisionShape3D")
-	var runtime_shape: CollisionShape3D = melee.get_node("HitBox/CollisionShape3D")
-	if source_shape.shape is CapsuleShape3D and runtime_shape.shape is CapsuleShape3D:
-		var source_capsule := source_shape.shape as CapsuleShape3D
-		var runtime_capsule := runtime_shape.shape as CapsuleShape3D
-		var tier_progress := clampf((float(weapon_tier) - 1.0) / 2.0, 0.0, 1.0)
-		var expected_normal_height := lerpf(melee.NORMAL_MELEE_MIN_HITBOX_LENGTH,
-			melee.NORMAL_MELEE_MAX_HITBOX_LENGTH, tier_progress)
-		_check(is_equal_approx(runtime_capsule.height, expected_normal_height),
-			"%s T%d normal hitbox is not the expected %.2fm" % [
-				data.weapon_name, weapon_tier, expected_normal_height])
-		_check(is_equal_approx(runtime_capsule.radius,
-			source_capsule.radius * data.held_scale * melee.HITBOX_WIDTH_MULTIPLIER),
-			"%s hitbox width does not match its visible scale" % data.weapon_name)
-		var normal_height := runtime_capsule.height
-		var normal_axis := runtime_shape.transform.basis.y.normalized()
-		var normal_center := absf(runtime_shape.position.dot(normal_axis))
-		_check(is_equal_approx(normal_center, normal_height * 0.5),
-			"%s normal hitbox does not extend outward from the paw" % data.weapon_name)
-		_check(normal_height <= melee.NORMAL_MELEE_MAX_HITBOX_LENGTH,
-			"%s T%d normal hitbox exceeds 3.8m" % [data.weapon_name, weapon_tier])
-		_check(melee.ONLINE_MELEE_MAX_HIT_DISTANCE >= normal_height,
-			"%s normal hitbox exceeds online host validation distance" % data.weapon_name)
-		melee._apply_powerup_reach(true)
-		var reach_shape := runtime_shape.shape as CapsuleShape3D
-		var reach_axis := runtime_shape.transform.basis.y.normalized()
-		var reach_center := absf(runtime_shape.position.dot(reach_axis))
-		_check(is_equal_approx(reach_shape.height,
-			melee.POWERUP_MELEE_MAX_HIT_DISTANCE)
-			and is_equal_approx(reach_center,
-				melee.POWERUP_MELEE_MAX_HIT_DISTANCE * 0.5),
-			"%s Reach hitbox does not extend from the paw to 8m" % data.weapon_name)
-		melee._restore_powerup_reach()
-		_check(is_equal_approx(
-			(runtime_shape.shape as CapsuleShape3D).height, normal_height)
-			and is_equal_approx(absf(runtime_shape.position.dot(normal_axis)), normal_center),
-			"%s did not restore its normal hitbox after Reach" % data.weapon_name)
-	source.free()
+	var player_script = load("res://character_body_3d.gd")
+	_check(player_script.should_attempt_interact(true, false),
+		"Interact alone does not permit pickup")
+	_check(not player_script.should_attempt_interact(true, true),
+		"Fire plus Interact still permits pickup")
+	_check(not player_script.should_attempt_interact(false, true),
+		"Fire alone permits pickup")
+
+
+func _validate_shared_melee_hitbox(
+		melee, weapon_name: String, expected_length: float) -> void:
+	var runtime_shape := melee.get_node("HitBox/CollisionShape3D") as CollisionShape3D
+	_check(runtime_shape.shape is CapsuleShape3D,
+		"%s does not use the shared capsule" % weapon_name)
+	if not runtime_shape.shape is CapsuleShape3D:
+		return
+	var capsule := runtime_shape.shape as CapsuleShape3D
+	_check(is_equal_approx(capsule.height, expected_length),
+		"%s hitbox is %.2fm instead of %.2fm" % [
+			weapon_name, capsule.height, expected_length])
+	_check(is_equal_approx(capsule.radius, melee.MELEE_HITBOX_RADIUS),
+		"%s does not use the shared capsule radius" % weapon_name)
+	_check(runtime_shape.basis.is_equal_approx(Basis.IDENTITY),
+		"%s hitbox uses a model-specific orientation" % weapon_name)
+	_check(runtime_shape.position.is_equal_approx(
+		Vector3(0.0, expected_length * 0.5, 0.0)),
+		"%s hitbox is not anchored outward from the paw" % weapon_name)
+	melee._apply_powerup_reach(true)
+	var reach_shape := runtime_shape.shape as CapsuleShape3D
+	_check(is_equal_approx(reach_shape.height,
+		melee.POWERUP_MELEE_MAX_HIT_DISTANCE)
+		and runtime_shape.position.is_equal_approx(
+			Vector3(0.0, melee.POWERUP_MELEE_MAX_HIT_DISTANCE * 0.5, 0.0)),
+		"%s Reach hitbox does not extend from the paw to 8m" % weapon_name)
+	melee._restore_powerup_reach()
+	var restored := runtime_shape.shape as CapsuleShape3D
+	_check(is_equal_approx(restored.height, expected_length)
+		and runtime_shape.position.is_equal_approx(
+			Vector3(0.0, expected_length * 0.5, 0.0)),
+		"%s did not restore its normal hitbox after Reach" % weapon_name)
 
 func _test_stamina_and_dash() -> void:
 	var player = load("res://character_body_3d.gd").new()

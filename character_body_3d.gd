@@ -95,6 +95,10 @@ var _one_of_us_final_bonus_active := false
 # pickup/swap (in which case holding it longer does nothing) or is still
 # eligible to become a hold-to-drop (see _try_interact()).
 var interact_hold_active = false
+# True only for the synchronous pick_up() calls made by an explicit Interact
+# press. Pickup objects use this to reject accidental proximity/callback calls
+# while still allowing bots and authoritative scripted loadouts.
+var _manual_pickup_request_active := false
 var interact_hold_timer = 0.0
 
 var stamina = MAX_STAMINA
@@ -493,7 +497,11 @@ func _physics_process(delta):
 		elif double_jump_shoes_active:
 			_request_double_jump_shoes()
 
-	if Input.is_action_just_pressed(input_prefix + "_interact"):
+	var primary_action_pressed := Input.is_action_just_pressed(input_prefix + "_fire")
+	var interact_action_pressed := Input.is_action_just_pressed(input_prefix + "_interact")
+	# Fire/swing always wins if a legacy save or remap binds both actions to the
+	# same input. A pickup requires an unambiguous Interact press.
+	if should_attempt_interact(interact_action_pressed, primary_action_pressed):
 		# A tap resolves as an instant pickup/swap if one is available right
 		# now; only if nothing happens does holding the button start counting
 		# toward a voluntary drop of the active slot (see below).
@@ -510,7 +518,7 @@ func _physics_process(delta):
 			interact_hold_active = false
 			interact_hold_timer = 0.0
 
-	if Input.is_action_just_pressed(input_prefix + "_fire"):
+	if primary_action_pressed:
 		var active_item = get_active_item() if active_slot in ["item1", "item2"] else null
 		if active_item != null and active_item.has_method("begin_use"):
 			active_item.begin_use()
@@ -1909,6 +1917,15 @@ func _update_accessible_camera_motion(delta: float) -> void:
 		_camera_shake_strength = 0.0
 	camera.position = _camera_base_position + bob + shake
 
+static func should_attempt_interact(interact_pressed: bool, fire_pressed: bool) -> bool:
+	# This guard also protects players with old/conflicting saved keybinds.
+	return interact_pressed and not fire_pressed
+
+
+func is_manual_pickup_request_active() -> bool:
+	return _manual_pickup_request_active
+
+
 func _try_interact() -> bool:
 	# Every pickup-able object (gun.gd, melee_weapon.gd, item.gd) now decides
 	# for itself whether this pickup is allowed to happen instantly (empty
@@ -1934,9 +1951,12 @@ func _try_interact() -> bool:
 				var a_score := a_offset.cross(ray_direction).length() + a_offset.length() * 0.02
 				var b_score := b_offset.cross(ray_direction).length() + b_offset.length() * 0.02
 				return a_score < b_score)
+	_manual_pickup_request_active = true
 	for obj in ordered:
 		if obj.pick_up(self):
+			_manual_pickup_request_active = false
 			return true
+	_manual_pickup_request_active = false
 	return false
 
 func _drop_active_slot():
@@ -2176,6 +2196,7 @@ func respawn(spawn_transform):
 	active_slot = "none"
 	interact_hold_active = false
 	interact_hold_timer = 0.0
+	_manual_pickup_request_active = false
 	if ads_tween != null and ads_tween.is_valid():
 		ads_tween.kill()
 	ads_blend = 0.0

@@ -226,7 +226,6 @@ func _refill_playpen_melee(position: Vector3, rotation_value: Vector3,
 		"identity": {
 			"weapon_name": weapon_name,
 			"effect": "normal",
-			"tier": 3,
 		},
 		"pickup_locked": false,
 		"overtime_supply": false,
@@ -338,7 +337,6 @@ func _spawn_fixed_armories() -> void:
 				"identity": {
 					"weapon_name": weapon_name,
 					"effect": "normal",
-					"tier": 3,
 				},
 				"pickup_locked": false,
 				"playpen_weapon_name": weapon_name,

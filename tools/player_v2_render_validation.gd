@@ -341,7 +341,7 @@ func _capture_held_weapon_poses() -> void:
 		var weapon = MELEE_SCENE.instantiate()
 		world.add_child(weapon)
 		weapon.apply_weapon_data(
-			MeleeWeaponRegistry.get_weapon_data_by_name(weapon_name), "normal", 1)
+			MeleeWeaponRegistry.get_weapon_data_by_name(weapon_name), "normal")
 		weapon.call("_local_pickup", player)
 		await _wait_frames(3)
 		await _capture("held_%s.png" % weapon_name.to_lower().replace(" ", "_"))

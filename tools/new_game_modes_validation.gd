@@ -68,6 +68,12 @@ func _load_mode(mode: String):
 
 
 func _validate_one_of_us() -> void:
+	_check(is_equal_approx(GameConfig.ONE_OF_US_THEM_SPEED_MULTIPLIER, 1.15),
+		"Them movement speed is not fifteen percent above Us")
+	_check(is_equal_approx(GameConfig.DEFAULT_MELEE_HITBOX_LENGTH, 5.0),
+		"Normal game modes do not use the shared 5m melee length")
+	_check(is_equal_approx(GameConfig.ONE_OF_US_MELEE_HITBOX_LENGTH, 5.7),
+		"One of Us does not use its 5.7m melee length")
 	GameConfig.local_one_of_us_volunteers = [true, false]
 	var manager = await _load_mode(GameConfig.MODE_ONE_OF_US)
 	_check(manager != null, "One of Us RoundManager did not initialize")
@@ -133,11 +139,8 @@ func _validate_one_of_us() -> void:
 	if them.size() != 1 or us.size() != 2:
 		return
 	var first_them = them[0]
-	_check(_held_weapon_name(first_them) == "Sword",
-		"The first infected did not receive a sword")
-	var them_melee = first_them.get("held_melee_weapon")
-	_check(them_melee != null and int(them_melee.get("tier")) == 3,
-		"The first infected sword was not Tier 3")
+	_check(_held_weapon_name(first_them) == "Frying Pan",
+		"The first infected did not receive the Frying Pan")
 	_check(int(first_them.get("max_dash_charges")) == GameConfig.ONE_OF_US_THEM_DASH_CHARGES,
 		"The first infected did not receive four base dashes")
 	var role_visual = first_them.get_node_or_null("OneOfUsRoleVisual")
@@ -189,8 +192,8 @@ func _validate_one_of_us() -> void:
 	await get_tree().create_timer(GameConfig.ONE_OF_US_CONVERSION_TIME + 0.25).timeout
 	_check(not bool(target.get("is_eliminated")),
 		"Converted player did not respawn after 1.5 seconds")
-	_check(_held_weapon_name(target) == "Sword",
-		"Converted player did not respawn with the Them sword")
+	_check(_held_weapon_name(target) == "Frying Pan",
+		"Converted player did not respawn with the Frying Pan")
 
 	var us_was_eliminated := bool(remaining_us.get("is_eliminated"))
 	var handled: bool = manager.try_resolve_local_one_of_us_gun_hit(
@@ -204,8 +207,8 @@ func _validate_one_of_us() -> void:
 	await get_tree().create_timer(GameConfig.ONE_OF_US_THEM_RESPAWN_TIME + 0.25).timeout
 	_check(not bool(first_them.get("is_eliminated")),
 		"Shot Them player did not respawn after 2 seconds")
-	_check(_held_weapon_name(first_them) == "Sword",
-		"Respawned Them player did not recover the Tier 3 sword")
+	_check(_held_weapon_name(first_them) == "Frying Pan",
+		"Respawned Them player did not recover the Frying Pan")
 	human.activate_double_jump_shoes()
 	_check(bool(human.get("double_jump_shoes_active")),
 		"Double Jump Shoes did not arm a charge")

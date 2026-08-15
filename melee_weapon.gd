@@ -10,30 +10,29 @@ const HitboxDebug = preload("res://hitbox_debug_visual.gd")
 # orientation all come from a WeaponData resource (set by
 # MeleeWeaponRegistry at spawn via apply_weapon_data()).
 #
-# Core rules that NEVER change regardless of tier or data:
+# Core rules that NEVER change regardless of weapon data:
 #   - One successful hit always disarms the gun holder.
-#   - Tiers NEVER increase damage.
 #   - Effects NEVER change damage.
+#   - Every weapon type uses the same active hit volume.
 # ============================================================
 
 # ---- Runtime weapon identity ----
 var weapon_data: WeaponData = null
 var effect_category: String = "normal"   # "normal" | "knockback" | "stagger" | "slow"
-var tier: int = 1
-
-# ---- Cached tier-adjusted stats (read from registry each time tier changes) ----
+# ---- Cached per-weapon handling stats ----
 var _windup_time: float = 0.1
 var _active_time: float = 0.2
 var _recovery_time: float = 0.3
 var _stamina_cost: float = 15.0
 
-# ---- Per-effect magnitudes by tier ----
-# Effects never change damage — only repositioning/control duration.
-const KNOCKBACK_DISTANCE_BY_TIER = [2.0, 3.0, 4.0]
-const STAGGER_DURATION_BY_TIER   = [1.0, 1.5, 2.0]
-const KNOCKBACK_IMMUNITY_BY_TIER = [1.5, 1.0, 0.0]
+# ---- Fixed effect magnitudes ----
+# Effects never change damage; tiers no longer modify timing or control.
+const KNOCKBACK_DISTANCE := 2.0
+const STAGGER_DURATION := 1.0
+const KNOCKBACK_BULLET_IMMUNITY := 1.5
+const STAGGER_BULLET_IMMUNITY := 1.0
 
-# Slow is flat regardless of tier — a minor effect, not worth tier-scaling.
+# Slow is a minor, fixed effect.
 const SLOW_MULTIPLIER = 0.85
 const SLOW_DURATION   = 3.0
 
@@ -43,15 +42,13 @@ const THROW_ARC_UPWARD_BOOST = GameConfig.SHARED_THROW_UPWARD_SPEED
 const THROW_PICKUP_LOCK_TIME = 1.0
 const BREAK_RESPAWN_TIME    = 5.0
 const ONLINE_PICKUP_MAX_DISTANCE = 2.25
-const ONLINE_MELEE_MAX_HIT_DISTANCE = 5.5
-const NORMAL_MELEE_MIN_HITBOX_LENGTH := 3.0
-const NORMAL_MELEE_MAX_HITBOX_LENGTH := 3.8
+const DEFAULT_MELEE_HITBOX_LENGTH := GameConfig.DEFAULT_MELEE_HITBOX_LENGTH
+const ONE_OF_US_MELEE_HITBOX_LENGTH := GameConfig.ONE_OF_US_MELEE_HITBOX_LENGTH
 const POWERUP_MELEE_MAX_HIT_DISTANCE := 8.0
 const SWING_TIME_MULTIPLIER := 0.85
-const HITBOX_WIDTH_MULTIPLIER := 1.20
+const MELEE_HITBOX_RADIUS := 0.45
 const DEDICATED_SWING_ORIGIN_HEIGHT := 0.45
 const DEDICATED_SWING_MIN_RADIUS := 0.18
-const POWERUP_REACH_MULTIPLIER := POWERUP_MELEE_MAX_HIT_DISTANCE / ONLINE_MELEE_MAX_HIT_DISTANCE
 
 # ---- Runtime state ----
 var player_ref = null
@@ -77,8 +74,6 @@ var overtime_marker_supply := false
 var _model_instance: Node3D = null
 
 var _throw_collision_ignored_player: PhysicsBody3D = null
-# ---- Per-weapon custom hit box (see _apply_custom_hitbox) ----
-var _custom_hitbox_applied := false
 var _default_hitbox_shape: Shape3D = null
 var _default_hitbox_transform := Transform3D.IDENTITY
 var _online_hit_actor_ids: Dictionary = {}
@@ -122,19 +117,17 @@ func _ready():
 	else:
 		apply_weapon_data(
 			MeleeWeaponRegistry.get_random_weapon_data(),
-			MeleeWeaponRegistry.get_random_effect(),
-			MeleeWeaponRegistry.get_random_tier()
+			MeleeWeaponRegistry.get_random_effect()
 		)
 	if NetworkManager.is_online():
 		freeze = true
 
-func apply_weapon_data(data: WeaponData, effect: String, new_tier: int):
+func apply_weapon_data(data: WeaponData, effect: String):
 	weapon_data    = data
 	effect_category = effect
-	tier           = new_tier
 
-	# Cache tier-adjusted stats.
-	var stats = MeleeWeaponRegistry.get_stats_for_tier(data, tier)
+	# Weapon types retain their authored handling feel, but no tier scaling.
+	var stats = MeleeWeaponRegistry.get_base_stats(data)
 	_windup_time   = float(stats["windup_time"]) * SWING_TIME_MULTIPLIER
 	_active_time   = float(stats["active_time"]) * SWING_TIME_MULTIPLIER
 	_recovery_time = float(stats["recovery_time"]) * SWING_TIME_MULTIPLIER
@@ -143,8 +136,8 @@ func apply_weapon_data(data: WeaponData, effect: String, new_tier: int):
 	# Swap in the correct visual model.
 	_swap_model(data)
 
-	# Resize the hit box to match this weapon's reach.
-	_apply_reach(tier)
+	# Every visual model uses the same forward-facing attack capsule.
+	_apply_reach()
 
 	_update_pickup_label()
 
@@ -153,8 +146,6 @@ func _swap_model(data: WeaponData):
 	if _model_instance != null and is_instance_valid(_model_instance):
 		_model_instance.queue_free()
 		_model_instance = null
-
-	_custom_hitbox_applied = false
 
 	if data.model_scene_path == "":
 		return
@@ -170,102 +161,30 @@ func _swap_model(data: WeaponData):
 	# Put the authored base of the handle on this weapon root. The root is what
 	# gets attached to the animated paw socket.
 	_model_instance.position = -(_model_instance.basis * data.held_grip_anchor)
-	_apply_custom_hitbox(_model_instance, tier)
-
-func _apply_custom_hitbox(model: Node, weapon_tier: int) -> void:
-	# Convention: a per-weapon model scene may carry its own HitShape/CollisionShape3D,
-	# sized and positioned to match its actual geometry (see baseball_bat.tscn). When
-	# present it replaces the generic reach-scaled hit box below instead of stacking
-	# with it. Weapons still using a bare model (no matching node) keep the shared
-	# default shape scaled by reach_multiplier, unchanged.
-	var hit_shape_node = model.get_node_or_null("HitShape/CollisionShape3D")
-	if hit_shape_node == null or hit_shape_node.shape == null:
-		return
-	var hit_box_shape: CollisionShape3D = $HitBox/CollisionShape3D
-	# Match the visual's anchored scene-root rotation and held scale. Bake that
-	# uniform scale into the duplicated shape so Jolt receives an orthonormal
-	# CollisionShape3D transform.
-	var relative_transform: Transform3D = global_transform.affine_inverse() \
-		* hit_shape_node.global_transform
-	var shape_scale: float = relative_transform.basis.get_scale().x
-	relative_transform.basis = relative_transform.basis.orthonormalized()
-	hit_box_shape.transform = relative_transform
-	var widened_shape: Shape3D = hit_shape_node.shape.duplicate()
-	_scale_hitbox_shape(widened_shape, shape_scale)
-	_widen_hitbox_shape(widened_shape)
-	_set_outward_hitbox_length(hit_box_shape, widened_shape,
-		_normal_hitbox_length(weapon_tier))
-	hit_box_shape.shape = widened_shape
-	_custom_hitbox_applied = true
-
-func _scale_hitbox_shape(shape: Shape3D, scale_factor: float) -> void:
-	if shape is BoxShape3D:
-		shape.size *= scale_factor
-	elif shape is SphereShape3D:
-		shape.radius *= scale_factor
-	elif shape is CapsuleShape3D or shape is CylinderShape3D:
-		shape.radius *= scale_factor
-		shape.height *= scale_factor
-
-func _widen_hitbox_shape(shape: Shape3D) -> void:
-	if shape is BoxShape3D:
-		shape.size.x *= HITBOX_WIDTH_MULTIPLIER
-	elif shape is SphereShape3D or shape is CapsuleShape3D or shape is CylinderShape3D:
-		shape.radius *= HITBOX_WIDTH_MULTIPLIER
-
-func _normal_hitbox_length(weapon_tier: int) -> float:
-	var tier_progress := clampf((float(weapon_tier) - 1.0) / 2.0, 0.0, 1.0)
-	return lerpf(NORMAL_MELEE_MIN_HITBOX_LENGTH,
-		NORMAL_MELEE_MAX_HITBOX_LENGTH, tier_progress)
 
 
-func _set_outward_hitbox_length(shape_node: CollisionShape3D, shape: Shape3D,
-		target_length: float) -> void:
-	var reach_axis := Vector3.ZERO
-	if shape is BoxShape3D:
-		reach_axis = shape_node.transform.basis.z.normalized()
-	elif shape is CapsuleShape3D or shape is CylinderShape3D:
-		reach_axis = shape_node.transform.basis.y.normalized()
-	elif shape is SphereShape3D:
-		reach_axis = shape_node.position.normalized()
-		if reach_axis.is_zero_approx():
-			reach_axis = shape_node.transform.basis.z.normalized()
-	if reach_axis.is_zero_approx():
-		return
-	if shape is BoxShape3D:
-		shape.size.z = target_length
-	elif shape is CapsuleShape3D or shape is CylinderShape3D:
-		shape.height = target_length
-	elif shape is SphereShape3D:
-		shape.radius = target_length * 0.5
-	# Anchor the near end at the paw so the normal attack shape only extends
-	# toward the target instead of growing backward through the holder.
-	var center := shape_node.position
-	var parallel_distance := center.dot(reach_axis)
-	var outward_sign := -1.0 if parallel_distance < 0.0 else 1.0
-	var lateral_offset := center - reach_axis * parallel_distance
-	shape_node.position = lateral_offset + reach_axis * outward_sign \
-		* (target_length * 0.5)
+func _normal_hitbox_length() -> float:
+	if GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
+		return ONE_OF_US_MELEE_HITBOX_LENGTH
+	return DEFAULT_MELEE_HITBOX_LENGTH
 
-func _apply_reach(weapon_tier: int):
-	if _custom_hitbox_applied:
-		return
-	var shape_node = $HitBox/CollisionShape3D
+
+func _apply_reach() -> void:
+	var shape_node := $HitBox/CollisionShape3D as CollisionShape3D
 	if shape_node == null or _default_hitbox_shape == null:
 		return
-	# Always reset from the cached original shape/transform, not from whatever
-	# the previous weapon (generic-reach OR custom-hitbox) left behind.
-	var shape = _default_hitbox_shape.duplicate()
+	# Always reset from the shared scene shape. Imported weapon scenes may keep
+	# authoring helpers, but those helpers never define gameplay reach.
+	var shape := _default_hitbox_shape.duplicate()
 	shape_node.shape = shape
 	shape_node.transform = _default_hitbox_transform
-	if shape is BoxShape3D:
-		shape.size.x *= HITBOX_WIDTH_MULTIPLIER
-	elif shape is SphereShape3D:
-		shape.radius *= HITBOX_WIDTH_MULTIPLIER
-	elif shape is CapsuleShape3D or shape is CylinderShape3D:
-		shape.radius *= HITBOX_WIDTH_MULTIPLIER
-	_set_outward_hitbox_length(shape_node, shape,
-		_normal_hitbox_length(weapon_tier))
+	var target_length := _normal_hitbox_length()
+	if shape is CapsuleShape3D:
+		shape.radius = MELEE_HITBOX_RADIUS
+		shape.height = target_length
+		shape_node.position = Vector3(0.0, target_length * 0.5, 0.0)
+	else:
+		push_error("MeleeWeapon: shared HitBox must use CapsuleShape3D")
 
 # ============================================================
 # Per-frame
@@ -290,34 +209,31 @@ func _process(_delta):
 func get_display_name() -> String:
 	var wname = weapon_data.weapon_name if weapon_data != null else "Melee"
 	var effect_label = effect_category.capitalize() if effect_category != "normal" else ""
-	var tier_label = " (T" + str(tier) + ")"
 	if effect_label != "":
-		return wname + " — " + effect_label + tier_label
-	return wname + tier_label
+		return wname + " — " + effect_label
+	return wname
 
 func randomize_attributes():
 	# Called by round_manager.gd at the start of each round.
-	# Full re-roll every round — weapon, effect, and tier all change.
+	# Weapon type and effect re-roll; all tiers have been retired.
 	apply_weapon_data(
 		MeleeWeaponRegistry.get_random_weapon_data(),
-		MeleeWeaponRegistry.get_random_effect(),
-		MeleeWeaponRegistry.get_random_tier()
+		MeleeWeaponRegistry.get_random_effect()
 	)
 
 func apply_network_identity(identity: Dictionary) -> bool:
 	var data = MeleeWeaponRegistry.get_weapon_data_by_name(str(identity.get("weapon_name", "")))
 	var effect := str(identity.get("effect", "normal"))
-	var new_tier := clampi(int(identity.get("tier", 1)), 1, 3)
 	if data == null or effect not in MeleeWeaponRegistry.EFFECTS:
 		return false
-	apply_weapon_data(data, effect, new_tier)
+	# Old network payloads may still contain "tier"; it is intentionally ignored.
+	apply_weapon_data(data, effect)
 	return true
 
 func get_network_identity() -> Dictionary:
 	return {
 		"weapon_name": weapon_data.weapon_name if weapon_data != null else "",
 		"effect": effect_category,
-		"tier": tier,
 	}
 
 func set_online_active(value: bool) -> void:
@@ -333,13 +249,6 @@ func set_online_active(value: bool) -> void:
 	$Area3D/CollisionShape3D.disabled = not value
 	$Area3D.monitoring = value and not pickup_locked and not is_held and not is_in_flight
 	_update_pickup_label()
-
-func upgrade_tier():
-	# Called when a player purchases a tier upgrade (future system).
-	var new_tier = clamp(tier + 1, 1, 3)
-	if new_tier == tier:
-		return
-	apply_weapon_data(weapon_data, effect_category, new_tier)
 
 # ============================================================
 # Pickup / drop / throw
@@ -423,6 +332,10 @@ func pick_up(p = null) -> bool:
 		p = player_ref
 	if p == null:
 		return false
+	if p.has_method("is_manual_pickup_request_active") \
+			and not p.is_manual_pickup_request_active():
+		return false
+
 	if NetworkManager.is_online():
 		if p.has_method("is_locally_controlled") and p.is_locally_controlled():
 			var epoch := _online_round_epoch()
@@ -771,7 +684,7 @@ func _update_pickup_label():
 	label.visible = online_active and not is_held and not is_in_flight and not pickup_locked
 	if not label.visible or weapon_data == null:
 		return
-	# Build display text: weapon name + tier + effect (if not normal) + button prompt.
+	# Build display text: weapon name + effect (if not normal) + button prompt.
 	# Button prompt is determined by whichever player is nearby.
 	# P2 is always gamepad; P1 is always keyboard (until input selection is added).
 	var nearby_player = _get_nearby_player()
@@ -787,12 +700,11 @@ func _update_pickup_label():
 		return
 
 	var weapon_name = weapon_data.weapon_name
-	var tier_str = " T" + str(tier)
 	var effect_str = ""
 	if effect_category != "normal":
 		effect_str = " | " + effect_category.capitalize()
 
-	label.text = button_prompt + "  " + weapon_name + tier_str + effect_str
+	label.text = button_prompt + "  " + weapon_name + effect_str
 
 func _get_nearby_player():
 	# Returns the nearest player in the pickup area, used for determining
@@ -947,11 +859,9 @@ func _dedicated_swing_radius(shape: Shape3D) -> float:
 
 func _apply_powerup_reach(enabled: bool) -> void:
 	_restore_powerup_reach()
-	var target_reach := POWERUP_MELEE_MAX_HIT_DISTANCE if enabled else 0.0
-	if target_reach <= 0.0 and player_ref != null and str(player_ref.get("one_of_us_role")) == "them":
-		target_reach = NORMAL_MELEE_MAX_HITBOX_LENGTH * GameConfig.ONE_OF_US_THEM_REACH_MULTIPLIER
-	if target_reach <= 0.0:
+	if not enabled:
 		return
+	var target_reach := POWERUP_MELEE_MAX_HIT_DISTANCE
 	var shape_node: CollisionShape3D = $HitBox/CollisionShape3D
 	if shape_node.shape == null:
 		return
@@ -1046,9 +956,7 @@ func _holder_max_hit_distance() -> float:
 	if player_ref != null and player_ref.has_method("has_active_reach") \
 			and player_ref.has_active_reach():
 		return POWERUP_MELEE_MAX_HIT_DISTANCE
-	if player_ref != null and str(player_ref.get("one_of_us_role")) == "them":
-		return NORMAL_MELEE_MAX_HITBOX_LENGTH * GameConfig.ONE_OF_US_THEM_REACH_MULTIPLIER
-	return ONLINE_MELEE_MAX_HIT_DISTANCE
+	return _normal_hitbox_length()
 
 func _on_hit_landed(body):
 	if body == player_ref:
@@ -1261,20 +1169,17 @@ func _apply_hit_effects(body, is_thrown: bool, was_holding_gun: bool = false, so
 
 func _get_effect_magnitude() -> float:
 	match effect_category:
-		"knockback": return KNOCKBACK_DISTANCE_BY_TIER[tier - 1]
-		"stagger":   return STAGGER_DURATION_BY_TIER[tier - 1]
+		"knockback": return KNOCKBACK_DISTANCE
+		"stagger":   return STAGGER_DURATION
 		"slow":      return SLOW_DURATION
 		_:           return 0.0
 
 func _get_bullet_immunity_duration() -> float:
 	match effect_category:
 		"stagger":
-			# Immunity protects the disarmed gunholder — grows with tier
-			# so rarer weapons give a longer escape window. T3 was
-			# previously 0 due to a conditional bug; now fixed via registry.
-			return MeleeWeaponRegistry.get_stagger_immunity_duration(tier)
+			return STAGGER_BULLET_IMMUNITY
 		"knockback":
-			return KNOCKBACK_IMMUNITY_BY_TIER[tier - 1]
+			return KNOCKBACK_BULLET_IMMUNITY
 		_:
 			return 0.0
 

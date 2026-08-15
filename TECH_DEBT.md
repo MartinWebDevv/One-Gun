@@ -368,11 +368,11 @@ Examples:
 
 Renaming paths is not recommended during stabilization; documentation/comments can eventually be reconciled without resource migrations.
 
-### TD-026: Future purchase hook exists without a system
+### TD-026: Retired melee purchase hook (resolved 2026-08-14)
 
-`melee_weapon.gd.upgrade_tier()` is commented as a future purchase-tier upgrade. No currency, purchase, or upgrade system exists.
+Weapon tiers and the unused `melee_weapon.gd.upgrade_tier()` hook were removed when melee collision and identity were normalized.
 
-Risk is low today, but the hook may mislead future readers into assuming a planned/active system.
+There is no active tier property, tier argument, or purchase-tier system; stale dictionary keys are simply not read.
 
 ### TD-027: Main-menu version and animation debug state
 

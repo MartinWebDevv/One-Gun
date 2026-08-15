@@ -49,7 +49,7 @@ Autoload order is significant and should be preserved.
 | 2 | `GameConfig` | `game_config.gd` | Shared match rules, presets, teams/friendly-fire checks |
 | 3 | `PlayerPrefs` | `player_prefs.gd` | Local settings, display/input preferences, persistent rebinding |
 | 4 | `PauseManager` | `pause_manager.gd` | ESC routing and local/online pause behavior |
-| 5 | `MeleeWeaponRegistry` | `melee_weapon_registry.gd` | Five melee definitions and randomized identity/tier/effect selection |
+| 5 | `MeleeWeaponRegistry` | `melee_weapon_registry.gd` | Five melee definitions, fixed base handling, and randomized type/effect selection |
 | 6 | `ThemeManager` | `theme_manager.gd` | Runtime theme construction and styling helpers |
 | 7 | `AudioManager` | `audio_manager.gd` | Music, ambience, and pooled SFX playback |
 | 8 | `NetworkManager` | `network_manager.gd` | ENet/Tailscale session, roster, discovery, config, scene coordination |

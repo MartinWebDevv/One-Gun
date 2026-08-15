@@ -172,8 +172,9 @@ func _run_online_one_of_us_checks() -> void:
 				_fail("network Them player did not receive four base dashes")
 				return
 			var melee = actor.get("held_melee_weapon")
-			if melee == null or int(melee.get("tier")) != 3:
-				_fail("network Them player did not receive the Tier 3 sword")
+			if melee == null or melee.weapon_data == null \
+					or melee.weapon_data.weapon_name != "Frying Pan":
+				_fail("network Them player did not receive the Frying Pan")
 				return
 		else:
 			us_count += 1

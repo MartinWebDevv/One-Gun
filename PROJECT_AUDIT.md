@@ -64,7 +64,7 @@ Approximate repository snapshot excluding `.git/` and `.godot/` caches:
 - Last-player-standing rounds, sets, match wins, statistics, scoreboard, and spectating.
 - Movement, sprint, stamina, jump, dash charges, aim, ADS, camera, and step-up.
 - Exactly one gun instance per map and multiple authored melee placements.
-- Five randomized melee identities with tiers and effects.
+- Five randomized melee weapon types and effects using one shared mode-aware hit capsule.
 - Seven consumable/deployable item types.
 - Seven powerup types.
 - Four bot difficulties with navigation, combat, item, and powerup behavior.

@@ -14,8 +14,9 @@ material = SubResource("StandardMaterial3D_vax1h")
 [sub_resource type="SphereShape3D" id="SphereShape3D_3eo4f"]
 radius = 1.5
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_bf788"]
-size = Vector3(0.29671478, 0.5402832, 2.4756684)
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_melee"]
+radius = 0.45
+height = 5.0
 
 [node name="MeleeWeapon" type="RigidBody3D" unique_id=1665878362]
 collision_layer = 4
@@ -40,8 +41,8 @@ shape = SubResource("SphereShape3D_3eo4f")
 collision_mask = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="HitBox" unique_id=1662649966]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.004055023, 0.020141602, 0.49761534)
-shape = SubResource("BoxShape3D_bf788")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("CapsuleShape3D_melee")
 
 [node name="Node3D" type="Node3D" parent="." unique_id=1835559051]
 

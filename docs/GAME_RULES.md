@@ -1,6 +1,6 @@
 # One Gun — Game Rules
 
-> Source of truth: this document describes mechanics as implemented in the codebase as of 2026-08-11. Numbers are pulled directly from the gameplay, configuration, registry, round, weapon, item, and bot scripts. Where a value is configurable per match, the default is listed.
+> Source of truth: this document describes mechanics as implemented in the codebase as of 2026-08-14. Numbers are pulled directly from the gameplay, configuration, registry, round, weapon, item, and bot scripts. Where a value is configurable per match, the default is listed.
 
 ## 1. Overview
 
@@ -10,7 +10,7 @@ One Gun is an arena shooter for up to 10 competitors (humans + bots), playable s
 
 - **One Gun**: the default scarcity mode. One shared gun is contested while ground melee, items, and powerups follow the configured spawn pools. Normal first-round map intro and standard/Chaos overtime rules apply.
 - **All Gun**: every player starts every round with a personal gun and three heart pips. The three filled/empty hearts are also rendered depth-tested above every living actor for all players and spectators. Only gunshots remove hearts, one at a time, with 0.75s post-hit protection. Melee weapons never spawn; items and collectible powerups remain, except Extra Life. A disarm effect forces the target gun through a full reload instead of dropping it, while Sticky Hands consumes itself to block that forced reload. The mode supports teams and remains last-player/last-team-standing. When the normal timer reaches overtime, the advancing fire removes all remaining hearts immediately for sudden death.
-- **One of Us**: each human may privately choose RESIST or LET IT IN before launch. The host randomly chooses the first infected from the volunteer pool; if nobody volunteers, every match participant is eligible. Preferences never enter the shared roster. Them receive +30% movement speed, four base dashes, a personal Tier 3 Sword, and 1.5x normal melee reach; Us receive three base dashes and personal One Gun guns. Them respawn after 2.0s when shot. A Them melee hit converts an Us player after a 1.5s spectator window, and both temporary waits use role-filtered spectating. The last Us receives one additional single-use dash. Them win by converting every Us before 3:00; Us win if at least one survivor remains when the fixed timer expires. That winner takes the whole match immediately: One of Us has exactly one three-minute round, no sets, and no overtime. Ground melee never spawns, Sticky Hands and Extra Life are excluded from collectible powerups, and a runtime-only darker, desaturated, cool-fog environment grade gives every map a dingy survival treatment without modifying its authored environment or affecting other modes.
+- **One of Us**: each human may privately choose RESIST or LET IT IN before launch. The host randomly chooses the first infected from the volunteer pool; if nobody volunteers, every match participant is eligible. Preferences never enter the shared roster. Them receive +15% movement speed, four base dashes, and a personal Frying Pan using the mode-specific 5.7m melee length. Us receive three base dashes and personal One Gun guns. Them respawn after 2.0s when shot. A Them melee hit converts an Us player after a 1.5s spectator window, and both temporary waits use role-filtered spectating. The last Us receives one additional single-use dash. Them win by converting every Us before 3:00; Us win if at least one survivor remains when the fixed timer expires. That winner takes the whole match immediately: One of Us has exactly one three-minute round, no sets, and no overtime. Ground melee never spawns, Sticky Hands and Extra Life are excluded from collectible powerups, and a runtime-only darker, desaturated, cool-fog environment grade gives every map a dingy survival treatment without modifying its authored environment or affecting other modes.
 - In One of Us, the normal map-orbit intro is replaced by a synchronized 7.35s hunt cinematic. Input is locked while a temporary camera dives from above the arena, scans deterministic player targets, reveals and orbits the server-selected first infected during their transformation, then takes a role-specific route back to each local gameplay camera. The first infected sees `YOU ARE THE FIRST.` then `MAKE THEM ONE OF US.`; every Us player sees `ONE OF THEM HAS TURNED.` then `RUN.`. All clients regain control on the shared cinematic deadline. Other game modes keep their existing first-round intro.
 
 ### The Playpen
@@ -61,7 +61,7 @@ Sprinting is a match-wide setting (`GameConfig.sprinting_enabled`) that applies 
 
 **Spring pads** launch at 13.0 m/s vertically. The first directional input made within 1.0s commits a 4.0 m/s horizontal boost in that direction; players retain 60% normal air-strafe control until landing. With no input the launch remains vertical. Dashing while still in a pad launch cancels all remaining pad momentum, including vertical velocity, so only the horizontal dash force is active during the dash. Bots and online actors follow the same movement rule; decoys use the pad launch and steering contract but cannot dash.
 
-**Knockback / stagger** (inflicted by melee hits — see §5): freezes horizontal velocity (knockback, 0.2s) or all movement (stagger, duration scales with weapon tier) and grants temporary bullet immunity afterward so a disarmed/staggered player isn't instantly finished off.
+**Knockback / stagger** (inflicted by melee hits — see §5): freezes horizontal velocity (knockback, 0.2s) or all movement (stagger, 1.0s) and grants temporary bullet immunity afterward so a disarmed/staggered player isn't instantly finished off.
 
 **Aiming**: ADS (aim-down-sights) transitions over 0.2s, tightens FOV by 0.9×, and pulls the camera boom in to 0.3 (from the default 4.0). ADS halves look sensitivity by default (configurable, `ads_sensitivity_multiplier`).
 
@@ -80,46 +80,36 @@ Sprinting is a match-wide setting (`GameConfig.sprinting_enabled`) that applies 
 
 ## 5. Melee Weapons
 
-Each round starts with **one randomized melee weapon at every authored `melee_spawn_point`**. Picking one up starts that marker's independent **5.0s refill**; the refill rolls a fresh weapon type, effect, and tier while the picked-up weapon remains with its player. Repeated pickups can therefore put multiple melee weapons into play. Pending regular refills are cancelled by round reset or overtime; OT activates one selected melee marker with the same independent refill behavior.
+Each round starts with **one randomized melee weapon at every authored `melee_spawn_point`**. Picking one up starts that marker's independent **5.0s refill**; the refill rolls a fresh weapon type and effect while the picked-up weapon remains with its player. Repeated pickups can therefore put multiple melee weapons into play. Pending regular refills are cancelled by round reset or overtime; OT activates one selected melee marker with the same independent refill behavior.
 
 The Spawns settings expose a collapsible **Melee Weapons** pool. Sword, Baseball Bat, Stick, Crowbar, and Frying Pan can each be enabled or disabled for local and online spawn rolls. The UI and `GameConfig` both enforce a minimum of one enabled melee weapon.
 
 ### Weapon types (`melee_weapon_registry.gd`)
 
-| Weapon | T1 reach | T2 reach | T3 reach | Windup | Active | Recovery | Stamina | Character |
-|---|---|---|---|---|---|---|---|---|
-| Sword | 3.0m | 3.4m | 3.8m | 0.08s | 0.18s | 0.25s | 15 | fast, disarm-safe poking |
-| Baseball Bat | 3.0m | 3.4m | 3.8m | 0.12s | 0.22s | 0.35s | 15 | wide arc, knockback specialist |
-| Stick | 3.0m | 3.4m | 3.8m | 0.04s | 0.12s | 0.14s | 8 | shortest windup, cheapest, aggressive rush |
-| Crowbar | 3.0m | 3.4m | 3.8m | 0.08s | 0.18s | 0.26s | 14 | balanced all-rounder |
-| Frying Pan | 3.0m | 3.4m | 3.8m | 0.32s | 0.28s | 0.55s | 22 | slow, very wide, devastating in corridors |
+| Weapon | Normal reach | One of Us reach | Windup | Active | Recovery | Stamina | Character |
+|---|---|---|---|---|---|---|---|
+| Sword | 5.0m | 5.7m | 0.08s | 0.18s | 0.25s | 15 | fast, responsive handling |
+| Baseball Bat | 5.0m | 5.7m | 0.12s | 0.22s | 0.35s | 15 | deliberate handling |
+| Stick | 5.0m | 5.7m | 0.04s | 0.12s | 0.14s | 8 | shortest windup, cheapest |
+| Crowbar | 5.0m | 5.7m | 0.08s | 0.18s | 0.26s | 14 | balanced all-rounder |
+| Frying Pan | 5.0m | 5.7m | 0.32s | 0.28s | 0.55s | 22 | heavy, committed handling |
 
-### Tiers (roll each spawn: T1 60% / T2 30% / T3 10%)
-
-Tiers affect **attack speed, stamina efficiency, and normal reach**; they never affect damage, so a lucky high-tier drop feels snappy and more forgiving rather than simply lethal.
-
-| | T1 | T2 | T3 |
-|---|---|---|---|
-| Normal reach | 3.0m | 3.4m | 3.8m |
-| Windup multiplier | 1.0× | 0.82× | 0.65× |
-| Recovery multiplier | 1.0× | 0.80× | 0.60× |
-| Stamina cost multiplier | 1.0× | 0.82× (min 0.6×) | 0.65× (min 0.6×) |
-| Active (hit-window) time | unchanged at all tiers | | |
+Weapon tiers have been removed. Weapon type and effect are the complete randomized identity; there are no T1/T2/T3 timing, stamina, effect, display, bot-priority, or networking modifiers.
 
 ### Effects (randomly rolled per weapon instance, one of four, equal odds)
 
 - **Normal**: no status effect; a hit on the gun holder disarms them (see below).
-- **Knockback**: shoves the target back; distance and post-hit bullet-immunity scale with tier (2.0 / 3.0 / 4.0 units; 1.5s / 1.0s / 0s immunity).
-- **Stagger**: freezes the target; duration and immunity scale with tier (1.0s / 1.5s / 2.0s stagger; matching immunity window). Higher tier = longer escape window for the staggered player.
-- **Slow**: slows the target to 85% speed for 3.0s. Flat regardless of tier (tier only affects windup/recovery/stamina, as always) and grants no bullet immunity afterward — it's a minor effect, not disruptive enough to warrant a safety window.
+- **Knockback**: shoves the target 2.0 units and grants 1.5s post-hit bullet immunity.
+- **Stagger**: freezes the target for 1.0s and grants a matching 1.0s bullet-immunity window.
+- **Slow**: slows the target to 85% speed for 3.0s and grants no bullet immunity afterward.
 
 **Who effects hit**: by default (`melee_effects_hit_anyone = true`), Knockback/Stagger/Slow apply to *any* player struck, not just the gun holder — this is a lobby-configurable match setting (see §11). The gun-holder-only *disarm* behavior below is separate and always applies regardless of this setting.
 
 ### Swing lifecycle
 
-All five melee models are normalized to a 1m longest held dimension, so their visual size is consistent even though their imported source files use very different units. Normal attack hitboxes extend outward from the holder's paw and increase linearly by tier: T1 starts at **3.0m**, T2 reaches **3.4m**, and every T3 weapon shares the **3.8m maximum**. Reach and timing remain data-driven and are not inferred from presentation scale.
+All five melee models are normalized to a 1m longest held dimension, so their visual size is consistent even though their imported source files use very different units. Legacy model-local hit-shape helpers are ignored: every weapon uses the same forward-facing runtime capsule, with a 0.45m radius, anchored at the paw. Its length is **5.0m in every normal game mode** and **5.7m in One of Us**. The Reach powerup temporarily stretches the capsule to **8.0m**.
 
-Windup (wind-up pose, no hit) → Active (hitbox live) → Recovery (character returns to locomotion). The authored character melee animation owns the visible attack; held weapon objects remain fixed to their paw socket instead of adding a second, smaller rotation tween. Runtime swing phases use 85% of the data-authored duration (15% faster), and collision widths are expanded by 20% for more dependable close-range contact. Stamina cost is paid **upfront** at swing start. Swinging while in stamina deficit twice in a row **breaks the weapon** for 5.0s (it respawns at its spawn point) — this can be disabled via `melee_weapon_breaking`.
+Windup (wind-up pose, no hit) → Active (hitbox live) → Recovery (character returns to locomotion). The authored character melee animation owns the visible attack; held weapon objects remain fixed to their paw socket instead of adding a second, smaller rotation tween. Runtime swing phases use 85% of the data-authored duration (15% faster). Stamina cost is paid **upfront** at swing start. Swinging while in stamina deficit twice in a row **breaks the weapon** for 5.0s (it respawns at its spawn point) — this can be disabled via `melee_weapon_breaking`.
 
 ### Elimination rules (match settings)
 
@@ -139,7 +129,7 @@ A weapon dropped by an eliminated holder despawns and returns to its spawn point
 
 A melee hit against the **gun holder** (when neither elimination rule above is active) disarms them: the gun is knocked loose, drops to the ground, and the disarmer gets credit (`player_disarmed` event, scoreboard "Disarms" stat). The disarmed player cannot re-pick the gun for `disarm_lock_time` seconds.
 
-Online matches use the same melee rules. The host validates pickup distance, holder ownership, alive/round state, swings, throws, hit targets, disarms, effects, breaking and despawn/reset outcomes. The host assigns every refill a fresh network candidate ID, rolls its weapon type/effect/tier once, and sends that identity to every peer so all machines show and simulate the same supply.
+Online matches use the same melee rules. The host validates pickup distance, holder ownership, alive/round state, swings, throws, hit targets, disarms, effects, breaking and despawn/reset outcomes. The host assigns every refill a fresh network candidate ID, rolls its weapon type/effect once, and sends that identity to every peer so all machines show and simulate the same supply.
 
 ## 7. Items & Hazards
 
@@ -186,7 +176,7 @@ Respawns **8.0s** after being collected.
 | Silent Steps (slate) | footsteps muted for the duration | n/a (bots have no footsteps) |
 | Vampire Touch (red) | landed melee hits refund 30 stamina | yes |
 | Extra Life (orange) | survive one lethal blow with 1s general damage immunity (one charge, shows as ∞ until used) | yes |
-| Reach (green) | for 5s, increases visible pickup range to 8m, auto-collects powerups, and stretches melee active hitboxes from their shorter normal reach to an 8m maximum; the owner alone sees an 8m green range ring | yes |
+| Reach (green) | for 5s, increases visible pickup range to 8m, auto-collects powerups, and stretches melee active hitboxes from their mode length (5.0m normally; 5.7m in One of Us) to an 8m maximum; the owner alone sees an 8m green range ring | yes |
 
 Powerup type is **fixed at spawn** and re-rolls only when the orb respawns after being collected. Items and powerups spawn at map-placed `item_spawn_point` / `powerup_spawn_point` markers each round. Every item marker rolls a random enabled type (pool = `GameConfig.ITEM_SCENES` filtered by `is_item_enabled`) and starts an independent **8.0s refill when that item is picked up**; the carried object remains usable, then retires after use instead of creating a second refill. Powerups likewise re-roll after their 8.0s post-collection delay. Marker-spawned nodes are tracked via the `marker_spawned` group and freed/re-spawned each round reset.
 
@@ -202,6 +192,7 @@ Three slots total: **slot 1** is the weapon slot (gun or melee weapon, mutually 
 - **Hold interact for 0.5s**: drops whatever's in the *currently active* slot. This only kicks in if the initial tap didn't already resolve as a pickup or swap — so standing next to a valid swap target and tapping always swaps; it never accidentally drops first.
 - **The gun is the one exception to tap-swapping**: it's never swapped away by a tap. A gun holder must hold interact for the full 0.5s to voluntarily give it up before they can pick up a melee weapon. Picking the gun *up* (from a melee weapon or empty-handed) is always an instant tap, same as everything else.
 - **Cycling** (Q/E, or bumpers) moves between *occupied* slots only, skipping empty ones: weapon → item slot 2 → item slot 3 → back to weapon. Fire performs the active slot's primary action (gunshot/melee swing, or item preview/use); the dedicated Throw input previews/releases a melee weapon while the weapon slot is active.
+- **Only Interact can pick up**: entering a pickup radius only registers the nearby object and cannot equip or swap it. Human gun/melee/item pickups require the controller's current explicit Interact transaction. Fire never runs the pickup path; if an old/conflicting keybind maps Fire and Interact to the same physical input, the primary attack takes priority and no nearby object is collected.
 - When both item slots are full and you interact with a new item on the ground, it swaps into whichever item slot is currently active (not automatically the oldest or newest).
 - Dying drops everything you're holding — gun, melee weapon, and both items — at your position.
 
@@ -241,7 +232,6 @@ Bots (`dummy.gd`) fight for the gun, melee, powerups, and items using the same m
 | Fire cooldown mult | 1.2× | 1.0× | 0.85× | 0.7× |
 | Can retreat | No | No | Yes | Yes |
 | Can dash | Yes (basic) | Yes (defensive) | Yes (defensive+aggressive) | Yes (defensive+aggressive) |
-| Prefers high melee tier | No | No | No | Yes |
 
 Bot objectives (`idle`, `get_gun`, `gunner_position`, `get_melee`, `get_item`, `get_powerup`, `chase_holder`, `retreat`) are re-evaluated on difficulty-tuned timers. Bots filter unreachable objectives, respect team/friendly-fire targeting, perceive combat noise, treat decoys as real targets, understand smoke concealment, and treat OT fire as a survival constraint. They may pursue a kill briefly into fire but commit to escape before their remaining exposure margin is exhausted.
 

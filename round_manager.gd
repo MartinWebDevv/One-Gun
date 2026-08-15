@@ -1211,7 +1211,7 @@ func _net_reset_online_round(assignments: Array, melee_assignments: Array, item_
 			if _actor_uses_personal_mode_gun(actor):
 				_grant_personal_mode_gun(actor)
 			elif GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
-				_grant_one_of_us_sword(actor)
+				_grant_one_of_us_frying_pan(actor)
 	_net_set_online_players_enabled(false)
 
 func _actor_uses_personal_mode_gun(actor) -> bool:
@@ -1261,7 +1261,7 @@ func _prepare_local_mode_loadouts() -> void:
 		if _actor_uses_personal_mode_gun(actor):
 			_grant_personal_mode_gun(actor)
 		elif GameConfig.game_mode == GameConfig.MODE_ONE_OF_US:
-			_grant_one_of_us_sword(actor)
+			_grant_one_of_us_frying_pan(actor)
 
 
 
@@ -1341,7 +1341,7 @@ func _clear_personal_mode_melees() -> void:
 		melee.free()
 
 
-func _grant_one_of_us_sword(actor) -> void:
+func _grant_one_of_us_frying_pan(actor) -> void:
 	if actor == null or GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
 		return
 	if one_of_us_role_for_actor(int(actor.get("actor_id"))) != "them":
@@ -1349,12 +1349,12 @@ func _grant_one_of_us_sword(actor) -> void:
 	if actor.get("held_melee_weapon") != null:
 		return
 	var melee = MeleeScene.instantiate()
-	melee.name = "ThemSword%d" % int(actor.get("actor_id"))
+	melee.name = "ThemFryingPan%d" % int(actor.get("actor_id"))
 	melee.online_candidate_id = -200000 - int(actor.get("actor_id"))
 	melee.personal_mode_melee = true
 	get_tree().current_scene.add_child(melee)
 	melee.set_online_active(true)
-	melee.apply_network_identity({"weapon_name": "Sword", "effect": "normal", "tier": 3})
+	melee.apply_network_identity({"weapon_name": "Frying Pan", "effect": "normal"})
 	melee.global_position = actor.global_position
 	melee.spawn_position = actor.global_position
 	melee._local_pickup(actor)
@@ -1440,7 +1440,7 @@ func _finish_local_one_of_us_conversion(target, actor_id: int, generation: int,
 	var spawn_transform := _one_of_us_safe_spawn_transform(actor_id)
 	target.respawn(spawn_transform)
 	target.set_one_of_us_role("them")
-	_grant_one_of_us_sword(target)
+	_grant_one_of_us_frying_pan(target)
 
 
 func _server_begin_one_of_us_respawn(victim_id: int, attacker_id: int,
@@ -1497,7 +1497,7 @@ func _net_respawn_one_of_us_actor(actor_id: int, position: Vector3, yaw: float, 
 	actor.respawn(Transform3D(Basis(Vector3.UP, yaw), position))
 	actor.set_one_of_us_role(role)
 	if role == "them":
-		_grant_one_of_us_sword(actor)
+		_grant_one_of_us_frying_pan(actor)
 	else:
 		_grant_personal_mode_gun(actor)
 

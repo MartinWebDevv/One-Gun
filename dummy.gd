@@ -61,7 +61,6 @@ const TIER_PROFILES = {
 		"move_speed_mult": 1.0,
 		"fire_cooldown_mult": 1.2,
 		"can_retreat": false,
-		"prefers_melee_tier": false,
 		"can_dash": true,
 		"dash_defensive": false,
 		"dash_aggressive": false,
@@ -76,7 +75,6 @@ const TIER_PROFILES = {
 		"move_speed_mult": 1.0,
 		"fire_cooldown_mult": 1.0,
 		"can_retreat": false,
-		"prefers_melee_tier": false,
 		"can_dash": true,
 		"dash_defensive": true,
 		"dash_aggressive": false,
@@ -91,7 +89,6 @@ const TIER_PROFILES = {
 		"move_speed_mult": 1.0,
 		"fire_cooldown_mult": 0.85,
 		"can_retreat": true,
-		"prefers_melee_tier": false,
 		"can_dash": true,
 		"dash_defensive": true,
 		"dash_aggressive": true,
@@ -106,7 +103,6 @@ const TIER_PROFILES = {
 		"move_speed_mult": 1.0,
 		"fire_cooldown_mult": 0.7,
 		"can_retreat": true,
-		"prefers_melee_tier": true,
 		"can_dash": true,
 		"dash_defensive": true,
 		"dash_aggressive": true,
@@ -126,7 +122,6 @@ var move_speed := BASE_MOVE_SPEED
 var fire_cooldown_min := BASE_FIRE_COOLDOWN_MIN
 var fire_cooldown_max := BASE_FIRE_COOLDOWN_MAX
 var can_retreat := false
-var prefers_melee_tier := false
 var can_dash := false
 var dash_defensive := false
 var dash_aggressive := false
@@ -473,7 +468,6 @@ func _apply_tier_profile():
 	fire_cooldown_min      = BASE_FIRE_COOLDOWN_MIN * profile["fire_cooldown_mult"]
 	fire_cooldown_max      = BASE_FIRE_COOLDOWN_MAX * profile["fire_cooldown_mult"]
 	can_retreat            = profile["can_retreat"]
-	prefers_melee_tier     = profile["prefers_melee_tier"]
 	can_dash               = profile["can_dash"]
 	dash_defensive         = profile["dash_defensive"]
 	dash_aggressive        = profile["dash_aggressive"]
@@ -1307,25 +1301,14 @@ func _find_best_melee_weapon():
 		available.append(m)
 	if available.size() == 0:
 		return null
-	if not prefers_melee_tier:
-		var closest = null
-		var closest_dist = INF
-		for m in available:
-			var dist = global_position.distance_to(m.global_position)
-			if dist < closest_dist:
-				closest_dist = dist
-				closest = m
-		return closest
-	var best = null
-	var best_score = -INF
+	var closest = null
+	var closest_dist = INF
 	for m in available:
 		var dist = global_position.distance_to(m.global_position)
-		var tier_value = m.tier if "tier" in m else 1
-		var score = float(tier_value) * 3.0 - dist
-		if score > best_score:
-			best_score = score
-			best = m
-	return best
+		if dist < closest_dist:
+			closest_dist = dist
+			closest = m
+	return closest
 
 const NAV_TARGET_UPDATE_INTERVAL := 0.2
 var _nav_update_timer := 0.0

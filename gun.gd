@@ -387,6 +387,12 @@ func pick_up(p = null) -> bool:
 		p = player_ref
 	if p == null:
 		return false
+	# Human pickups must originate from the controller's current Interact press.
+	# Area overlap only registers this gun; it must never equip/swap by proximity.
+	if p.has_method("is_manual_pickup_request_active") \
+			and not p.is_manual_pickup_request_active():
+		return false
+
 	if p == disarm_lock_player and disarm_lock_timer > 0.0:
 		return false
 	if NetworkManager.is_online():
