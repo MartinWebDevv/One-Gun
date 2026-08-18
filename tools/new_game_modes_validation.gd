@@ -70,10 +70,10 @@ func _load_mode(mode: String):
 func _validate_one_of_us() -> void:
 	_check(is_equal_approx(GameConfig.ONE_OF_US_THEM_SPEED_MULTIPLIER, 1.15),
 		"Them movement speed is not fifteen percent above Us")
-	_check(is_equal_approx(GameConfig.DEFAULT_MELEE_HITBOX_LENGTH, 5.0),
-		"Normal game modes do not use the shared 5m melee length")
-	_check(is_equal_approx(GameConfig.ONE_OF_US_MELEE_HITBOX_LENGTH, 5.7),
-		"One of Us does not use its 5.7m melee length")
+	_check(is_equal_approx(GameConfig.DEFAULT_MELEE_HITBOX_LENGTH, 5.2),
+		"Normal game modes do not use the shared 5.2m melee length")
+	_check(is_equal_approx(GameConfig.ONE_OF_US_MELEE_HITBOX_LENGTH, 5.2),
+		"One of Us did not inherit the shared 5.2m melee length")
 	GameConfig.local_one_of_us_volunteers = [true, false]
 	var manager = await _load_mode(GameConfig.MODE_ONE_OF_US)
 	_check(manager != null, "One of Us RoundManager did not initialize")
@@ -309,6 +309,10 @@ func _validate_shared_item_packet() -> void:
 		return
 	var gum = gum_scene.instantiate()
 	add_child(gum)
+	_check(is_equal_approx(gum.lifetime_seconds, 5.0),
+		"Bubble Gum Trap does not own a five-second deployed lifetime")
+	_check(gum.manages_deployed_lifetime(),
+		"Bubble Gum Trap does not advertise its self-managed cleanup")
 	var collision := gum.get_node("CollisionShape3D") as CollisionShape3D
 	var shape := collision.shape as CylinderShape3D
 	_check(shape != null and is_equal_approx(shape.radius, 2.25),
@@ -317,7 +321,20 @@ func _validate_shared_item_packet() -> void:
 	_check(splat != null and splat.get_child_count() == 7,
 		"Chewed-gum presentation did not build its irregular seven-piece splat")
 	gum.free()
+	var expiring_gum = gum_scene.instantiate()
+	expiring_gum.lifetime_seconds = 0.05
+	add_child(expiring_gum)
+	await get_tree().create_timer(0.10).timeout
+	await get_tree().process_frame
+	_check(not is_instance_valid(expiring_gum),
+		"Bubble Gum Trap did not remove itself when its deployed lifetime elapsed")
 
+
+	var item_scene := load("res://item.tscn") as PackedScene
+	var item = item_scene.instantiate()
+	_check(is_equal_approx(item.deployed_lifetime, 5.0),
+		"Bubble Gum inventory item does not configure a five-second deployment")
+	item.free()
 
 func _validate_melee_throw_release() -> void:
 	var manager = await _load_mode(GameConfig.MODE_ONE_GUN)
@@ -339,18 +356,44 @@ func _validate_melee_throw_release() -> void:
 		return
 	var weapon = loose_melee[0]
 	_check(weapon._local_pickup(human), "Could not equip melee weapon for throw validation")
+	human.global_position = Vector3(1000.0, 50.0, 1000.0)
+	human.rotation = Vector3.ZERO
+	human.get_node("AimPivot").rotation = Vector3.ZERO
+	human.get_node("AimPivot/SpringArm3D").rotation = Vector3.ZERO
+	# The City map has broad invisible boundary bodies; isolate motion integration
+	# here while the production collider dimensions are asserted separately below.
+	weapon.collision_mask = 0
+	var expected_launch: Vector3 = human.get_aim_direction().normalized() * GameConfig.SHARED_THROW_FORWARD_SPEED + Vector3.UP * GameConfig.SHARED_THROW_UPWARD_SPEED
 	var player_position: Vector3 = human.global_position
 	weapon.throw()
 	_check(bool(weapon.get("is_in_flight")), "Melee throw did not enter flight")
 	var horizontal_release: Vector3 = weapon.global_position - player_position
 	horizontal_release.y = 0.0
-	_check(horizontal_release.length() >= 1.1,
-		"Melee weapon released too close and can still catch on its thrower")
-	_check(weapon.linear_velocity.length() >= GameConfig.SHARED_THROW_FORWARD_SPEED,
-		"Melee weapon did not receive the shared throw strength")
+	_check(absf(horizontal_release.length()
+			- GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET) < 0.05,
+		"Melee weapon does not share the item's release offset")
+	_check(weapon.scale.is_equal_approx(Vector3.ONE),
+		"Melee weapon retained an animated hold-socket scale after release")
+	var outer_collision := weapon.get_node("CollisionShape3D") as CollisionShape3D
+	var outer_box := outer_collision.shape as BoxShape3D
+	_check(outer_box != null and outer_box.size.is_equal_approx(Vector3(0.3, 0.1, 0.16))
+			and outer_collision.transform.is_equal_approx(Transform3D.IDENTITY),
+		"Melee weapon does not use the compact unscaled item-style flight collider")
+	_check(weapon.linear_velocity.distance_to(expected_launch) < 0.05,
+		"Melee weapon did not receive the exact shared throw velocity (got %s, expected %s)"
+			% [weapon.linear_velocity, expected_launch])
 	_check(weapon.get_collision_exceptions().has(human),
 		"Melee thrower collision exception was not active at release")
-	await get_tree().create_timer(0.42).timeout
+	var release_position: Vector3 = weapon.global_position
+	for _physics_frame in 10:
+		await get_tree().physics_frame
+	var travel: Vector3 = weapon.global_position - release_position
+	travel.y = 0.0
+	_check(travel.length() >= 1.25,
+		"Melee weapon did not travel forward after its item-strength release (%.2fm)"
+			% travel.length() + " (expected launch %s, current velocity %s, frozen=%s, in_flight=%s)"
+			% [expected_launch, weapon.linear_velocity, weapon.freeze, weapon.is_in_flight])
+	await get_tree().create_timer(0.30).timeout
 	_check(not weapon.get_collision_exceptions().has(human),
 		"Melee thrower collision exception did not clear after launch grace")
 
@@ -359,7 +402,7 @@ func _run() -> void:
 	GameConfig.split_screen_enabled = false
 	GameConfig.teams_enabled = false
 	GameConfig.set_bot_count(2)
-	_validate_shared_item_packet()
+	await _validate_shared_item_packet()
 	reparent(NetworkManager)
 	await _validate_one_of_us()
 	await _validate_all_gun()

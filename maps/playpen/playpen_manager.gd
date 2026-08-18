@@ -49,6 +49,8 @@ func _initialize_playpen() -> void:
 	NetworkManager.report_playpen_scene_ready.call_deferred()
 	if NetworkManager.is_host():
 		_reconcile_playpen_members.call_deferred()
+		if NetworkManager.local_match_role == "playpen_hosting":
+			show_host_lobby_overlay.call_deferred()
 
 
 func _process(_delta: float) -> void:
@@ -114,7 +116,7 @@ func _reconcile_playpen_members() -> void:
 	await get_tree().process_frame
 	_broadcast_online_state()
 	_update_practice_overlay()
-
+	NetworkManager.refresh_playpen_replication_visibility()
 
 func _practice_actor_entry(actor_id: int, peer_id: int) -> Dictionary:
 	var peer_entry: Dictionary = NetworkManager.peers.get(peer_id, {})

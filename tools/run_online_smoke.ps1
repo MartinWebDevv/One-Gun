@@ -26,8 +26,8 @@ $hostErr = Join-Path $env:TEMP "one_gun_online_smoke_host.err.log"
 $clientOut = Join-Path $env:TEMP "one_gun_online_smoke_client.out.log"
 $clientErr = Join-Path $env:TEMP "one_gun_online_smoke_client.err.log"
 $displayArg = if ($Rendered) { "" } else { "--headless " }
-$hostArgs = "${displayArg}--path `"$project`" res://tools/online_smoke.tscn -- --role=host --map=$Map --mode=$Mode"
-$clientArgs = "${displayArg}--path `"$project`" res://tools/online_smoke.tscn -- --role=client --map=$Map --mode=$Mode"
+$hostArgs = "${displayArg}--path `"$project`" --scene res://tools/online_smoke.tscn -- --role=host --map=$Map --mode=$Mode"
+$clientArgs = "${displayArg}--path `"$project`" --scene res://tools/online_smoke.tscn -- --role=client --map=$Map --mode=$Mode"
 
 $hostProcess = Start-Process -FilePath $godot -ArgumentList $hostArgs -RedirectStandardOutput $hostOut -RedirectStandardError $hostErr -WindowStyle Hidden -PassThru
 Start-Sleep -Milliseconds 500

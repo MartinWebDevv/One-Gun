@@ -291,10 +291,12 @@ func can_accept_online_combat(epoch: int) -> bool:
 		and epoch == online_round_epoch
 	)
 
-func _online_loose_gun():
+func _online_loose_gun(instance_name: String = ""):
 	var guns := get_tree().get_nodes_in_group("gun")
 	guns.sort_custom(func(a, b): return str(a.get_path()) < str(b.get_path()))
 	for gun in guns:
+		if instance_name != "" and str(gun.name) != instance_name:
+			continue
 		if not bool(gun.get("personal_mode_gun")) and not bool(gun.get("is_held")) \
 				and not bool(gun.get("overtime_disabled")) and bool(gun.get("visible")):
 			return gun
@@ -314,24 +316,30 @@ func _online_gun_for_actor(actor_id: int):
 # Gun nodes move between the map and a holder's hand. Route requests through
 # this stable RoundManager path so dedicated and client scene-tree differences
 # cannot invalidate RPC delivery after a pickup.
-func request_online_gun_action(action: String, epoch: int, direction: Vector3 = Vector3.ZERO) -> void:
+func request_online_gun_action(action: String, epoch: int,
+		direction: Vector3 = Vector3.ZERO, gun_instance_name: String = "") -> void:
 	if NetworkManager.is_host():
-		_server_route_online_gun_action(NetworkManager.local_actor_id(), action, epoch, direction)
+		_server_route_online_gun_action(NetworkManager.local_actor_id(), action,
+			epoch, direction, gun_instance_name)
 	else:
-		_net_request_online_gun_action.rpc_id(1, action, epoch, direction)
+		_net_request_online_gun_action.rpc_id(
+			1, action, epoch, direction, gun_instance_name)
 
 
 @rpc("any_peer", "reliable")
-func _net_request_online_gun_action(action: String, epoch: int, direction: Vector3) -> void:
+func _net_request_online_gun_action(action: String, epoch: int,
+		direction: Vector3, gun_instance_name: String) -> void:
 	_server_route_online_gun_action(
 		NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()),
-		action, epoch, direction)
+		action, epoch, direction, gun_instance_name)
 
 
-func _server_route_online_gun_action(sender_id: int, action: String, epoch: int, direction: Vector3) -> void:
+func _server_route_online_gun_action(sender_id: int, action: String, epoch: int,
+		direction: Vector3, gun_instance_name: String = "") -> void:
 	if not multiplayer.is_server():
 		return
-	var gun = _online_loose_gun() if action == "pickup" else _online_gun_for_actor(sender_id)
+	var gun = _online_loose_gun(gun_instance_name) \
+		if action == "pickup" else _online_gun_for_actor(sender_id)
 	if gun == null:
 		if NetworkManager.is_dedicated_server():
 			print("[DEDICATED ACTION] gun %s rejected for actor %d: matching gun not found" % [action, sender_id])
@@ -352,8 +360,9 @@ func broadcast_online_gun_action(action: String, data: Dictionary = {}) -> void:
 @rpc("authority", "reliable", "call_local")
 func _net_apply_online_gun_action(action: String, data: Dictionary) -> void:
 	var holder_actor_id := int(data.get("holder_actor_id", -1))
-	var gun = _online_loose_gun() if action in ["pickup", "return_loose"] \
-		else _online_gun_for_actor(holder_actor_id)
+	var gun = _online_loose_gun(str(data.get("gun_instance_name", ""))) \
+		if action == "pickup" else _online_loose_gun() \
+		if action == "return_loose" else _online_gun_for_actor(holder_actor_id)
 	if gun == null and action in ["set_can_fire", "return_loose"]:
 		gun = _online_loose_gun()
 	if gun == null:

@@ -1749,38 +1749,15 @@ func _update_playpen_availability() -> void:
 		_playpen_button.text = "THE PLAYPEN — LISTEN HOSTS ONLY"
 		_playpen_button.tooltip_text = "Dedicated-server Playpen support is intentionally deferred."
 		return
-	var host_open := NetworkManager.is_playpen_open()
-	_playpen_button.disabled = NetworkManager._prelaunch_active \
-		or (not NetworkManager.can_manage_lobby() and not host_open)
+	_playpen_button.disabled = NetworkManager._prelaunch_active
 	_playpen_button.text = "ENTER THE PLAYPEN"
-	if not NetworkManager.can_manage_lobby() and not host_open:
-		_playpen_button.tooltip_text = "The host must open The Playpen first."
-	else:
-		_playpen_button.tooltip_text = "Practice with the lobby while waiting for the match."
+	_playpen_button.tooltip_text = "Practice with the lobby while waiting for the match."
 
 
 func _on_playpen_pressed() -> void:
 	if not _is_net() or NetworkManager.lobby_in_progress or not NetworkManager.is_playpen_supported():
 		return
-	if not NetworkManager.can_manage_lobby() and not NetworkManager.is_playpen_open():
-		_on_lobby_notice("The host must open The Playpen first.")
-		return
-	var dialog := ConfirmationDialog.new()
-	dialog.title = "ENTER THE PLAYPEN"
-	dialog.dialog_text = "Are you ready for the match?\n\nYour answer updates your lobby Ready status before entering practice."
-	dialog.ok_button_text = "YES"
-	dialog.cancel_button_text = "CANCEL"
-	dialog.add_button("NO", true, "not_ready")
-	add_child(dialog)
-	dialog.confirmed.connect(func():
-		NetworkManager.request_enter_playpen(true)
-		dialog.queue_free())
-	dialog.custom_action.connect(func(action: StringName):
-		if action == &"not_ready":
-			NetworkManager.request_enter_playpen(false)
-			dialog.queue_free())
-	dialog.canceled.connect(func(): dialog.queue_free())
-	dialog.popup_centered(Vector2i(520, 250))
+	NetworkManager.request_enter_playpen()
 
 # Back / Play
 # ============================================================

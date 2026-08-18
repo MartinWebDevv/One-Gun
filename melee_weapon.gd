@@ -44,7 +44,7 @@ const BREAK_RESPAWN_TIME    = 5.0
 const ONLINE_PICKUP_MAX_DISTANCE = 2.25
 const DEFAULT_MELEE_HITBOX_LENGTH := GameConfig.DEFAULT_MELEE_HITBOX_LENGTH
 const ONE_OF_US_MELEE_HITBOX_LENGTH := GameConfig.ONE_OF_US_MELEE_HITBOX_LENGTH
-const POWERUP_MELEE_MAX_HIT_DISTANCE := 8.0
+const POWERUP_MELEE_MAX_HIT_DISTANCE := GameConfig.REACH_POWERUP_DISTANCE
 const SWING_TIME_MULTIPLIER := 0.85
 const MELEE_HITBOX_RADIUS := 0.45
 const DEDICATED_SWING_ORIGIN_HEIGHT := 0.45
@@ -320,7 +320,8 @@ func get_throw_preview_data() -> Dictionary:
 	var flat := Vector3(direction.x, 0.0, direction.z)
 	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
 	return {
-		"origin": player_ref.global_position + flat * 1.2 + Vector3.UP * 1.15,
+		"origin": player_ref.global_position + flat * GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET \
+			+ Vector3.UP * GameConfig.SHARED_THROW_RELEASE_HEIGHT,
 		"velocity": direction * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST,
 		"gravity": 9.8,
 	}
@@ -535,13 +536,18 @@ func throw():
 		p.play_throw_animation()
 	var forward = p.get_aim_direction()
 	var world = get_tree().current_scene
-	reparent(world, true)
 	var flat_forward = Vector3(forward.x, 0, forward.z)
 	if flat_forward.length() < 0.01:
 		flat_forward = Vector3.FORWARD
 	else:
 		flat_forward = flat_forward.normalized()
-	global_position = p.global_position + flat_forward * 1.2 + Vector3.UP * 1.15
+	var hold_point = get_parent()
+	hold_point.remove_child(self)
+	world.add_child(self)
+	scale = Vector3.ONE
+	global_position = p.global_position \
+		+ flat_forward * GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET \
+		+ Vector3.UP * GameConfig.SHARED_THROW_RELEASE_HEIGHT
 	global_rotation = p.global_rotation
 	_enable_loose_physics()
 	$CollisionShape3D.disabled = false
@@ -551,6 +557,8 @@ func throw():
 	if p.held_melee_weapon == self:
 		p.held_melee_weapon = null
 	_arm_thrower_collision_grace(p)
+	# Direct velocity is deterministic immediately after leaving the animated
+	# hand socket; Jolt can discard a same-frame impulse while reparenting.
 	linear_velocity = forward.normalized() * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST
 	angular_velocity = Vector3.ZERO
 	await get_tree().create_timer(0.40).timeout
@@ -567,7 +575,9 @@ func _server_try_throw(sender_id: int, epoch: int) -> void:
 	var forward: Vector3 = player_ref.get_aim_direction().normalized()
 	var flat_forward := Vector3(forward.x, 0.0, forward.z)
 	flat_forward = Vector3.FORWARD if flat_forward.length() < 0.01 else flat_forward.normalized()
-	var start_pos: Vector3 = player_ref.global_position + flat_forward * 1.2 + Vector3.UP * 1.15
+	var start_pos: Vector3 = player_ref.global_position \
+		+ flat_forward * GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET \
+		+ Vector3.UP * GameConfig.SHARED_THROW_RELEASE_HEIGHT
 	var start_rot: Vector3 = player_ref.global_rotation
 	var launch_velocity := forward * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST
 	rm.broadcast_online_melee_action(online_candidate_id, "throw", {
@@ -583,7 +593,10 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 	if p != null and p.has_method("play_throw_animation"):
 		p.play_throw_animation()
 	var world = get_tree().current_scene
-	reparent(world, true)
+	var hold_point = get_parent()
+	hold_point.remove_child(self)
+	world.add_child(self)
+	scale = Vector3.ONE
 	global_position = start_pos
 	global_rotation = start_rot
 	$CollisionShape3D.disabled = false
@@ -594,11 +607,11 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 	_arm_thrower_collision_grace(p)
 	if p != null and p.held_melee_weapon == self:
 		p.held_melee_weapon = null
-	linear_velocity = launch_velocity
-	angular_velocity = Vector3.ZERO
 	# Every peer launches the same approved visual trajectory. Only the server
 	# resolves impacts, then broadcasts the authoritative landing transform.
 	_enable_loose_physics()
+	linear_velocity = launch_velocity
+	angular_velocity = Vector3.ZERO
 	if multiplayer.is_server():
 		call_deferred("_online_enable_throw_player_collision")
 

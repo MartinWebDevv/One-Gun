@@ -45,18 +45,18 @@ func _validate_config_and_reach() -> void:
 		"testing hitboxes are missing from lobby/network snapshots")
 	_check(GameConfig.ITEM_SCENES.get("flash_camera", "") == "res://flash_camera.tscn",
 		"Flash Camera is missing from the item scene registry")
-	_check(is_equal_approx(GameConfig.REACH_POWERUP_DISTANCE, 8.0),
-		"shared Reach powerup distance is not 8m")
-	_check(is_equal_approx(PlayerScript.REACH_PICKUP_RADIUS, 8.0),
-		"human Reach pickup radius is not 8m")
-	_check(is_equal_approx(DummyScript.REACH_PICKUP_RADIUS, 8.0),
-		"bot Reach pickup radius is not 8m")
-	_check(is_equal_approx(MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE, 8.0),
-		"Reach melee hit limit is not 8m")
-	_check(is_equal_approx(MeleeScript.DEFAULT_MELEE_HITBOX_LENGTH, 5.0),
-		"normal melee hit limit is not 5m")
-	_check(is_equal_approx(MeleeScript.ONE_OF_US_MELEE_HITBOX_LENGTH, 5.7),
-		"One of Us melee hit limit is not 5.7m")
+	_check(is_equal_approx(GameConfig.REACH_POWERUP_DISTANCE, 7.0),
+		"shared Reach powerup distance is not 7m")
+	_check(is_equal_approx(PlayerScript.REACH_PICKUP_RADIUS, 7.0),
+		"human Reach pickup radius is not 7m")
+	_check(is_equal_approx(DummyScript.REACH_PICKUP_RADIUS, 7.0),
+		"bot Reach pickup radius is not 7m")
+	_check(is_equal_approx(MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE, 7.0),
+		"Reach melee hit limit is not 7m")
+	_check(is_equal_approx(MeleeScript.DEFAULT_MELEE_HITBOX_LENGTH, 5.2),
+		"universal melee hit limit is not 5.2m")
+	_check(is_equal_approx(MeleeScript.ONE_OF_US_MELEE_HITBOX_LENGTH, 5.2),
+		"One of Us did not inherit the universal 5.2m melee limit")
 	_check(is_equal_approx(PlayerScript.SPRING_AIR_CONTROL, 0.60),
 		"human spring air steering is not 60 percent")
 	_check(is_equal_approx(DummyScript.SPRING_AIR_CONTROL, 0.60),

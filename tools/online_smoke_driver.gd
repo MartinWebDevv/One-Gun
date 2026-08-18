@@ -197,19 +197,31 @@ func _run_playpen_smoke() -> void:
 		if not NetworkManager.host_game(TEST_PORT):
 			_fail("Playpen host setup failed")
 			return
+		NetworkManager.pending_map_path = test_map
 		if not await _wait_for(func(): return NetworkManager.peers.size() >= 2,
 				"Playpen client connection"):
 			return
-		NetworkManager.pending_map_path = test_map
-		NetworkManager.request_enter_playpen(true)
+		if not await _wait_for(func():
+			return (
+				NetworkManager.local_match_role == "playpen_hosting"
+				and get_tree().current_scene != null
+				and get_tree().current_scene.scene_file_path == "res://maps/playpen/playpen.tscn"
+			)
+		, "guest opening The Playpen without host entry"):
+			return
+		NetworkManager.request_enter_playpen()
 	else:
 		if not NetworkManager.join_game("127.0.0.1", TEST_PORT):
 			_fail("Playpen client setup failed")
 			return
-		if not await _wait_for(func(): return NetworkManager.is_peer_in_playpen(1),
-				"host opening The Playpen"):
+		if not await _wait_for(func():
+			return (
+				NetworkManager.local_id() != 1
+				and NetworkManager.peers.has(NetworkManager.local_id())
+			)
+		, "Playpen client lobby admission"):
 			return
-		NetworkManager.request_enter_playpen(false)
+		NetworkManager.request_enter_playpen()
 	if not await _wait_for(func():
 		var scene := get_tree().current_scene
 		var net_players := scene.get_node_or_null("NetPlayers") if scene != null else null
@@ -228,6 +240,35 @@ func _run_playpen_smoke() -> void:
 		if "is_bot" in actor and actor.is_bot:
 			_fail("The Playpen spawned a bot")
 			return
+	var net_players := get_tree().current_scene.get_node("NetPlayers")
+	var local_actor = net_players.get_node_or_null("NP%d" % NetworkManager.local_actor_id())
+	var remote_actor = null
+	for candidate in net_players.get_children():
+		if candidate != local_actor:
+			remote_actor = candidate
+			break
+	if local_actor == null or remote_actor == null:
+		_fail("Playpen replication validation could not find both actors")
+		return
+	var remote_start: Vector3 = remote_actor.global_position
+	if role == "client":
+		await get_tree().create_timer(0.5).timeout
+		for _movement_frame in 30:
+			local_actor.global_position.x += 0.1
+			await get_tree().physics_frame
+		if not await _wait_for(func():
+			return remote_actor.global_position.distance_to(remote_start) > 1.0
+		, "host movement replication after Playpen membership refresh"):
+			return
+	else:
+		if not await _wait_for(func():
+			return remote_actor.global_position.distance_to(remote_start) > 1.0
+		, "guest movement replication after guest-first Playpen entry"):
+			return
+		for _movement_frame in 30:
+			local_actor.global_position.z += 0.1
+			await get_tree().physics_frame
+
 	if role == "client":
 		await get_tree().create_timer(0.5).timeout
 		NetworkManager.request_leave_playpen()
@@ -255,33 +296,59 @@ func _run_playpen_smoke() -> void:
 		guest_lobby.call("_discard_settings_slideout_immediately")
 		await get_tree().process_frame
 		var playpen_button = guest_lobby.get("_playpen_button")
+		var local_peer_id := NetworkManager.local_id()
+		var ready_before_entry := bool(
+			NetworkManager.peers[local_peer_id].get("ready", false))
 		playpen_button.emit_signal("pressed")
-		await get_tree().process_frame
 		var entry_dialogs: Array[Node] = guest_lobby.find_children(
 			"*", "ConfirmationDialog", true, false)
-		if not entry_dialogs.any(func(dialog): return dialog.visible):
-			_fail("guest lobby Playpen click did not open its Ready prompt")
+		if entry_dialogs.any(func(dialog): return dialog.visible):
+			_fail("guest lobby Playpen click still opened a Ready prompt")
 			return
-		for dialog in entry_dialogs:
-			dialog.queue_free()
+		if (bool(NetworkManager.peers[local_peer_id].get("ready", false))
+				!= ready_before_entry):
+			_fail("guest Playpen entry changed the lobby Ready state")
+			return
+		if not await _wait_for(func():
+			return (
+				NetworkManager.local_match_role == "playpen"
+				and get_tree().current_scene != null
+				and get_tree().current_scene.scene_file_path == "res://maps/playpen/playpen.tscn"
+			)
+		, "guest free re-entry into The Playpen"):
+			return
+		NetworkManager.request_leave_playpen()
+		if not await _wait_for(func():
+			return (
+				get_tree().current_scene != null
+				and get_tree().current_scene.scene_file_path == "res://game_setup.tscn"
+				and NetworkManager.local_match_role == "lobby"
+			)
+		, "guest completing its second independent Playpen exit"):
+			return
 		_lobby_test_client_complete.rpc_id(1)
 		print("ONLINE_PLAYPEN_PASS client")
 		await get_tree().create_timer(0.5).timeout
+		NetworkManager.disconnect_net()
+		await get_tree().create_timer(0.25).timeout
 		get_tree().quit()
 		return
 	if not await _wait_for(func():
 		for peer_id_value in NetworkManager.peers:
 			var peer_id := int(peer_id_value)
 			if peer_id != 1 and str(NetworkManager.peers[peer_id].get("role", "")) == "lobby":
-				var net_players := get_tree().current_scene.get_node_or_null("NetPlayers")
-				return net_players != null and net_players.get_child_count() == 1
+				var remaining_net_players := get_tree().current_scene.get_node_or_null("NetPlayers")
+				return remaining_net_players != null and remaining_net_players.get_child_count() == 1
 		return false
 	, "host retaining The Playpen after guest exit"):
 		return
 	if not await _wait_for(func(): return _lobby_client_complete,
 			"client returned-lobby button verification"):
 		return
+	await get_tree().create_timer(0.75).timeout
 	print("ONLINE_PLAYPEN_PASS host")
+	NetworkManager.disconnect_net()
+	await get_tree().create_timer(0.25).timeout
 	get_tree().quit()
 func _run_late_spectator_smoke() -> void:
 	if role == "host":

@@ -50,7 +50,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	reparent(network)
 	network.pending_map_path = "res://maps/test/CityMap.tscn"
-	network.request_enter_playpen(true)
+	network.request_enter_playpen()
 	var deadline := Time.get_ticks_msec() + 8000
 	while Time.get_ticks_msec() < deadline:
 		var scene := get_tree().current_scene
@@ -118,6 +118,20 @@ func _run() -> void:
 				"Normal-match exit actions leaked into the Playpen pause menu")
 		if manager != null and host_actor != null:
 			var actor_id := int(host_actor.get("actor_id"))
+			if not playpen_guns.is_empty():
+				var far_bay_gun = playpen_guns[-1]
+				var saved_actor_transform: Transform3D = host_actor.global_transform
+				host_actor.global_position = far_bay_gun.global_position
+				manager._server_route_online_gun_action(actor_id, "pickup",
+					int(manager.get("online_round_epoch")), Vector3.ZERO,
+					str(far_bay_gun.name))
+				await get_tree().process_frame
+				_check(bool(far_bay_gun.get("is_held"))
+					and far_bay_gun.get("player_ref") == host_actor,
+					"Playpen rejected the exact gun touched outside the first armory bay")
+				if bool(far_bay_gun.get("is_held")):
+					far_bay_gun._net_do_drop(saved_actor_transform.origin + Vector3.UP)
+				host_actor.global_transform = saved_actor_transform
 			var loose_melee = get_tree().get_nodes_in_group("melee").filter(func(melee):
 				return not bool(melee.get("is_held")))
 			if not loose_melee.is_empty():
@@ -191,18 +205,18 @@ func _run() -> void:
 				player_settings.call("request_cancel_close")
 				await get_tree().process_frame
 			var playpen_button = host_lobby.get("_playpen_button")
+			var ready_before_entry := bool(network.peers[1].get("ready", false))
 			playpen_button.emit_signal("pressed")
-			await get_tree().process_frame
 			var entry_dialogs: Array[Node] = host_lobby.find_children(
 				"*", "ConfirmationDialog", true, false)
 			var visible_entry_dialog := false
 			for dialog in entry_dialogs:
 				visible_entry_dialog = visible_entry_dialog or dialog.visible
-			_check(visible_entry_dialog,
-				"Host lobby Playpen button did not open its Ready prompt after exit")
-			for dialog in entry_dialogs:
-				dialog.queue_free()
-		network.request_enter_playpen(true)
+			_check(not visible_entry_dialog,
+				"Host lobby Playpen entry still opened a Ready prompt")
+			_check(bool(network.peers[1].get("ready", false)) == ready_before_entry,
+				"Entering Playpen changed the player's lobby Ready state")
+			await get_tree().process_frame
 		var reentry_deadline := Time.get_ticks_msec() + 3000
 		while playpen.get_node_or_null("NetPlayers/NP1") == null \
 				and Time.get_ticks_msec() < reentry_deadline:
@@ -239,7 +253,7 @@ func _run() -> void:
 				_check(repeat_lobby.get("_settings_slideout") != null,
 					"Repeated host lobby Settings click did nothing")
 				repeat_lobby.call("_discard_settings_slideout_immediately")
-			network.request_enter_playpen(true)
+			network.request_enter_playpen()
 			var repeat_deadline := Time.get_ticks_msec() + 3000
 			while playpen.get_node_or_null("NetPlayers/NP1") == null \
 					and Time.get_ticks_msec() < repeat_deadline:

@@ -182,7 +182,10 @@ func _server_try_pickup(sender_id: int, epoch: int) -> void:
 		return
 	if player == disarm_lock_player and disarm_lock_timer > 0.0:
 		return
-	rm.broadcast_online_gun_action("pickup", {"holder_actor_id": sender_id})
+	rm.broadcast_online_gun_action("pickup", {
+		"holder_actor_id": sender_id,
+		"gun_instance_name": str(name),
+	})
 
 func _online_round_manager():
 	var scene := get_tree().current_scene
@@ -401,7 +404,8 @@ func pick_up(p = null) -> bool:
 			var epoch := _online_round_epoch()
 			var rm = _online_round_manager()
 			if rm != null:
-				rm.request_online_gun_action("pickup", epoch)
+				rm.request_online_gun_action(
+					"pickup", epoch, Vector3.ZERO, str(name))
 		return true   # "handled" so _try_interact stops probing other objects
 	return _local_pickup(p)
 

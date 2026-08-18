@@ -1520,7 +1520,7 @@ var vampire_timer := 0.0
 const VAMPIRE_STAMINA_REFUND := 30.0
 var second_wind_ready := false
 var reach_timer := 0.0
-const REACH_PICKUP_RADIUS := 8.0
+const REACH_PICKUP_RADIUS := GameConfig.REACH_POWERUP_DISTANCE
 const REACH_SCAN_INTERVAL := 0.10
 
 func _canonical_powerup_type(power_type: String) -> String:

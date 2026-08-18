@@ -2,6 +2,7 @@ extends Area3D
 
 @export var slow_duration := 4.0
 @export var slow_multiplier := 0.5
+@export var lifetime_seconds := 5.0
 
 var owner_player = null
 
@@ -11,6 +12,16 @@ func _ready():
 	collision_layer = 0
 	set_collision_mask_value(2, true)
 	_build_chewed_gum_splat()
+	_expire_after_lifetime()
+
+func manages_deployed_lifetime() -> bool:
+	return true
+
+
+func _expire_after_lifetime() -> void:
+	await get_tree().create_timer(lifetime_seconds).timeout
+	if is_inside_tree():
+		queue_free()
 
 
 func _build_chewed_gum_splat() -> void:

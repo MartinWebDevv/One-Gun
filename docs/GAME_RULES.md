@@ -10,12 +10,12 @@ One Gun is an arena shooter for up to 10 competitors (humans + bots), playable s
 
 - **One Gun**: the default scarcity mode. One shared gun is contested while ground melee, items, and powerups follow the configured spawn pools. Normal first-round map intro and standard/Chaos overtime rules apply.
 - **All Gun**: every player starts every round with a personal gun and three heart pips. The three filled/empty hearts are also rendered depth-tested above every living actor for all players and spectators. Only gunshots remove hearts, one at a time, with 0.75s post-hit protection. Melee weapons never spawn; items and collectible powerups remain, except Extra Life. A disarm effect forces the target gun through a full reload instead of dropping it, while Sticky Hands consumes itself to block that forced reload. The mode supports teams and remains last-player/last-team-standing. When the normal timer reaches overtime, the advancing fire removes all remaining hearts immediately for sudden death.
-- **One of Us**: each human may privately choose RESIST or LET IT IN before launch. The host randomly chooses the first infected from the volunteer pool; if nobody volunteers, every match participant is eligible. Preferences never enter the shared roster. Them receive +15% movement speed, four base dashes, and a personal Frying Pan using the mode-specific 5.7m melee length. Us receive three base dashes and personal One Gun guns. Them respawn after 2.0s when shot. A Them melee hit converts an Us player after a 1.5s spectator window, and both temporary waits use role-filtered spectating. The last Us receives one additional single-use dash. Them win by converting every Us before 3:00; Us win if at least one survivor remains when the fixed timer expires. That winner takes the whole match immediately: One of Us has exactly one three-minute round, no sets, and no overtime. Ground melee never spawns, Sticky Hands and Extra Life are excluded from collectible powerups, and a runtime-only darker, desaturated, cool-fog environment grade gives every map a dingy survival treatment without modifying its authored environment or affecting other modes.
+- **One of Us**: each human may privately choose RESIST or LET IT IN before launch. The host randomly chooses the first infected from the volunteer pool; if nobody volunteers, every match participant is eligible. Preferences never enter the shared roster. Them receive +15% movement speed, four base dashes, and a personal Frying Pan using the universal 5.2m melee length. Us receive three base dashes and personal One Gun guns. Them respawn after 2.0s when shot. A Them melee hit converts an Us player after a 1.5s spectator window, and both temporary waits use role-filtered spectating. The last Us receives one additional single-use dash. Them win by converting every Us before 3:00; Us win if at least one survivor remains when the fixed timer expires. That winner takes the whole match immediately: One of Us has exactly one three-minute round, no sets, and no overtime. Ground melee never spawns, Sticky Hands and Extra Life are excluded from collectible powerups, and a runtime-only darker, desaturated, cool-fog environment grade gives every map a dingy survival treatment without modifying its authored environment or affecting other modes.
 - In One of Us, the normal map-orbit intro is replaced by a synchronized 7.35s hunt cinematic. Input is locked while a temporary camera dives from above the arena, scans deterministic player targets, reveals and orbits the server-selected first infected during their transformation, then takes a role-specific route back to each local gameplay camera. The first infected sees `YOU ARE THE FIRST.` then `MAKE THEM ONE OF US.`; every Us player sees `ONE OF THEM HAS TURNED.` then `RUN.`. All clients regain control on the shared cinematic deadline. Other game modes keep their existing first-round intro.
 
 ### The Playpen
 
-The Playpen is an online-only, retro-space practice room reached from the lobby. Every player enters and leaves independently; entry asks Yes/No only to update that player's Ready state. If the host leaves, the authoritative practice scene keeps running for its remaining members while the host receives the normal lobby controls as an overlay and may re-enter without reloading the room. Practice has no scores, round timer, or bots, and eliminated players respawn after 2.0s. Its pause menu exposes `LEAVE PLAYPEN` to everyone and gives the host a separate `START MATCH`/`FORCE START MATCH` action; ordinary match pause menus are unchanged.
+The Playpen is an online-only, retro-space practice room reached from the lobby. Every player enters and leaves independently, entry never asks about or changes lobby Ready state, and a guest may open the room before the host enters. In that guest-first case the listen host silently loads and continues authoritatively serving the practice scene while remaining on its lobby overlay. If the host leaves later, the authoritative practice scene likewise keeps running for its remaining members and the host may re-enter without reloading the room. Practice has no scores, round timer, or bots, and eliminated players respawn after 2.0s. Its pause menu exposes `LEAVE PLAYPEN` to everyone and gives the host a separate `START MATCH`/`FORCE START MATCH` action; ordinary match pause menus are unchanged.
 
 Three fixed armory bays remove random scavenging from practice. Every bay contains exactly two gun spawns, one of each of the five melee types, all nine item types, and all seven collectible powerups. Each dedicated pickup refills after 2.0s. Loose guns, melee weapons, and items dropped from a player's inventory retire after 2.0s so the dedicated supplies stay available without floor clutter. Only peers currently inside The Playpen see and fight one another.
 
@@ -86,13 +86,13 @@ The Spawns settings expose a collapsible **Melee Weapons** pool. Sword, Baseball
 
 ### Weapon types (`melee_weapon_registry.gd`)
 
-| Weapon | Normal reach | One of Us reach | Windup | Active | Recovery | Stamina | Character |
-|---|---|---|---|---|---|---|---|
-| Sword | 5.0m | 5.7m | 0.08s | 0.18s | 0.25s | 15 | fast, responsive handling |
-| Baseball Bat | 5.0m | 5.7m | 0.12s | 0.22s | 0.35s | 15 | deliberate handling |
-| Stick | 5.0m | 5.7m | 0.04s | 0.12s | 0.14s | 8 | shortest windup, cheapest |
-| Crowbar | 5.0m | 5.7m | 0.08s | 0.18s | 0.26s | 14 | balanced all-rounder |
-| Frying Pan | 5.0m | 5.7m | 0.32s | 0.28s | 0.55s | 22 | heavy, committed handling |
+| Weapon | Universal reach | Windup | Active | Recovery | Stamina | Character |
+|---|---|---|---|---|---|---|
+| Sword | 5.2m | 0.08s | 0.18s | 0.25s | 15 | fast, responsive handling |
+| Baseball Bat | 5.2m | 0.12s | 0.22s | 0.35s | 15 | deliberate handling |
+| Stick | 5.2m | 0.04s | 0.12s | 0.14s | 8 | shortest windup, cheapest |
+| Crowbar | 5.2m | 0.08s | 0.18s | 0.26s | 14 | balanced all-rounder |
+| Frying Pan | 5.2m | 0.32s | 0.28s | 0.55s | 22 | heavy, committed handling |
 
 Weapon tiers have been removed. Weapon type and effect are the complete randomized identity; there are no T1/T2/T3 timing, stamina, effect, display, bot-priority, or networking modifiers.
 
@@ -107,7 +107,7 @@ Weapon tiers have been removed. Weapon type and effect are the complete randomiz
 
 ### Swing lifecycle
 
-All five melee models are normalized to a 1m longest held dimension, so their visual size is consistent even though their imported source files use very different units. Legacy model-local hit-shape helpers are ignored: every weapon uses the same forward-facing runtime capsule, with a 0.45m radius, anchored at the paw. Its length is **5.0m in every normal game mode** and **5.7m in One of Us**. The Reach powerup temporarily stretches the capsule to **8.0m**.
+All five melee models are normalized to a 1m longest held dimension, so their visual size is consistent even though their imported source files use very different units. Legacy model-local hit-shape helpers are ignored: every weapon uses the same forward-facing runtime capsule, with a 0.45m radius, anchored at the paw. Its length is **5.2m in every game mode**. The Reach powerup temporarily stretches the capsule to **7.0m**.
 
 Windup (wind-up pose, no hit) → Active (hitbox live) → Recovery (character returns to locomotion). The authored character melee animation owns the visible attack; held weapon objects remain fixed to their paw socket instead of adding a second, smaller rotation tween. Runtime swing phases use 85% of the data-authored duration (15% faster). Stamina cost is paid **upfront** at swing start. Swinging while in stamina deficit twice in a row **breaks the weapon** for 5.0s (it respawns at its spawn point) — this can be disabled via `melee_weapon_breaking`.
 
@@ -119,7 +119,7 @@ Windup (wind-up pose, no hit) → Active (hitbox live) → Recovery (character r
 
 ### Throwing
 
-Holding the throw input on a melee weapon previews a short dotted, collision-aware arc; releasing commits the throw. Melee weapons and throwable items share the same launch: 15.0 m/s forward plus 5.0 m/s upward. The preview deliberately shows only the arc, with no landing marker. Melee release begins 1.2m ahead and 1.15m above the character, preserves its world scale while reparenting, and uses a 0.40s collision-exception grace so the thrown weapon clears and cannot affect its thrower. A thrown weapon that lands still applies its effect at 50% magnitude (and, for Stagger specifically, 50% of its bullet-immunity window too). After landing, it has a 1.0s cooldown before it can be picked back up.
+Holding the throw input on a melee weapon previews a short dotted, collision-aware arc; releasing commits the throw. Melee weapons and throwable items share the same launch: 15.0 m/s forward plus 5.0 m/s upward, from 0.6m ahead and 1.0m above the character. The preview deliberately shows only the arc, with no landing marker. A melee weapon resets its rigid-body root scale after leaving the animated paw, uses the same compact 0.3×0.1×0.16m flight collider as an item, receives the launch as deterministic velocity, and keeps a 0.40s collision-exception grace so it clears and cannot affect its thrower. A thrown weapon that lands still applies its effect at 50% magnitude (and, for Stagger specifically, 50% of its bullet-immunity window too). After landing, it has a 1.0s cooldown before it can be picked back up.
 
 ### Death drops & respawn
 
@@ -135,7 +135,7 @@ Online matches use the same melee rules. The host validates pickup distance, hol
 
 Held across two item slots (slots 2 and 3 - see section 9), separate from the weapon slot, so a player can carry a weapon and up to two items. For throwable items, holding Fire previews the same short dotted, collision-aware arc and releasing throws using the shared 15.0 m/s forward plus 5.0 m/s upward launch. Flash Camera and Double Jump Shoes are use-in-place exceptions and do not show a throw arc.
 
-- **Bubble Gum Trap**: thrown, deploys on first contact as an irregular chewed-gum splat roughly 4.5m by 4.5m, and slows anyone who walks into its area to 0.5x speed for 2.0s. Its pickup marker independently refills 8.0s after collection.
+- **Bubble Gum Trap**: thrown, deploys on first contact as an irregular chewed-gum splat roughly 4.5m by 4.5m, slows anyone who walks into its area to 0.5x speed for 2.0s, and removes itself from play after 5.0s. Its pickup marker independently refills 8.0s after collection.
 - **Grenade**: pressing Fire irrevocably starts a **3.0s fuse** and the circular crosshair progress ring; holding cooks it and releasing throws it. If the fuse expires in hand it detonates at the holder. The blast affects everyone allowed by the match rules, including its owner, within **7.5m** and retains the normal gun-holder disarm behavior. Knockback falls linearly from 4.0 at the center to 2.0 at the edge and grants no bullet-immunity window. Its pickup marker independently refills 8.0s after collection.
 - The Spawns tab's collapsible **Items** group contains every throwable/usable item: Bubble Gum, Grenade, Bear Trap, Spring Pad, Smoke Bomb, Decoy, Boomerang, Flash Camera, and Double Jump Shoes. Its master switch gates the full item pool while `item_registry` preserves every individual selection underneath.
 - The collapsible **Power Ups** group contains only collectible powerups. Its master switch maps exclusively to `powerups_enabled`, while `powerup_registry` preserves every individual selection underneath.
@@ -176,7 +176,7 @@ Respawns **8.0s** after being collected.
 | Silent Steps (slate) | footsteps muted for the duration | n/a (bots have no footsteps) |
 | Vampire Touch (red) | landed melee hits refund 30 stamina | yes |
 | Extra Life (orange) | survive one lethal blow with 1s general damage immunity (one charge, shows as ∞ until used) | yes |
-| Reach (green) | for 5s, increases visible pickup range to 8m, auto-collects powerups, and stretches melee active hitboxes from their mode length (5.0m normally; 5.7m in One of Us) to an 8m maximum; the owner alone sees an 8m green range ring | yes |
+| Reach (green) | for 5s, increases visible pickup range to 7m, auto-collects powerups, and stretches every 5.2m melee active hitbox to a 7m maximum; the owner alone sees a 7m green range ring | yes |
 
 Powerup type is **fixed at spawn** and re-rolls only when the orb respawns after being collected. Items and powerups spawn at map-placed `item_spawn_point` / `powerup_spawn_point` markers each round. Every item marker rolls a random enabled type (pool = `GameConfig.ITEM_SCENES` filtered by `is_item_enabled`) and starts an independent **8.0s refill when that item is picked up**; the carried object remains usable, then retires after use instead of creating a second refill. Powerups likewise re-roll after their 8.0s post-collection delay. Marker-spawned nodes are tracked via the `marker_spawned` group and freed/re-spawned each round reset.
 

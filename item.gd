@@ -394,7 +394,8 @@ func get_throw_preview_data() -> Dictionary:
 	var flat := Vector3(direction.x, 0.0, direction.z)
 	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
 	return {
-		"origin": player_ref.global_position + flat * 0.6 + Vector3.UP,
+		"origin": player_ref.global_position + flat * GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET \
+			+ Vector3.UP * GameConfig.SHARED_THROW_RELEASE_HEIGHT,
 		"velocity": direction * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST,
 		"gravity": 9.8,
 	}
@@ -501,7 +502,8 @@ func _server_try_throw(sender_id: int, epoch: int, direction: Vector3) -> void:
 		return
 	var flat := Vector3(direction.x, 0.0, direction.z)
 	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
-	var start: Vector3 = player.global_position + flat * 0.6 + Vector3.UP * 1.0
+	var start: Vector3 = player.global_position + flat * GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET \
+		+ Vector3.UP * GameConfig.SHARED_THROW_RELEASE_HEIGHT
 	var velocity: Vector3 = direction * THROW_IMPULSE + Vector3.UP * THROW_ARC_UPWARD_BOOST
 	rm.broadcast_online_item_action(online_item_id, "throw", {
 		"position": start,
@@ -574,7 +576,8 @@ func throw():
 	else:
 		flat_forward = flat_forward.normalized()
 
-	global_position = p.global_position + flat_forward * 0.6 + Vector3.UP * 1.0
+	global_position = p.global_position + flat_forward * GameConfig.SHARED_THROW_RELEASE_FORWARD_OFFSET \
+		+ Vector3.UP * GameConfig.SHARED_THROW_RELEASE_HEIGHT
 	global_rotation = p.global_rotation
 
 	freeze = false

@@ -64,6 +64,7 @@ var pending_match_id := 0
 var _online := false
 var _match_ready_peers: Dictionary = {}
 var _playpen_ready_peers: Dictionary = {}
+var _playpen_leave_pending := false
 var match_participant_peers: Array = []
 var match_load_status: Dictionary = {}
 var _match_load_watch_generation := 0
@@ -699,6 +700,7 @@ func _reset_session(emit_change: bool) -> void:
 	pending_match_id = 0
 	_match_ready_peers.clear()
 	_playpen_ready_peers.clear()
+	_playpen_leave_pending = false
 	match_participant_peers.clear()
 	match_load_status.clear()
 	_match_load_watch_generation += 1
@@ -986,11 +988,11 @@ func is_playpen_open() -> bool:
 
 
 
-func request_enter_playpen(ready_choice: bool) -> void:
+func request_enter_playpen() -> void:
 	if not is_online() or dedicated_session or lobby_in_progress or _prelaunch_active:
 		return
 	var peer_id := local_id()
-	lobby_ready[peer_id] = ready_choice if peer_id != 1 else true
+	_playpen_leave_pending = false
 	if is_host():
 		peers[peer_id]["role"] = "playpen"
 		local_match_role = "playpen"
@@ -1005,29 +1007,33 @@ func request_enter_playpen(ready_choice: bool) -> void:
 		else:
 			get_tree().change_scene_to_file(PLAYPEN_SCENE)
 		return
-	_request_enter_playpen.rpc_id(1, ready_choice)
+	_request_enter_playpen.rpc_id(1)
 
 
 @rpc("any_peer", "reliable")
-func _request_enter_playpen(ready_choice: bool) -> void:
+func _request_enter_playpen() -> void:
 	if not multiplayer.is_server() or dedicated_session or lobby_in_progress:
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if not peers.has(sender):
 		return
 	if not is_playpen_open():
-		_lobby_notice_target.rpc_id(sender,
-			"The host must open The Playpen before guests can enter.")
-		return
+		# A guest may be the first person to enter. The listen host silently
+		# starts the authoritative practice scene but remains in its lobby overlay.
+		peers[1]["role"] = "playpen_hosting"
+		local_match_role = "playpen_hosting"
 	peers[sender]["role"] = "playpen_loading"
-	lobby_ready[sender] = ready_choice
 	_broadcast_lobby_state()
 	_net_enter_playpen.rpc_id(sender)
 
+	if get_tree().current_scene == null \
+			or get_tree().current_scene.scene_file_path != PLAYPEN_SCENE:
+		get_tree().change_scene_to_file(PLAYPEN_SCENE)
 
 @rpc("authority", "reliable")
 func _net_enter_playpen() -> void:
 	local_match_role = "playpen_loading"
+	_playpen_leave_pending = false
 	get_tree().change_scene_to_file(PLAYPEN_SCENE)
 
 
@@ -1061,7 +1067,17 @@ func _mark_playpen_scene_ready(peer_id: int) -> void:
 
 
 func request_leave_playpen() -> void:
+	if (not is_online()
+			or local_match_role not in ["playpen", "playpen_loading"]
+			or _playpen_leave_pending):
+		return
+	_playpen_leave_pending = true
+	# The departing peer owns its NetSync. Stop publication before the host
+	# removes the actor, matching the normal match-to-lobby despawn handshake.
+	_net_suspend_match_replication()
+	await get_tree().create_timer(0.15).timeout
 	if not is_online() or local_match_role not in ["playpen", "playpen_loading"]:
+		_playpen_leave_pending = false
 		return
 	if is_host():
 		# Keep the authoritative practice scene alive for guests while the host
@@ -1074,6 +1090,7 @@ func request_leave_playpen() -> void:
 		playpen_members_changed.emit()
 		var manager = get_tree().current_scene.get_node_or_null("RoundManager") \
 			if get_tree().current_scene != null else null
+		_playpen_leave_pending = false
 		if manager != null and manager.has_method("show_host_lobby_overlay"):
 			manager.show_host_lobby_overlay()
 	else:
@@ -1114,6 +1131,7 @@ func _close_playpen_for_everyone() -> void:
 
 @rpc("authority", "reliable")
 func _net_leave_playpen() -> void:
+	_playpen_leave_pending = false
 	local_match_role = "lobby"
 	# Let any reliable MultiplayerSpawner despawn sent just before this RPC land
 	# while the Playpen replication nodes still exist on the departing peer.
@@ -1641,6 +1659,26 @@ func _refresh_gameplay_replication_visibility(peer_id: int = 0) -> void:
 					synchronizer.set_visibility_for(connected_id,
 						is_gameplay_replication_visible_to_peer(connected_id))
 					synchronizer.update_visibility(connected_id)
+
+
+func refresh_playpen_replication_visibility() -> void:
+	if not is_online():
+		return
+	_refresh_gameplay_replication_visibility()
+	if not is_host():
+		return
+	for peer_id_value in playpen_peer_ids():
+		var peer_id := int(peer_id_value)
+		if peer_id != local_id():
+			_net_refresh_playpen_replication_visibility.rpc_id(peer_id)
+
+
+@rpc("authority", "reliable")
+func _net_refresh_playpen_replication_visibility() -> void:
+	# Membership and actor spawns are separate reliable operations. Refresh on
+	# the owning peer after both land so its client-authoritative NetSync starts
+	# publishing to every current Playpen member.
+	_refresh_gameplay_replication_visibility.call_deferred()
 
 
 func _lobby_metadata() -> Dictionary:
