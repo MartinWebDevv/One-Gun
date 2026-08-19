@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://ct5jegqyfnx5h" path="res://local_match_ui.gd" id="4_local_ui"]
 [ext_resource type="Script" uid="uid://cd1gvr838772b" path="res://splitscreen_manager.gd" id="5_split"]
 [ext_resource type="Script" uid="uid://ci4gr5d8y5mxs" path="res://void_kill_zone.gd" id="6_void"]
-[ext_resource type="NavigationMesh" path="res://navigation/SpaceStationPrototypeNavigation.tres" id="7_nav"]
+[ext_resource type="NavigationMesh" uid="uid://dqsxih7lq2goc" path="res://navigation/SpaceStationPrototypeNavigation.tres" id="7_nav"]
 [ext_resource type="PackedScene" uid="uid://u8ril0wcf6ds" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_DarkPlates.gltf" id="8_floor_dark"]
 [ext_resource type="PackedScene" uid="uid://bmd2iiqp6cx1o" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_Metal2.gltf" id="9_floor_metal"]
 [ext_resource type="PackedScene" uid="uid://1jhk6uuk3575" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Walls/WallBand_Straight.gltf" id="10_wall_band"]
@@ -221,18 +221,18 @@ size = Vector3(16, 0.5, 0.8)
 material = SubResource("MatCyan")
 
 [node name="ObservationDeck" type="CSGBox3D" parent="Graybox" unique_id=1284705518]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.225, -13.3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.012090355, -13.3)
 use_collision = true
 size = Vector3(10.5, 0.45, 6.2)
 material = SubResource("MatWall")
 
 [node name="ObservationAccent" type="CSGBox3D" parent="Graybox" unique_id=1865823926]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, -15.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22290966, -15.8)
 size = Vector3(9.8, 0.035, 0.4)
 material = SubResource("MatCyan")
 
 [node name="TelescopeConsole" type="CSGBox3D" parent="Graybox" unique_id=1306913082]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -13.7)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8629097, -13.7)
 use_collision = true
 size = Vector3(2.6, 2.2, 1.7)
 material = SubResource("MatCover")
@@ -359,7 +359,7 @@ size = Vector3(3, 1.7, 1.4)
 material = SubResource("MatCover")
 
 [node name="GunPedestal" type="CSGCylinder3D" parent="Graybox" unique_id=1188966123]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.071415365, 0)
 use_collision = true
 radius = 1.45
 height = 0.36
@@ -2145,6 +2145,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0.6, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13, 20)
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1565743705]
+visible = false
 navigation_mesh = ExtResource("7_nav")
 
 [node name="VoidKillZone" type="Area3D" parent="." unique_id=1856445279]
