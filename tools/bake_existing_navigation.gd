@@ -31,6 +31,16 @@ const TARGETS := {
 		"cell_size": 0.25,
 		"cell_height": 0.25,
 	},
+	"space_station_prototype": {
+		"scene": "res://maps/test/SpaceStationPrototype.tscn",
+		"output": "res://navigation/SpaceStationPrototypeNavigation.tres",
+		"source_node": "Graybox",
+		"radius": 0.55,
+		"height": 2.5,
+		"climb": 0.7,
+		"cell_size": 0.25,
+		"cell_height": 0.25,
+	},
 }
 
 
@@ -41,7 +51,7 @@ func _initialize() -> void:
 func _bake_target() -> void:
 	var target_name := OS.get_environment("ONEGUN_NAV_BAKE_TARGET").to_lower()
 	if not TARGETS.has(target_name):
-		push_error("Set ONEGUN_NAV_BAKE_TARGET to city, forest, western, or cat_tower")
+		push_error("Set ONEGUN_NAV_BAKE_TARGET to city, forest, western, cat_tower, or space_station_prototype")
 		quit(1)
 		return
 	var target: Dictionary = TARGETS[target_name]

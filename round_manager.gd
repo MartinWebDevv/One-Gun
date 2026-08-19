@@ -2443,6 +2443,18 @@ func _clean_spawn_transform(gt: Transform3D) -> Transform3D:
 	var yaw = gt.basis.get_euler().y
 	return Transform3D(Basis(Vector3.UP, yaw), gt.origin)
 
+
+func _apply_local_human_spawn_transform(player, spawn_transform: Transform3D) -> void:
+	# Human movement is camera-relative: the body stays world-aligned while yaw
+	# lives on AimPivot. Applying marker yaw to the body makes the rendered camera
+	# inherit that rotation without the local movement basis inheriting it, so
+	# WASD no longer follows the direction shown on screen.
+	player.global_transform = Transform3D(Basis(), spawn_transform.origin)
+	var aim_pivot := player.get_node_or_null("AimPivot") as Node3D
+	if aim_pivot != null:
+		aim_pivot.rotation.y = spawn_transform.basis.get_euler().y
+
+
 func _assign_spawn_transforms():
 	var all_spawns = get_tree().get_nodes_in_group("spawn_point")
 	if all_spawns.size() == 0:
@@ -2460,7 +2472,7 @@ func _assign_spawn_transforms():
 		var idx = i
 		spawn_transforms[human_players[i]] = _clean_spawn_transform(shuffled[idx].global_transform)
 		used_indices.append(idx)
-		human_players[i].global_transform = spawn_transforms[human_players[i]]
+		_apply_local_human_spawn_transform(human_players[i], spawn_transforms[human_players[i]])
 
 	var bot_players = players.filter(func(p): return "is_bot" in p and p.is_bot)
 	var next_idx = human_players.size()

@@ -1,0 +1,1043 @@
+[gd_scene load_steps=25 format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://gun.tscn" id="2_gun"]
+[ext_resource type="Script" path="res://round_manager.gd" id="3_round"]
+[ext_resource type="Script" path="res://local_match_ui.gd" id="4_local_ui"]
+[ext_resource type="Script" path="res://splitscreen_manager.gd" id="5_split"]
+[ext_resource type="Script" path="res://void_kill_zone.gd" id="6_void"]
+[ext_resource type="NavigationMesh" path="res://navigation/SpaceStationPrototypeCompactNavigation.tres" id="7_nav"]
+
+[sub_resource type="StandardMaterial3D" id="MatFloor"]
+albedo_color = Color(0.18, 0.215, 0.28, 1)
+metallic = 0.72
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="MatWall"]
+albedo_color = Color(0.32, 0.37, 0.45, 1)
+metallic = 0.66
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="MatCover"]
+albedo_color = Color(0.23, 0.27, 0.34, 1)
+metallic = 0.8
+roughness = 0.34
+
+[sub_resource type="StandardMaterial3D" id="MatCyan"]
+albedo_color = Color(0.035, 0.22, 0.3, 1)
+metallic = 0.48
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.02, 0.68, 1, 1)
+emission_energy_multiplier = 2.4
+
+[sub_resource type="StandardMaterial3D" id="MatPurple"]
+albedo_color = Color(0.2, 0.075, 0.31, 1)
+metallic = 0.42
+roughness = 0.34
+emission_enabled = true
+emission = Color(0.52, 0.12, 1, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="MatRed"]
+albedo_color = Color(0.29, 0.055, 0.055, 1)
+metallic = 0.5
+roughness = 0.36
+emission_enabled = true
+emission = Color(1, 0.08, 0.035, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="StandardMaterial3D" id="MatGreen"]
+albedo_color = Color(0.055, 0.25, 0.16, 1)
+metallic = 0.38
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.08, 0.9, 0.42, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="StandardMaterial3D" id="MatGold"]
+albedo_color = Color(0.44, 0.25, 0.025, 1)
+metallic = 0.62
+roughness = 0.3
+emission_enabled = true
+emission = Color(1, 0.55, 0.03, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="StandardMaterial3D" id="MatGlass"]
+transparency = 1
+albedo_color = Color(0.05, 0.28, 0.42, 0.26)
+metallic = 0.2
+roughness = 0.1
+emission_enabled = true
+emission = Color(0.025, 0.2, 0.36, 1)
+emission_energy_multiplier = 0.7
+
+[sub_resource type="StandardMaterial3D" id="MatPanel"]
+albedo_color = Color(0.58, 0.64, 0.72, 1)
+metallic = 0.78
+roughness = 0.34
+
+[sub_resource type="StandardMaterial3D" id="MatDark"]
+albedo_color = Color(0.035, 0.05, 0.08, 1)
+metallic = 0.88
+roughness = 0.27
+
+[sub_resource type="StandardMaterial3D" id="MatWarning"]
+albedo_color = Color(0.58, 0.31, 0.025, 1)
+metallic = 0.58
+roughness = 0.3
+emission_enabled = true
+emission = Color(1, 0.46, 0.02, 1)
+emission_energy_multiplier = 0.75
+
+[sub_resource type="StandardMaterial3D" id="MatPlanet"]
+albedo_color = Color(0.035, 0.13, 0.42, 1)
+metallic = 0.05
+roughness = 0.72
+emission_enabled = true
+emission = Color(0.015, 0.08, 0.3, 1)
+emission_energy_multiplier = 1.15
+
+
+[sub_resource type="Environment" id="EnvironmentStation"]
+background_mode = 1
+background_color = Color(0.0015, 0.003, 0.012, 1)
+background_energy_multiplier = 0.6
+ambient_light_source = 3
+ambient_light_color = Color(0.42, 0.49, 0.62, 1)
+ambient_light_energy = 1.45
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.2
+tonemap_white = 5.0
+glow_enabled = true
+glow_intensity = 0.62
+glow_bloom = 0.12
+
+[sub_resource type="BoxShape3D" id="VoidKillShape"]
+size = Vector3(48, 3, 44)
+
+[node name="SpaceStationPrototypeCompactSnapshot" type="Node3D"]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+
+[node name="Graybox" type="Node3D" parent="."]
+
+[node name="MainDeck" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, -0.4, 0)
+size = Vector3(34, 0.8, 30)
+use_collision = true
+material = SubResource("MatFloor")
+
+[node name="NorthWallLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-12, 2.5, -15)
+size = Vector3(10, 5, 0.6)
+use_collision = true
+material = SubResource("MatWall")
+
+[node name="NorthWallRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(12, 2.5, -15)
+size = Vector3(10, 5, 0.6)
+use_collision = true
+material = SubResource("MatWall")
+
+[node name="ObservationWindow" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 2.5, -15)
+size = Vector3(14, 5, 0.35)
+use_collision = true
+material = SubResource("MatGlass")
+
+[node name="SouthWall" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 2.5, 15)
+size = Vector3(34, 5, 0.6)
+use_collision = true
+material = SubResource("MatWall")
+
+[node name="WestWall" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-17, 2.5, 0)
+size = Vector3(0.6, 5, 30)
+use_collision = true
+material = SubResource("MatWall")
+
+[node name="EastWall" type="CSGBox3D" parent="Graybox"]
+position = Vector3(17, 2.5, 0)
+size = Vector3(0.6, 5, 30)
+use_collision = true
+material = SubResource("MatWall")
+
+[node name="NorthFrame" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.25, -14.75)
+size = Vector3(16, 0.5, 0.8)
+use_collision = true
+material = SubResource("MatCyan")
+
+[node name="ObservationDeck" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.225, -11.7)
+size = Vector3(10, 0.45, 5.2)
+use_collision = true
+material = SubResource("MatWall")
+
+[node name="ObservationAccent" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.46, -13.9)
+size = Vector3(9.4, 0.035, 0.4)
+material = SubResource("MatCyan")
+
+[node name="TelescopeConsole" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 1.1, -12.1)
+size = Vector3(2.6, 2.2, 1.7)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="TelescopeGlow" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 1.75, -11.23)
+size = Vector3(1.7, 0.35, 0.04)
+material = SubResource("MatCyan")
+
+[node name="ResearchFloorAccent" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.85, 0.02, 0)
+size = Vector3(0.22, 0.04, 9.4)
+material = SubResource("MatGreen")
+
+[node name="ResearchCoverA" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-12.4, 1.6, -3)
+radius = 1.0
+height = 3.2
+sides = 20
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="ResearchGlowA" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-12.4, 1.75, -3)
+radius = 0.62
+height = 2.65
+sides = 20
+material = SubResource("MatGreen")
+
+[node name="ResearchCoverB" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-12.4, 1.6, 3)
+radius = 1.0
+height = 3.2
+sides = 20
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="ResearchGlowB" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-12.4, 1.75, 3)
+radius = 0.62
+height = 2.65
+sides = 20
+material = SubResource("MatGreen")
+
+[node name="ResearchConsole" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-14.8, 0.75, 0)
+size = Vector3(1.2, 1.5, 3.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="ZeroGDeck" type="CSGBox3D" parent="Graybox"]
+position = Vector3(13, 0.125, 0)
+size = Vector3(7.5, 0.25, 10)
+use_collision = true
+material = SubResource("MatFloor")
+
+[node name="ZeroGCargoA" type="CSGBox3D" parent="Graybox"]
+position = Vector3(11.4, 1.2, -3.1)
+rotation = Vector3(0, 0.35, 0)
+size = Vector3(2.3, 2.4, 2.9)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="ZeroGCargoAGlow" type="CSGBox3D" parent="Graybox"]
+position = Vector3(11.4, 1.55, -3.1)
+rotation = Vector3(0, 0.35, 0)
+size = Vector3(2.36, 0.22, 2.96)
+material = SubResource("MatPurple")
+
+[node name="ZeroGCargoB" type="CSGBox3D" parent="Graybox"]
+position = Vector3(13.4, 1.15, 2.7)
+rotation = Vector3(0, -0.42, 0)
+size = Vector3(2.5, 2.3, 2.6)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="ZeroGCargoBGlow" type="CSGBox3D" parent="Graybox"]
+position = Vector3(13.4, 1.5, 2.7)
+rotation = Vector3(0, -0.42, 0)
+size = Vector3(2.56, 0.22, 2.66)
+material = SubResource("MatPurple")
+
+[node name="EngineFloorAccent" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.02, 9.35)
+size = Vector3(12.4, 0.04, 0.22)
+material = SubResource("MatRed")
+
+[node name="EngineTurbineA" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-3.4, 1.6, 11.4)
+radius = 1.35
+height = 3.2
+sides = 24
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="EngineTurbineAGlow" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-3.4, 1.65, 11.4)
+radius = 1.41
+height = 0.28
+sides = 24
+material = SubResource("MatRed")
+
+[node name="EngineTurbineB" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(3.4, 1.6, 11.4)
+radius = 1.35
+height = 3.2
+sides = 24
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="EngineTurbineBGlow" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(3.4, 1.65, 11.4)
+radius = 1.41
+height = 0.28
+sides = 24
+material = SubResource("MatRed")
+
+[node name="EngineConsoleLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-8, 0.85, 11.8)
+rotation = Vector3(0, -0.28, 0)
+size = Vector3(3, 1.7, 1.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="EngineConsoleRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(8, 0.85, 11.8)
+rotation = Vector3(0, 0.28, 0)
+size = Vector3(3, 1.7, 1.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="GunPedestal" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 0.18, 0)
+radius = 1.45
+height = 0.36
+sides = 32
+use_collision = true
+material = SubResource("MatGold")
+
+[node name="CoreRing" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 0.025, 0)
+radius = 5.0
+height = 0.05
+sides = 48
+material = SubResource("MatDark")
+
+[node name="CoreFinNW" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-3.8, 1.6, -3.5)
+rotation = Vector3(0, -0.72, 0)
+size = Vector3(1.15, 3.2, 3.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="CoreFinNE" type="CSGBox3D" parent="Graybox"]
+position = Vector3(3.8, 1.6, -3.5)
+rotation = Vector3(0, 0.72, 0)
+size = Vector3(1.15, 3.2, 3.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="CoreFinSW" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-3.8, 1.6, 3.5)
+rotation = Vector3(0, 0.72, 0)
+size = Vector3(1.15, 3.2, 3.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="CoreFinSE" type="CSGBox3D" parent="Graybox"]
+position = Vector3(3.8, 1.6, 3.5)
+rotation = Vector3(0, -0.72, 0)
+size = Vector3(1.15, 3.2, 3.4)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="WestCrosscutCover" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-7.6, 1.2, -7.5)
+rotation = Vector3(0, 0.55, 0)
+size = Vector3(3.4, 2.4, 1.1)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="EastCrosscutCover" type="CSGBox3D" parent="Graybox"]
+position = Vector3(7.6, 1.2, -7.5)
+rotation = Vector3(0, -0.55, 0)
+size = Vector3(3.4, 2.4, 1.1)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="WestDashCrate" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-8.2, 1.15, 6.7)
+rotation = Vector3(0, -0.25, 0)
+size = Vector3(2.4, 2.3, 2.2)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="EastDashCrate" type="CSGBox3D" parent="Graybox"]
+position = Vector3(8.2, 1.15, 6.7)
+rotation = Vector3(0, 0.25, 0)
+size = Vector3(2.4, 2.3, 2.2)
+use_collision = true
+material = SubResource("MatCover")
+
+[node name="DeckSeamXLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-5.8, 0.025, 0)
+size = Vector3(0.08, 0.035, 28)
+material = SubResource("MatDark")
+
+[node name="DeckSeamXCenter" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.025, 0)
+size = Vector3(0.08, 0.035, 28)
+material = SubResource("MatDark")
+
+[node name="DeckSeamXRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(5.8, 0.025, 0)
+size = Vector3(0.08, 0.035, 28)
+material = SubResource("MatDark")
+
+[node name="DeckSeamNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.026, -7)
+size = Vector3(32, 0.036, 0.08)
+material = SubResource("MatDark")
+
+[node name="DeckSeamCenter" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.026, 0)
+size = Vector3(32, 0.036, 0.08)
+material = SubResource("MatDark")
+
+[node name="DeckSeamSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.026, 7)
+size = Vector3(32, 0.036, 0.08)
+material = SubResource("MatDark")
+
+[node name="ZeroGGuideRail" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.85, 0.03, 0)
+size = Vector3(0.22, 0.05, 9.4)
+material = SubResource("MatPurple")
+
+[node name="ObservationPortalLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-5.2, 2.5, -9)
+size = Vector3(0.58, 5, 0.82)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ObservationPortalRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(5.2, 2.5, -9)
+size = Vector3(0.58, 5, 0.82)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ObservationPortalHeader" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5, -9)
+size = Vector3(10.98, 0.58, 0.82)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ObservationPortalLight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 4.72, -8.56)
+size = Vector3(8.8, 0.16, 0.06)
+material = SubResource("MatCyan")
+
+[node name="EnginePortalLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-5.2, 2.5, 9.1)
+size = Vector3(0.58, 5, 0.82)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="EnginePortalRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(5.2, 2.5, 9.1)
+size = Vector3(0.58, 5, 0.82)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="EnginePortalHeader" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5, 9.1)
+size = Vector3(10.98, 0.58, 0.82)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="EnginePortalLight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 4.72, 8.66)
+size = Vector3(8.8, 0.16, 0.06)
+material = SubResource("MatRed")
+
+[node name="ResearchPortalNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.8, 2.5, -5.2)
+size = Vector3(0.82, 5, 0.58)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ResearchPortalSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.8, 2.5, 5.2)
+size = Vector3(0.82, 5, 0.58)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ResearchPortalHeader" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.8, 5, 0)
+size = Vector3(0.82, 0.58, 10.98)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ResearchPortalLight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.36, 4.72, 0)
+size = Vector3(0.06, 0.16, 8.8)
+material = SubResource("MatGreen")
+
+[node name="ZeroGPortalNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.8, 2.5, -5.2)
+size = Vector3(0.82, 5, 0.58)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ZeroGPortalSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.8, 2.5, 5.2)
+size = Vector3(0.82, 5, 0.58)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ZeroGPortalHeader" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.8, 5, 0)
+size = Vector3(0.82, 0.58, 10.98)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ZeroGPortalLight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.36, 4.72, 0)
+size = Vector3(0.06, 0.16, 8.8)
+material = SubResource("MatPurple")
+
+[node name="NorthRibLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-10.5, 2.65, -14.55)
+size = Vector3(0.5, 5.3, 1.05)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="NorthRibCenter" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 2.65, -14.55)
+size = Vector3(0.42, 5.3, 1.05)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="NorthRibRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(10.5, 2.65, -14.55)
+size = Vector3(0.5, 5.3, 1.05)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="SouthRibLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-10.5, 2.65, 14.55)
+size = Vector3(0.5, 5.3, 1.05)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="SouthRibCenter" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 2.65, 14.55)
+size = Vector3(0.5, 5.3, 1.05)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="SouthRibRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(10.5, 2.65, 14.55)
+size = Vector3(0.5, 5.3, 1.05)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="WestRibNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-16.55, 2.65, -9.5)
+size = Vector3(1.05, 5.3, 0.5)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="WestRibCenter" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-16.55, 2.65, 0)
+size = Vector3(1.05, 5.3, 0.5)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="WestRibSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-16.55, 2.65, 9.5)
+size = Vector3(1.05, 5.3, 0.5)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="EastRibNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(16.55, 2.65, -9.5)
+size = Vector3(1.05, 5.3, 0.5)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="EastRibCenter" type="CSGBox3D" parent="Graybox"]
+position = Vector3(16.55, 2.65, 0)
+size = Vector3(1.05, 5.3, 0.5)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="EastRibSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(16.55, 2.65, 9.5)
+size = Vector3(1.05, 5.3, 0.5)
+use_collision = true
+material = SubResource("MatPanel")
+
+[node name="ObservationMullionLeft" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-4.65, 2.5, -14.48)
+size = Vector3(0.3, 5, 0.62)
+material = SubResource("MatPanel")
+
+[node name="ObservationMullionRight" type="CSGBox3D" parent="Graybox"]
+position = Vector3(4.65, 2.5, -14.48)
+size = Vector3(0.3, 5, 0.62)
+material = SubResource("MatPanel")
+
+[node name="ObservationWindowSill" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 0.5, -14.45)
+size = Vector3(14, 1, 0.72)
+use_collision = true
+material = SubResource("MatDark")
+
+[node name="ResearchWallInset" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-16.66, 2.25, 0)
+size = Vector3(0.08, 3.7, 5.2)
+material = SubResource("MatDark")
+
+[node name="ResearchWallStatus" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-16.6, 2.25, 0)
+size = Vector3(0.06, 0.24, 4.3)
+material = SubResource("MatGreen")
+
+[node name="ZeroGWallInset" type="CSGBox3D" parent="Graybox"]
+position = Vector3(16.66, 2.25, 0)
+size = Vector3(0.08, 3.7, 5.2)
+material = SubResource("MatDark")
+
+[node name="ZeroGWallStatus" type="CSGBox3D" parent="Graybox"]
+position = Vector3(16.6, 2.25, 0)
+size = Vector3(0.06, 0.24, 4.3)
+material = SubResource("MatPurple")
+
+[node name="EngineWallInset" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 2.25, 14.66)
+size = Vector3(6.2, 3.7, 0.08)
+material = SubResource("MatDark")
+
+[node name="EngineWallStatus" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 2.25, 14.6)
+size = Vector3(5.2, 0.24, 0.06)
+material = SubResource("MatRed")
+
+[node name="CeilingBeamNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.65, -9)
+size = Vector3(32.6, 0.36, 0.34)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamCenterZ" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.65, 0)
+size = Vector3(32.6, 0.36, 0.34)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.65, 9)
+size = Vector3(32.6, 0.36, 0.34)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamWest" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.8, 5.66, 0)
+size = Vector3(0.34, 0.38, 29)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamCenterX" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.66, 0)
+size = Vector3(0.34, 0.38, 29)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamEast" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.8, 5.66, 0)
+size = Vector3(0.34, 0.38, 29)
+material = SubResource("MatDark")
+
+[node name="CeilingLightNorth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.44, -9)
+size = Vector3(7.2, 0.06, 0.42)
+material = SubResource("MatCyan")
+
+[node name="CeilingLightSouth" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.44, 9)
+size = Vector3(7.2, 0.06, 0.42)
+material = SubResource("MatRed")
+
+[node name="CeilingLightWest" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-9.8, 5.44, 0)
+size = Vector3(0.42, 0.06, 7.2)
+material = SubResource("MatGreen")
+
+[node name="CeilingLightEast" type="CSGBox3D" parent="Graybox"]
+position = Vector3(9.8, 5.44, 0)
+size = Vector3(0.42, 0.06, 7.2)
+material = SubResource("MatPurple")
+
+[node name="SouthServicePipe" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 4.3, 14.25)
+rotation = Vector3(0, 0, 1.5708)
+radius = 0.14
+height = 26
+sides = 12
+material = SubResource("MatRed")
+
+[node name="SouthPowerConduit" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 4.72, 14.25)
+rotation = Vector3(0, 0, 1.5708)
+radius = 0.11
+height = 22
+sides = 12
+material = SubResource("MatWarning")
+
+[node name="WestResearchPipe" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-16.25, 4.35, 0)
+rotation = Vector3(1.5708, 0, 0)
+radius = 0.12
+height = 22
+sides = 12
+material = SubResource("MatGreen")
+
+[node name="EastZeroGConduit" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(16.25, 4.35, 0)
+rotation = Vector3(1.5708, 0, 0)
+radius = 0.12
+height = 22
+sides = 12
+material = SubResource("MatPurple")
+
+[node name="CoreCeilingHub" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 5.35, 0)
+radius = 2.65
+height = 0.48
+sides = 32
+material = SubResource("MatDark")
+
+[node name="CoreCeilingHubGlow" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 5.08, 0)
+radius = 1.8
+height = 0.06
+sides = 32
+material = SubResource("MatCyan")
+
+[node name="CoreCeilingArmX" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.38, 0)
+size = Vector3(9.2, 0.32, 0.42)
+material = SubResource("MatPanel")
+
+[node name="CoreCeilingArmZ" type="CSGBox3D" parent="Graybox"]
+position = Vector3(0, 5.39, 0)
+size = Vector3(0.42, 0.34, 9.2)
+material = SubResource("MatPanel")
+
+[node name="CoreEnergyDrop" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(0, 4.1, 0)
+radius = 0.24
+height = 2.1
+sides = 16
+material = SubResource("MatCyan")
+
+[node name="Planet" type="CSGSphere3D" parent="Graybox"]
+position = Vector3(9, 7, -29)
+radius = 7.8
+radial_segments = 40
+rings = 20
+material = SubResource("MatPlanet")
+
+[node name="PlanetAtmosphere" type="CSGSphere3D" parent="Graybox"]
+position = Vector3(9, 7, -29)
+radius = 8.15
+radial_segments = 40
+rings = 20
+material = SubResource("MatGlass")
+
+[node name="ExteriorTrussX" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-5, 0, -19)
+size = Vector3(16, 0.38, 0.38)
+material = SubResource("MatPanel")
+
+[node name="ExteriorTrussZ" type="CSGBox3D" parent="Graybox"]
+position = Vector3(-12.5, 0, -22)
+size = Vector3(0.38, 0.38, 6)
+material = SubResource("MatPanel")
+
+[node name="ExteriorBeacon" type="CSGCylinder3D" parent="Graybox"]
+position = Vector3(-12.5, 1.5, -22)
+radius = 0.16
+height = 3
+sides = 12
+material = SubResource("MatRed")
+
+[node name="StarA" type="CSGSphere3D" parent="Graybox"]
+position = Vector3(-13, 10, -34)
+radius = 0.12
+radial_segments = 8
+rings = 4
+material = SubResource("MatPanel")
+
+[node name="StarB" type="CSGSphere3D" parent="Graybox"]
+position = Vector3(-4, 6, -36)
+radius = 0.09
+radial_segments = 8
+rings = 4
+material = SubResource("MatCyan")
+
+[node name="StarC" type="CSGSphere3D" parent="Graybox"]
+position = Vector3(1, 11, -35)
+radius = 0.08
+radial_segments = 8
+rings = 4
+material = SubResource("MatPanel")
+
+[node name="StarD" type="CSGSphere3D" parent="Graybox"]
+position = Vector3(15, 13, -38)
+radius = 0.11
+radial_segments = 8
+rings = 4
+material = SubResource("MatPanel")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("EnvironmentStation")
+
+[node name="StationKeyLight" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.92, -0.55, 0)
+light_color = Color(0.72, 0.8, 1, 1)
+light_energy = 1.65
+shadow_enabled = true
+
+[node name="CoreLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 4.2, 0)
+light_color = Color(0.08, 0.62, 1, 1)
+light_energy = 4.0
+omni_range = 17.0
+shadow_enabled = true
+
+[node name="ObservationLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 3, -11.5)
+light_color = Color(0.12, 0.56, 1, 1)
+light_energy = 2.4
+omni_range = 8.0
+
+[node name="ResearchLight" type="OmniLight3D" parent="."]
+position = Vector3(-12, 3, 0)
+light_color = Color(0.12, 1, 0.48, 1)
+light_energy = 2.0
+omni_range = 8.0
+
+[node name="ZeroGLight" type="OmniLight3D" parent="."]
+position = Vector3(12, 3, 0)
+light_color = Color(0.62, 0.18, 1, 1)
+light_energy = 2.6
+omni_range = 8.0
+
+[node name="EngineLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 3, 11.5)
+light_color = Color(1, 0.12, 0.04, 1)
+light_energy = 2.4
+omni_range = 9.0
+
+[node name="ZoneLabels" type="Node3D" parent="."]
+
+[node name="ObservationLabel" type="Label3D" parent="ZoneLabels"]
+position = Vector3(0, 3.8, -14.65)
+text = "OBSERVATION"
+font_size = 48
+outline_size = 10
+modulate = Color(0.25, 0.8, 1, 1)
+
+[node name="ResearchLabel" type="Label3D" parent="ZoneLabels"]
+position = Vector3(-16.65, 3.8, 0)
+rotation = Vector3(0, 1.5708, 0)
+text = "RESEARCH"
+font_size = 48
+outline_size = 10
+modulate = Color(0.2, 1, 0.55, 1)
+
+[node name="ZeroGLabel" type="Label3D" parent="ZoneLabels"]
+position = Vector3(16.65, 3.8, 0)
+rotation = Vector3(0, -1.5708, 0)
+text = "ZERO-G TEST BAY"
+font_size = 48
+outline_size = 10
+modulate = Color(0.72, 0.35, 1, 1)
+
+[node name="EngineLabel" type="Label3D" parent="ZoneLabels"]
+position = Vector3(0, 3.8, 14.65)
+rotation = Vector3(0, 3.14159, 0)
+text = "ENGINE SERVICE"
+font_size = 48
+outline_size = 10
+modulate = Color(1, 0.3, 0.12, 1)
+
+[node name="SpawnPoints" type="Node3D" parent="."]
+
+[node name="SpawnPoint1" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(-14, 1.25, -9.5)
+rotation = Vector3(0, 0.9, 0)
+
+[node name="SpawnPoint2" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(14, 1.25, -9.5)
+rotation = Vector3(0, -0.9, 0)
+
+[node name="SpawnPoint3" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(-14, 1.25, 0)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="SpawnPoint4" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(14, 1.25, 0)
+rotation = Vector3(0, -1.5708, 0)
+
+[node name="SpawnPoint5" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(-13.5, 1.25, 9)
+rotation = Vector3(0, 2.2, 0)
+
+[node name="SpawnPoint6" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(13.5, 1.25, 9)
+rotation = Vector3(0, -2.2, 0)
+
+[node name="SpawnPoint7" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(-7, 1.25, 13)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="SpawnPoint8" type="Marker3D" parent="SpawnPoints" groups=["spawn_point"]]
+position = Vector3(7, 1.25, 13)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="GunSpawnPoints" type="Node3D" parent="."]
+
+[node name="GunSpawnNorth" type="Marker3D" parent="GunSpawnPoints" groups=["gun_spawn_point"]]
+position = Vector3(0, 0.7, -8.2)
+
+[node name="GunSpawnWest" type="Marker3D" parent="GunSpawnPoints" groups=["gun_spawn_point"]]
+position = Vector3(-8.7, 0.7, 0)
+
+[node name="GunSpawnEast" type="Marker3D" parent="GunSpawnPoints" groups=["gun_spawn_point"]]
+position = Vector3(8.7, 0.7, 0)
+
+[node name="GunSpawnSouth" type="Marker3D" parent="GunSpawnPoints" groups=["gun_spawn_point"]]
+position = Vector3(0, 0.7, 8.2)
+
+[node name="MeleeSpawnPoints" type="Node3D" parent="."]
+
+[node name="MeleeSpawn0" type="Marker3D" parent="MeleeSpawnPoints" groups=["melee_spawn_point"]]
+position = Vector3(-13.8, 0.55, -5.8)
+
+[node name="MeleeSpawn1" type="Marker3D" parent="MeleeSpawnPoints" groups=["melee_spawn_point"]]
+position = Vector3(13.8, 0.55, -5.8)
+
+[node name="MeleeSpawn2" type="Marker3D" parent="MeleeSpawnPoints" groups=["melee_spawn_point"]]
+position = Vector3(-10.2, 0.55, 8.8)
+
+[node name="MeleeSpawn3" type="Marker3D" parent="MeleeSpawnPoints" groups=["melee_spawn_point"]]
+position = Vector3(10.2, 0.55, 8.8)
+
+[node name="MeleeSpawn4" type="Marker3D" parent="MeleeSpawnPoints" groups=["melee_spawn_point"]]
+position = Vector3(-2.1, 0.75, -12.2)
+
+[node name="MeleeSpawn5" type="Marker3D" parent="MeleeSpawnPoints" groups=["melee_spawn_point"]]
+position = Vector3(2.1, 0.75, -12.2)
+
+[node name="ItemSpawnPoints" type="Node3D" parent="."]
+
+[node name="ItemSpawn0" type="Marker3D" parent="ItemSpawnPoints" groups=["item_spawn_point"]]
+position = Vector3(-14.6, 0.6, 0)
+
+[node name="ItemSpawn1" type="Marker3D" parent="ItemSpawnPoints" groups=["item_spawn_point"]]
+position = Vector3(14.6, 0.6, 0)
+
+[node name="ItemSpawn2" type="Marker3D" parent="ItemSpawnPoints" groups=["item_spawn_point"]]
+position = Vector3(-6.1, 0.6, 11.7)
+
+[node name="ItemSpawn3" type="Marker3D" parent="ItemSpawnPoints" groups=["item_spawn_point"]]
+position = Vector3(6.1, 0.6, 11.7)
+
+[node name="PowerupSpawnPoints" type="Node3D" parent="."]
+
+[node name="PowerupSpawn0" type="Marker3D" parent="PowerupSpawnPoints" groups=["powerup_spawn_point"]]
+position = Vector3(0, 0.85, -13.4)
+
+[node name="PowerupSpawn1" type="Marker3D" parent="PowerupSpawnPoints" groups=["powerup_spawn_point"]]
+position = Vector3(-10.2, 0.6, 0)
+
+[node name="PowerupSpawn2" type="Marker3D" parent="PowerupSpawnPoints" groups=["powerup_spawn_point"]]
+position = Vector3(10.2, 0.6, 0)
+
+[node name="RoundIntroCameraPoint" type="Marker3D" parent="." groups=["round_intro_camera_point"]]
+position = Vector3(0, 12, 18)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = ExtResource("7_nav")
+
+[node name="VoidKillZone" type="Area3D" parent="."]
+position = Vector3(0, -5.5, 0)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+script = ExtResource("6_void")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="VoidKillZone"]
+shape = SubResource("VoidKillShape")
+
+[node name="player1" parent="." groups=["local_player"] instance=ExtResource("1_player")]
+position = Vector3(-12, 1.25, 0)
+
+[node name="player2" parent="." instance=ExtResource("1_player")]
+position = Vector3(12, 1.25, 0)
+input_prefix = "p2"
+is_player2 = true
+use_gamepad_look = true
+
+[node name="Gun" parent="." instance=ExtResource("2_gun")]
+position = Vector3(0, 0.75, 0)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+script = ExtResource("4_local_ui")
+
+[node name="RoundManager" type="Node" parent="."]
+script = ExtResource("3_round")
+
+[node name="SplitScreenLayer" type="CanvasLayer" parent="."]
+layer = 0
+script = ExtResource("5_split")
+player1_path = NodePath("../player1")
+player2_path = NodePath("../player2")
+
+[node name="ViewportRow" type="HBoxContainer" parent="SplitScreenLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="SubViewportContainer1" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport1" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1"]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera1" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1/SubViewport1"]
+current = true
+
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport2" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2"]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2"]
+current = true

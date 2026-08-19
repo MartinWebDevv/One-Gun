@@ -68,6 +68,18 @@ const MAPS := [
 		"preview_height_ratio": 0.75,
 		"preview_target_height_ratio": 0.06,
 	},
+	{
+		"name": "Neon Circuit",
+		"scene_path": "res://maps/test/SpaceStationPrototype.tscn",
+		"thumbnail_path": "",
+		"description": "A neon orbital tag arena built for fast crossfire, quick cover, and one exposed gun.",
+		"size": "Medium",
+		"recommended_players": "4–10",
+		"player_capacity": 10,
+		"playstyle": "Fast cover & crossfire",
+		"hazards": false,
+		"tint": Color(0.24, 0.10, 0.40),
+	},
 ]
 
 

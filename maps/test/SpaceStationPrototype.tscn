@@ -1,0 +1,2216 @@
+[gd_scene format=3 uid="uid://dkfnep6ghgmoc"]
+
+[ext_resource type="PackedScene" uid="uid://ddjvi4ck1h7rc" path="res://player.tscn" id="1_player"]
+[ext_resource type="PackedScene" uid="uid://b0o8qjgssykx5" path="res://gun.tscn" id="2_gun"]
+[ext_resource type="Script" uid="uid://dm7m7cqa3abt0" path="res://round_manager.gd" id="3_round"]
+[ext_resource type="Script" uid="uid://ct5jegqyfnx5h" path="res://local_match_ui.gd" id="4_local_ui"]
+[ext_resource type="Script" uid="uid://cd1gvr838772b" path="res://splitscreen_manager.gd" id="5_split"]
+[ext_resource type="Script" uid="uid://ci4gr5d8y5mxs" path="res://void_kill_zone.gd" id="6_void"]
+[ext_resource type="NavigationMesh" path="res://navigation/SpaceStationPrototypeNavigation.tres" id="7_nav"]
+[ext_resource type="PackedScene" uid="uid://u8ril0wcf6ds" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_DarkPlates.gltf" id="8_floor_dark"]
+[ext_resource type="PackedScene" uid="uid://bmd2iiqp6cx1o" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_Metal2.gltf" id="9_floor_metal"]
+[ext_resource type="PackedScene" uid="uid://1jhk6uuk3575" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Walls/WallBand_Straight.gltf" id="10_wall_band"]
+[ext_resource type="PackedScene" uid="uid://cloquf5yjds4d" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Walls/WallAstra_Straight.gltf" id="11_wall_astra"]
+[ext_resource type="PackedScene" uid="uid://ct44nk0xst24q" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Walls/WallAstra_Straight_Window.gltf" id="12_wall_window"]
+[ext_resource type="PackedScene" uid="uid://bf86ohffc1ahy" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Walls/TopCables_Straight.gltf" id="13_top_cables"]
+[ext_resource type="PackedScene" uid="uid://cuoxuvvds8axt" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Columns/Column_Round.gltf" id="14_column_round"]
+[ext_resource type="PackedScene" uid="uid://dt0mrfa350vdn" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Columns/Column_Astra.gltf" id="15_column_astra"]
+[ext_resource type="PackedScene" uid="uid://blt38ua77hrmk" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Props/Prop_Crate4.gltf" id="16_crate"]
+[ext_resource type="PackedScene" uid="uid://ypdqmrfgoa56" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Props/Prop_Vent_Wide.gltf" id="17_vent"]
+[ext_resource type="PackedScene" uid="uid://cartf2bmpisv6" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_Round1.gltf" id="18_center_platform"]
+[ext_resource type="PackedScene" uid="uid://b1g8nptk7w8hp" path="res://models/neonCircuitAssets/moltenMapsSciFiPack/Assets/gtlf/Large_Monitor_Blue.glb" id="19_monitor_blue"]
+[ext_resource type="PackedScene" uid="uid://betlvh40af1w1" path="res://models/neonCircuitAssets/moltenMapsSciFiPack/Assets/gtlf/Large_Monitor_Green.glb" id="20_monitor_green"]
+[ext_resource type="PackedScene" uid="uid://dxm5yx4iab50i" path="res://models/neonCircuitAssets/moltenMapsSciFiPack/Assets/gtlf/Large_Monitor_Purple.glb" id="21_monitor_purple"]
+[ext_resource type="PackedScene" uid="uid://sn2ififsnewv" path="res://models/neonCircuitAssets/moltenMapsSciFiPack/Assets/gtlf/Large_Monitor_Red.glb" id="22_monitor_red"]
+[ext_resource type="PackedScene" uid="uid://cwl108wo0yr78" path="res://models/neonCircuitAssets/moltenMapsSciFiPack/Assets/gtlf/Ceiling_Light.glb" id="23_ceiling_light"]
+[ext_resource type="PackedScene" uid="uid://cc5y6awp38ufo" path="res://models/neonCircuitAssets/kennySpaceStationKit/GLB format/computer-wide.glb" id="24_computer"]
+[ext_resource type="PackedScene" uid="uid://kmisgspf2k41" path="res://models/neonCircuitAssets/kennySpaceStationKit/GLB format/container-tall.glb" id="25_container"]
+[ext_resource type="PackedScene" uid="uid://cg3kekuxfk5d2" path="res://models/neonCircuitAssets/kennySpaceStationKit/GLB format/pipe.glb" id="26_pipe"]
+
+[sub_resource type="StandardMaterial3D" id="MatFloor"]
+albedo_color = Color(0.18, 0.215, 0.28, 1)
+metallic = 0.72
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="MatWall"]
+albedo_color = Color(0.32, 0.37, 0.45, 1)
+metallic = 0.66
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="MatGlass"]
+transparency = 1
+albedo_color = Color(0.05, 0.28, 0.42, 0.26)
+metallic = 0.2
+roughness = 0.1
+emission_enabled = true
+emission = Color(0.025, 0.2, 0.36, 1)
+emission_energy_multiplier = 0.7
+
+[sub_resource type="StandardMaterial3D" id="MatCyan"]
+albedo_color = Color(0.035, 0.22, 0.3, 1)
+metallic = 0.48
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.02, 0.68, 1, 1)
+emission_energy_multiplier = 2.4
+
+[sub_resource type="StandardMaterial3D" id="MatCover"]
+albedo_color = Color(0.23, 0.27, 0.34, 1)
+metallic = 0.8
+roughness = 0.34
+
+[sub_resource type="StandardMaterial3D" id="MatGreen"]
+albedo_color = Color(0.055, 0.25, 0.16, 1)
+metallic = 0.38
+roughness = 0.4
+emission_enabled = true
+emission = Color(0.08, 0.9, 0.42, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="StandardMaterial3D" id="MatPurple"]
+albedo_color = Color(0.2, 0.075, 0.31, 1)
+metallic = 0.42
+roughness = 0.34
+emission_enabled = true
+emission = Color(0.52, 0.12, 1, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="MatRed"]
+albedo_color = Color(0.29, 0.055, 0.055, 1)
+metallic = 0.5
+roughness = 0.36
+emission_enabled = true
+emission = Color(1, 0.08, 0.035, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="StandardMaterial3D" id="MatGold"]
+albedo_color = Color(0.44, 0.25, 0.025, 1)
+metallic = 0.62
+roughness = 0.3
+emission_enabled = true
+emission = Color(1, 0.55, 0.03, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="StandardMaterial3D" id="MatDark"]
+albedo_color = Color(0.035, 0.05, 0.08, 1)
+metallic = 0.88
+roughness = 0.27
+
+[sub_resource type="StandardMaterial3D" id="MatPanel"]
+albedo_color = Color(0.58, 0.64, 0.72, 1)
+metallic = 0.78
+roughness = 0.34
+
+[sub_resource type="StandardMaterial3D" id="MatWarning"]
+albedo_color = Color(0.58, 0.31, 0.025, 1)
+metallic = 0.58
+roughness = 0.3
+emission_enabled = true
+emission = Color(1, 0.46, 0.02, 1)
+emission_energy_multiplier = 0.75
+
+[sub_resource type="StandardMaterial3D" id="MatPlanet"]
+albedo_color = Color(0.035, 0.13, 0.42, 1)
+metallic = 0.05
+roughness = 0.72
+emission_enabled = true
+emission = Color(0.015, 0.08, 0.3, 1)
+emission_energy_multiplier = 1.15
+
+[sub_resource type="StandardMaterial3D" id="MatArenaLine"]
+albedo_color = Color(0.24, 0.34, 0.5, 1)
+metallic = 0.42
+roughness = 0.38
+emission_enabled = true
+emission = Color(0.16, 0.34, 0.62, 1)
+emission_energy_multiplier = 0.7
+
+[sub_resource type="StandardMaterial3D" id="MatArenaInk"]
+albedo_color = Color(0.016, 0.023, 0.042, 1)
+metallic = 0.24
+roughness = 0.72
+
+[sub_resource type="StandardMaterial3D" id="MatArenaPanel"]
+albedo_color = Color(0.075, 0.105, 0.16, 1)
+metallic = 0.6
+roughness = 0.46
+emission_enabled = true
+emission = Color(0.1, 0.18, 0.3, 1)
+emission_energy_multiplier = 0.3
+
+[sub_resource type="ProceduralSkyMaterial" id="StationFillSkyMaterial"]
+sky_top_color = Color(0.025, 0.04, 0.075, 1)
+sky_horizon_color = Color(0.18, 0.23, 0.34, 1)
+ground_bottom_color = Color(0.018, 0.028, 0.052, 1)
+ground_horizon_color = Color(0.12, 0.17, 0.27, 1)
+energy_multiplier = 0.75
+
+[sub_resource type="Sky" id="StationFillSky"]
+sky_material = SubResource("StationFillSkyMaterial")
+
+[sub_resource type="Environment" id="EnvironmentStation"]
+background_mode = 1
+background_color = Color(0.0015, 0.003, 0.012, 1)
+background_energy_multiplier = 0.6
+sky = SubResource("StationFillSky")
+ambient_light_source = 3
+ambient_light_color = Color(0.42, 0.49, 0.62, 1)
+ambient_light_energy = 1.35
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.1
+tonemap_white = 5.0
+glow_enabled = true
+glow_intensity = 0.62
+glow_bloom = 0.12
+
+[sub_resource type="BoxShape3D" id="VoidKillShape"]
+size = Vector3(48, 3, 44)
+
+[node name="NeonCircuitPrototype" type="Node3D" unique_id=30155253]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+
+[node name="Graybox" type="Node3D" parent="." unique_id=180071416]
+
+[node name="MainDeck" type="CSGBox3D" parent="Graybox" unique_id=2114807856]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+use_collision = true
+size = Vector3(38, 0.8, 34)
+material = SubResource("MatFloor")
+
+[node name="NorthWallLeft" type="CSGBox3D" parent="Graybox" unique_id=688037584]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 2.5, -17)
+use_collision = true
+size = Vector3(12, 5, 0.6)
+material = SubResource("MatWall")
+
+[node name="NorthWallRight" type="CSGBox3D" parent="Graybox" unique_id=1461873490]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 2.5, -17)
+use_collision = true
+size = Vector3(12, 5, 0.6)
+material = SubResource("MatWall")
+
+[node name="ObservationWindow" type="CSGBox3D" parent="Graybox" unique_id=1978447959]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -17)
+use_collision = true
+size = Vector3(14, 5, 0.35)
+material = SubResource("MatGlass")
+
+[node name="SouthWall" type="CSGBox3D" parent="Graybox" unique_id=386137297]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 17)
+use_collision = true
+size = Vector3(38, 5, 0.6)
+material = SubResource("MatWall")
+
+[node name="WestWall" type="CSGBox3D" parent="Graybox" unique_id=454616745]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19, 2.5, 0)
+use_collision = true
+size = Vector3(0.6, 5, 34)
+material = SubResource("MatWall")
+
+[node name="EastWall" type="CSGBox3D" parent="Graybox" unique_id=523891843]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 2.5, 0)
+use_collision = true
+size = Vector3(0.6, 5, 34)
+material = SubResource("MatWall")
+
+[node name="NorthFrame" type="CSGBox3D" parent="Graybox" unique_id=267457634]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.25, -16.75)
+use_collision = true
+size = Vector3(16, 0.5, 0.8)
+material = SubResource("MatCyan")
+
+[node name="ObservationDeck" type="CSGBox3D" parent="Graybox" unique_id=1284705518]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.225, -13.3)
+use_collision = true
+size = Vector3(10.5, 0.45, 6.2)
+material = SubResource("MatWall")
+
+[node name="ObservationAccent" type="CSGBox3D" parent="Graybox" unique_id=1865823926]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, -15.8)
+size = Vector3(9.8, 0.035, 0.4)
+material = SubResource("MatCyan")
+
+[node name="TelescopeConsole" type="CSGBox3D" parent="Graybox" unique_id=1306913082]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -13.7)
+use_collision = true
+size = Vector3(2.6, 2.2, 1.7)
+material = SubResource("MatCover")
+
+[node name="TelescopeGlow" type="CSGBox3D" parent="Graybox" unique_id=233781138]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, -12.83)
+size = Vector3(1.7, 0.35, 0.04)
+material = SubResource("MatCyan")
+
+[node name="ResearchFloorAccent" type="CSGBox3D" parent="Graybox" unique_id=1765930823]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.75, 0.02, 0)
+size = Vector3(0.22, 0.04, 10.4)
+material = SubResource("MatGreen")
+
+[node name="ResearchCoverA" type="CSGCylinder3D" parent="Graybox" unique_id=793389722]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.6, -3.4)
+use_collision = true
+radius = 1.0
+height = 3.2
+sides = 20
+material = SubResource("MatCover")
+
+[node name="ResearchGlowA" type="CSGCylinder3D" parent="Graybox" unique_id=1818459015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.75, -3.4)
+radius = 0.62
+height = 2.65
+sides = 20
+material = SubResource("MatGreen")
+
+[node name="ResearchCoverB" type="CSGCylinder3D" parent="Graybox" unique_id=1469581979]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.6, 3.4)
+use_collision = true
+radius = 1.0
+height = 3.2
+sides = 20
+material = SubResource("MatCover")
+
+[node name="ResearchGlowB" type="CSGCylinder3D" parent="Graybox" unique_id=1611062969]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.75, 3.4)
+radius = 0.62
+height = 2.65
+sides = 20
+material = SubResource("MatGreen")
+
+[node name="ResearchConsole" type="CSGBox3D" parent="Graybox" unique_id=1288315131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.7, 0.75, 0)
+use_collision = true
+size = Vector3(1.2, 1.5, 3.4)
+material = SubResource("MatCover")
+
+[node name="ZeroGDeck" type="CSGBox3D" parent="Graybox" unique_id=1556364426]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.7, 0.125, 0)
+use_collision = true
+size = Vector3(7.8, 0.25, 10.8)
+material = SubResource("MatFloor")
+
+[node name="ZeroGCargoA" type="CSGBox3D" parent="Graybox" unique_id=2806056]
+transform = Transform3D(0.9393727, 0, 0.3428978, 0, 1, 0, -0.3428978, 0, 0.9393727, 13, 1.2, -3.4)
+use_collision = true
+size = Vector3(2.3, 2.4, 2.9)
+material = SubResource("MatCover")
+
+[node name="ZeroGCargoAGlow" type="CSGBox3D" parent="Graybox" unique_id=1784345311]
+transform = Transform3D(0.9393727, 0, 0.3428978, 0, 1, 0, -0.3428978, 0, 0.9393727, 13, 1.55, -3.4)
+size = Vector3(2.36, 0.22, 2.96)
+material = SubResource("MatPurple")
+
+[node name="ZeroGCargoB" type="CSGBox3D" parent="Graybox" unique_id=418168677]
+transform = Transform3D(0.9130889, 0, -0.40776044, 0, 1, 0, 0.40776044, 0, 0.9130889, 15.2, 1.15, 3.1)
+use_collision = true
+size = Vector3(2.5, 2.3, 2.6)
+material = SubResource("MatCover")
+
+[node name="ZeroGCargoBGlow" type="CSGBox3D" parent="Graybox" unique_id=771167082]
+transform = Transform3D(0.9130889, 0, -0.40776044, 0, 1, 0, 0.40776044, 0, 0.9130889, 15.2, 1.5, 3.1)
+size = Vector3(2.56, 0.22, 2.66)
+material = SubResource("MatPurple")
+
+[node name="EngineFloorAccent" type="CSGBox3D" parent="Graybox" unique_id=486785106]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 10.15)
+size = Vector3(13.2, 0.04, 0.22)
+material = SubResource("MatRed")
+
+[node name="EngineTurbineA" type="CSGCylinder3D" parent="Graybox" unique_id=17595850]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 1.6, 13)
+use_collision = true
+radius = 1.35
+height = 3.2
+sides = 24
+material = SubResource("MatCover")
+
+[node name="EngineTurbineAGlow" type="CSGCylinder3D" parent="Graybox" unique_id=703574057]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 1.65, 13)
+radius = 1.41
+height = 0.28
+sides = 24
+material = SubResource("MatRed")
+
+[node name="EngineTurbineB" type="CSGCylinder3D" parent="Graybox" unique_id=477070026]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.8, 1.6, 13)
+use_collision = true
+radius = 1.35
+height = 3.2
+sides = 24
+material = SubResource("MatCover")
+
+[node name="EngineTurbineBGlow" type="CSGCylinder3D" parent="Graybox" unique_id=1964279733]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.8, 1.65, 13)
+radius = 1.41
+height = 0.28
+sides = 24
+material = SubResource("MatRed")
+
+[node name="EngineConsoleLeft" type="CSGBox3D" parent="Graybox" unique_id=1786698032]
+transform = Transform3D(0.96105546, 0, -0.27635565, 0, 1, 0, 0.27635565, 0, 0.96105546, -9, 0.85, 13.4)
+use_collision = true
+size = Vector3(3, 1.7, 1.4)
+material = SubResource("MatCover")
+
+[node name="EngineConsoleRight" type="CSGBox3D" parent="Graybox" unique_id=605341529]
+transform = Transform3D(0.96105546, 0, 0.27635565, 0, 1, 0, -0.27635565, 0, 0.96105546, 9, 0.85, 13.4)
+use_collision = true
+size = Vector3(3, 1.7, 1.4)
+material = SubResource("MatCover")
+
+[node name="GunPedestal" type="CSGCylinder3D" parent="Graybox" unique_id=1188966123]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+use_collision = true
+radius = 1.45
+height = 0.36
+sides = 32
+material = SubResource("MatGold")
+
+[node name="CoreRing" type="CSGCylinder3D" parent="Graybox" unique_id=685454185]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0)
+radius = 5.0
+height = 0.05
+sides = 48
+material = SubResource("MatDark")
+
+[node name="CoreFinNW" type="CSGBox3D" parent="Graybox" unique_id=1915721106]
+transform = Transform3D(0.7518057, 0, -0.65938467, 0, 1, 0, 0.65938467, 0, 0.7518057, -4.2, 1.6, -3.8)
+use_collision = true
+size = Vector3(1.15, 3.2, 3.4)
+material = SubResource("MatCover")
+
+[node name="CoreFinNE" type="CSGBox3D" parent="Graybox" unique_id=26248970]
+transform = Transform3D(0.7518057, 0, 0.65938467, 0, 1, 0, -0.65938467, 0, 0.7518057, 4.2, 1.6, -3.8)
+use_collision = true
+size = Vector3(1.15, 3.2, 3.4)
+material = SubResource("MatCover")
+
+[node name="CoreFinSW" type="CSGBox3D" parent="Graybox" unique_id=1568707358]
+transform = Transform3D(0.7518057, 0, 0.65938467, 0, 1, 0, -0.65938467, 0, 0.7518057, -4.2, 1.6, 3.8)
+use_collision = true
+size = Vector3(1.15, 3.2, 3.4)
+material = SubResource("MatCover")
+
+[node name="CoreFinSE" type="CSGBox3D" parent="Graybox" unique_id=806088043]
+transform = Transform3D(0.7518057, 0, -0.65938467, 0, 1, 0, 0.65938467, 0, 0.7518057, 4.2, 1.6, 3.8)
+use_collision = true
+size = Vector3(1.15, 3.2, 3.4)
+material = SubResource("MatCover")
+
+[node name="WestCrosscutCover" type="CSGBox3D" parent="Graybox" unique_id=212595007]
+transform = Transform3D(0.8525245, 0, 0.52268726, 0, 1, 0, -0.52268726, 0, 0.8525245, -8.5, 1.2, -8.2)
+use_collision = true
+size = Vector3(3.4, 2.4, 1.1)
+material = SubResource("MatCover")
+
+[node name="EastCrosscutCover" type="CSGBox3D" parent="Graybox" unique_id=1245745662]
+transform = Transform3D(0.8525245, 0, -0.52268726, 0, 1, 0, 0.52268726, 0, 0.8525245, 8.5, 1.2, -8.2)
+use_collision = true
+size = Vector3(3.4, 2.4, 1.1)
+material = SubResource("MatCover")
+
+[node name="WestDashCrate" type="CSGBox3D" parent="Graybox" unique_id=1618574824]
+transform = Transform3D(0.9689124, 0, -0.24740396, 0, 1, 0, 0.24740396, 0, 0.9689124, -9.1, 1.15, 7.4)
+use_collision = true
+size = Vector3(2.4, 2.3, 2.2)
+material = SubResource("MatCover")
+
+[node name="EastDashCrate" type="CSGBox3D" parent="Graybox" unique_id=568858204]
+transform = Transform3D(0.9689124, 0, 0.24740396, 0, 1, 0, -0.24740396, 0, 0.9689124, 9.1, 1.15, 7.4)
+use_collision = true
+size = Vector3(2.4, 2.3, 2.2)
+material = SubResource("MatCover")
+
+[node name="DeckSeamXLeft" type="CSGBox3D" parent="Graybox" unique_id=632013476]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 0.025, 0)
+size = Vector3(0.08, 0.035, 32)
+material = SubResource("MatDark")
+
+[node name="DeckSeamXCenter" type="CSGBox3D" parent="Graybox" unique_id=861885475]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0)
+size = Vector3(0.08, 0.035, 32)
+material = SubResource("MatDark")
+
+[node name="DeckSeamXRight" type="CSGBox3D" parent="Graybox" unique_id=463085928]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 0.025, 0)
+size = Vector3(0.08, 0.035, 32)
+material = SubResource("MatDark")
+
+[node name="DeckSeamNorth" type="CSGBox3D" parent="Graybox" unique_id=782404541]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026, -7.7)
+size = Vector3(36, 0.036, 0.08)
+material = SubResource("MatDark")
+
+[node name="DeckSeamCenter" type="CSGBox3D" parent="Graybox" unique_id=461751915]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026, 0)
+size = Vector3(36, 0.036, 0.08)
+material = SubResource("MatDark")
+
+[node name="DeckSeamSouth" type="CSGBox3D" parent="Graybox" unique_id=829717999]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026, 7.7)
+size = Vector3(36, 0.036, 0.08)
+material = SubResource("MatDark")
+
+[node name="ZeroGGuideRail" type="CSGBox3D" parent="Graybox" unique_id=1103892042]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.75, 0.03, 0)
+size = Vector3(0.22, 0.05, 10.4)
+material = SubResource("MatPurple")
+
+[node name="ObservationPortalLeft" type="CSGBox3D" parent="Graybox" unique_id=1575902519]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 2.5, -9.8)
+use_collision = true
+size = Vector3(0.58, 5, 0.82)
+material = SubResource("MatPanel")
+
+[node name="ObservationPortalRight" type="CSGBox3D" parent="Graybox" unique_id=788944906]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.5, -9.8)
+use_collision = true
+size = Vector3(0.58, 5, 0.82)
+material = SubResource("MatPanel")
+
+[node name="ObservationPortalHeader" type="CSGBox3D" parent="Graybox" unique_id=677489498]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -9.8)
+use_collision = true
+size = Vector3(11.58, 0.58, 0.82)
+material = SubResource("MatPanel")
+
+[node name="ObservationPortalLight" type="CSGBox3D" parent="Graybox" unique_id=1413499759]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.72, -9.36)
+size = Vector3(9.4, 0.16, 0.06)
+material = SubResource("MatCyan")
+
+[node name="EnginePortalLeft" type="CSGBox3D" parent="Graybox" unique_id=130002902]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 2.5, 9.9)
+use_collision = true
+size = Vector3(0.58, 5, 0.82)
+material = SubResource("MatPanel")
+
+[node name="EnginePortalRight" type="CSGBox3D" parent="Graybox" unique_id=571342683]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 2.5, 9.9)
+use_collision = true
+size = Vector3(0.58, 5, 0.82)
+material = SubResource("MatPanel")
+
+[node name="EnginePortalHeader" type="CSGBox3D" parent="Graybox" unique_id=2146083230]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 9.9)
+use_collision = true
+size = Vector3(11.58, 0.58, 0.82)
+material = SubResource("MatPanel")
+
+[node name="EnginePortalLight" type="CSGBox3D" parent="Graybox" unique_id=851953176]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.72, 9.46)
+size = Vector3(9.4, 0.16, 0.06)
+material = SubResource("MatRed")
+
+[node name="ResearchPortalNorth" type="CSGBox3D" parent="Graybox" unique_id=1342757351]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.7, 2.5, -5.5)
+use_collision = true
+size = Vector3(0.82, 5, 0.58)
+material = SubResource("MatPanel")
+
+[node name="ResearchPortalSouth" type="CSGBox3D" parent="Graybox" unique_id=1137463654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.7, 2.5, 5.5)
+use_collision = true
+size = Vector3(0.82, 5, 0.58)
+material = SubResource("MatPanel")
+
+[node name="ResearchPortalHeader" type="CSGBox3D" parent="Graybox" unique_id=1717556663]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.7, 5, 0)
+use_collision = true
+size = Vector3(0.82, 0.58, 11.58)
+material = SubResource("MatPanel")
+
+[node name="ResearchPortalLight" type="CSGBox3D" parent="Graybox" unique_id=1290191762]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.26, 4.72, 0)
+size = Vector3(0.06, 0.16, 9.4)
+material = SubResource("MatGreen")
+
+[node name="ZeroGPortalNorth" type="CSGBox3D" parent="Graybox" unique_id=995809749]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.7, 2.5, -5.5)
+use_collision = true
+size = Vector3(0.82, 5, 0.58)
+material = SubResource("MatPanel")
+
+[node name="ZeroGPortalSouth" type="CSGBox3D" parent="Graybox" unique_id=1166081755]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.7, 2.5, 5.5)
+use_collision = true
+size = Vector3(0.82, 5, 0.58)
+material = SubResource("MatPanel")
+
+[node name="ZeroGPortalHeader" type="CSGBox3D" parent="Graybox" unique_id=1951047563]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.7, 5, 0)
+use_collision = true
+size = Vector3(0.82, 0.58, 11.58)
+material = SubResource("MatPanel")
+
+[node name="ZeroGPortalLight" type="CSGBox3D" parent="Graybox" unique_id=290331587]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.26, 4.72, 0)
+size = Vector3(0.06, 0.16, 9.4)
+material = SubResource("MatPurple")
+
+[node name="NorthRibLeft" type="CSGBox3D" parent="Graybox" unique_id=2119087907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 2.65, -16.55)
+use_collision = true
+size = Vector3(0.5, 5.3, 1.05)
+material = SubResource("MatPanel")
+
+[node name="NorthRibCenter" type="CSGBox3D" parent="Graybox" unique_id=524532405]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.65, -16.55)
+use_collision = true
+size = Vector3(0.42, 5.3, 1.05)
+material = SubResource("MatPanel")
+
+[node name="NorthRibRight" type="CSGBox3D" parent="Graybox" unique_id=1682897094]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 2.65, -16.55)
+use_collision = true
+size = Vector3(0.5, 5.3, 1.05)
+material = SubResource("MatPanel")
+
+[node name="SouthRibLeft" type="CSGBox3D" parent="Graybox" unique_id=1765722124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 2.65, 16.55)
+use_collision = true
+size = Vector3(0.5, 5.3, 1.05)
+material = SubResource("MatPanel")
+
+[node name="SouthRibCenter" type="CSGBox3D" parent="Graybox" unique_id=1621541133]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.65, 16.55)
+use_collision = true
+size = Vector3(0.5, 5.3, 1.05)
+material = SubResource("MatPanel")
+
+[node name="SouthRibRight" type="CSGBox3D" parent="Graybox" unique_id=606707495]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 2.65, 16.55)
+use_collision = true
+size = Vector3(0.5, 5.3, 1.05)
+material = SubResource("MatPanel")
+
+[node name="WestRibNorth" type="CSGBox3D" parent="Graybox" unique_id=1515038497]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.55, 2.65, -10.7)
+use_collision = true
+size = Vector3(1.05, 5.3, 0.5)
+material = SubResource("MatPanel")
+
+[node name="WestRibCenter" type="CSGBox3D" parent="Graybox" unique_id=8368818]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.55, 2.65, 0)
+use_collision = true
+size = Vector3(1.05, 5.3, 0.5)
+material = SubResource("MatPanel")
+
+[node name="WestRibSouth" type="CSGBox3D" parent="Graybox" unique_id=1955732755]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.55, 2.65, 10.7)
+use_collision = true
+size = Vector3(1.05, 5.3, 0.5)
+material = SubResource("MatPanel")
+
+[node name="EastRibNorth" type="CSGBox3D" parent="Graybox" unique_id=1897337089]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.55, 2.65, -10.7)
+use_collision = true
+size = Vector3(1.05, 5.3, 0.5)
+material = SubResource("MatPanel")
+
+[node name="EastRibCenter" type="CSGBox3D" parent="Graybox" unique_id=580261793]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.55, 2.65, 0)
+use_collision = true
+size = Vector3(1.05, 5.3, 0.5)
+material = SubResource("MatPanel")
+
+[node name="EastRibSouth" type="CSGBox3D" parent="Graybox" unique_id=1750336505]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.55, 2.65, 10.7)
+use_collision = true
+size = Vector3(1.05, 5.3, 0.5)
+material = SubResource("MatPanel")
+
+[node name="ObservationMullionLeft" type="CSGBox3D" parent="Graybox" unique_id=1244417859]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.65, 2.5, -16.48)
+size = Vector3(0.3, 5, 0.62)
+material = SubResource("MatPanel")
+
+[node name="ObservationMullionRight" type="CSGBox3D" parent="Graybox" unique_id=697982097]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.65, 2.5, -16.48)
+size = Vector3(0.3, 5, 0.62)
+material = SubResource("MatPanel")
+
+[node name="ObservationWindowSill" type="CSGBox3D" parent="Graybox" unique_id=1978755214]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -16.45)
+use_collision = true
+size = Vector3(14, 1, 0.72)
+material = SubResource("MatDark")
+
+[node name="ResearchWallInset" type="CSGBox3D" parent="Graybox" unique_id=988799680]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.66, 2.25, 0)
+size = Vector3(0.08, 3.7, 5.2)
+material = SubResource("MatDark")
+
+[node name="ResearchWallStatus" type="CSGBox3D" parent="Graybox" unique_id=115663480]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.6, 2.25, 0)
+size = Vector3(0.06, 0.24, 4.3)
+material = SubResource("MatGreen")
+
+[node name="ZeroGWallInset" type="CSGBox3D" parent="Graybox" unique_id=1400517096]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.66, 2.25, 0)
+size = Vector3(0.08, 3.7, 5.2)
+material = SubResource("MatDark")
+
+[node name="ZeroGWallStatus" type="CSGBox3D" parent="Graybox" unique_id=1365736667]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.6, 2.25, 0)
+size = Vector3(0.06, 0.24, 4.3)
+material = SubResource("MatPurple")
+
+[node name="EngineWallInset" type="CSGBox3D" parent="Graybox" unique_id=37388877]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 16.66)
+size = Vector3(6.2, 3.7, 0.08)
+material = SubResource("MatDark")
+
+[node name="EngineWallStatus" type="CSGBox3D" parent="Graybox" unique_id=554115693]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 16.6)
+size = Vector3(5.2, 0.24, 0.06)
+material = SubResource("MatRed")
+
+[node name="CeilingBeamNorth" type="CSGBox3D" parent="Graybox" unique_id=1080465485]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.65, -9.8)
+size = Vector3(36.6, 0.36, 0.34)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamCenterZ" type="CSGBox3D" parent="Graybox" unique_id=1440930895]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.65, 0)
+size = Vector3(36.6, 0.36, 0.34)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamSouth" type="CSGBox3D" parent="Graybox" unique_id=1482476912]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.65, 9.8)
+size = Vector3(36.6, 0.36, 0.34)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamWest" type="CSGBox3D" parent="Graybox" unique_id=721119571]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.7, 5.66, 0)
+size = Vector3(0.34, 0.38, 33)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamCenterX" type="CSGBox3D" parent="Graybox" unique_id=580082373]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.66, 0)
+size = Vector3(0.34, 0.38, 33)
+material = SubResource("MatDark")
+
+[node name="CeilingBeamEast" type="CSGBox3D" parent="Graybox" unique_id=568224636]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.7, 5.66, 0)
+size = Vector3(0.34, 0.38, 33)
+material = SubResource("MatDark")
+
+[node name="CeilingLightNorth" type="CSGBox3D" parent="Graybox" unique_id=817168833]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.44, -9.8)
+size = Vector3(7.2, 0.06, 0.42)
+material = SubResource("MatCyan")
+
+[node name="CeilingLightSouth" type="CSGBox3D" parent="Graybox" unique_id=1302119159]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.44, 9.8)
+size = Vector3(7.2, 0.06, 0.42)
+material = SubResource("MatRed")
+
+[node name="CeilingLightWest" type="CSGBox3D" parent="Graybox" unique_id=79187449]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.7, 5.44, 0)
+size = Vector3(0.42, 0.06, 7.2)
+material = SubResource("MatGreen")
+
+[node name="CeilingLightEast" type="CSGBox3D" parent="Graybox" unique_id=155117276]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.7, 5.44, 0)
+size = Vector3(0.42, 0.06, 7.2)
+material = SubResource("MatPurple")
+
+[node name="SouthServicePipe" type="CSGCylinder3D" parent="Graybox" unique_id=951858376]
+transform = Transform3D(-3.6199901e-06, -1, 0, 1, -3.6199901e-06, 0, 0, 0, 1, 0, 4.3, 16.25)
+radius = 0.14
+height = 30.0
+sides = 12
+material = SubResource("MatRed")
+
+[node name="SouthPowerConduit" type="CSGCylinder3D" parent="Graybox" unique_id=1270226156]
+transform = Transform3D(-3.6199901e-06, -1, 0, 1, -3.6199901e-06, 0, 0, 0, 1, 0, 4.72, 16.25)
+radius = 0.11
+height = 26.0
+sides = 12
+material = SubResource("MatWarning")
+
+[node name="WestResearchPipe" type="CSGCylinder3D" parent="Graybox" unique_id=607009120]
+transform = Transform3D(1, 0, 0, 0, -3.6199901e-06, -1, 0, 1, -3.6199901e-06, -18.25, 4.35, 0)
+radius = 0.12
+height = 26.0
+sides = 12
+material = SubResource("MatGreen")
+
+[node name="EastZeroGConduit" type="CSGCylinder3D" parent="Graybox" unique_id=1541471391]
+transform = Transform3D(1, 0, 0, 0, -3.6199901e-06, -1, 0, 1, -3.6199901e-06, 18.25, 4.35, 0)
+radius = 0.12
+height = 26.0
+sides = 12
+material = SubResource("MatPurple")
+
+[node name="CoreCeilingHub" type="CSGCylinder3D" parent="Graybox" unique_id=1576036620]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.35, 0)
+radius = 2.65
+height = 0.48
+sides = 32
+material = SubResource("MatDark")
+
+[node name="CoreCeilingHubGlow" type="CSGCylinder3D" parent="Graybox" unique_id=994276624]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.08, 0)
+radius = 1.8
+height = 0.06
+sides = 32
+material = SubResource("MatCyan")
+
+[node name="CoreCeilingArmX" type="CSGBox3D" parent="Graybox" unique_id=324142193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.38, 0)
+size = Vector3(10, 0.32, 0.42)
+material = SubResource("MatPanel")
+
+[node name="CoreCeilingArmZ" type="CSGBox3D" parent="Graybox" unique_id=1430032351]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.39, 0)
+size = Vector3(0.42, 0.34, 10)
+material = SubResource("MatPanel")
+
+[node name="CoreEnergyDrop" type="CSGCylinder3D" parent="Graybox" unique_id=180229482]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.1, 0)
+radius = 0.24
+height = 2.1
+sides = 16
+material = SubResource("MatCyan")
+
+[node name="Planet" type="CSGSphere3D" parent="Graybox" unique_id=1720624388]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 8, -32)
+radius = 8.4
+radial_segments = 40
+rings = 20
+material = SubResource("MatPlanet")
+
+[node name="PlanetAtmosphere" type="CSGSphere3D" parent="Graybox" unique_id=2063978445]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 8, -32)
+radius = 8.75
+radial_segments = 40
+rings = 20
+material = SubResource("MatGlass")
+
+[node name="ExteriorTrussX" type="CSGBox3D" parent="Graybox" unique_id=442993106]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 0, -21.5)
+size = Vector3(18, 0.38, 0.38)
+material = SubResource("MatPanel")
+
+[node name="ExteriorTrussZ" type="CSGBox3D" parent="Graybox" unique_id=23753074]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -25)
+size = Vector3(0.38, 0.38, 7)
+material = SubResource("MatPanel")
+
+[node name="ExteriorBeacon" type="CSGCylinder3D" parent="Graybox" unique_id=923186190]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.5, -25)
+radius = 0.16
+height = 3.0
+sides = 12
+material = SubResource("MatRed")
+
+[node name="StarA" type="CSGSphere3D" parent="Graybox" unique_id=1726478340]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 10, -34)
+radius = 0.12
+radial_segments = 8
+rings = 4
+material = SubResource("MatPanel")
+
+[node name="StarB" type="CSGSphere3D" parent="Graybox" unique_id=1957826848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 6, -36)
+radius = 0.09
+radial_segments = 8
+rings = 4
+material = SubResource("MatCyan")
+
+[node name="StarC" type="CSGSphere3D" parent="Graybox" unique_id=957202793]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 11, -35)
+radius = 0.08
+radial_segments = 8
+rings = 4
+material = SubResource("MatPanel")
+
+[node name="StarD" type="CSGSphere3D" parent="Graybox" unique_id=114296195]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 13, -38)
+radius = 0.11
+radial_segments = 8
+rings = 4
+material = SubResource("MatPanel")
+
+[node name="CapacityCoverNW" type="CSGBox3D" parent="Graybox" unique_id=1149493471 groups=["capacity_cover"]]
+transform = Transform3D(0.9393727, 0, 0.3428978, 0, 1, 0, -0.3428978, 0, 0.9393727, -13.4, 0.6, -9.3)
+use_collision = true
+size = Vector3(2.8, 1.2, 1.45)
+material = SubResource("MatCover")
+
+[node name="CapacityCoverNWStatus" type="CSGBox3D" parent="Graybox" unique_id=1352846628]
+transform = Transform3D(0.9393727, 0, 0.3428978, 0, 1, 0, -0.3428978, 0, 0.9393727, -13.4, 1.23, -9.3)
+size = Vector3(2.05, 0.1, 1.49)
+material = SubResource("MatCyan")
+
+[node name="CapacityCoverNE" type="CSGBox3D" parent="Graybox" unique_id=443507740 groups=["capacity_cover"]]
+transform = Transform3D(0.9393727, 0, -0.3428978, 0, 1, 0, 0.3428978, 0, 0.9393727, 13.4, 0.6, -9.3)
+use_collision = true
+size = Vector3(2.8, 1.2, 1.45)
+material = SubResource("MatCover")
+
+[node name="CapacityCoverNEStatus" type="CSGBox3D" parent="Graybox" unique_id=697814248]
+transform = Transform3D(0.9393727, 0, -0.3428978, 0, 1, 0, 0.3428978, 0, 0.9393727, 13.4, 1.23, -9.3)
+size = Vector3(2.05, 0.1, 1.49)
+material = SubResource("MatPurple")
+
+[node name="CapacityCoverSW" type="CSGBox3D" parent="Graybox" unique_id=1382810396 groups=["capacity_cover"]]
+transform = Transform3D(0.9689124, 0, -0.24740396, 0, 1, 0, 0.24740396, 0, 0.9689124, -13, 0.6, 8.9)
+use_collision = true
+size = Vector3(2.8, 1.2, 1.45)
+material = SubResource("MatCover")
+
+[node name="CapacityCoverSWStatus" type="CSGBox3D" parent="Graybox" unique_id=1241909708]
+transform = Transform3D(0.9689124, 0, -0.24740396, 0, 1, 0, 0.24740396, 0, 0.9689124, -13, 1.23, 8.9)
+size = Vector3(2.05, 0.1, 1.49)
+material = SubResource("MatGreen")
+
+[node name="CapacityCoverSE" type="CSGBox3D" parent="Graybox" unique_id=2126300699 groups=["capacity_cover"]]
+transform = Transform3D(0.9689124, 0, 0.24740396, 0, 1, 0, -0.24740396, 0, 0.9689124, 13, 0.6, 8.9)
+use_collision = true
+size = Vector3(2.8, 1.2, 1.45)
+material = SubResource("MatCover")
+
+[node name="CapacityCoverSEStatus" type="CSGBox3D" parent="Graybox" unique_id=2133305916]
+transform = Transform3D(0.9689124, 0, 0.24740396, 0, 1, 0, -0.24740396, 0, 0.9689124, 13, 1.23, 8.9)
+size = Vector3(2.05, 0.1, 1.49)
+material = SubResource("MatRed")
+
+[node name="ObservationCanopy" type="CSGBox3D" parent="Graybox" unique_id=126414735]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.85, -13.45)
+use_collision = true
+size = Vector3(11.8, 0.35, 6.5)
+material = SubResource("MatWall")
+
+[node name="ObservationCanopyInset" type="CSGBox3D" parent="Graybox" unique_id=960718063]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.66, -13.45)
+size = Vector3(5.5, 0.05, 2.8)
+material = SubResource("MatDark")
+
+[node name="ObservationCanopyRim" type="CSGBox3D" parent="Graybox" unique_id=1055989862]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.62, -10.25)
+size = Vector3(10, 0.1, 0.12)
+material = SubResource("MatCyan")
+
+[node name="ResearchCanopy" type="CSGBox3D" parent="Graybox" unique_id=1572830953]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.8, 5.85, 0)
+use_collision = true
+size = Vector3(7.4, 0.35, 11.8)
+material = SubResource("MatWall")
+
+[node name="ResearchCanopyInset" type="CSGBox3D" parent="Graybox" unique_id=275490864]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.8, 5.66, 0)
+size = Vector3(3.1, 0.05, 5.5)
+material = SubResource("MatDark")
+
+[node name="ResearchCanopyRim" type="CSGBox3D" parent="Graybox" unique_id=723097625]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.14, 5.62, 0)
+size = Vector3(0.12, 0.1, 10)
+material = SubResource("MatGreen")
+
+[node name="ZeroGCanopy" type="CSGBox3D" parent="Graybox" unique_id=831920200]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.8, 5.85, 0)
+use_collision = true
+size = Vector3(7.4, 0.35, 11.8)
+material = SubResource("MatWall")
+
+[node name="ZeroGCanopyInset" type="CSGBox3D" parent="Graybox" unique_id=1563737703]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.8, 5.66, 0)
+size = Vector3(3.1, 0.05, 5.5)
+material = SubResource("MatDark")
+
+[node name="ZeroGCanopyRim" type="CSGBox3D" parent="Graybox" unique_id=1931137568]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.14, 5.62, 0)
+size = Vector3(0.12, 0.1, 10)
+material = SubResource("MatPurple")
+
+[node name="EngineCanopy" type="CSGBox3D" parent="Graybox" unique_id=199601731]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.85, 13.5)
+use_collision = true
+size = Vector3(11.8, 0.35, 6.4)
+material = SubResource("MatWall")
+
+[node name="EngineCanopyInset" type="CSGBox3D" parent="Graybox" unique_id=1456085184]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.66, 13.5)
+size = Vector3(5.5, 0.05, 2.8)
+material = SubResource("MatDark")
+
+[node name="EngineCanopyRim" type="CSGBox3D" parent="Graybox" unique_id=1979827611]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.62, 10.35)
+size = Vector3(10, 0.1, 0.12)
+material = SubResource("MatRed")
+
+[node name="CoreHazardNorthLeft" type="CSGBox3D" parent="Graybox" unique_id=1153431123]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.08, -2.5)
+size = Vector3(1.9, 0.08, 0.2)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardNorthRight" type="CSGBox3D" parent="Graybox" unique_id=1803381094]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 0.08, -2.5)
+size = Vector3(1.9, 0.08, 0.2)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardSouthLeft" type="CSGBox3D" parent="Graybox" unique_id=335510719]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.08, 2.5)
+size = Vector3(1.9, 0.08, 0.2)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardSouthRight" type="CSGBox3D" parent="Graybox" unique_id=1303918711]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 0.08, 2.5)
+size = Vector3(1.9, 0.08, 0.2)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardWestNorth" type="CSGBox3D" parent="Graybox" unique_id=880757010]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0.08, -1.25)
+size = Vector3(0.2, 0.08, 1.9)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardWestSouth" type="CSGBox3D" parent="Graybox" unique_id=2014721755]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0.08, 1.25)
+size = Vector3(0.2, 0.08, 1.9)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardEastNorth" type="CSGBox3D" parent="Graybox" unique_id=1875812787]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.08, -1.25)
+size = Vector3(0.2, 0.08, 1.9)
+material = SubResource("MatWarning")
+
+[node name="CoreHazardEastSouth" type="CSGBox3D" parent="Graybox" unique_id=1250013259]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.08, 1.25)
+size = Vector3(0.2, 0.08, 1.9)
+material = SubResource("MatWarning")
+
+[node name="ResearchTerminalScreen" type="CSGBox3D" parent="Graybox" unique_id=1286313431]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.05, 1.15, 0)
+size = Vector3(0.05, 0.72, 2.35)
+material = SubResource("MatGreen")
+
+[node name="ZeroGWallClampNorth" type="CSGBox3D" parent="Graybox" unique_id=399919536]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.8, 1.6, -3.8)
+use_collision = true
+size = Vector3(0.6, 3.2, 1.2)
+material = SubResource("MatDark")
+
+[node name="ZeroGWallClampSouth" type="CSGBox3D" parent="Graybox" unique_id=383562096]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.8, 1.6, 3.8)
+use_collision = true
+size = Vector3(0.6, 3.2, 1.2)
+material = SubResource("MatDark")
+
+[node name="EngineCoolantLine" type="CSGCylinder3D" parent="Graybox" unique_id=128160045]
+transform = Transform3D(-3.6199901e-06, -1, 0, 1, -3.6199901e-06, 0, 0, 0, 1, 0, 3.9, 16.05)
+radius = 0.16
+height = 16.0
+sides = 12
+material = SubResource("MatCyan")
+
+[node name="ArenaIdentity" type="Node3D" parent="." unique_id=536690500]
+
+[node name="BoundaryNorth" type="CSGBox3D" parent="ArenaIdentity" unique_id=675499549]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, -15.75)
+size = Vector3(33.5, 0.055, 0.12)
+material = SubResource("MatArenaLine")
+
+[node name="BoundarySouth" type="CSGBox3D" parent="ArenaIdentity" unique_id=668649399]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 15.75)
+size = Vector3(33.5, 0.055, 0.12)
+material = SubResource("MatArenaLine")
+
+[node name="BoundaryWest" type="CSGBox3D" parent="ArenaIdentity" unique_id=1814269309]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.75, 0.06, 0)
+size = Vector3(0.12, 0.055, 29.2)
+material = SubResource("MatArenaLine")
+
+[node name="BoundaryEast" type="CSGBox3D" parent="ArenaIdentity" unique_id=158599530]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.75, 0.06, 0)
+size = Vector3(0.12, 0.055, 29.2)
+material = SubResource("MatArenaLine")
+
+[node name="BlueLaneLeft" type="CSGBox3D" parent="ArenaIdentity" unique_id=1392021013]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0.065, -11.2)
+size = Vector3(0.13, 0.06, 8.1)
+material = SubResource("MatCyan")
+
+[node name="BlueLaneRight" type="CSGBox3D" parent="ArenaIdentity" unique_id=833982172]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0.065, -11.2)
+size = Vector3(0.13, 0.06, 8.1)
+material = SubResource("MatCyan")
+
+[node name="GreenLaneNorth" type="CSGBox3D" parent="ArenaIdentity" unique_id=1587539861]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.1, 0.065, -3.5)
+size = Vector3(8.2, 0.06, 0.13)
+material = SubResource("MatGreen")
+
+[node name="GreenLaneSouth" type="CSGBox3D" parent="ArenaIdentity" unique_id=315965352]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.1, 0.065, 3.5)
+size = Vector3(8.2, 0.06, 0.13)
+material = SubResource("MatGreen")
+
+[node name="VioletLaneNorth" type="CSGBox3D" parent="ArenaIdentity" unique_id=2079338684]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.1, 0.065, -3.5)
+size = Vector3(8.2, 0.06, 0.13)
+material = SubResource("MatPurple")
+
+[node name="VioletLaneSouth" type="CSGBox3D" parent="ArenaIdentity" unique_id=1279277985]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.1, 0.065, 3.5)
+size = Vector3(8.2, 0.06, 0.13)
+material = SubResource("MatPurple")
+
+[node name="RedLaneLeft" type="CSGBox3D" parent="ArenaIdentity" unique_id=589708561]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0.065, 11.2)
+size = Vector3(0.13, 0.06, 8.1)
+material = SubResource("MatRed")
+
+[node name="RedLaneRight" type="CSGBox3D" parent="ArenaIdentity" unique_id=1755807607]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0.065, 11.2)
+size = Vector3(0.13, 0.06, 8.1)
+material = SubResource("MatRed")
+
+[node name="BlueChevronLeft" type="CSGBox3D" parent="ArenaIdentity" unique_id=273349919]
+transform = Transform3D(0.7071055, 0, -0.7071081, 0, 1, 0, 0.7071081, 0, 0.7071055, -0.6, 0.075, -6.4)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatCyan")
+
+[node name="BlueChevronRight" type="CSGBox3D" parent="ArenaIdentity" unique_id=1991753291]
+transform = Transform3D(0.7071055, 0, 0.7071081, 0, 1, 0, -0.7071081, 0, 0.7071055, 0.6, 0.075, -6.4)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatCyan")
+
+[node name="GreenChevronNorth" type="CSGBox3D" parent="ArenaIdentity" unique_id=761922422]
+transform = Transform3D(0.7071055, 0, -0.7071081, 0, 1, 0, 0.7071081, 0, 0.7071055, -6.4, 0.075, -0.6)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatGreen")
+
+[node name="GreenChevronSouth" type="CSGBox3D" parent="ArenaIdentity" unique_id=1307477670]
+transform = Transform3D(0.7071055, 0, 0.7071081, 0, 1, 0, -0.7071081, 0, 0.7071055, -6.4, 0.075, 0.6)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatGreen")
+
+[node name="VioletChevronNorth" type="CSGBox3D" parent="ArenaIdentity" unique_id=889533196]
+transform = Transform3D(0.7071055, 0, 0.7071081, 0, 1, 0, -0.7071081, 0, 0.7071055, 6.4, 0.075, -0.6)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatPurple")
+
+[node name="VioletChevronSouth" type="CSGBox3D" parent="ArenaIdentity" unique_id=1414947647]
+transform = Transform3D(0.7071055, 0, -0.7071081, 0, 1, 0, 0.7071081, 0, 0.7071055, 6.4, 0.075, 0.6)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatPurple")
+
+[node name="RedChevronLeft" type="CSGBox3D" parent="ArenaIdentity" unique_id=190254477]
+transform = Transform3D(0.7071055, 0, 0.7071081, 0, 1, 0, -0.7071081, 0, 0.7071055, -0.6, 0.075, 6.4)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatRed")
+
+[node name="RedChevronRight" type="CSGBox3D" parent="ArenaIdentity" unique_id=230000045]
+transform = Transform3D(0.7071055, 0, -0.7071081, 0, 1, 0, 0.7071081, 0, 0.7071055, 0.6, 0.075, 6.4)
+size = Vector3(1.75, 0.065, 0.18)
+material = SubResource("MatRed")
+
+[node name="EntryPad1" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=1314604198]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.04, -11)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad1Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=906321613]
+transform = Transform3D(0.62161, 0, 0.7833269, 0, 1, 0, -0.7833269, 0, 0.62161, -16, 0.08, -11)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatCyan")
+
+[node name="EntryPad2" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=450397789]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.04, -11)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad2Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=254905115]
+transform = Transform3D(0.62161, 0, -0.7833269, 0, 1, 0, 0.7833269, 0, 0.62161, 16, 0.08, -11)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatCyan")
+
+[node name="EntryPad3" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=2092401100]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.04, 0)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad3Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=1657929964]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -16, 0.08, 0)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatGreen")
+
+[node name="EntryPad4" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=1471846418]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.04, 0)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad4Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=251301544]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 16, 0.08, 0)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatPurple")
+
+[node name="EntryPad5" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=482853300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 0.04, 10.2)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad5Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=28520020]
+transform = Transform3D(-0.58850116, 0, 0.80849636, 0, 1, 0, -0.80849636, 0, -0.58850116, -15.5, 0.08, 10.2)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatRed")
+
+[node name="EntryPad6" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=1274538080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5, 0.04, 10.2)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad6Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=2095657116]
+transform = Transform3D(-0.58850116, 0, -0.80849636, 0, 1, 0, 0.80849636, 0, -0.58850116, 15.5, 0.08, 10.2)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatRed")
+
+[node name="EntryPad7" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=1297880870]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.04, 15)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad7Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=216440465]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, -8, 0.08, 15)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatRed")
+
+[node name="EntryPad8" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=1745287039]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.04, 15)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad8Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=226623107]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 8, 0.08, 15)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatRed")
+
+[node name="EntryPad9" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=76586272]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.04, -15)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad9Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=1111878070]
+transform = Transform3D(0.87758255, 0, 0.47942555, 0, 1, 0, -0.47942555, 0, 0.87758255, -8, 0.08, -15)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatCyan")
+
+[node name="EntryPad10" type="CSGCylinder3D" parent="ArenaIdentity" unique_id=1896891663]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.04, -15)
+radius = 1.15
+height = 0.05
+sides = 16
+material = SubResource("MatArenaInk")
+
+[node name="EntryPad10Accent" type="CSGBox3D" parent="ArenaIdentity" unique_id=1051401412]
+transform = Transform3D(0.87758255, 0, -0.47942555, 0, 1, 0, 0.47942555, 0, 0.87758255, 8, 0.08, -15)
+size = Vector3(1.5, 0.055, 0.16)
+material = SubResource("MatCyan")
+
+[node name="CoreFinWestNorthTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=408090968]
+transform = Transform3D(0.7518057, 0, -0.65938467, 0, 1, 0, 0.65938467, 0, 0.7518057, -4.2, 3.22, -3.8)
+size = Vector3(1.18, 0.08, 2.7)
+material = SubResource("MatGreen")
+
+[node name="CoreFinWestSouthTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=1477330652]
+transform = Transform3D(0.7518057, 0, 0.65938467, 0, 1, 0, -0.65938467, 0, 0.7518057, -4.2, 3.22, 3.8)
+size = Vector3(1.18, 0.08, 2.7)
+material = SubResource("MatGreen")
+
+[node name="CoreFinEastNorthTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=1989381651]
+transform = Transform3D(0.7518057, 0, 0.65938467, 0, 1, 0, -0.65938467, 0, 0.7518057, 4.2, 3.22, -3.8)
+size = Vector3(1.18, 0.08, 2.7)
+material = SubResource("MatPurple")
+
+[node name="CoreFinEastSouthTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=266018979]
+transform = Transform3D(0.7518057, 0, -0.65938467, 0, 1, 0, 0.65938467, 0, 0.7518057, 4.2, 3.22, 3.8)
+size = Vector3(1.18, 0.08, 2.7)
+material = SubResource("MatPurple")
+
+[node name="WestCrosscutTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=241421034]
+transform = Transform3D(0.8525245, 0, 0.52268726, 0, 1, 0, -0.52268726, 0, 0.8525245, -8.5, 2.42, -8.2)
+size = Vector3(2.7, 0.08, 0.18)
+material = SubResource("MatGreen")
+
+[node name="EastCrosscutTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=178280721]
+transform = Transform3D(0.8525245, 0, -0.52268726, 0, 1, 0, 0.52268726, 0, 0.8525245, 8.5, 2.42, -8.2)
+size = Vector3(2.7, 0.08, 0.18)
+material = SubResource("MatPurple")
+
+[node name="WestDashTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=856509698]
+transform = Transform3D(0.9689124, 0, -0.24740396, 0, 1, 0, 0.24740396, 0, 0.9689124, -9.1, 2.32, 7.4)
+size = Vector3(1.7, 0.08, 0.18)
+material = SubResource("MatGreen")
+
+[node name="EastDashTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=52237857]
+transform = Transform3D(0.9689124, 0, 0.24740396, 0, 1, 0, -0.24740396, 0, 0.9689124, 9.1, 2.32, 7.4)
+size = Vector3(1.7, 0.08, 0.18)
+material = SubResource("MatPurple")
+
+[node name="TelescopeTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=2063713115]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.22, -13.7)
+size = Vector3(2.15, 0.08, 0.18)
+material = SubResource("MatCyan")
+
+[node name="EngineConsoleLeftTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=1083968951]
+transform = Transform3D(0.96105546, 0, -0.27635565, 0, 1, 0, 0.27635565, 0, 0.96105546, -9, 1.72, 13.4)
+size = Vector3(2.3, 0.08, 0.18)
+material = SubResource("MatRed")
+
+[node name="EngineConsoleRightTrim" type="CSGBox3D" parent="ArenaIdentity" unique_id=1163163241]
+transform = Transform3D(0.96105546, 0, 0.27635565, 0, 1, 0, -0.27635565, 0, 0.96105546, 9, 1.72, 13.4)
+size = Vector3(2.3, 0.08, 0.18)
+material = SubResource("MatRed")
+
+[node name="NorthBumperLeft" type="CSGBox3D" parent="ArenaIdentity" unique_id=2077203062]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.72, -16.64)
+size = Vector3(11.6, 1.12, 0.1)
+material = SubResource("MatArenaInk")
+
+[node name="NorthBumperRight" type="CSGBox3D" parent="ArenaIdentity" unique_id=1465559980]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.72, -16.64)
+size = Vector3(11.6, 1.12, 0.1)
+material = SubResource("MatArenaInk")
+
+[node name="SouthBumper" type="CSGBox3D" parent="ArenaIdentity" unique_id=1012788210]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.72, 16.64)
+size = Vector3(36.7, 1.12, 0.1)
+material = SubResource("MatArenaInk")
+
+[node name="WestBumper" type="CSGBox3D" parent="ArenaIdentity" unique_id=273401710]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.64, 0.72, 0)
+size = Vector3(0.1, 1.12, 32.7)
+material = SubResource("MatArenaInk")
+
+[node name="EastBumper" type="CSGBox3D" parent="ArenaIdentity" unique_id=932413896]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.64, 0.72, 0)
+size = Vector3(0.1, 1.12, 32.7)
+material = SubResource("MatArenaInk")
+
+[node name="NorthBumperGlowLeft" type="CSGBox3D" parent="ArenaIdentity" unique_id=729899018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 1.31, -16.57)
+size = Vector3(10.6, 0.11, 0.06)
+material = SubResource("MatCyan")
+
+[node name="NorthBumperGlowRight" type="CSGBox3D" parent="ArenaIdentity" unique_id=1657645650]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 1.31, -16.57)
+size = Vector3(10.6, 0.11, 0.06)
+material = SubResource("MatCyan")
+
+[node name="SouthBumperGlow" type="CSGBox3D" parent="ArenaIdentity" unique_id=154113086]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31, 16.57)
+size = Vector3(34.8, 0.11, 0.06)
+material = SubResource("MatRed")
+
+[node name="WestBumperGlow" type="CSGBox3D" parent="ArenaIdentity" unique_id=1337739128]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.57, 1.31, 0)
+size = Vector3(0.06, 0.11, 30.8)
+material = SubResource("MatGreen")
+
+[node name="EastBumperGlow" type="CSGBox3D" parent="ArenaIdentity" unique_id=1596822904]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.57, 1.31, 0)
+size = Vector3(0.06, 0.11, 30.8)
+material = SubResource("MatPurple")
+
+[node name="ArenaMottoBacker" type="CSGBox3D" parent="ArenaIdentity" unique_id=2086695875]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.35, 16.57)
+size = Vector3(12.8, 1.05, 0.055)
+material = SubResource("MatArenaPanel")
+
+[node name="ArenaCapacityBacker" type="CSGBox3D" parent="ArenaIdentity" unique_id=467093705]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.55, -16.57)
+size = Vector3(13.5, 0.8, 0.055)
+material = SubResource("MatArenaPanel")
+
+[node name="AssetArtPass" type="Node3D" parent="." unique_id=1616533807 groups=["neon_circuit_art_pass"]]
+
+[node name="FloorPanels" type="Node3D" parent="AssetArtPass" unique_id=1993967927]
+
+[node name="Floor_0_0" parent="AssetArtPass/FloorPanels" unique_id=1858242429 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, -14)
+
+[node name="Floor_0_1" parent="AssetArtPass/FloorPanels" unique_id=1636034885 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, -14)
+
+[node name="Floor_0_2" parent="AssetArtPass/FloorPanels" unique_id=1484538568 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, -14)
+
+[node name="Floor_0_3" parent="AssetArtPass/FloorPanels" unique_id=458813504 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, -14)
+
+[node name="Floor_0_4" parent="AssetArtPass/FloorPanels" unique_id=931968141 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, -14)
+
+[node name="Floor_0_5" parent="AssetArtPass/FloorPanels" unique_id=1617605583 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, -14)
+
+[node name="Floor_0_6" parent="AssetArtPass/FloorPanels" unique_id=910041181 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, -14)
+
+[node name="Floor_0_7" parent="AssetArtPass/FloorPanels" unique_id=1996904688 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, -14)
+
+[node name="Floor_0_8" parent="AssetArtPass/FloorPanels" unique_id=1761013168 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, -14)
+
+[node name="Floor_1_0" parent="AssetArtPass/FloorPanels" unique_id=150941373 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, -10)
+
+[node name="Floor_1_1" parent="AssetArtPass/FloorPanels" unique_id=1726145702 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, -10)
+
+[node name="Floor_1_2" parent="AssetArtPass/FloorPanels" unique_id=1831271830 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, -10)
+
+[node name="Floor_1_3" parent="AssetArtPass/FloorPanels" unique_id=2012706029 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, -10)
+
+[node name="Floor_1_4" parent="AssetArtPass/FloorPanels" unique_id=515218223 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, -10)
+
+[node name="Floor_1_5" parent="AssetArtPass/FloorPanels" unique_id=899731534 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, -10)
+
+[node name="Floor_1_6" parent="AssetArtPass/FloorPanels" unique_id=1610207761 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, -10)
+
+[node name="Floor_1_7" parent="AssetArtPass/FloorPanels" unique_id=211831490 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, -10)
+
+[node name="Floor_1_8" parent="AssetArtPass/FloorPanels" unique_id=1250813092 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, -10)
+
+[node name="Floor_2_0" parent="AssetArtPass/FloorPanels" unique_id=1963152772 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, -6)
+
+[node name="Floor_2_1" parent="AssetArtPass/FloorPanels" unique_id=1799190060 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, -6)
+
+[node name="Floor_2_2" parent="AssetArtPass/FloorPanels" unique_id=380417123 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, -6)
+
+[node name="Floor_2_3" parent="AssetArtPass/FloorPanels" unique_id=1131713095 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, -6)
+
+[node name="Floor_2_4" parent="AssetArtPass/FloorPanels" unique_id=54802772 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, -6)
+
+[node name="Floor_2_5" parent="AssetArtPass/FloorPanels" unique_id=359813481 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, -6)
+
+[node name="Floor_2_6" parent="AssetArtPass/FloorPanels" unique_id=477571454 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, -6)
+
+[node name="Floor_2_7" parent="AssetArtPass/FloorPanels" unique_id=75994790 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, -6)
+
+[node name="Floor_2_8" parent="AssetArtPass/FloorPanels" unique_id=708352682 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, -6)
+
+[node name="Floor_3_0" parent="AssetArtPass/FloorPanels" unique_id=56624909 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, -2)
+
+[node name="Floor_3_1" parent="AssetArtPass/FloorPanels" unique_id=491845513 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, -2)
+
+[node name="Floor_3_2" parent="AssetArtPass/FloorPanels" unique_id=28592096 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, -2)
+
+[node name="Floor_3_3" parent="AssetArtPass/FloorPanels" unique_id=1233825493 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, -2)
+
+[node name="Floor_3_4" parent="AssetArtPass/FloorPanels" unique_id=773721980 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, -2)
+
+[node name="Floor_3_5" parent="AssetArtPass/FloorPanels" unique_id=346537343 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, -2)
+
+[node name="Floor_3_6" parent="AssetArtPass/FloorPanels" unique_id=139632261 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, -2)
+
+[node name="Floor_3_7" parent="AssetArtPass/FloorPanels" unique_id=1415412816 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, -2)
+
+[node name="Floor_3_8" parent="AssetArtPass/FloorPanels" unique_id=546332941 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, -2)
+
+[node name="Floor_4_0" parent="AssetArtPass/FloorPanels" unique_id=2014318653 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, 2)
+
+[node name="Floor_4_1" parent="AssetArtPass/FloorPanels" unique_id=1081934912 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, 2)
+
+[node name="Floor_4_2" parent="AssetArtPass/FloorPanels" unique_id=1252070508 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, 2)
+
+[node name="Floor_4_3" parent="AssetArtPass/FloorPanels" unique_id=976435254 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, 2)
+
+[node name="Floor_4_4" parent="AssetArtPass/FloorPanels" unique_id=1611146832 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, 2)
+
+[node name="Floor_4_5" parent="AssetArtPass/FloorPanels" unique_id=644969492 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, 2)
+
+[node name="Floor_4_6" parent="AssetArtPass/FloorPanels" unique_id=1413931382 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, 2)
+
+[node name="Floor_4_7" parent="AssetArtPass/FloorPanels" unique_id=1396151904 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, 2)
+
+[node name="Floor_4_8" parent="AssetArtPass/FloorPanels" unique_id=956562978 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, 2)
+
+[node name="Floor_5_0" parent="AssetArtPass/FloorPanels" unique_id=597349655 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, 6)
+
+[node name="Floor_5_1" parent="AssetArtPass/FloorPanels" unique_id=204514496 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, 6)
+
+[node name="Floor_5_2" parent="AssetArtPass/FloorPanels" unique_id=609303806 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, 6)
+
+[node name="Floor_5_3" parent="AssetArtPass/FloorPanels" unique_id=221814161 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, 6)
+
+[node name="Floor_5_4" parent="AssetArtPass/FloorPanels" unique_id=99592929 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, 6)
+
+[node name="Floor_5_5" parent="AssetArtPass/FloorPanels" unique_id=1362419227 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, 6)
+
+[node name="Floor_5_6" parent="AssetArtPass/FloorPanels" unique_id=980850507 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, 6)
+
+[node name="Floor_5_7" parent="AssetArtPass/FloorPanels" unique_id=657618632 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, 6)
+
+[node name="Floor_5_8" parent="AssetArtPass/FloorPanels" unique_id=1246814648 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, 6)
+
+[node name="Floor_6_0" parent="AssetArtPass/FloorPanels" unique_id=1885711141 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, 10)
+
+[node name="Floor_6_1" parent="AssetArtPass/FloorPanels" unique_id=266207032 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, 10)
+
+[node name="Floor_6_2" parent="AssetArtPass/FloorPanels" unique_id=2067932238 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, 10)
+
+[node name="Floor_6_3" parent="AssetArtPass/FloorPanels" unique_id=2034690798 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, 10)
+
+[node name="Floor_6_4" parent="AssetArtPass/FloorPanels" unique_id=745821606 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, 10)
+
+[node name="Floor_6_5" parent="AssetArtPass/FloorPanels" unique_id=1174187421 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, 10)
+
+[node name="Floor_6_6" parent="AssetArtPass/FloorPanels" unique_id=439340684 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, 10)
+
+[node name="Floor_6_7" parent="AssetArtPass/FloorPanels" unique_id=230310330 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, 10)
+
+[node name="Floor_6_8" parent="AssetArtPass/FloorPanels" unique_id=2111588775 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, 10)
+
+[node name="Floor_7_0" parent="AssetArtPass/FloorPanels" unique_id=1707477947 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.032, 14)
+
+[node name="Floor_7_1" parent="AssetArtPass/FloorPanels" unique_id=82506984 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.032, 14)
+
+[node name="Floor_7_2" parent="AssetArtPass/FloorPanels" unique_id=1500814242 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.032, 14)
+
+[node name="Floor_7_3" parent="AssetArtPass/FloorPanels" unique_id=1982067192 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.032, 14)
+
+[node name="Floor_7_4" parent="AssetArtPass/FloorPanels" unique_id=1828328089 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.032, 14)
+
+[node name="Floor_7_5" parent="AssetArtPass/FloorPanels" unique_id=1447418028 instance=ExtResource("9_floor_metal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.032, 14)
+
+[node name="Floor_7_6" parent="AssetArtPass/FloorPanels" unique_id=834403493 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.032, 14)
+
+[node name="Floor_7_7" parent="AssetArtPass/FloorPanels" unique_id=1354740911 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.032, 14)
+
+[node name="Floor_7_8" parent="AssetArtPass/FloorPanels" unique_id=205150225 instance=ExtResource("8_floor_dark")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.032, 14)
+
+[node name="PerimeterShell" type="Node3D" parent="AssetArtPass" unique_id=498976530]
+
+[node name="NorthPanel_0" parent="AssetArtPass/PerimeterShell" unique_id=525436643 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -16, 0, -19.08)
+
+[node name="NorthPanel_1" parent="AssetArtPass/PerimeterShell" unique_id=957506359 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -12, 0, -19.08)
+
+[node name="NorthPanel_2" parent="AssetArtPass/PerimeterShell" unique_id=1231494558 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -8, 0, -19.08)
+
+[node name="NorthPanel_3" parent="AssetArtPass/PerimeterShell" unique_id=302628107 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 8, 0, -19.08)
+
+[node name="NorthPanel_4" parent="AssetArtPass/PerimeterShell" unique_id=2140071178 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 12, 0, -19.08)
+
+[node name="NorthPanel_5" parent="AssetArtPass/PerimeterShell" unique_id=1226270437 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 16, 0, -19.08)
+
+[node name="SouthPanel_0" parent="AssetArtPass/PerimeterShell" unique_id=841672349 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, -16, 0, 19.08)
+
+[node name="SouthPanel_1" parent="AssetArtPass/PerimeterShell" unique_id=1960683334 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, -12, 0, 19.08)
+
+[node name="SouthPanel_2" parent="AssetArtPass/PerimeterShell" unique_id=2107206739 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, -8, 0, 19.08)
+
+[node name="SouthPanel_3" parent="AssetArtPass/PerimeterShell" unique_id=612492370 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, -4, 0, 19.08)
+
+[node name="SouthPanel_4" parent="AssetArtPass/PerimeterShell" unique_id=2107926699 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 0, 0, 19.08)
+
+[node name="SouthPanel_5" parent="AssetArtPass/PerimeterShell" unique_id=1100648190 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 4, 0, 19.08)
+
+[node name="SouthPanel_6" parent="AssetArtPass/PerimeterShell" unique_id=1199068374 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 8, 0, 19.08)
+
+[node name="SouthPanel_7" parent="AssetArtPass/PerimeterShell" unique_id=932186641 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 12, 0, 19.08)
+
+[node name="SouthPanel_8" parent="AssetArtPass/PerimeterShell" unique_id=1698123676 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 16, 0, 19.08)
+
+[node name="WestPanel_0" parent="AssetArtPass/PerimeterShell" unique_id=1574796215 instance=ExtResource("10_wall_band")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, -14)
+
+[node name="WestPanel_1" parent="AssetArtPass/PerimeterShell" unique_id=2142012645 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, -10)
+
+[node name="WestPanel_2" parent="AssetArtPass/PerimeterShell" unique_id=2071075170 instance=ExtResource("10_wall_band")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, -6)
+
+[node name="WestPanel_3" parent="AssetArtPass/PerimeterShell" unique_id=1548954924 instance=ExtResource("10_wall_band")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, -2)
+
+[node name="WestPanel_4" parent="AssetArtPass/PerimeterShell" unique_id=1579335616 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, 2)
+
+[node name="WestPanel_5" parent="AssetArtPass/PerimeterShell" unique_id=627808619 instance=ExtResource("10_wall_band")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, 6)
+
+[node name="WestPanel_6" parent="AssetArtPass/PerimeterShell" unique_id=214305790 instance=ExtResource("10_wall_band")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, 10)
+
+[node name="WestPanel_7" parent="AssetArtPass/PerimeterShell" unique_id=398004780 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.9, 0, 14)
+
+[node name="EastPanel_0" parent="AssetArtPass/PerimeterShell" unique_id=1190832414 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, -14)
+
+[node name="EastPanel_1" parent="AssetArtPass/PerimeterShell" unique_id=1818554082 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, -10)
+
+[node name="EastPanel_2" parent="AssetArtPass/PerimeterShell" unique_id=2020006030 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, -6)
+
+[node name="EastPanel_3" parent="AssetArtPass/PerimeterShell" unique_id=1421123570 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, -2)
+
+[node name="EastPanel_4" parent="AssetArtPass/PerimeterShell" unique_id=1405001602 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, 2)
+
+[node name="EastPanel_5" parent="AssetArtPass/PerimeterShell" unique_id=157349944 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, 6)
+
+[node name="EastPanel_6" parent="AssetArtPass/PerimeterShell" unique_id=331825756 instance=ExtResource("10_wall_band")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, 10)
+
+[node name="EastPanel_7" parent="AssetArtPass/PerimeterShell" unique_id=443786333 instance=ExtResource("11_wall_astra")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 16.9, 0, 14)
+
+[node name="ObservationWindowFrame_0" parent="AssetArtPass/PerimeterShell" unique_id=1601328320 instance=ExtResource("12_wall_window")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -4, 0, -19)
+
+[node name="ObservationWindowFrame_1" parent="AssetArtPass/PerimeterShell" unique_id=639045291 instance=ExtResource("12_wall_window")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 0, 0, -19)
+
+[node name="ObservationWindowFrame_2" parent="AssetArtPass/PerimeterShell" unique_id=1158121781 instance=ExtResource("12_wall_window")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 4, 0, -19)
+
+[node name="NorthUpperCables_0" parent="AssetArtPass/PerimeterShell" unique_id=1221556625 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -16, 0, -18.98)
+
+[node name="NorthUpperCables_1" parent="AssetArtPass/PerimeterShell" unique_id=164701268 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -8, 0, -18.98)
+
+[node name="NorthUpperCables_2" parent="AssetArtPass/PerimeterShell" unique_id=1590580652 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 8, 0, -18.98)
+
+[node name="NorthUpperCables_3" parent="AssetArtPass/PerimeterShell" unique_id=223184302 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, 16, 0, -18.98)
+
+[node name="SouthUpperCables_0" parent="AssetArtPass/PerimeterShell" unique_id=1758051149 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, -16, 0, 18.98)
+
+[node name="SouthUpperCables_1" parent="AssetArtPass/PerimeterShell" unique_id=1293687895 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, -8, 0, 18.98)
+
+[node name="SouthUpperCables_2" parent="AssetArtPass/PerimeterShell" unique_id=1325408901 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 0, 0, 18.98)
+
+[node name="SouthUpperCables_3" parent="AssetArtPass/PerimeterShell" unique_id=1065690002 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 8, 0, 18.98)
+
+[node name="SouthUpperCables_4" parent="AssetArtPass/PerimeterShell" unique_id=325679930 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 16, 0, 18.98)
+
+[node name="WestUpperCables_0" parent="AssetArtPass/PerimeterShell" unique_id=478077515 instance=ExtResource("13_top_cables")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.02, 0, -14)
+
+[node name="WestUpperCables_1" parent="AssetArtPass/PerimeterShell" unique_id=380310668 instance=ExtResource("13_top_cables")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.02, 0, -6)
+
+[node name="WestUpperCables_2" parent="AssetArtPass/PerimeterShell" unique_id=906261102 instance=ExtResource("13_top_cables")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.02, 0, 2)
+
+[node name="WestUpperCables_3" parent="AssetArtPass/PerimeterShell" unique_id=30872439 instance=ExtResource("13_top_cables")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17.02, 0, 10)
+
+[node name="EastUpperCables_0" parent="AssetArtPass/PerimeterShell" unique_id=1985393783 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 17.02, 0, -14)
+
+[node name="EastUpperCables_1" parent="AssetArtPass/PerimeterShell" unique_id=676326637 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 17.02, 0, -6)
+
+[node name="EastUpperCables_2" parent="AssetArtPass/PerimeterShell" unique_id=2013582057 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 17.02, 0, 2)
+
+[node name="EastUpperCables_3" parent="AssetArtPass/PerimeterShell" unique_id=1159654631 instance=ExtResource("13_top_cables")]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 17.02, 0, 10)
+
+[node name="StructuralColumns" type="Node3D" parent="AssetArtPass" unique_id=1614692461]
+
+[node name="NorthColumn_0" parent="AssetArtPass/StructuralColumns" unique_id=1611400312 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, 1.45, 0, 1.62, 0, -1.45, 0, -5.248986e-06, -17, 0, -16.35)
+
+[node name="NorthColumn_1" parent="AssetArtPass/StructuralColumns" unique_id=1173488796 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, 1.45, 0, 1.62, 0, -1.45, 0, -5.248986e-06, -6, 0, -16.35)
+
+[node name="NorthColumn_2" parent="AssetArtPass/StructuralColumns" unique_id=815208774 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, 1.45, 0, 1.62, 0, -1.45, 0, -5.248986e-06, 6, 0, -16.35)
+
+[node name="NorthColumn_3" parent="AssetArtPass/StructuralColumns" unique_id=311912555 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, 1.45, 0, 1.62, 0, -1.45, 0, -5.248986e-06, 17, 0, -16.35)
+
+[node name="SouthColumn_0" parent="AssetArtPass/StructuralColumns" unique_id=453564169 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, -1.45, 0, 1.62, 0, 1.45, 0, -5.248986e-06, -17, 0, 16.35)
+
+[node name="SouthColumn_1" parent="AssetArtPass/StructuralColumns" unique_id=908298672 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, -1.45, 0, 1.62, 0, 1.45, 0, -5.248986e-06, -6, 0, 16.35)
+
+[node name="SouthColumn_2" parent="AssetArtPass/StructuralColumns" unique_id=1281597227 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, -1.45, 0, 1.62, 0, 1.45, 0, -5.248986e-06, 6, 0, 16.35)
+
+[node name="SouthColumn_3" parent="AssetArtPass/StructuralColumns" unique_id=238904602 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-5.248986e-06, 0, -1.45, 0, 1.62, 0, 1.45, 0, -5.248986e-06, 17, 0, 16.35)
+
+[node name="WestColumn_0" parent="AssetArtPass/StructuralColumns" unique_id=2071315305 instance=ExtResource("15_column_astra")]
+transform = Transform3D(1.45, 0, 0, 0, 1.62, 0, 0, 0, 1.45, -18.25, 0, -11)
+
+[node name="WestColumn_1" parent="AssetArtPass/StructuralColumns" unique_id=705010599 instance=ExtResource("15_column_astra")]
+transform = Transform3D(1.45, 0, 0, 0, 1.62, 0, 0, 0, 1.45, -18.25, 0, 0)
+
+[node name="WestColumn_2" parent="AssetArtPass/StructuralColumns" unique_id=112183613 instance=ExtResource("15_column_astra")]
+transform = Transform3D(1.45, 0, 0, 0, 1.62, 0, 0, 0, 1.45, -18.25, 0, 11)
+
+[node name="EastColumn_0" parent="AssetArtPass/StructuralColumns" unique_id=1257667220 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-1.45, 0, 3.6760136e-06, 0, 1.62, 0, -3.6760136e-06, 0, -1.45, 18.25, 0, -11)
+
+[node name="EastColumn_1" parent="AssetArtPass/StructuralColumns" unique_id=861247884 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-1.45, 0, 3.6760136e-06, 0, 1.62, 0, -3.6760136e-06, 0, -1.45, 18.25, 0, 0)
+
+[node name="EastColumn_2" parent="AssetArtPass/StructuralColumns" unique_id=1674130718 instance=ExtResource("15_column_astra")]
+transform = Transform3D(-1.45, 0, 3.6760136e-06, 0, 1.62, 0, -3.6760136e-06, 0, -1.45, 18.25, 0, 11)
+
+[node name="ResearchPylonNorth" parent="AssetArtPass/StructuralColumns" unique_id=436764125 instance=ExtResource("14_column_round")]
+transform = Transform3D(1.8, 0, 0, 0, 0.64, 0, 0, 0, 1.8, -14, 0, -3.4)
+
+[node name="ResearchPylonSouth" parent="AssetArtPass/StructuralColumns" unique_id=210942828 instance=ExtResource("14_column_round")]
+transform = Transform3D(1.8, 0, 0, 0, 0.64, 0, 0, 0, 1.8, -14, 0, 3.4)
+
+[node name="EnginePylonWest" parent="AssetArtPass/StructuralColumns" unique_id=66410332 instance=ExtResource("14_column_round")]
+transform = Transform3D(1.8, 0, 0, 0, 0.64, 0, 0, 0, 1.8, -3.8, 0, 13)
+
+[node name="EnginePylonEast" parent="AssetArtPass/StructuralColumns" unique_id=497353445 instance=ExtResource("14_column_round")]
+transform = Transform3D(1.8, 0, 0, 0, 0.64, 0, 0, 0, 1.8, 3.8, 0, 13)
+
+[node name="CoverShells" type="Node3D" parent="AssetArtPass" unique_id=1658471601]
+
+[node name="CapacityNW" parent="AssetArtPass/CoverShells" unique_id=571892350 instance=ExtResource("16_crate")]
+transform = Transform3D(2.273282, 0, 0.42862225, 0, 1.02, 0, -0.8298127, 0, 1.1742159, -13.4, 0.63, -9.3)
+
+[node name="CapacityNE" parent="AssetArtPass/CoverShells" unique_id=1957220700 instance=ExtResource("16_crate")]
+transform = Transform3D(2.273282, 0, -0.42862225, 0, 1.02, 0, 0.8298127, 0, 1.1742159, 13.4, 0.63, -9.3)
+
+[node name="CapacitySW" parent="AssetArtPass/CoverShells" unique_id=742279806 instance=ExtResource("16_crate")]
+transform = Transform3D(2.344768, 0, -0.30925494, 0, 1.02, 0, 0.59871763, 0, 1.2111405, -13, 0.63, 8.9)
+
+[node name="CapacitySE" parent="AssetArtPass/CoverShells" unique_id=1978188172 instance=ExtResource("16_crate")]
+transform = Transform3D(2.344768, 0, 0.30925494, 0, 1.02, 0, -0.59871763, 0, 1.2111405, 13, 0.63, 8.9)
+
+[node name="CrosscutWest" parent="AssetArtPass/CoverShells" unique_id=91020351 instance=ExtResource("16_crate")]
+transform = Transform3D(2.5575736, 0, 0.49655288, 0, 2.05, 0, -1.5680618, 0, 0.80989826, -8.5, 1.2, -8.2)
+
+[node name="CrosscutEast" parent="AssetArtPass/CoverShells" unique_id=1627270357 instance=ExtResource("16_crate")]
+transform = Transform3D(2.5575736, 0, -0.49655288, 0, 2.05, 0, 1.5680618, 0, 0.80989826, 8.5, 1.2, -8.2)
+
+[node name="DashWest" parent="AssetArtPass/CoverShells" unique_id=619057723 instance=ExtResource("16_crate")]
+transform = Transform3D(1.9862704, 0, -0.45769733, 0, 1.92, 0, 0.5071781, 0, 1.792488, -9.1, 1.15, 7.4)
+
+[node name="DashEast" parent="AssetArtPass/CoverShells" unique_id=1265668201 instance=ExtResource("16_crate")]
+transform = Transform3D(1.9862704, 0, 0.45769733, 0, 1.92, 0, -0.5071781, 0, 1.792488, 9.1, 1.15, 7.4)
+
+[node name="CargoNorth" parent="AssetArtPass/CoverShells" unique_id=1379747943 instance=ExtResource("16_crate")]
+transform = Transform3D(1.8787454, 0, 0.8058098, 0, 2.02, 0, -0.6857956, 0, 2.2075257, 13, 1.2, -3.4)
+
+[node name="CargoSouth" parent="AssetArtPass/CoverShells" unique_id=941853397 instance=ExtResource("16_crate")]
+transform = Transform3D(1.9357485, 0, -0.87668496, 0, 1.95, 0, 0.86445206, 0, 1.9631412, 15.2, 1.15, 3.1)
+
+[node name="CenterPresentation" type="Node3D" parent="AssetArtPass" unique_id=1534942751]
+
+[node name="OpenGunPlatform" parent="AssetArtPass/CenterPresentation" unique_id=831156634 instance=ExtResource("18_center_platform")]
+transform = Transform3D(1.18, 0, 0, 0, 1, 0, 0, 0, 1.18, 0, 0.055, 0)
+
+[node name="CircuitDisplays" type="Node3D" parent="AssetArtPass" unique_id=79246662]
+
+[node name="BlueCircuitMonitor" parent="AssetArtPass/CircuitDisplays" unique_id=941967020 instance=ExtResource("19_monitor_blue")]
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, -11.5, 1.35, -16.42)
+
+[node name="GreenCircuitMonitor" parent="AssetArtPass/CircuitDisplays" unique_id=228169481 instance=ExtResource("20_monitor_green")]
+transform = Transform3D(-4.1629887e-06, 0, 1.15, 0, 1.15, 0, -1.15, 0, -4.1629887e-06, -18.42, 1.35, -7.5)
+
+[node name="VioletCircuitMonitor" parent="AssetArtPass/CircuitDisplays" unique_id=2013134685 instance=ExtResource("21_monitor_purple")]
+transform = Transform3D(-4.1629887e-06, 0, -1.15, 0, 1.15, 0, 1.15, 0, -4.1629887e-06, 18.42, 1.35, -7.5)
+
+[node name="RedCircuitMonitor" parent="AssetArtPass/CircuitDisplays" unique_id=1940959283 instance=ExtResource("22_monitor_red")]
+transform = Transform3D(-1.15, 0, 2.915459e-06, 0, 1.15, 0, -2.915459e-06, 0, -1.15, 0, 1.35, 16.42)
+
+[node name="CeilingFixtures" type="Node3D" parent="AssetArtPass" unique_id=1578224517]
+
+[node name="BlueCeilingFixture" parent="AssetArtPass/CeilingFixtures" unique_id=1087962644 instance=ExtResource("23_ceiling_light")]
+transform = Transform3D(0.58, 0, 0, 0, 1, 0, 0, 0, 0.58, 0, 5.58, -12.6)
+
+[node name="GreenCeilingFixture" parent="AssetArtPass/CeilingFixtures" unique_id=1905273117 instance=ExtResource("23_ceiling_light")]
+transform = Transform3D(0.55, 0, 0, 0, 1, 0, 0, 0, 0.55, -14.2, 5.58, 0)
+
+[node name="VioletCeilingFixture" parent="AssetArtPass/CeilingFixtures" unique_id=1962622225 instance=ExtResource("23_ceiling_light")]
+transform = Transform3D(0.55, 0, 0, 0, 1, 0, 0, 0, 0.55, 14.2, 5.58, 0)
+
+[node name="RedCeilingFixture" parent="AssetArtPass/CeilingFixtures" unique_id=1426450785 instance=ExtResource("23_ceiling_light")]
+transform = Transform3D(0.58, 0, 0, 0, 1, 0, 0, 0, 0.58, 0, 5.58, 12.7)
+
+[node name="ObservationVent" parent="AssetArtPass/CeilingFixtures" unique_id=82649335 instance=ExtResource("17_vent")]
+transform = Transform3D(2, 0, 0, 0, -1, -5.0703634e-06, 0, 2.5351817e-06, -2, 0, 5.56, -13.2)
+
+[node name="ResearchVent" parent="AssetArtPass/CeilingFixtures" unique_id=2034261042 instance=ExtResource("17_vent")]
+transform = Transform3D(1.7, 0, 0, 0, -1, -4.309809e-06, 0, 2.5351817e-06, -1.7, -14.6, 5.56, 0)
+
+[node name="VioletVent" parent="AssetArtPass/CeilingFixtures" unique_id=1934401623 instance=ExtResource("17_vent")]
+transform = Transform3D(1.7, 0, 0, 0, -1, -4.309809e-06, 0, 2.5351817e-06, -1.7, 14.6, 5.56, 0)
+
+[node name="EngineVent" parent="AssetArtPass/CeilingFixtures" unique_id=129184846 instance=ExtResource("17_vent")]
+transform = Transform3D(2, 0, 0, 0, -1, -5.0703634e-06, 0, 2.5351817e-06, -2, 0, 5.56, 13.3)
+
+[node name="StationProps" type="Node3D" parent="AssetArtPass" unique_id=1508716203]
+
+[node name="ResearchComputer" parent="AssetArtPass/StationProps" unique_id=1137732454 instance=ExtResource("24_computer")]
+transform = Transform3D(-6.515982e-06, 0, 1.8, 0, 1.8, 0, -1.8, 0, -6.515982e-06, -17.855385, 0.49100065, -5.186008)
+
+[node name="VioletComputer" parent="AssetArtPass/StationProps" unique_id=218175802 instance=ExtResource("24_computer")]
+transform = Transform3D(-6.515982e-06, 0, -1.8, 0, 1.8, 0, 1.8, 0, -6.515982e-06, 17.853432, 0.16617948, 6.177612)
+
+[node name="ObservationContainerLeft" parent="AssetArtPass/StationProps" unique_id=1062906064 instance=ExtResource("25_container")]
+transform = Transform3D(1.799423, 0, -0.045574844, 0, 1.8, 0, 0.045574844, 0, 1.799423, -14.807986, 1.538638, -16.470661)
+
+[node name="ObservationContainerRight" parent="AssetArtPass/StationProps" unique_id=154183206 instance=ExtResource("25_container")]
+transform = Transform3D(1.789111, 0, -0.19769083, 0, 1.8, 0, 0.19769083, 0, 1.789111, 8.731885, 1.6876204, -16.272669)
+
+[node name="EngineContainerLeft" parent="AssetArtPass/StationProps" unique_id=1378191569 instance=ExtResource("25_container")]
+transform = Transform3D(1.797525, 0, 0.09435773, 0, 1.8, 0, -0.09435773, 0, 1.797525, -13.5, 1.8650136, 16.154608)
+
+[node name="EngineContainerRight" parent="AssetArtPass/StationProps" unique_id=107503225 instance=ExtResource("25_container")]
+transform = Transform3D(1.7440423, 0, 0.44532713, 0, 1.8, 0, -0.44532713, 0, 1.7440423, 13.188842, 1.5955003, 16.344019)
+
+[node name="WestServicePipe" parent="AssetArtPass/StationProps" unique_id=1503105933 instance=ExtResource("26_pipe")]
+transform = Transform3D(2.1, 0, 0, 0, 4, 0, 0, 0, 2.1, -18.15, 3.65, 6.5)
+
+[node name="EastServicePipe" parent="AssetArtPass/StationProps" unique_id=119984358 instance=ExtResource("26_pipe")]
+transform = Transform3D(2.1, 0, 0, 0, 4, 0, 0, 0, 2.1, 18.15, 3.65, 6.5)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1438444328]
+environment = SubResource("EnvironmentStation")
+
+[node name="StationKeyLight" type="DirectionalLight3D" parent="." unique_id=559107540]
+transform = Transform3D(0.8525245, 0.41585082, -0.31665444, 0, 0.6058201, 0.7956016, 0.52268726, -0.67826986, 0.5164765, 0, 0, 0)
+light_color = Color(0.72, 0.8, 1, 1)
+light_energy = 1.65
+light_angular_distance = 6.0
+shadow_enabled = true
+shadow_opacity = 0.5
+
+[node name="StationFillLight" type="DirectionalLight3D" parent="." unique_id=835804214]
+transform = Transform3D(-0.702713, 0.38990447, 0.59512097, 0, 0.8364627, -0.54802394, -0.7114734, -0.38510355, -0.58779323, 0, 0, 0)
+light_color = Color(0.48, 0.58, 0.78, 1)
+light_energy = 0.32
+light_specular = 0.18
+
+[node name="DeckFillLight" type="OmniLight3D" parent="." unique_id=1304855430]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.1, 0)
+light_color = Color(0.42, 0.5, 0.68, 1)
+light_energy = 0.65
+omni_range = 34.0
+
+[node name="CoreLight" type="OmniLight3D" parent="." unique_id=521681946]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+light_color = Color(0.08, 0.62, 1, 1)
+light_energy = 4.0
+shadow_enabled = true
+shadow_opacity = 0.5
+omni_range = 24.0
+
+[node name="ObservationLight" type="OmniLight3D" parent="." unique_id=766828717]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -13)
+light_color = Color(0.12, 0.56, 1, 1)
+light_energy = 2.4
+omni_range = 16.0
+
+[node name="ResearchLight" type="OmniLight3D" parent="." unique_id=570682136]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 3, 0)
+light_color = Color(0.12, 1, 0.48, 1)
+light_energy = 2.0
+omni_range = 16.0
+
+[node name="ZeroGLight" type="OmniLight3D" parent="." unique_id=165119085]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 3, 0)
+light_color = Color(0.62, 0.18, 1, 1)
+light_energy = 2.6
+omni_range = 16.0
+
+[node name="EngineLight" type="OmniLight3D" parent="." unique_id=1544938079]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 13)
+light_color = Color(1, 0.12, 0.04, 1)
+light_energy = 2.4
+omni_range = 18.0
+
+[node name="BlueArenaPool" type="SpotLight3D" parent="." unique_id=1567042365]
+transform = Transform3D(1, 0, 0, 0, -3.6199901e-06, 1, 0, -1, -3.6199901e-06, 0, 5.35, -10.5)
+light_color = Color(0.08, 0.48, 1, 1)
+light_energy = 0.85
+light_specular = 0.2
+spot_range = 11.0
+spot_angle = 42.0
+
+[node name="GreenArenaPool" type="SpotLight3D" parent="." unique_id=1583507648]
+transform = Transform3D(1, 0, 0, 0, -3.6199901e-06, 1, 0, -1, -3.6199901e-06, -10.5, 5.35, 0)
+light_color = Color(0.08, 0.92, 0.42, 1)
+light_energy = 0.7
+light_specular = 0.2
+spot_range = 11.0
+spot_angle = 42.0
+
+[node name="VioletArenaPool" type="SpotLight3D" parent="." unique_id=945734107]
+transform = Transform3D(1, 0, 0, 0, -3.6199901e-06, 1, 0, -1, -3.6199901e-06, 10.5, 5.35, 0)
+light_color = Color(0.58, 0.14, 1, 1)
+light_energy = 0.85
+light_specular = 0.2
+spot_range = 11.0
+spot_angle = 42.0
+
+[node name="RedArenaPool" type="SpotLight3D" parent="." unique_id=1947171112]
+transform = Transform3D(1, 0, 0, 0, -3.6199901e-06, 1, 0, -1, -3.6199901e-06, 0, 5.35, 10.5)
+light_color = Color(1, 0.08, 0.025, 1)
+light_energy = 0.75
+light_specular = 0.2
+spot_range = 11.0
+spot_angle = 42.0
+
+[node name="ZoneLabels" type="Node3D" parent="." unique_id=1432315779]
+
+[node name="ObservationLabel" type="Label3D" parent="ZoneLabels" unique_id=848786265]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, -16.65)
+modulate = Color(0.25, 0.8, 1, 1)
+text = "BLUE CIRCUIT"
+font_size = 48
+outline_size = 10
+
+[node name="ResearchLabel" type="Label3D" parent="ZoneLabels" unique_id=538954920]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -18.65, 3.8, 0)
+modulate = Color(0.2, 1, 0.55, 1)
+text = "GREEN CIRCUIT"
+font_size = 48
+outline_size = 10
+
+[node name="ZeroGLabel" type="Label3D" parent="ZoneLabels" unique_id=1025213224]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 18.65, 3.8, 0)
+modulate = Color(0.72, 0.35, 1, 1)
+text = "VIOLET CIRCUIT"
+font_size = 48
+outline_size = 10
+
+[node name="EngineLabel" type="Label3D" parent="ZoneLabels" unique_id=358456317]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 3.8, 16.65)
+modulate = Color(1, 0.3, 0.12, 1)
+text = "RED CIRCUIT"
+font_size = 48
+outline_size = 10
+
+[node name="DeckHeaderLabel" type="Label3D" parent="ZoneLabels" unique_id=1523842260]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.12, -9.34)
+pixel_size = 0.004
+billboard = 1
+modulate = Color(0.3, 0.88, 1, 1)
+text = "NEON CIRCUIT // ORBITAL TAG ARENA"
+font_size = 36
+outline_size = 10
+
+[node name="ResearchPortalLabel" type="Label3D" parent="ZoneLabels" unique_id=573092882]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -10.24, 4.12, 0)
+text = "GATE 02 // GREEN"
+
+[node name="ArenaMottoLabel" type="Label3D" parent="ZoneLabels" unique_id=1604068982]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 2.35, 16.54)
+modulate = Color(0.78, 0.86, 1, 1)
+text = "TAG // DASH // DISARM // SURVIVE"
+font_size = 30
+outline_size = 10
+
+[node name="ArenaCapacityLabel" type="Label3D" parent="ZoneLabels" unique_id=1543700322]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.55, -16.54)
+pixel_size = 0.004
+billboard = 1
+modulate = Color(0.25, 1, 0.58, 1)
+text = "NEON CIRCUIT // 10 PLAYERS // SYSTEM LIVE"
+font_size = 34
+outline_size = 10
+
+[node name="ZeroGPortalLabel" type="Label3D" parent="ZoneLabels" unique_id=101224140]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 10.24, 4.12, 0)
+pixel_size = 0.004
+billboard = 1
+modulate = Color(0.78, 0.42, 1, 1)
+text = "GATE 03 // VIOLET"
+font_size = 34
+outline_size = 10
+
+[node name="EnginePortalLabel" type="Label3D" parent="ZoneLabels" unique_id=17342120]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 4.12, 9.44)
+pixel_size = 0.004
+billboard = 1
+modulate = Color(1, 0.38, 0.16, 1)
+text = "GATE 04 // RED"
+font_size = 34
+outline_size = 10
+
+[node name="CoreStatusLabel" type="Label3D" parent="ZoneLabels" unique_id=1677759439]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.35, 0)
+pixel_size = 0.0038
+billboard = 1
+modulate = Color(1, 0.68, 0.12, 1)
+text = "ONE GUN // LIVE VAULT"
+font_size = 30
+outline_size = 9
+
+[node name="SpawnPoints" type="Node3D" parent="." unique_id=1183274632]
+
+[node name="SpawnPoint1" type="Marker3D" parent="SpawnPoints" unique_id=1426777756 groups=["spawn_point"]]
+transform = Transform3D(0.62161, 0, 0.7833269, 0, 1, 0, -0.7833269, 0, 0.62161, -16, 1.25, -11)
+
+[node name="SpawnPoint2" type="Marker3D" parent="SpawnPoints" unique_id=272594068 groups=["spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.25, -11)
+
+[node name="SpawnPoint9" type="Marker3D" parent="SpawnPoints" unique_id=1391508525 groups=["spawn_point"]]
+transform = Transform3D(0.87758255, 0, 0.47942555, 0, 1, 0, -0.47942555, 0, 0.87758255, -8, 1.25, -15)
+
+[node name="SpawnPoint10" type="Marker3D" parent="SpawnPoints" unique_id=545993161 groups=["spawn_point"]]
+transform = Transform3D(0.62161, 0, -0.7833269, 0, 1, 0, 0.7833269, 0, 0.62161, 8, 1.25, -15)
+
+[node name="SpawnPoint3" type="Marker3D" parent="SpawnPoints" unique_id=1710469012 groups=["spawn_point"]]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -16, 1.25, 0)
+
+[node name="SpawnPoint4" type="Marker3D" parent="SpawnPoints" unique_id=517374411 groups=["spawn_point"]]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 16, 1.25, 0)
+
+[node name="SpawnPoint5" type="Marker3D" parent="SpawnPoints" unique_id=886722157 groups=["spawn_point"]]
+transform = Transform3D(-0.58850116, 0, 0.80849636, 0, 1, 0, -0.80849636, 0, -0.58850116, -15.5, 1.25, 10.2)
+
+[node name="SpawnPoint6" type="Marker3D" parent="SpawnPoints" unique_id=187600867 groups=["spawn_point"]]
+transform = Transform3D(-0.58850116, 0, -0.80849636, 0, 1, 0, 0.80849636, 0, -0.58850116, 15.5, 1.25, 10.2)
+
+[node name="SpawnPoint7" type="Marker3D" parent="SpawnPoints" unique_id=1250345577 groups=["spawn_point"]]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, -8, 1.25, 15)
+
+[node name="SpawnPoint8" type="Marker3D" parent="SpawnPoints" unique_id=335363488 groups=["spawn_point"]]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 8, 1.25, 15)
+
+[node name="GunSpawnPoints" type="Node3D" parent="." unique_id=363312744]
+
+[node name="GunSpawnNorth" type="Marker3D" parent="GunSpawnPoints" unique_id=2028565688 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, -9)
+
+[node name="GunSpawnWest" type="Marker3D" parent="GunSpawnPoints" unique_id=1813722722 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.5, 0.7, 0)
+
+[node name="GunSpawnEast" type="Marker3D" parent="GunSpawnPoints" unique_id=137531392 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.5, 0.7, 0)
+
+[node name="GunSpawnSouth" type="Marker3D" parent="GunSpawnPoints" unique_id=1805941630 groups=["gun_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 9)
+
+[node name="MeleeSpawnPoints" type="Node3D" parent="." unique_id=1913112743]
+
+[node name="MeleeSpawn0" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1034871124 groups=["melee_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.7, 0.55, -6.4)
+
+[node name="MeleeSpawn1" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1721518385 groups=["melee_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.7, 0.55, -6.4)
+
+[node name="MeleeSpawn2" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1706054060 groups=["melee_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.3, 0.55, 10)
+
+[node name="MeleeSpawn3" type="Marker3D" parent="MeleeSpawnPoints" unique_id=470949113 groups=["melee_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.3, 0.55, 10)
+
+[node name="MeleeSpawn4" type="Marker3D" parent="MeleeSpawnPoints" unique_id=876467049 groups=["melee_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0.75, -13.8)
+
+[node name="MeleeSpawn5" type="Marker3D" parent="MeleeSpawnPoints" unique_id=1103402690 groups=["melee_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0.75, -13.8)
+
+[node name="ItemSpawnPoints" type="Node3D" parent="." unique_id=535598369]
+
+[node name="ItemSpawn0" type="Marker3D" parent="ItemSpawnPoints" unique_id=746258004 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 0.6, 0)
+
+[node name="ItemSpawn1" type="Marker3D" parent="ItemSpawnPoints" unique_id=1617669645 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 0.6, 0)
+
+[node name="ItemSpawn2" type="Marker3D" parent="ItemSpawnPoints" unique_id=1586890789 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.8, 0.6, 13.4)
+
+[node name="ItemSpawn3" type="Marker3D" parent="ItemSpawnPoints" unique_id=630196089 groups=["item_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.8, 0.6, 13.4)
+
+[node name="PowerupSpawnPoints" type="Node3D" parent="." unique_id=280185500]
+
+[node name="PowerupSpawn0" type="Marker3D" parent="PowerupSpawnPoints" unique_id=1379902579 groups=["powerup_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, -15.3)
+
+[node name="PowerupSpawn1" type="Marker3D" parent="PowerupSpawnPoints" unique_id=2090102380 groups=["powerup_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.5, 0.6, 0)
+
+[node name="PowerupSpawn2" type="Marker3D" parent="PowerupSpawnPoints" unique_id=1888254633 groups=["powerup_spawn_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0.6, 0)
+
+[node name="RoundIntroCameraPoint" type="Marker3D" parent="." unique_id=320126588 groups=["round_intro_camera_point"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13, 20)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1565743705]
+navigation_mesh = ExtResource("7_nav")
+
+[node name="VoidKillZone" type="Area3D" parent="." unique_id=1856445279]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -5.5, 0)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+script = ExtResource("6_void")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="VoidKillZone" unique_id=566531898]
+shape = SubResource("VoidKillShape")
+
+[node name="player1" parent="." unique_id=199601793 groups=["local_player"] instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.25, 0)
+
+[node name="player2" parent="." unique_id=1021788040 instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 1.25, 0)
+input_prefix = "p2"
+is_player2 = true
+use_gamepad_look = true
+
+[node name="Gun" parent="." unique_id=1015918392 instance=ExtResource("2_gun")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2014393744]
+script = ExtResource("4_local_ui")
+
+[node name="RoundManager" type="Node" parent="." unique_id=1394728177]
+script = ExtResource("3_round")
+
+[node name="SplitScreenLayer" type="CanvasLayer" parent="." unique_id=1682368794]
+layer = 0
+script = ExtResource("5_split")
+player1_path = NodePath("../player1")
+player2_path = NodePath("../player2")
+
+[node name="ViewportRow" type="HBoxContainer" parent="SplitScreenLayer" unique_id=931261688]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="SubViewportContainer1" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=880084921]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport1" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1" unique_id=1537117096]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera1" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer1/SubViewport1" unique_id=607420742]
+current = true
+
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="SplitScreenLayer/ViewportRow" unique_id=720980333]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport2" type="SubViewport" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2" unique_id=1547831872]
+handle_input_locally = false
+size = Vector2i(800, 900)
+render_target_update_mode = 4
+
+[node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2" unique_id=669031379]
+current = true
