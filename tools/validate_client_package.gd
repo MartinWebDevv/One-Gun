@@ -11,7 +11,7 @@ const REQUIRED_RESOURCES: Array[Dictionary] = [
 	{"path": "res://models/player_v2/player_v2_visual.tscn", "type": "PackedScene"},
 	{"path": "res://models/player_v2/femaleOGCat/female_player_v2_visual.tscn", "type": "PackedScene"},
 	{"path": "res://models/player_v2/femaleOGCat/femaleOGCatRigged.glb", "type": "PackedScene"},
-	{"path": "res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/femaleOGCatBLACK.png", "type": "Texture2D"},
+	{"path": "res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color black BOOBA corrected.png", "type": "Texture2D"},
 	{"path": "res://UI/assets/character_portraits/female/black.png", "type": "Texture2D"},
 	{"path": "res://models/player_v2/animations/Idle.fbx", "type": "PackedScene"},
 	{"path": "res://models/menu/TrophyPedestal.glb", "type": "PackedScene"},
