@@ -11,7 +11,7 @@ const PLAYPEN_ITEMS := [
 ]
 const PLAYPEN_POWERUPS := [
 	"extra_dash", "sticky_hands", "speed_surge", "silent_steps",
-	"vampire_touch", "extra_life", "reach",
+	"extra_life", "reach",
 ]
 
 var _gun_spawn_positions: Dictionary = {}

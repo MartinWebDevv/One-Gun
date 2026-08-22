@@ -19,7 +19,6 @@ signal gun_dropped()
 signal hud_notification(message: String)
 
 @warning_ignore("unused_signal")
-signal melee_hit_landed(hitter_name: String)
 signal actor_melee_hit_landed(actor_id: int)
 
 # Typed, validated combat presentation event. event_kind is one of
@@ -27,6 +26,12 @@ signal actor_melee_hit_landed(actor_id: int)
 @warning_ignore("unused_signal")
 signal combat_feedback(attacker_name: String, event_kind: String)
 signal actor_combat_feedback(attacker_actor_id: int, event_kind: String)
+
+# Victim-keyed incoming-fire presentation. source_world_direction points from
+# the victim back toward the source of the hit so each HUD can rotate it
+# against its own camera without coupling combat code to UI.
+signal actor_damage_direction(victim_actor_id: int, source_world_direction: Vector3,
+	source_kind: String)
 
 # Approximate perception cue for bots. Silent Steps suppresses only footstep
 # emissions; weapon/item noise remains intentionally audible.

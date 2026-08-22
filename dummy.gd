@@ -282,10 +282,6 @@ func _ready():
 	max_dash_charges = clampi(GameConfig.max_dash_charges, 0, 6)
 	dash_charges = max_dash_charges
 	_apply_tier_profile()
-	GameEvents.melee_hit_landed.connect(func(hitter_name):
-		if vampire_timer > 0.0 and hitter_name == get_display_name():
-			stamina = minf(stamina + 30.0, MAX_STAMINA)
-	)
 	if not GameEvents.combat_noise.is_connected(_on_combat_noise):
 		GameEvents.combat_noise.connect(_on_combat_noise)
 	var nav_agent: NavigationAgent3D = $NavigationAgent3D
@@ -559,10 +555,16 @@ func _physics_process(delta):
 		lethal_immunity_timer = maxf(lethal_immunity_timer - delta, 0.0)
 	if flash_blind_timer > 0.0:
 		flash_blind_timer = maxf(flash_blind_timer - delta, 0.0)
+	if sticky_hands_cooldown_timer > 0.0:
+		sticky_hands_cooldown_timer = maxf(sticky_hands_cooldown_timer - delta, 0.0)
+	if melee_disarm_shields > 0:
+		sticky_hands_timer = maxf(sticky_hands_timer - delta, 0.0)
+		if sticky_hands_timer <= 0.0:
+			_clear_sticky_hands(true)
+	elif sticky_hands_timer > 0.0:
+		sticky_hands_timer = 0.0
 	if speed_surge_timer > 0.0:
 		speed_surge_timer -= delta
-	if vampire_timer > 0.0:
-		vampire_timer -= delta
 	if reach_timer > 0.0:
 		reach_timer = maxf(reach_timer - delta, 0.0)
 		if not is_online or _is_online_authority:
@@ -1580,8 +1582,9 @@ func apply_flash_blind(duration: float) -> void:
 
 var speed_surge_timer := 0.0
 const SPEED_SURGE_MULT := 1.4
-var vampire_timer := 0.0
 var second_wind_ready := false
+var sticky_hands_timer := 0.0
+var sticky_hands_cooldown_timer := 0.0
 
 func _canonical_powerup_type(power_type: String) -> String:
 	match power_type:
@@ -1597,7 +1600,8 @@ func _canonical_powerup_type(power_type: String) -> String:
 func can_collect_powerup(power_type: String) -> bool:
 	match _canonical_powerup_type(power_type):
 		"sticky_hands":
-			return melee_disarm_shields <= 0
+			return melee_disarm_shields <= 0 \
+				and sticky_hands_cooldown_timer <= 0.0
 		"extra_life":
 			return not second_wind_ready
 		"extra_dash":
@@ -1619,12 +1623,11 @@ func apply_powerup(power_type: String, duration: float) -> bool:
 	match power_type:
 		"sticky_hands":
 			melee_disarm_shields = 1
+			sticky_hands_timer = GameConfig.STICKY_HANDS_DURATION
 		"extra_dash":
 			extra_dash_charge = 1
 		"speed_surge":
 			speed_surge_timer = _extend_timed_powerup(speed_surge_timer, duration)
-		"vampire_touch":
-			vampire_timer = _extend_timed_powerup(vampire_timer, duration)
 		"extra_life":
 			second_wind_ready = true
 		"reach":
@@ -1643,13 +1646,12 @@ func get_active_powerups_for_display() -> Array:
 			"extra_dash":
 				if extra_dash_charge > 0: result.append({"type": power_type, "timed": false, "time_left": 0.0})
 			"sticky_hands":
-				if melee_disarm_shields > 0: result.append({"type": power_type, "timed": false, "time_left": 0.0})
+				if melee_disarm_shields > 0 and sticky_hands_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": sticky_hands_timer})
 			"speed_surge":
 				if speed_surge_timer > 0.0: result.append({"type": power_type, "timed": true, "time_left": speed_surge_timer})
 			"silent_steps":
 				if silent_steps_timer > 0.0: result.append({"type": power_type, "timed": true, "time_left": silent_steps_timer})
-			"vampire_touch":
-				if vampire_timer > 0.0: result.append({"type": power_type, "timed": true, "time_left": vampire_timer})
 			"extra_life":
 				if second_wind_ready: result.append({"type": power_type, "timed": false, "time_left": 0.0})
 			"reach":
@@ -1659,7 +1661,6 @@ func get_active_powerups_for_display() -> Array:
 
 func clear_all_powerups() -> void:
 	speed_surge_timer = 0.0
-	vampire_timer = 0.0
 	reach_timer = 0.0
 	_reach_interactables.clear()
 	_rebuild_interactables()
@@ -1668,6 +1669,8 @@ func clear_all_powerups() -> void:
 	melee_disarm_shields = 0
 	extra_dash_charge = 0
 	active_powerup_order.clear()
+	sticky_hands_timer = 0.0
+	sticky_hands_cooldown_timer = 0.0
 
 
 func activate_double_jump_shoes() -> void:
@@ -1769,12 +1772,22 @@ func clear_overtime_protections() -> void:
 	melee_disarm_shields = 0
 	active_powerup_order.erase("extra_life")
 	active_powerup_order.erase("sticky_hands")
+	sticky_hands_timer = 0.0
+	sticky_hands_cooldown_timer = 0.0
+
+func _clear_sticky_hands(start_cooldown: bool) -> void:
+	melee_disarm_shields = 0
+	sticky_hands_timer = 0.0
+	if start_cooldown:
+		sticky_hands_cooldown_timer = maxf(
+			sticky_hands_cooldown_timer, GameConfig.STICKY_HANDS_REPICKUP_COOLDOWN)
+	active_powerup_order.erase("sticky_hands")
+
 
 func consume_sticky_hands() -> bool:
 	if melee_disarm_shields <= 0:
 		return false
-	melee_disarm_shields = 0
-	active_powerup_order.erase("sticky_hands")
+	_clear_sticky_hands(true)
 	return true
 
 func consume_extra_life() -> bool:

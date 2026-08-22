@@ -1,0 +1,159 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://UI/winners_circle_stage_blockout.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/winners_circle/blockout/wc_stage_shell_blockout.glb" id="2_shell"]
+[ext_resource type="PackedScene" path="res://models/winners_circle/blockout/wc_podiums_blockout.glb" id="3_podiums"]
+[ext_resource type="PackedScene" path="res://models/winners_circle/blockout/wc_decor_blockout.glb" id="4_decor"]
+[ext_resource type="FontFile" path="res://fonts/Fredoka-VariableFont_wdth,wght.ttf" id="5_font"]
+
+[sub_resource type="Environment" id="Environment_stage"]
+background_mode = 1
+background_color = Color(0.0015, 0.003, 0.012, 1)
+background_energy_multiplier = 0.72
+ambient_light_source = 3
+ambient_light_color = Color(0.42, 0.34, 0.30, 1)
+ambient_light_energy = 0.72
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.05
+tonemap_white = 5.0
+glow_enabled = true
+glow_intensity = 0.42
+glow_bloom = 0.08
+
+[node name="WinnersCircleStageBlockout" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="StageShell" parent="." instance=ExtResource("2_shell")]
+
+[node name="Podiums" parent="." instance=ExtResource("3_podiums")]
+
+[node name="Decor" parent="." instance=ExtResource("4_decor")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_stage")
+
+[node name="Lights" type="Node3D" parent="."]
+
+[node name="WarmKey" type="DirectionalLight3D" parent="Lights"]
+rotation = Vector3(-0.698132, -0.436332, 0)
+light_color = Color(1, 0.61, 0.31, 1)
+light_energy = 1.35
+light_specular = 0.55
+
+[node name="WarmFill" type="OmniLight3D" parent="Lights"]
+position = Vector3(0, 4.8, 2.2)
+light_color = Color(1, 0.33, 0.08, 1)
+light_energy = 3.2
+light_specular = 0.45
+omni_range = 13.0
+
+[node name="BlueRim" type="OmniLight3D" parent="Lights"]
+position = Vector3(-5.4, 3.4, -0.8)
+light_color = Color(0.08, 0.24, 1, 1)
+light_energy = 2.8
+light_specular = 0.35
+omni_range = 8.5
+
+[node name="ChampionSpot" type="SpotLight3D" parent="Lights"]
+position = Vector3(0, 7.2, 4.0)
+light_color = Color(1, 0.52, 0.09, 1)
+light_energy = 8.0
+light_specular = 0.55
+spot_range = 11.0
+spot_angle = 27.0
+spot_angle_attenuation = 0.65
+
+[node name="SecondSpot" type="SpotLight3D" parent="Lights"]
+position = Vector3(-4.5, 6.0, 3.0)
+light_color = Color(0.22, 0.42, 1, 1)
+light_energy = 4.6
+light_specular = 0.4
+spot_range = 9.0
+spot_angle = 31.0
+
+[node name="ThirdSpot" type="SpotLight3D" parent="Lights"]
+position = Vector3(4.5, 5.8, 3.0)
+light_color = Color(0.24, 1, 0.30, 1)
+light_energy = 3.8
+light_specular = 0.4
+spot_range = 9.0
+spot_angle = 31.0
+
+[node name="Anchors" type="Node3D" parent="."]
+
+[node name="FirstPlace" type="Marker3D" parent="Anchors"]
+position = Vector3(0, 2.33, 0)
+
+[node name="SecondPlace" type="Marker3D" parent="Anchors"]
+position = Vector3(-3.2, 1.77, -0.18)
+
+[node name="ThirdPlace" type="Marker3D" parent="Anchors"]
+position = Vector3(3.2, 1.51, -0.34)
+
+[node name="TrophyStart" type="Marker3D" parent="Anchors"]
+position = Vector3(0, 7.1, 1.62)
+
+[node name="TrophyLanding" type="Marker3D" parent="Anchors"]
+position = Vector3(0, 0.76, 1.62)
+
+[node name="CeremonialGun" type="Marker3D" parent="Anchors"]
+position = Vector3(5.35, 2.45, -1.82)
+rotation_degrees = Vector3(-8, 160, 10)
+
+[node name="Confetti" type="Marker3D" parent="Anchors"]
+position = Vector3(0, 6.7, 0.2)
+
+[node name="LookTargets" type="Node3D" parent="."]
+
+[node name="CameraTarget" type="Marker3D" parent="LookTargets"]
+position = Vector3(0, 3.0, 0)
+
+[node name="ChampionTarget" type="Marker3D" parent="LookTargets"]
+position = Vector3(0, 2.2, 0)
+
+[node name="SecondTarget" type="Marker3D" parent="LookTargets"]
+position = Vector3(-3.2, 1.8, -0.18)
+
+[node name="ThirdTarget" type="Marker3D" parent="LookTargets"]
+position = Vector3(3.2, 1.6, -0.34)
+
+[node name="DynamicLabels" type="Node3D" parent="."]
+
+[node name="FirstName" type="Label3D" parent="DynamicLabels"]
+position = Vector3(0, 0.28, 1.38)
+font = ExtResource("5_font")
+font_size = 52
+no_depth_test = true
+render_priority = 3
+outline_size = 14
+outline_modulate = Color(0.02, 0.01, 0, 1)
+text = "FIRST"
+horizontal_alignment = 1
+
+[node name="SecondName" type="Label3D" parent="DynamicLabels"]
+position = Vector3(-3.2, 0.28, 1.15)
+font = ExtResource("5_font")
+font_size = 48
+outline_size = 14
+no_depth_test = true
+render_priority = 3
+outline_modulate = Color(0, 0.01, 0.04, 1)
+text = "SECOND"
+horizontal_alignment = 1
+
+[node name="ThirdName" type="Label3D" parent="DynamicLabels"]
+position = Vector3(3.2, 0.28, 1.02)
+font = ExtResource("5_font")
+font_size = 48
+outline_size = 14
+outline_modulate = Color(0, 0.025, 0.005, 1)
+no_depth_test = true
+render_priority = 3
+text = "THIRD"
+horizontal_alignment = 1
+
+[node name="WinnersCircleCamera" type="Camera3D" parent="."]
+position = Vector3(0, 3.9, 10.9)
+fov = 42.0
+current = true

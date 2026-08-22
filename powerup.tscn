@@ -1,18 +1,11 @@
 [gd_scene format=3 uid="uid://lxicxytw7d7w"]
 
 [ext_resource type="Script" uid="uid://j7vs5kxj1m3v" path="res://powerup.gd" id="1_vcqqu"]
+[ext_resource type="Texture2D" path="res://models/2DPowerUpLogos/extra dash.png" id="2_icon"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_vcqqu"]
 radius = 0.31
 height = 1.18
-
-[sub_resource type="SphereMesh" id="SphereMesh_wh0le"]
-radius = 0.3
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6cuax"]
-emission_enabled = true
-emission = Color(0, 0.9425977, 0.9425974, 1)
-emission_energy_multiplier = 3.0
 
 [node name="powerup" type="Area3D" unique_id=1880222296]
 script = ExtResource("1_vcqqu")
@@ -21,9 +14,11 @@ script = ExtResource("1_vcqqu")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0002322197, 0)
 shape = SubResource("CapsuleShape3D_vcqqu")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1034187409]
-mesh = SubResource("SphereMesh_wh0le")
-surface_material_override/0 = SubResource("StandardMaterial3D_6cuax")
+[node name="PowerupIcon" type="Sprite3D" parent="."]
+texture_filter = 0
+pixel_size = 0.015625
+billboard = 1
+texture = ExtResource("2_icon")
 
 [node name="PowerupName" type="Label3D" parent="."]
 position = Vector3(0, 0.72, 0)

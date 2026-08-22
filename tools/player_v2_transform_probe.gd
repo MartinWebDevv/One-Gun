@@ -2,6 +2,7 @@ extends Node
 
 const SOURCES := {
 	"master": "res://models/player_v2/OGCatModelV2_Rigged.glb",
+	"female_rigged": "res://models/player_v2/femaleOGCat/femaleOGCatRigged.glb",
 	"idle_fbx": "res://models/player_v2/animations/Idle.fbx",
 	"standard_run_fbx": "res://models/player_v2/animations/Standard Run.fbx",
 	"run_fbx": "res://models/player_v2/animations/Running.fbx",
@@ -24,6 +25,7 @@ func _probe_source(label: String, path: String) -> void:
 	_print_nodes(instance, instance)
 	var skeleton := instance.find_child("Skeleton3D", true, false) as Skeleton3D
 	_print_skin_binds(label, instance, skeleton)
+	_print_bones(label + "_raw", skeleton)
 	var player := instance.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	print("PROBE_AP ", label, " path=", instance.get_path_to(player),
 		" root=", player.root_node)
@@ -55,6 +57,21 @@ func _probe_runtime() -> void:
 		player.advance(minf(player.get_animation(animation_name).length * 0.25, 0.2))
 		_print_bones("runtime_" + animation_name, skeleton)
 		_print_bounds("runtime_" + animation_name, visual)
+	var female_packed := load(
+		"res://models/player_v2/femaleOGCat/female_player_v2_visual.tscn") as PackedScene
+	var female_visual := female_packed.instantiate()
+	add_child(female_visual)
+	await get_tree().process_frame
+	var female_player := female_visual.call(
+		"ensure_animations", ["idle", "standard_run", "jump", "melee"]) as AnimationPlayer
+	var female_skeleton := female_visual.find_child(
+		"Skeleton3D", true, false) as Skeleton3D
+	for animation_name in ["idle", "standard_run", "jump", "melee"]:
+		female_player.play(animation_name)
+		female_player.advance(minf(
+			female_player.get_animation(animation_name).length * 0.25, 0.2))
+		_print_bones("runtime_female_" + animation_name, female_skeleton)
+		_print_bounds("runtime_female_" + animation_name, female_visual)
 	get_tree().quit(0)
 
 

@@ -28,7 +28,6 @@ const POWERUP_DISPLAY_NAMES := {
 	"sticky_hands": "STICKY HANDS",
 	"speed_surge": "SPEED SURGE",
 	"silent_steps": "SILENT STEPS",
-	"vampire_touch": "VAMPIRE TOUCH",
 	"extra_life": "EXTRA LIFE",
 	"reach": "REACH",
 }

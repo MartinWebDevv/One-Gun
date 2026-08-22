@@ -9,12 +9,13 @@ signal setting_changed(key: String, value)
 const SAVE_PATH := "user://player_prefs.json"
 const BACKUP_PATH := "user://player_prefs.backup.json"
 const TEMP_PATH := "user://player_prefs.pending.json"
-const SETTINGS_VERSION := 4
+const SETTINGS_VERSION := 6
 const SETTINGS_APPLIER = preload("res://UI/player_settings_applier.gd")
 
 const DEFAULT_SETTINGS := {
 	"player_name": "Player 1",
 	"character_skin_id": "blue",
+	"character_model_id": "male",
 	"master_volume": 1.0,
 	"music_volume": 1.0,
 	"sfx_volume": 1.0,
@@ -89,6 +90,7 @@ const DEFAULT_SETTINGS := {
 	"shadow_quality": "high",
 	"anti_aliasing": "fxaa",
 	"render_scale": 1.0,
+	"effects_quality": "high",
 	# action -> {"keyboard_mouse": [event descriptors], "gamepad": [...]}
 	"input_overrides": {},
 }
@@ -304,10 +306,17 @@ func _normalize(values: Dictionary) -> Dictionary:
 	for key in values:
 		if normalized.has(key):
 			normalized[key] = values[key]
+	# Version 4 already stored a preset/render scale but had no effects tier.
+	# Preserve the selected preset during migration instead of silently giving
+	# an existing Low/Medium user High effects.
+	if not values.has("effects_quality") and str(normalized["quality_preset"]) in ["low", "medium", "high", "ultra"]:
+		normalized["effects_quality"] = str(normalized["quality_preset"])
 	normalized["player_name"] = str(normalized["player_name"]).strip_edges().substr(0, 24)
 	if normalized["player_name"] == "": normalized["player_name"] = "Player 1"
 	normalized["character_skin_id"] = PlayerSkinRegistry.sanitize_skin_id(
 		str(normalized["character_skin_id"]))
+	normalized["character_model_id"] = PlayerSkinRegistry.sanitize_model_id(
+		str(normalized["character_model_id"]))
 	for key in ["master_volume", "music_volume", "sfx_volume"]:
 		normalized[key] = clampf(float(normalized[key]), 0.0, 1.0)
 	normalized["mouse_sensitivity"] = clampf(float(normalized["mouse_sensitivity"]), 0.1, 5.0)
@@ -337,6 +346,7 @@ func _normalize(values: Dictionary) -> Dictionary:
 	if str(normalized["quality_preset"]) not in ["low", "medium", "high", "ultra", "custom"]: normalized["quality_preset"] = "high"
 	if str(normalized["shadow_quality"]) not in ["low", "medium", "high", "ultra"]: normalized["shadow_quality"] = "high"
 	if str(normalized["anti_aliasing"]) not in ["off", "fxaa", "msaa_2x", "msaa_4x"]: normalized["anti_aliasing"] = "fxaa"
+	if str(normalized["effects_quality"]) not in ["low", "medium", "high", "ultra"]: normalized["effects_quality"] = "high"
 	if str(normalized["text_size"]) not in ["small", "normal", "large", "extra_large"]: normalized["text_size"] = "normal"
 	if str(normalized["colorblind_filter"]) not in ["off", "protanopia", "deuteranopia", "tritanopia"]: normalized["colorblind_filter"] = "off"
 	if str(normalized["crosshair_style"]) not in ["classic", "dot", "ring", "cross_dot", "brackets", "chevron", "minimal", "hidden"]: normalized["crosshair_style"] = "classic"

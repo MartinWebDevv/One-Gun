@@ -26,6 +26,8 @@ func _run() -> void:
 			await _wait_frames(3)
 	var original_p1 := str(PlayerPrefs.get_setting("character_skin_id"))
 	var original_p2 := str(GameConfig.player2_skin_id)
+	var original_p1_model := str(PlayerPrefs.get_setting("character_model_id"))
+	var original_p2_model := str(GameConfig.player2_model_id)
 	_overlay = CUSTOMIZATION_SCRIPT.new()
 	_overlay.configure(false, 2)
 	add_child(_overlay)
@@ -45,14 +47,20 @@ func _run() -> void:
 	_check(_overlay.find_child("Player1Tab", true, false) != null
 		and _overlay.find_child("Player2Tab", true, false) != null,
 		"split-screen customization should show P1/P2 tabs")
+	_check(_overlay.find_child("MaleModel", true, false) != null
+		and _overlay.find_child("FemaleModel", true, false) != null,
+		"customization should show M/F model buttons beneath the preview")
 	_check(_overlay.find_child("Randomize", true, false) != null
 		and _overlay.find_child("Default", true, false) != null
 		and _overlay.find_child("Confirm", true, false) != null,
 		"action bar should contain Randomize, Default, and Confirm")
 
 	for skin in PlayerSkinRegistry.SKINS:
-		_check(PlayerSkinRegistry.load_portrait(str(skin["id"])) != null,
-			"portrait missing for %s" % str(skin["id"]))
+		var skin_id := str(skin["id"])
+		_check(PlayerSkinRegistry.load_portrait(skin_id) != null,
+			"portrait missing for %s" % skin_id)
+		_check(PlayerSkinRegistry.load_portrait(skin_id, "female") != null,
+			"female portrait missing for %s" % skin_id)
 
 	var preview = _overlay.find_child("PreviewCharacter", true, false)
 	var animation_player := preview.find_child(
@@ -62,8 +70,11 @@ func _run() -> void:
 		"shared preview should show an evaluated Idle pose")
 
 	_overlay.call("_select_skin", "salmon")
+	_overlay.call("_select_model", "female")
 	_check(str(PlayerPrefs.get_setting("character_skin_id")) == original_p1,
 		"P1 preview selection leaked before Confirm")
+	_check(str(PlayerPrefs.get_setting("character_model_id")) == original_p1_model,
+		"P1 model preview selection leaked before Confirm")
 	_overlay.call("_default_active_skin")
 	_check(str(_overlay._pending_skin_ids.get(0, "")) == "blue",
 		"Default should set the pending P1 color to Blue")
@@ -73,9 +84,12 @@ func _run() -> void:
 	await _capture("%s_p1.png" % _prefix)
 	_overlay.call("_set_active_slot", 1)
 	_overlay.call("_select_skin", "salmon")
+	_overlay.call("_select_model", "female")
 	await _wait_frames(4)
 	_check(str(GameConfig.player2_skin_id) == original_p2,
 		"P2 preview selection leaked before Confirm")
+	_check(str(GameConfig.player2_model_id) == original_p2_model,
+		"P2 model preview selection leaked before Confirm")
 	await _capture("%s_p2.png" % _prefix)
 
 	var canvas := _overlay.find_child("CustomizationCanvas", true, false) as Control
@@ -92,22 +106,26 @@ func _run() -> void:
 	add_child(roster_row)
 	roster_row.visible = false
 	roster_row.set_human("Remote Player", false, false,
-		OneGunRosterRow.ReadyState.READY, "purple")
+		OneGunRosterRow.ReadyState.READY, "purple", "female")
 	await get_tree().process_frame
 	var roster_portraits := roster_row.find_children(
 		"PlayerPortrait", "", true, false)
 	var roster_portrait = roster_portraits[0] \
 		if not roster_portraits.is_empty() else null
 	_check(roster_portrait != null and roster_portrait.visible
-		and roster_portrait.skin_id == "purple" and roster_portrait.texture != null,
+		and roster_portrait.skin_id == "purple"
+		and roster_portrait.model_id == "female"
+		and roster_portrait.texture != null,
 		"human lobby row did not resolve the synchronized skin portrait")
 	roster_row.queue_free()
 
 	_overlay.call("_cancel")
 	await get_tree().process_frame
 	_check(str(PlayerPrefs.get_setting("character_skin_id")) == original_p1
-		and str(GameConfig.player2_skin_id) == original_p2,
-		"Cancel failed to preserve both confirmed colors")
+		and str(GameConfig.player2_skin_id) == original_p2
+		and str(PlayerPrefs.get_setting("character_model_id")) == original_p1_model
+		and str(GameConfig.player2_model_id) == original_p2_model,
+		"Cancel failed to preserve both confirmed appearances")
 
 	var confirm_overlay = CUSTOMIZATION_SCRIPT.new()
 	confirm_overlay.configure(false, 2)
@@ -115,15 +133,18 @@ func _run() -> void:
 	await _wait_frames(3)
 	confirm_overlay.call("_set_active_slot", 1)
 	confirm_overlay.call("_select_skin", "cyan")
+	confirm_overlay.call("_select_model", "female")
 	confirm_overlay.call("_confirm")
 	await get_tree().process_frame
-	_check(str(GameConfig.player2_skin_id) == "cyan",
-		"Confirm did not commit the pending P2 color")
+	_check(str(GameConfig.player2_skin_id) == "cyan"
+		and str(GameConfig.player2_model_id) == "female",
+		"Confirm did not commit the pending P2 appearance")
 	GameConfig.player2_skin_id = original_p2
+	GameConfig.player2_model_id = original_p2_model
 	if _failed:
 		get_tree().quit(1)
 	else:
-		print("CHARACTER_CUSTOMIZATION_VALIDATION_OK colors=13 rows=5/5/3 portraits=online-ready")
+		print("CHARACTER_CUSTOMIZATION_VALIDATION_OK colors=13 models=2 rows=5/5/3 portraits=online-ready")
 		get_tree().quit(0)
 
 

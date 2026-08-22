@@ -5,13 +5,13 @@ extends Node
 ## renderer (not --headless), then restart once so Godot imports the PNGs.
 
 const SkinRegistry = preload("res://player_skin_registry.gd")
-const VISUAL_SCENE = preload("res://models/player_v2/player_v2_visual.tscn")
 const OUTPUT_DIR := "res://UI/assets/character_portraits"
 const PORTRAIT_SIZE := Vector2i(512, 512)
 
 var _viewport: SubViewport
 var _pivot: Node3D
 var _visual: Node3D
+var _model_id := SkinRegistry.DEFAULT_MODEL_ID
 
 
 func _ready() -> void:
@@ -19,9 +19,14 @@ func _ready() -> void:
 
 
 func _generate() -> void:
+	_model_id = SkinRegistry.sanitize_model_id(
+		OS.get_environment("ONEGUN_PORTRAIT_MODEL"))
 	_build_portrait_stage()
 	await _wait_frames(8)
-	var absolute_dir := ProjectSettings.globalize_path(OUTPUT_DIR)
+	var output_dir := OUTPUT_DIR
+	if _model_id != SkinRegistry.DEFAULT_MODEL_ID:
+		output_dir = OUTPUT_DIR.path_join(_model_id)
+	var absolute_dir := ProjectSettings.globalize_path(output_dir)
 	DirAccess.make_dir_recursive_absolute(absolute_dir)
 	for skin in SkinRegistry.SKINS:
 		var skin_id := str(skin["id"])
@@ -36,7 +41,8 @@ func _generate() -> void:
 			get_tree().quit(1)
 			return
 		print("CHARACTER_PORTRAIT_CAPTURE ", path)
-	print("CHARACTER_PORTRAITS_GENERATED count=", SkinRegistry.skin_count())
+	print("CHARACTER_PORTRAITS_GENERATED model=", _model_id,
+		" count=", SkinRegistry.skin_count())
 	get_tree().quit(0)
 
 
@@ -64,7 +70,12 @@ func _build_portrait_stage() -> void:
 	_pivot = Node3D.new()
 	_pivot.name = "PortraitPivot"
 	world.add_child(_pivot)
-	_visual = VISUAL_SCENE.instantiate()
+	var visual_scene := SkinRegistry.load_visual_scene(_model_id)
+	if visual_scene == null:
+		push_error("CharacterPortraitGenerator: selected model scene is unavailable.")
+		get_tree().quit(1)
+		return
+	_visual = visual_scene.instantiate()
 	_visual.name = "PortraitCharacter"
 	_visual.set("build_animation_library", false)
 	_pivot.add_child(_visual)

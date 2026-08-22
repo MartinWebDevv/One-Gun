@@ -241,6 +241,8 @@ func _build_video_page() -> void:
 		["low", "medium", "high", "ultra"], ["LOW", "MEDIUM", "HIGH", "ULTRA"])
 	_add_dropdown(column, "Anti-Aliasing", "anti_aliasing",
 		["off", "fxaa", "msaa_2x", "msaa_4x"], ["OFF", "FXAA", "MSAA 2X", "MSAA 4X"])
+	_add_dropdown(column, "Effects Quality", "effects_quality",
+		["low", "medium", "high", "ultra"], ["LOW", "MEDIUM", "HIGH", "ULTRA"])
 	_add_slider(column, "Render Scale", "render_scale", 0.5, 1.5, 0.05, false, false, true)
 	_add_section(column, "CAMERA")
 	_add_slider(column, "Field of View", "field_of_view", 60.0, 110.0, 1.0)
@@ -512,10 +514,12 @@ func _on_dropdown_changed(index: int, key: String, values: Array,
 	if key == "quality_preset" and str(_pending[key]) in VIDEO_PRESETS:
 		APPLIER.apply_quality_preset(_pending, str(_pending[key]))
 		APPLIER.apply_video(_pending, get_tree(), false)
+		GraphicsQualityManager.apply_effects_quality(str(_pending["effects_quality"]))
 		_rebuild_page()
-	elif key in ["shadow_quality", "anti_aliasing"]:
+	elif key in ["shadow_quality", "anti_aliasing", "effects_quality"]:
 		_pending["quality_preset"] = "custom"
 		APPLIER.apply_video(_pending, get_tree(), false)
+		GraphicsQualityManager.apply_effects_quality(str(_pending["effects_quality"]))
 		_rebuild_page()
 	elif key == "fps_limit":
 		APPLIER.apply_video(_pending, get_tree(), false)
@@ -756,9 +760,10 @@ func _defaults_for_category() -> void:
 				_pending[key] = PlayerPrefs.get_default(key)
 		"Video":
 			for key in ["display_mode", "resolution", "vsync_enabled", "fps_limit", "quality_preset",
-					"shadow_quality", "anti_aliasing", "render_scale", "field_of_view"]:
+					"shadow_quality", "anti_aliasing", "effects_quality", "render_scale", "field_of_view"]:
 				_pending[key] = PlayerPrefs.get_default(key)
 			APPLIER.apply_video(_pending, get_tree(), true)
+			GraphicsQualityManager.apply_effects_quality(str(_pending["effects_quality"]))
 			_display_recovery_timer.start()
 		"Controls":
 			_pending["input_overrides"] = {}
@@ -778,6 +783,7 @@ func _apply_and_close() -> void:
 		_status_label.text = "Could not save settings. Nothing was applied."
 		return
 	APPLIER.apply_all(PlayerPrefs.snapshot(), get_tree(), true)
+	GraphicsQualityManager.apply_effects_quality(str(PlayerPrefs.get_setting("effects_quality")))
 	AccessibilityManager.apply_all()
 	_finish_close()
 
@@ -787,6 +793,7 @@ func _cancel_and_close() -> void:
 	_display_recovery_timer.stop()
 	PlayerPrefs.apply_input_overrides()
 	APPLIER.apply_all(_opening, get_tree(), true)
+	GraphicsQualityManager.apply_effects_quality(str(_opening["effects_quality"]))
 	AccessibilityManager.apply_all(_opening)
 	_finish_close()
 

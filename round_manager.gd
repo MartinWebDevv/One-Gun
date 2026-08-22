@@ -3,6 +3,9 @@ extends Node
 const MatchLimitsData = preload("res://match_limits.gd")
 const CombatVisibility = preload("res://combat_visibility.gd")
 const OneOfUsIntroData = preload("res://one_of_us_intro.gd")
+const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
+const WinnersResult = preload("res://winners_circle_match_result.gd")
+const WinnersCoordinator = preload("res://winners_circle_coordinator.gd")
 
 @export var countdown_time := 3
 @export var round_end_display_time := 3
@@ -75,6 +78,9 @@ var stat_deaths   := {}
 var stat_disarms  := {}
 var stat_pickups  := {}
 var stat_melee    := {}
+var stat_round_wins := {}
+var stat_runner_up_finishes := {}
+var stat_third_place_finishes := {}
 
 func _leave_match_to(scene_path: String):
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -104,6 +110,8 @@ var one_of_us_roles: Dictionary = {}
 var one_of_us_first_actor_id := -1
 var _one_of_us_respawn_generation: Dictionary = {}
 var _one_of_us_round_finishing := false
+var _winners_circle_coordinator: Node = null
+
 
 func _setup_online_freeroam() -> void:
 	var root := get_tree().current_scene
@@ -187,6 +195,8 @@ func _setup_online_freeroam() -> void:
 				"owner_peer_id": peer_id,
 				"team_id": int(peer_entry.get("team_id", 0)),
 				"skin_id": str(peer_entry.get("skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID)),
+				"model_id": str(peer_entry.get("model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID)),
+				"cosmetics": CosmeticRegistry.sanitize_loadout(peer_entry.get("cosmetics", {})),
 				"name": str(peer_entry.get("name", "Player")),
 				"pos": pos,
 				"yaw": yaw,
@@ -278,6 +288,10 @@ func _net_spawn_player(data: Dictionary) -> Node:
 	p.set("team_id", int(data.get("team_id", 0)))
 	p.set("character_skin_id", PlayerSkinRegistry.sanitize_skin_id(
 		str(data.get("skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID))))
+	p.set("character_model_id", PlayerSkinRegistry.sanitize_model_id(
+		str(data.get("model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID))))
+	p.set("cosmetic_loadout", CosmeticRegistry.sanitize_loadout(
+		data.get("cosmetics", {})))
 	# The player root stays host-authoritative for safe spawn visibility. Its
 	# NetSync child is assigned to peer_id inside character_body_3d.gd.
 	p.set_multiplayer_authority(1)
@@ -668,6 +682,9 @@ func _net_apply_online_item_action(item_id: int, action: String, data: Dictionar
 			int(data.get("deployed_id", -1)),
 			int(data.get("owner_actor_id", -1))
 		)
+		"boomerang_recatch":
+			if item.has_method("_net_recatch"):
+				item._net_recatch(int(data.get("holder_actor_id", -1)))
 		"consume": item._net_consume()
 		"activate_shoes": item._net_do_activate(int(data.get("holder_actor_id", -1)))
 	if bool(data.get("retire", false)):
@@ -1040,6 +1057,8 @@ func _net_set_online_combat(enabled: bool, epoch: int) -> void:
 	online_round_epoch = epoch
 	online_combat_live = enabled
 	round_state = "live" if enabled else "countdown"
+	if enabled:
+		_grant_all_gun_opening_protection()
 
 func _initialize_online_match() -> void:
 	if not NetworkManager.is_host():
@@ -1052,7 +1071,22 @@ func _initialize_online_match() -> void:
 	online_actor_state.clear()
 	for p in players:
 		var id := int(p.actor_id)
+		var skin_id := PlayerSkinRegistry.DEFAULT_SKIN_ID
+		var model_id := PlayerSkinRegistry.DEFAULT_MODEL_ID
+		var cosmetics := CosmeticRegistry.empty_loadout()
+		if "character_skin_id" in p:
+			skin_id = PlayerSkinRegistry.sanitize_skin_id(
+				str(p.get("character_skin_id")))
+		if "character_model_id" in p:
+			model_id = PlayerSkinRegistry.sanitize_model_id(
+				str(p.get("character_model_id")))
+		if "cosmetic_loadout" in p:
+			cosmetics = CosmeticRegistry.sanitize_loadout(
+				p.get("cosmetic_loadout"))
 		online_actor_state[id] = {
+			"skin_id": skin_id,
+			"model_id": model_id,
+			"cosmetics": cosmetics,
 			"actor_id": id,
 			"owner_peer_id": int(p.owner_peer_id),
 			"name": p.get_display_name(),
@@ -1060,6 +1094,9 @@ func _initialize_online_match() -> void:
 			"alive": true,
 			"rounds": 0,
 			"sets": 0,
+			"total_round_wins": 0,
+			"runner_up_finishes": 0,
+			"third_place_finishes": 0,
 			"kills": 0,
 			"deaths": 0,
 			"pickups": 0,
@@ -1668,6 +1705,8 @@ func _online_state_snapshot() -> Dictionary:
 		protections[int(actor_id)] = {
 			"extra_life": bool(actor.get("second_wind_ready")),
 			"sticky_hands": clampi(int(actor.get("melee_disarm_shields")), 0, 1),
+			"sticky_hands_time": maxf(float(actor.get("sticky_hands_timer")), 0.0),
+			"sticky_hands_cooldown": maxf(float(actor.get("sticky_hands_cooldown_timer")), 0.0),
 			"bullet_immunity": maxf(float(actor.get("bullet_immune_timer")), 0.0),
 			"lethal_immunity": maxf(float(actor.get("lethal_immunity_timer")), 0.0),
 		}
@@ -1728,6 +1767,10 @@ func _net_apply_online_state(snapshot: Dictionary) -> void:
 		var protection: Dictionary = protections[actor_id]
 		actor.second_wind_ready = bool(protection.get("extra_life", false))
 		actor.melee_disarm_shields = clampi(int(protection.get("sticky_hands", 0)), 0, 1)
+		actor.sticky_hands_timer = maxf(float(protection.get(
+			"sticky_hands_time", GameConfig.STICKY_HANDS_DURATION \
+			if actor.melee_disarm_shields > 0 else 0.0)), 0.0)
+		actor.sticky_hands_cooldown_timer = maxf(float(protection.get("sticky_hands_cooldown", 0.0)), 0.0)
 		actor.bullet_immune_timer = maxf(float(protection.get("bullet_immunity", 0.0)), 0.0)
 		actor.lethal_immunity_timer = maxf(float(protection.get("lethal_immunity", 0.0)), 0.0)
 		actor.active_powerup_order.erase("extra_life")
@@ -1877,12 +1920,13 @@ func _online_finish_round(winner_id: int, winner_label := "",
 	var winner_name := ""
 	var won_set := false
 	var won_match := false
+	var scoring_ids: Array = []
 	if winner_id >= 0 and online_actor_state.has(winner_id):
 		var winner: Dictionary = online_actor_state[winner_id]
 		var winning_team := int(winner.get("team_id", -1))
 		winner_name = winner_label if winner_label != "" else (
 			"Team %d" % (winning_team + 1) if GameConfig.teams_enabled else str(winner["name"]))
-		var scoring_ids: Array = scoring_ids_override.duplicate()
+		scoring_ids = scoring_ids_override.duplicate()
 		if scoring_ids.is_empty():
 			scoring_ids = [winner_id]
 			if GameConfig.teams_enabled:
@@ -1891,7 +1935,10 @@ func _online_finish_round(winner_id: int, winner_label := "",
 		for scoring_id in scoring_ids:
 			var scoring_entry: Dictionary = online_actor_state[scoring_id]
 			scoring_entry["rounds"] = int(scoring_entry["rounds"]) + 1
+			scoring_entry["total_round_wins"] = int(
+				scoring_entry.get("total_round_wins", 0)) + 1
 			online_actor_state[scoring_id] = scoring_entry
+		_record_online_round_placements(scoring_ids)
 		var representative: Dictionary = online_actor_state[scoring_ids[0]]
 		if int(representative["rounds"]) >= GameConfig.rounds_per_set:
 			for scoring_id in scoring_ids:
@@ -1909,8 +1956,13 @@ func _online_finish_round(winner_id: int, winner_label := "",
 		online_announcement = winner_name + " WINS THE MATCH!"
 		round_state = "match_end"
 		_broadcast_online_state()
-		await get_tree().create_timer(match_end_display_time).timeout
-		NetworkManager.host_return_everyone_to_lobby()
+		if not GameConfig.teams_enabled \
+				and GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
+			await get_tree().create_timer(0.75).timeout
+			_begin_online_winners_circle(winner_id)
+		else:
+			await get_tree().create_timer(match_end_display_time).timeout
+			NetworkManager.host_return_everyone_to_lobby()
 		return
 
 	if won_set:
@@ -2014,6 +2066,25 @@ func _on_online_host_left() -> void:
 # goes to spectate — there is NO mid-round respawn. Players only come back at
 # the START of the next round (round-start reset is Phase 2b). Round/set/match
 # SCORING is Phase 2b; _net_respawn below is the reset hook 2b will call.
+
+func server_report_damage_direction(victim_id: int, attacker_id: int,
+		source_world_direction: Vector3, epoch: int = -1) -> void:
+	if not multiplayer.is_server() or not can_accept_online_combat(epoch):
+		return
+	if victim_id == attacker_id or not online_actor_state.has(victim_id) \
+			or not bool(online_actor_state[victim_id].get("alive", false)):
+		return
+	var direction := Vector3(source_world_direction.x, 0.0, source_world_direction.z)
+	if not direction.is_finite() or direction.is_zero_approx():
+		return
+	NetworkManager.broadcast_match_rpc(self, &"_net_damage_direction",
+		[victim_id, direction.normalized(), "gun"])
+
+@rpc("authority", "reliable", "call_local")
+func _net_damage_direction(victim_id: int, source_world_direction: Vector3,
+		source_kind: String) -> void:
+	GameEvents.actor_damage_direction.emit(
+		victim_id, source_world_direction, source_kind)
 
 func server_eliminate(victim_id: int, killer_id: int, epoch: int = -1,
 		weapon_icon: String = "🔫", feedback_kind: String = "gun",
@@ -2174,6 +2245,7 @@ func _apply_one_of_us_environment_grade() -> void:
 
 
 func _ready():
+	_setup_winners_circle_coordinator()
 	_apply_one_of_us_environment_grade()
 	if NetworkManager.is_online():
 		# Defer: the scene tree is still "busy setting up children" during
@@ -2200,11 +2272,14 @@ func _ready():
 	for p in players:
 		round_wins[p] = 0
 		match_points[p] = 0
-		stat_kills[p]   = 0
-		stat_deaths[p]  = 0
+		stat_kills[p] = 0
+		stat_deaths[p] = 0
 		stat_disarms[p] = 0
 		stat_pickups[p] = 0
-		stat_melee[p]   = 0
+		stat_melee[p] = 0
+		stat_round_wins[p] = 0
+		stat_runner_up_finishes[p] = 0
+		stat_third_place_finishes[p] = 0
 		_round_kills[p] = 0
 	_setup_local_combat_tags()
 	_disable_all_players()
@@ -2339,7 +2414,7 @@ func _find_player_by_actor_id(requested_actor_id: int):
 
 func _on_stat_actor_eliminated(victim_actor_id: int, killer_actor_id: int, _icon: String) -> void:
 	var victim = _find_player_by_actor_id(victim_actor_id)
-	if overtime_active and victim != null and not _elimination_time_ms.has(victim):
+	if victim != null and not _elimination_time_ms.has(victim):
 		_elimination_time_ms[victim] = Time.get_ticks_msec()
 	if victim != null and stat_deaths.has(victim):
 		stat_deaths[victim] += 1
@@ -2364,6 +2439,104 @@ func _on_stat_actor_melee_hit(actor_id: int) -> void:
 	var player = _find_player_by_actor_id(actor_id)
 	if player != null and stat_melee.has(player):
 		stat_melee[player] += 1
+
+func _setup_winners_circle_coordinator() -> void:
+	if _winners_circle_coordinator != null:
+		return
+	_winners_circle_coordinator = WinnersCoordinator.new()
+	_winners_circle_coordinator.name = "WinnersCircleCoordinator"
+	add_child(_winners_circle_coordinator)
+	_winners_circle_coordinator.local_return_requested.connect(func() -> void:
+		if is_inside_tree():
+			_leave_match_to("res://game_setup.tscn"))
+
+
+func _record_online_round_placements(scoring_ids: Array) -> void:
+	if GameConfig.teams_enabled or scoring_ids.size() != 1:
+		return
+	var remaining: Array = []
+	for actor_id_value in online_actor_state:
+		var actor_id := int(actor_id_value)
+		if actor_id not in scoring_ids:
+			remaining.append(actor_id)
+	remaining.sort_custom(func(a, b):
+		var a_entry: Dictionary = online_actor_state[int(a)]
+		var b_entry: Dictionary = online_actor_state[int(b)]
+		var a_time := int(a_entry.get("eliminated_at_ms", -1))
+		var b_time := int(b_entry.get("eliminated_at_ms", -1))
+		if a_time != b_time:
+			return a_time > b_time
+		var a_kills := int(a_entry.get("round_kills", 0))
+		var b_kills := int(b_entry.get("round_kills", 0))
+		if a_kills != b_kills:
+			return a_kills > b_kills
+		return int(a) < int(b))
+	if not remaining.is_empty():
+		var runner_up: Dictionary = online_actor_state[int(remaining[0])]
+		runner_up["runner_up_finishes"] = int(
+			runner_up.get("runner_up_finishes", 0)) + 1
+		online_actor_state[int(remaining[0])] = runner_up
+	if remaining.size() >= 2:
+		var third: Dictionary = online_actor_state[int(remaining[1])]
+		third["third_place_finishes"] = int(
+			third.get("third_place_finishes", 0)) + 1
+		online_actor_state[int(remaining[1])] = third
+
+
+func _record_local_round_placements(scoring_players: Array) -> void:
+	if GameConfig.teams_enabled or scoring_players.size() != 1:
+		return
+	var remaining: Array = []
+	for player in players:
+		if is_instance_valid(player) and player not in scoring_players:
+			remaining.append(player)
+	remaining.sort_custom(func(a, b):
+		var a_time := int(_elimination_time_ms.get(a, -1))
+		var b_time := int(_elimination_time_ms.get(b, -1))
+		if a_time != b_time:
+			return a_time > b_time
+		var a_kills := int(_round_kills.get(a, 0))
+		var b_kills := int(_round_kills.get(b, 0))
+		if a_kills != b_kills:
+			return a_kills > b_kills
+		return int(a.get("actor_id")) < int(b.get("actor_id")))
+	if not remaining.is_empty() and stat_runner_up_finishes.has(remaining[0]):
+		stat_runner_up_finishes[remaining[0]] += 1
+	if remaining.size() >= 2 and stat_third_place_finishes.has(remaining[1]):
+		stat_third_place_finishes[remaining[1]] += 1
+
+
+func _begin_online_winners_circle(champion_actor_id: int) -> void:
+	if not NetworkManager.is_host() or _winners_circle_coordinator == null:
+		return
+	var human_count := 0
+	var bot_count := 0
+	for actor_id_value in online_actor_state:
+		if int(actor_id_value) >= ONLINE_BOT_ACTOR_ID_BASE:
+			bot_count += 1
+		else:
+			human_count += 1
+	var official := GameConfig.is_official_beta_ruleset(human_count, bot_count)
+	var result := WinnersResult.build_online(
+		online_actor_state, champion_actor_id, official)
+	_winners_circle_coordinator.begin_online(result)
+
+
+func _show_local_winners_circle(champion) -> void:
+	if champion == null or _winners_circle_coordinator == null:
+		return
+	var champion_actor_id := int(champion.get("actor_id"))
+	var result := WinnersResult.build_local(
+		players, champion_actor_id, match_points, stat_round_wins,
+		stat_runner_up_finishes, stat_third_place_finishes,
+		stat_kills, stat_deaths, stat_disarms, stat_pickups, stat_melee)
+	var viewer_actor_ids: Array[int] = []
+	for player in players:
+		if is_instance_valid(player) \
+				and not ("is_bot" in player and bool(player.is_bot)):
+			viewer_actor_ids.append(int(player.get("actor_id")))
+	_winners_circle_coordinator.show_local(result, viewer_actor_ids)
+
 
 func get_scoreboard_data() -> Array:
 	if NetworkManager.is_online():
@@ -2508,6 +2681,17 @@ func _enable_all_players():
 		if is_instance_valid(p) and not p.is_eliminated:
 			p.set_physics_process(true)
 
+
+func _grant_all_gun_opening_protection() -> void:
+	if GameConfig.game_mode != GameConfig.MODE_ALL_GUN:
+		return
+	for actor in get_tree().get_nodes_in_group("player"):
+		if actor == null or bool(actor.get("is_eliminated")):
+			continue
+		actor.lethal_immunity_timer = maxf(
+			float(actor.get("lethal_immunity_timer")),
+			GameConfig.ALL_GUN_SPAWN_PROTECTION_TIME)
+
 var _round_labels_styled := false
 
 func _set_round_label_text(text):
@@ -2539,6 +2723,7 @@ func _start_countdown(skip_countdown := false):
 	_update_status_label()
 	if skip_countdown:
 		_set_round_label_text("GO!")
+		_grant_all_gun_opening_protection()
 		round_elapsed = 0.0
 		round_state = "live"
 		_enable_all_players()
@@ -2551,6 +2736,7 @@ func _start_countdown(skip_countdown := false):
 		_set_round_label_text(str(i))
 		await get_tree().create_timer(1.0).timeout
 	_set_round_label_text("GO!")
+	_grant_all_gun_opening_protection()
 	round_elapsed = 0.0
 	round_state = "live"
 	_enable_all_players()
@@ -3588,6 +3774,9 @@ func _end_round(alive, multi_winner_draw := false, winner_label := "",
 			scoring_players = [winner]
 		for scoring_player in scoring_players:
 			round_wins[scoring_player] += 1
+			if stat_round_wins.has(scoring_player):
+				stat_round_wins[scoring_player] += 1
+		_record_local_round_placements(scoring_players)
 		# Trigger victory dance on the representative immediately.
 		if winner.has_method("play_victory_dance"):
 			winner.play_victory_dance()
@@ -3607,8 +3796,13 @@ func _end_round(alive, multi_winner_draw := false, winner_label := "",
 
 			if match_points[winner] >= GameConfig.sets_per_match:
 				_set_round_label_text(display_name + " WINS THE MATCH!")
-				await get_tree().create_timer(match_end_display_time).timeout
-				_leave_match_to("res://game_setup.tscn")
+				if not GameConfig.teams_enabled \
+						and GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
+					await get_tree().create_timer(0.75).timeout
+					_show_local_winners_circle(winner)
+				else:
+					await get_tree().create_timer(match_end_display_time).timeout
+					_leave_match_to("res://game_setup.tscn")
 				return
 			else:
 				_set_round_label_text(display_name + " wins the set!")

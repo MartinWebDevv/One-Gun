@@ -8,12 +8,20 @@ extends Area3D
 const BOB_HEIGHT = 0.15
 const BOB_SPEED = 2.0
 
+const ICON_TEXTURES := {
+	"extra_dash": preload("res://models/2DPowerUpLogos/extra dash.png"),
+	"sticky_hands": preload("res://models/2DPowerUpLogos/sticky hands pixel.png"),
+	"speed_surge": preload("res://models/2DPowerUpLogos/speed surge.png"),
+	"silent_steps": preload("res://models/2DPowerUpLogos/silent steps pixel.png"),
+	"extra_life": preload("res://models/2DPowerUpLogos/extra life.png"),
+	"reach": preload("res://models/2DPowerUpLogos/reach pixel.png"),
+}
+
 const DISPLAY_NAMES := {
 	"extra_dash": "Extra Dash",
 	"sticky_hands": "Sticky Hands",
 	"speed_surge": "Speed Surge",
 	"silent_steps": "Silent Steps",
-	"vampire_touch": "Vampire Touch",
 	"extra_life": "Extra Life",
 	"reach": "Reach",
 }
@@ -23,7 +31,6 @@ var color_map = {
 	"sticky_hands": Color(0.2, 1.0, 0.35),
 	"speed_surge": Color(0.3, 1.0, 0.3),
 	"silent_steps": Color(0.55, 0.55, 0.85),
-	"vampire_touch": Color(0.85, 0.15, 0.25),
 	"extra_life": Color(1.0, 0.72, 0.18),
 	"reach": Color(0.2, 1.0, 0.42),
 }
@@ -34,10 +41,10 @@ var base_y = 0.0
 var bob_time = 0.0
 var collected = false
 var overtime_disabled := false
-var active_material: StandardMaterial3D = null
 var online_powerup_id := -1
 var _respawn_generation := 0
 
+@onready var powerup_icon: Sprite3D = $PowerupIcon
 @onready var powerup_name_label: Label3D = $PowerupName
 
 func _ready():
@@ -51,30 +58,15 @@ func _ready():
 	set_collision_mask_value(2, true)
 	spawn_position = global_position
 	base_y = position.y
-	_setup_material()
 	if fixed_power_type in enabled_types:
 		power_type = fixed_power_type
 	elif not NetworkManager.is_online():
 		power_type = enabled_types[randi() % enabled_types.size()]
-	_update_color()
+	_update_visual()
 
-func _setup_material():
-	var mesh_instance = $MeshInstance3D
-	var existing = mesh_instance.get_surface_override_material(0)
-	if existing == null:
-		existing = mesh_instance.mesh.surface_get_material(0)
-	if existing != null:
-		active_material = existing.duplicate()
-	else:
-		active_material = StandardMaterial3D.new()
-	active_material.emission_enabled = true
-	active_material.emission_energy_multiplier = 2.5
-	mesh_instance.set_surface_override_material(0, active_material)
-
-func _update_color():
-	if active_material != null and color_map.has(power_type):
-		active_material.albedo_color = color_map[power_type]
-		active_material.emission = color_map[power_type]
+func _update_visual():
+	if powerup_icon != null:
+		powerup_icon.texture = ICON_TEXTURES.get(power_type, ICON_TEXTURES["extra_dash"])
 	if powerup_name_label != null:
 		powerup_name_label.text = str(DISPLAY_NAMES.get(
 			power_type, power_type.replace("_", " ").capitalize()))
@@ -83,7 +75,6 @@ func _update_color():
 func _process(delta):
 	if collected:
 		return
-	rotate_y(delta * 2.0)
 	bob_time += delta * BOB_SPEED
 	position.y = base_y + sin(bob_time) * BOB_HEIGHT
 
@@ -140,7 +131,7 @@ func _collect():
 		return
 	power_type = fixed_power_type if fixed_power_type in enabled_types \
 		else enabled_types[randi() % enabled_types.size()]
-	_update_color()
+	_update_visual()
 
 func _net_collect(actor_id: int, collected_type: String) -> void:
 	if collected:
@@ -161,7 +152,7 @@ func _net_respawn(new_type: String) -> void:
 	collected = false
 	visible = true
 	monitoring = true
-	_update_color()
+	_update_visual()
 
 func reset_to_spawn():
 	_respawn_generation += 1

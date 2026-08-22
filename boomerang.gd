@@ -2,16 +2,18 @@ extends "res://item.gd"
 
 ## Boomerang: thrown, flies out ~10m, arcs back to the thrower. Disarms a gun
 ## holder on hit (same rules as melee: shields respected), knocks back anyone
-## else. Makes exactly ONE trip: it vanishes the moment it hits a target OR
-## the moment it returns to the thrower, then respawns like any consumable.
+## else. A missed first trip is caught for one additional throw; any hit, or
+## the return from the second trip, consumes it like an ordinary item.
 
 const FLIGHT_RANGE := 10.0
 const OUT_TIME := 0.8
 const BACK_TIME := 0.9
 const SPIN_SPEED := 18.0
+const MAX_THROWS := 2
 
 var _flying := false
 var _consumed := false
+var _throws_used := 0
 var _flight_t := 0.0
 var _origin := Vector3.ZERO
 var _out_dir := Vector3.FORWARD
@@ -34,6 +36,9 @@ func throw():
 	_origin = p.global_position + _out_dir * 0.6 + Vector3.UP * 1.3
 	global_position = _origin
 	_thrower = p
+	if _consumed:
+		_throws_used = 0
+	_throws_used += 1
 	_flying = true
 	_consumed = false
 	_flight_t = 0.0
@@ -64,6 +69,9 @@ func _net_do_throw(start_position: Vector3, _start_rotation: Vector3, _velocity:
 	global_position = _origin
 	_thrower = NetworkManager.find_actor(owner_actor_id)
 	online_owner_actor_id = owner_actor_id
+	if _consumed:
+		_throws_used = 0
+	_throws_used += 1
 	_flying = true
 	_consumed = false
 	_flight_t = 0.0
@@ -88,29 +96,28 @@ func _physics_process(delta: float) -> void:
 		global_position = _origin + _out_dir * FLIGHT_RANGE * eased
 	else:
 		var t := (_flight_t - OUT_TIME) / BACK_TIME
-		# return trip finished (reached the thrower, or ran out of time) -> gone
-		if t >= 1.0 or _thrower == null or not is_instance_valid(_thrower):
+		if _thrower == null or not is_instance_valid(_thrower):
 			if NetworkManager.is_online():
 				if multiplayer.is_server():
 					_server_consume_online()
 			else:
 				_consume()
 			return
+		if t >= 1.0:
+			_finish_return()
+			return
 		var apex := _origin + _out_dir * FLIGHT_RANGE
 		var home: Vector3 = _thrower.global_position + Vector3.UP * 1.2
 		var eased := t * t  # accelerate homeward
 		global_position = apex.lerp(home, eased)
 		if global_position.distance_to(home) < 0.9:
-			if NetworkManager.is_online():
-				if multiplayer.is_server():
-					_server_consume_online()
-			else:
-				_consume()  # back at the thrower -> go away
+			_finish_return()
 			return
 	if not NetworkManager.is_online() or multiplayer.is_server():
 		_check_hits()
 
 func _check_hits() -> void:
+
 	for body in $Area3D.get_overlapping_bodies():
 		if body.is_in_group("combat_decoy"):
 			if _hit_bodies.has(body):
@@ -143,6 +150,69 @@ func _check_hits() -> void:
 		_strike(body)
 		_consume()  # collision landed -> go away, no return trip
 		return
+func _finish_return() -> void:
+	if _throws_used >= MAX_THROWS:
+		if NetworkManager.is_online():
+			if multiplayer.is_server():
+				_server_consume_online()
+		else:
+			_consume()
+		return
+	if NetworkManager.is_online():
+		if multiplayer.is_server():
+			_server_recatch_online()
+	elif not _recatch(_thrower):
+		_consume()
+
+
+func _can_recatch(holder) -> bool:
+	if holder == null or not is_instance_valid(holder) \
+			or bool(holder.get("is_eliminated")):
+		return false
+	if holder.has_method("can_pick_up_item"):
+		return bool(holder.can_pick_up_item())
+	return not ("held_item" in holder) or holder.held_item == null
+
+
+func _recatch(holder) -> bool:
+	if not _can_recatch(holder):
+		return false
+	_flying = false
+	is_in_flight = false
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	$CollisionShape3D.disabled = true
+	$Area3D.monitoring = false
+	return super._do_pickup(holder)
+
+
+func _server_recatch_online() -> void:
+	if not multiplayer.is_server():
+		return
+	if not _can_recatch(_thrower):
+		_server_consume_online()
+		return
+	var rm = _online_round_manager()
+	if rm != null:
+		rm.broadcast_online_item_action(online_item_id, "boomerang_recatch", {
+			"holder_actor_id": online_owner_actor_id,
+		})
+	else:
+		_server_consume_online()
+
+
+func _net_recatch(holder_actor_id: int) -> void:
+	var holder = NetworkManager.find_actor(holder_actor_id)
+	if not _recatch(holder):
+		_net_consume()
+
+
+func reset_to_spawn() -> void:
+	_throws_used = 0
+	_flying = false
+	_consumed = false
+	super.reset_to_spawn()
 
 func _strike(body: Node3D) -> void:
 	if body.has_method("flash_hit"):
@@ -175,8 +245,8 @@ func _strike(body: Node3D) -> void:
 		dir.y = 0
 		body.apply_knockback(dir.normalized(), 3.0)
 
-# End the single trip: hide the boomerang and let it respawn like any other
-# consumable. Guarded so a hit + arrival on the same frame can't double-fire.
+# End the item after a hit or its final missed trip, then let it respawn like
+# any other consumable. Guarded so a hit + arrival can't double-fire.
 func _consume() -> void:
 	if _consumed:
 		return

@@ -96,9 +96,54 @@ class MockLooseMelee:
 			holder.held_melee_weapon = null
 
 var failures: Array[String] = []
+class MockBoomerangHolder:
+	extends CharacterBody3D
+	var held_item = null
+	var is_eliminated := false
+	var actor_id := 7301
+	var hold_point: Node3D
+
+	func _init() -> void:
+		hold_point = Node3D.new()
+		hold_point.name = "ItemHoldPoint"
+		add_child(hold_point)
+
+	func get_item_hold_point() -> Node3D:
+		return hold_point
+
+	func can_pick_up_item() -> bool:
+		return held_item == null
+
+	func assign_item(item_obj) -> void:
+		held_item = item_obj
+
+	func clear_item_slot(item_obj) -> void:
+		if held_item == item_obj:
+			held_item = null
+
+	func get_active_item():
+		return held_item
+
+	func get_aim_direction() -> Vector3:
+		return Vector3.FORWARD
+
+	func get_display_name() -> String:
+		return "Boomerang Holder"
+
 
 func _ready() -> void:
 	await get_tree().process_frame
+	if OS.get_environment("ONE_GUN_FEATURE_PASS_ONLY") == "1":
+		_test_protections_and_timers()
+		await _test_boomerang_second_throw()
+		if failures.is_empty():
+			print("FEATURE COMBAT VALIDATION: PASS")
+			get_tree().quit(0)
+		else:
+			for failure in failures:
+				push_error("FEATURE COMBAT VALIDATION: " + failure)
+			get_tree().quit(1)
+		return
 	if OS.get_environment("ONE_GUN_MELEE_ONLY") == "1":
 		await _test_melee_tuning()
 		if failures.is_empty():
@@ -111,6 +156,7 @@ func _ready() -> void:
 		return
 	_test_projectile_and_gun()
 	_test_protections_and_timers()
+	await _test_boomerang_second_throw()
 	await _test_melee_tuning()
 	_test_stamina_and_dash()
 	_test_overtime_math_and_tiebreak()
@@ -169,6 +215,14 @@ func _test_projectile_and_gun() -> void:
 func _test_protections_and_timers() -> void:
 	var player = load("res://character_body_3d.gd").new()
 	_check(player.apply_powerup("sticky_hands", 10.0), "Sticky Hands could not be collected")
+	_check(player.melee_disarm_shields == 1, "Sticky Hands did not grant its shield")
+	_check(is_equal_approx(player.sticky_hands_timer, GameConfig.STICKY_HANDS_DURATION),
+		"Sticky Hands did not start its 30-second duration")
+	var sticky_entries: Array = player.get_active_powerups_for_display().filter(
+		func(entry): return entry.get("type", "") == "sticky_hands")
+	_check(not sticky_entries.is_empty(), "Sticky Hands is missing from the HUD powerup list")
+	if not sticky_entries.is_empty():
+		_check(bool(sticky_entries[0].get("timed", false)), "Sticky Hands HUD entry is not timed")
 	_check(player.apply_powerup("extra_life", 10.0), "Extra Life could not coexist with Sticky Hands")
 	_check(not player.apply_powerup("sticky_hands", 10.0), "duplicate Sticky Hands was accepted")
 	_check(not player.apply_powerup("extra_life", 10.0), "duplicate Extra Life was accepted")
@@ -180,12 +234,65 @@ func _test_protections_and_timers() -> void:
 	_check(is_equal_approx(player.speed_surge_timer, 20.0), "timed powerup exceeded or missed 2x cap")
 	_check(player.consume_extra_life(), "Extra Life did not consume")
 	_check(is_equal_approx(player.lethal_immunity_timer, 1.0), "Extra Life immunity is not one second")
+	player._update_new_powerups(GameConfig.STICKY_HANDS_DURATION - 0.5)
+	_check(player.melee_disarm_shields == 1 and not player.can_collect_powerup("sticky_hands"),
+		"Sticky Hands expired early or allowed stacking while active")
+	player._update_new_powerups(0.5)
+	_check(player.melee_disarm_shields == 0, "Sticky Hands did not expire after 30 seconds")
+	_check(is_equal_approx(player.sticky_hands_cooldown_timer, GameConfig.STICKY_HANDS_REPICKUP_COOLDOWN),
+		"Sticky Hands expiry did not begin its eight-second cooldown")
+	_check(not player.can_collect_powerup("sticky_hands"), "Sticky Hands was collectible during cooldown")
+	player._update_new_powerups(GameConfig.STICKY_HANDS_REPICKUP_COOLDOWN - 0.1)
+	_check(not player.can_collect_powerup("sticky_hands"), "Sticky Hands cooldown ended early")
+	player._update_new_powerups(0.1)
+	_check(player.can_collect_powerup("sticky_hands"), "Sticky Hands did not unlock after cooldown")
+	_check(player.apply_powerup("sticky_hands", 10.0), "Sticky Hands could not be recollected after cooldown")
 	_check(player.consume_sticky_hands(), "Sticky Hands did not consume")
 	_check(not player.consume_sticky_hands(), "Sticky Hands behaved like it had a hidden second charge")
+	_check(is_equal_approx(player.sticky_hands_cooldown_timer, GameConfig.STICKY_HANDS_REPICKUP_COOLDOWN),
+		"consumed Sticky Hands did not begin its eight-second cooldown")
 	player.clear_all_powerups()
-	_check(player.melee_disarm_shields == 0 and not player.second_wind_ready,
+	_check(
+		player.melee_disarm_shields == 0
+		and player.sticky_hands_timer == 0.0
+		and player.sticky_hands_cooldown_timer == 0.0
+		and not player.second_wind_ready,
 		"full powerup clear left a protection behind")
 	player.free()
+	var bot = load("res://dummy.gd").new()
+	_check(bot.apply_powerup("sticky_hands", 10.0), "bot could not collect Sticky Hands")
+	_check(is_equal_approx(bot.sticky_hands_timer, GameConfig.STICKY_HANDS_DURATION),
+		"bot Sticky Hands duration differs from humans")
+	bot._clear_sticky_hands(true)
+	_check(
+		is_equal_approx(bot.sticky_hands_cooldown_timer, GameConfig.STICKY_HANDS_REPICKUP_COOLDOWN)
+		and not bot.can_collect_powerup("sticky_hands"),
+		"bot Sticky Hands cooldown differs from humans")
+	bot.free()
+
+
+func _test_boomerang_second_throw() -> void:
+	var holder = MockBoomerangHolder.new()
+	get_tree().current_scene.add_child(holder)
+	var boomerang = load("res://boomerang.tscn").instantiate()
+	get_tree().current_scene.add_child(boomerang)
+	await get_tree().process_frame
+	_check(boomerang._do_pickup(holder), "boomerang could not enter the test inventory")
+	boomerang.throw()
+	_check(boomerang._throws_used == 1 and boomerang.is_in_flight,
+		"boomerang did not record its first throw")
+	boomerang._finish_return()
+	_check(boomerang.is_held and holder.held_item == boomerang and boomerang._throws_used == 1,
+		"missed first boomerang throw was not returned to inventory")
+	boomerang.throw()
+	_check(boomerang._throws_used == 2 and boomerang.is_in_flight,
+		"boomerang did not record its second throw")
+	boomerang._finish_return()
+	_check(boomerang._consumed and not boomerang.visible and holder.held_item == null,
+		"boomerang did not disappear after its second missed return")
+	boomerang.queue_free()
+	holder.queue_free()
+	await get_tree().process_frame
 
 func _test_melee_tuning() -> void:
 	var melee_scene := load("res://melee_weapon.tscn") as PackedScene

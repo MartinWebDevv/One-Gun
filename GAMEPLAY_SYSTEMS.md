@@ -110,7 +110,6 @@ The human controller owns timers/state for:
 - Knockback/stagger and temporary immunity.
 - Speed Surge.
 - Silent Steps.
-- Vampire Touch stamina refund.
 - Second Wind.
 - Magnet Hands.
 - Extra dash.
@@ -224,9 +223,9 @@ Known online limitation: existing review notes say melee/item pickup validation 
 
 ## Powerup system
 
-`powerup.tscn` is one generic bobbing/rotating colored pickup. Its type is fixed while visible and rerolled after collection/respawn. Older documentation describing live cycling is stale; `cycle_*` fields remain only for scene compatibility.
+`powerup.tscn` is one generic bobbing, camera-facing pixel-art pickup. Its type is fixed while visible, selects one of six distinct icons, and rerolls after collection/respawn.
 
-Seven types exist:
+Six types exist:
 
 | Type | Effect |
 |---|---|
@@ -234,7 +233,6 @@ Seven types exist:
 | Extra Melee Shield | One protected gun-holder melee/disarm interaction |
 | Speed Surge | Temporary movement speed multiplier |
 | Silent Steps | Temporary footstep suppression |
-| Vampire Touch | Melee hits refund stamina |
 | Second Wind | Prevents one otherwise valid elimination |
 | Magnet Hands | Pulls nearby loose pickups toward the player |
 

@@ -5,7 +5,6 @@ signal closed
 signal skin_changed(player_slot: int, skin_id: String)
 
 const SkinRegistry = preload("res://player_skin_registry.gd")
-const VISUAL_SCENE = preload("res://models/player_v2/player_v2_visual.tscn")
 const COLOR_CARD_SCRIPT = preload("res://UI/components/character_color_card.gd")
 const BASE_SIZE := Vector2(1600.0, 900.0)
 const LEFT_PANEL_RECT := Rect2(64.0, 142.0, 566.0, 638.0)
@@ -23,6 +22,9 @@ var _player_tabs: Array[OneGunButton] = []
 var _color_cards: Array = []
 var _pending_skin_ids: Dictionary = {}
 var _confirmed_skin_ids: Dictionary = {}
+var _pending_model_ids: Dictionary = {}
+var _confirmed_model_ids: Dictionary = {}
+var _model_buttons: Dictionary = {}
 var _active_slot := 0
 var _dragging_preview := false
 var _confirm_button: OneGunButton
@@ -76,10 +78,15 @@ func _unhandled_input(event: InputEvent) -> void:
 func _snapshot_confirmed_colors() -> void:
 	_confirmed_skin_ids.clear()
 	_pending_skin_ids.clear()
+	_confirmed_model_ids.clear()
+	_pending_model_ids.clear()
 	for slot in local_player_count:
 		var skin_id := _stored_skin_for_slot(slot)
+		var model_id := _stored_model_for_slot(slot)
 		_confirmed_skin_ids[slot] = skin_id
 		_pending_skin_ids[slot] = skin_id
+		_confirmed_model_ids[slot] = model_id
+		_pending_model_ids[slot] = model_id
 
 
 func _build_ui() -> void:
@@ -218,7 +225,7 @@ func _build_preview_panel() -> void:
 
 	var viewport_container := SubViewportContainer.new()
 	viewport_container.name = "CharacterPreview"
-	viewport_container.custom_minimum_size = Vector2(0.0, 500.0)
+	viewport_container.custom_minimum_size = Vector2(0.0, 440.0)
 	viewport_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	viewport_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	viewport_container.stretch = true
@@ -226,6 +233,28 @@ func _build_preview_panel() -> void:
 	viewport_container.gui_input.connect(_on_preview_gui_input)
 	column.add_child(viewport_container)
 	_build_preview_world(viewport_container)
+
+	var model_row := HBoxContainer.new()
+	model_row.name = "ModelButtons"
+	model_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	model_row.add_theme_constant_override("separation", 12)
+	column.add_child(model_row)
+	for model_id in SkinRegistry.MODEL_IDS:
+		var model_button := OneGunButton.new()
+		model_button.name = ("%sModel" % SkinRegistry.model_display_name(model_id))
+		model_button.text = "M" if model_id == "male" else "F"
+		model_button.font_size = OneGunUI.TEXT_M
+		model_button.custom_minimum_size = Vector2(76.0, 38.0)
+		model_button.tooltip_text = "Use the %s character model" % \
+			SkinRegistry.model_display_name(model_id)
+		model_button.pressed.connect(_select_model.bind(model_id))
+		model_row.add_child(model_button)
+		_model_buttons[model_id] = model_button
+	var male_button: Control = _model_buttons.get("male")
+	var female_button: Control = _model_buttons.get("female")
+	if male_button != null and female_button != null:
+		male_button.focus_neighbor_right = male_button.get_path_to(female_button)
+		female_button.focus_neighbor_left = female_button.get_path_to(male_button)
 
 	var rotate_hint := OneGunUI.make_label(
 		"↶  DRAG OR USE THE RIGHT STICK TO ROTATE  ↷", 14, "muted", true)
@@ -264,14 +293,7 @@ func _build_preview_world(container: SubViewportContainer) -> void:
 	# from perspective/shadow bias at menu-camera distances.
 	_preview_pivot.position.y = 0.30
 	world.add_child(_preview_pivot)
-	_preview_visual = VISUAL_SCENE.instantiate()
-	_preview_visual.name = "PreviewCharacter"
-	_preview_visual.set("build_animation_library", false)
-	_preview_pivot.add_child(_preview_visual)
-	var animation_player := _preview_visual.call("ensure_animations", ["idle"]) as AnimationPlayer
-	if animation_player != null and animation_player.has_animation("idle"):
-		animation_player.play("idle", 0.0)
-		animation_player.advance(0.0)
+	_replace_preview_visual(SkinRegistry.DEFAULT_MODEL_ID)
 
 	var key := DirectionalLight3D.new()
 	key.rotation_degrees = Vector3(-42.0, -28.0, 0.0)
@@ -299,6 +321,33 @@ func _build_preview_world(container: SubViewportContainer) -> void:
 		Vector3(-2.65, 1.78, 4.95), Vector3(0.0, 1.27, 0.0), Vector3.UP)
 	world.add_child(camera)
 	camera.current = true
+
+
+func _replace_preview_visual(model_id: String) -> void:
+	var safe_model_id := SkinRegistry.sanitize_model_id(model_id)
+	if _preview_visual != null and is_instance_valid(_preview_visual):
+		var current_id := SkinRegistry.sanitize_model_id(
+			str(_preview_visual.get("model_id")))
+		if current_id == safe_model_id:
+			return
+	var visual_scene := SkinRegistry.load_visual_scene(safe_model_id)
+	if visual_scene == null:
+		push_warning("Character customization could not load the selected model.")
+		return
+	var replacement := visual_scene.instantiate() as Node3D
+	if replacement == null:
+		return
+	replacement.name = "PreviewCharacter"
+	replacement.set("build_animation_library", false)
+	if _preview_visual != null and is_instance_valid(_preview_visual):
+		_preview_visual.free()
+	_preview_visual = replacement
+	_preview_pivot.add_child(_preview_visual)
+	var animation_player := _preview_visual.call(
+		"ensure_animations", ["idle"]) as AnimationPlayer
+	if animation_player != null and animation_player.has_animation("idle"):
+		animation_player.play("idle", 0.0)
+		animation_player.advance(0.0)
 
 
 func _build_preview_podium(world: Node3D) -> void:
@@ -516,11 +565,17 @@ func _refresh_active_player() -> void:
 		return
 	_player_name_label.text = _player_name(_active_slot).to_upper()
 	var skin_id := _pending_skin_for_slot(_active_slot)
+	var model_id := _pending_model_for_slot(_active_slot)
 	_selected_color_label.text = SkinRegistry.display_name(skin_id).to_upper()
+	_replace_preview_visual(model_id)
 	if _preview_visual != null and _preview_visual.has_method("set_skin"):
 		_preview_visual.call("set_skin", skin_id)
 	for card in _color_cards:
+		card.set_model(model_id)
 		card.set_selected(card.skin_id == skin_id)
+	for button_model_id in _model_buttons:
+		var button: OneGunButton = _model_buttons[button_model_id]
+		button.variant = "gold" if button_model_id == model_id else "navy"
 	for slot in _player_tabs.size():
 		_player_tabs[slot].variant = "gold" if slot == _active_slot else "navy"
 	var card = _card_for_skin(skin_id)
@@ -530,6 +585,11 @@ func _refresh_active_player() -> void:
 
 func _select_skin(skin_id: String) -> void:
 	_pending_skin_ids[_active_slot] = SkinRegistry.sanitize_skin_id(skin_id)
+	_refresh_active_player()
+
+
+func _select_model(model_id: String) -> void:
+	_pending_model_ids[_active_slot] = SkinRegistry.sanitize_model_id(model_id)
 	_refresh_active_player()
 
 
@@ -556,14 +616,21 @@ func _default_active_skin() -> void:
 func _confirm() -> void:
 	for slot in local_player_count:
 		var skin_id := _pending_skin_for_slot(slot)
+		var model_id := _pending_model_for_slot(slot)
 		if online_mode:
-			if not NetworkManager.set_local_skin_id(skin_id):
+			if not NetworkManager.set_local_appearance(skin_id, model_id):
 				return
 		elif slot == 1:
 			GameConfig.player2_skin_id = skin_id
+			GameConfig.player2_model_id = model_id
 		else:
-			PlayerPrefs.set_setting("character_skin_id", skin_id)
+			var next_preferences := PlayerPrefs.snapshot()
+			next_preferences["character_skin_id"] = skin_id
+			next_preferences["character_model_id"] = model_id
+			if not PlayerPrefs.apply_transaction(next_preferences):
+				return
 		_confirmed_skin_ids[slot] = skin_id
+		_confirmed_model_ids[slot] = model_id
 		skin_changed.emit(slot, skin_id)
 	closed.emit()
 	queue_free()
@@ -602,9 +669,23 @@ func _stored_skin_for_slot(slot: int) -> String:
 	return SkinRegistry.sanitize_skin_id(str(PlayerPrefs.get_setting("character_skin_id")))
 
 
+func _stored_model_for_slot(slot: int) -> String:
+	if online_mode:
+		return NetworkManager.local_model_id()
+	if slot == 1:
+		return SkinRegistry.sanitize_model_id(str(GameConfig.player2_model_id))
+	return SkinRegistry.sanitize_model_id(str(
+		PlayerPrefs.get_setting("character_model_id")))
+
+
 func _pending_skin_for_slot(slot: int) -> String:
 	return SkinRegistry.sanitize_skin_id(str(
 		_pending_skin_ids.get(slot, SkinRegistry.DEFAULT_SKIN_ID)))
+
+
+func _pending_model_for_slot(slot: int) -> String:
+	return SkinRegistry.sanitize_model_id(str(
+		_pending_model_ids.get(slot, SkinRegistry.DEFAULT_MODEL_ID)))
 
 
 func _card_for_skin(skin_id: String):

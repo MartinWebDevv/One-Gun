@@ -79,11 +79,12 @@ func _ensure_built() -> void:
 
 func set_human(player_name: String, is_host := false, is_you := false,
 		ready_state: ReadyState = ReadyState.NONE,
-		skin_id := SkinRegistry.DEFAULT_SKIN_ID) -> void:
+		skin_id := SkinRegistry.DEFAULT_SKIN_ID,
+		model_id := SkinRegistry.DEFAULT_MODEL_ID) -> void:
 	_ensure_built()
 	_reset()
 	focus_mode = Control.FOCUS_NONE
-	_show_human_portrait(skin_id)
+	_show_human_portrait(skin_id, model_id)
 	_name_label.text = player_name
 	tooltip_text = "%s — %s" % [player_name, SkinRegistry.display_name(skin_id)]
 	_name_label.add_theme_color_override("font_color", OneGunUI.color("text"))
@@ -197,8 +198,8 @@ func _reset() -> void:
 			child.queue_free()
 
 
-func _show_human_portrait(skin_id: String) -> void:
-	_portrait.set_skin(skin_id)
+func _show_human_portrait(skin_id: String, model_id: String) -> void:
+	_portrait.set_appearance(skin_id, model_id)
 	_portrait.visible = _portrait.texture != null
 	_icon.visible = not _portrait.visible
 	if _icon.visible:

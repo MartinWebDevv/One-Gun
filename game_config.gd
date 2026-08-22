@@ -6,6 +6,7 @@ var split_screen_enabled = false
 var lobby_settings_dirty = false
 var melee_effects_hit_anyone = true
 var player2_skin_id = "blue"  # Session-only, like the second local player's name.
+var player2_model_id = "male"  # Session-only character model for local P2.
 var player2_name = "Player 2"  # session-only, not saved to disk — P2 may be a different guest each time
 
 # -- Game modes --
@@ -64,7 +65,10 @@ const DOUBLE_JUMP_SHOE_MULTIPLIER := 1.0
 const ONE_OF_US_US_DASH_CHARGES := 3
 const ONE_OF_US_THEM_DASH_CHARGES := 4
 const ALL_GUN_MAX_HEARTS := 3
-const ALL_GUN_HIT_PROTECTION_TIME := 0.75
+const ALL_GUN_HIT_PROTECTION_TIME := 1.0
+const ALL_GUN_SPAWN_PROTECTION_TIME := 1.0
+const STICKY_HANDS_DURATION := 30.0
+const STICKY_HANDS_REPICKUP_COOLDOWN := 8.0
 const ONE_OF_US_ROUND_TIME := 180.0
 const ONE_OF_US_THEM_RESPAWN_TIME := 2.0
 const ONE_OF_US_CONVERSION_TIME := 1.5
@@ -75,7 +79,7 @@ const ONE_OF_US_MELEE_HITBOX_LENGTH := DEFAULT_MELEE_HITBOX_LENGTH
 
 var melee_eliminates_gunholder = false
 var melee_eliminates_anyone = false
-var round_time_limit = 300.0  # host-adjustable; 0 keeps the legacy unlimited option
+var round_time_limit = 180.0  # official/default round; 0 keeps the custom unlimited option
 var chaos_overtime_enabled = false  # everyone armed + guns-only OT; off preserves the one-gun loop
 var overtime_fire_exposure_time = 5.0  # zone-1 seconds allowed in OT fire before elimination
 var sprinting_enabled = false  # match-wide for humans and bots
@@ -92,7 +96,7 @@ var visible_hitboxes = false
 
 # -- Win conditions --
 var rounds_per_set = 3  # rounds a player/team must win to take a set
-var sets_per_match = 3  # sets a player/team must win to take the match
+var sets_per_match = 1  # one first-to-three set is the default full match
 
 # -- Items / hazards / consumables --
 # Category toggles are master gates that preserve the individual selections
@@ -129,7 +133,7 @@ const ITEM_SCENES = {
 
 const POWERUP_TYPES := [
 	"extra_dash", "sticky_hands", "speed_surge", "silent_steps",
-	"vampire_touch", "extra_life", "reach",
+	"extra_life", "reach",
 ]
 
 # Per-powerup switches are separate from the master switch so a ruleset can
@@ -139,7 +143,6 @@ var powerup_registry := {
 	"sticky_hands": {"enabled": true},
 	"speed_surge": {"enabled": true},
 	"silent_steps": {"enabled": true},
-	"vampire_touch": {"enabled": true},
 	"extra_life": {"enabled": true},
 	"reach": {"enabled": true},
 }
@@ -290,7 +293,7 @@ const DEFAULT_VALUES := {
 	"friendly_fire_enabled": false,
 	"team_count": 2,
 	"local_player_teams": [0, 1],
-	"round_time_limit": 300.0,
+	"round_time_limit": 180.0,
 	"chaos_overtime_enabled": false,
 	"overtime_fire_exposure_time": 5.0,
 	"sprinting_enabled": false,
@@ -304,7 +307,7 @@ const DEFAULT_VALUES := {
 	"dropped_melee_despawn_time": 3.0,
 	"melee_weapon_breaking": true,
 	"rounds_per_set": 3,
-	"sets_per_match": 3,
+	"sets_per_match": 1,
 	"hazards_enabled": true,
 	"consumables_enabled": true,
 	"powerups_enabled": true,
@@ -324,7 +327,6 @@ const DEFAULT_VALUES := {
 		"sticky_hands": {"enabled": true},
 		"speed_surge": {"enabled": true},
 		"silent_steps": {"enabled": true},
-		"vampire_touch": {"enabled": true},
 		"extra_life": {"enabled": true},
 		"reach": {"enabled": true},
 	},
@@ -347,6 +349,40 @@ func default_match_settings() -> Dictionary:
 	# Transactional settings panels need a detached default snapshot. Returning
 	# the constant directly would let nested item/bot dictionaries be mutated.
 	return DEFAULT_VALUES.duplicate(true)
+
+
+func is_official_beta_ruleset(human_count: int,
+		active_bot_count: int) -> bool:
+	# Connection transport is deliberately irrelevant: today these rules make a
+	# private Tailscale match official; a dedicated server can enforce the same
+	# contract later without changing the player-facing definition.
+	return game_mode == MODE_ONE_GUN \
+		and not teams_enabled \
+		and not friendly_fire_enabled \
+		and human_count >= 3 \
+		and active_bot_count == 0 \
+		and is_equal_approx(round_time_limit, 180.0) \
+		and not chaos_overtime_enabled \
+		and is_equal_approx(overtime_fire_exposure_time, 5.0) \
+		and rounds_per_set == 3 \
+		and sets_per_match == 1 \
+		and not sprinting_enabled \
+		and not melee_eliminates_gunholder \
+		and not melee_eliminates_anyone \
+		and melee_effects_hit_anyone \
+		and melee_weapon_breaking \
+		and is_equal_approx(disarm_lock_time, 3.0) \
+		and max_dash_charges == 3 \
+		and gun_spawn_mode == "center" \
+		and is_zero_approx(melee_spawn_delay) \
+		and is_equal_approx(dropped_melee_despawn_time, 3.0) \
+		and hazards_enabled \
+		and consumables_enabled \
+		and powerups_enabled \
+		and item_registry == DEFAULT_VALUES["item_registry"] \
+		and powerup_registry == DEFAULT_VALUES["powerup_registry"] \
+		and melee_weapon_registry == DEFAULT_VALUES["melee_weapon_registry"] \
+		and not visible_hitboxes
 
 # preset_slots[slot_index] = {"name": String, "values": Dictionary} or null.
 var preset_slots: Array = []

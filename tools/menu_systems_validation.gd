@@ -7,11 +7,15 @@ extends SceneTree
 const TARGETS := [
 	"res://network_manager.gd",
 	"res://player_prefs.gd",
+	"res://graphics_quality_manager.gd",
 	"res://UI/player_settings_applier.gd",
 	"res://player_settings.gd",
 	"res://player_settings.tscn",
 	"res://game_setup.gd",
 	"res://game_setup.tscn",
+	"res://lobby_map_preview.gd",
+	"res://menu_map_cycler.gd",
+	"res://maps/test/title_bg_map.tscn",
 	"res://main_menu.gd",
 	"res://pause_menu.gd",
 	"res://UI/accessibility_manager.gd",
@@ -123,6 +127,124 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU RUNTIME OK: accessibility/crosshair preference migration defaults")
+		var migrated_low: Dictionary = prefs.call("_normalize", {"quality_preset": "low"})
+		if migrated_low["effects_quality"] != "low":
+			push_error("Menu validation: pre-effects-tier Low preset did not migrate to Low effects")
+			failed = true
+		var applier = load("res://UI/player_settings_applier.gd")
+		var low_preset: Dictionary = {}
+		applier.apply_quality_preset(low_preset, "low")
+		if low_preset.get("effects_quality") != "low" or not is_equal_approx(float(low_preset.get("render_scale", 0.0)), 0.75):
+			push_error("Menu validation: Low preset does not include its effects/render-scale policy")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: graphics preset schema and version-4 migration")
+		var quality_root := Node3D.new()
+		var world_environment := WorldEnvironment.new()
+		var authored_environment := Environment.new()
+		authored_environment.ssao_enabled = true
+		authored_environment.ssil_enabled = true
+		authored_environment.ssr_enabled = true
+		authored_environment.volumetric_fog_enabled = true
+		authored_environment.glow_enabled = true
+		world_environment.environment = authored_environment
+		quality_root.add_child(world_environment)
+		var local_light := OmniLight3D.new()
+		local_light.shadow_enabled = true
+		quality_root.add_child(local_light)
+		var sun := DirectionalLight3D.new()
+		sun.shadow_enabled = true
+		sun.directional_shadow_max_distance = 120.0
+		quality_root.add_child(sun)
+		var particles := GPUParticles3D.new()
+		particles.amount = 100
+		particles.amount_ratio = 1.0
+		quality_root.add_child(particles)
+		var quality_camera := Camera3D.new()
+		var camera_attributes := CameraAttributesPractical.new()
+		camera_attributes.dof_blur_far_enabled = true
+		quality_camera.attributes = camera_attributes
+		quality_root.add_child(quality_camera)
+		root.add_child(quality_root)
+		await process_frame
+		var quality_manager = root.get_node("GraphicsQualityManager")
+		var pending_low_viewport := SubViewport.new()
+		pending_low_viewport.size = Vector2i(320, 180)
+		root.add_child(pending_low_viewport)
+		applier.apply_viewport(pending_low_viewport, low_preset)
+		quality_manager.apply_effects_quality("low")
+		if not is_equal_approx(pending_low_viewport.scaling_3d_scale, 0.75) \
+				or pending_low_viewport.msaa_3d != Viewport.MSAA_DISABLED \
+				or pending_low_viewport.screen_space_aa != Viewport.SCREEN_SPACE_AA_DISABLED:
+			push_error("Menu validation: effects preview overwrote pending Low viewport settings")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: pending Low viewport settings survive effects preview")
+		pending_low_viewport.queue_free()
+		var low_environment := world_environment.environment
+		if low_environment.ssao_enabled or low_environment.ssil_enabled or low_environment.ssr_enabled \
+				or low_environment.volumetric_fog_enabled or low_environment.glow_enabled \
+				or local_light.shadow_enabled or sun.directional_shadow_max_distance > 35.01 \
+				or not is_equal_approx(particles.amount_ratio, 0.45) \
+				or (quality_camera.attributes as CameraAttributesPractical).dof_blur_far_enabled:
+			push_error("Menu validation: Low effects policy was not applied completely")
+			failed = true
+		quality_manager.apply_effects_quality("high")
+		var restored_environment := world_environment.environment
+		if not restored_environment.ssao_enabled or not restored_environment.ssil_enabled \
+				or not restored_environment.ssr_enabled or not restored_environment.volumetric_fog_enabled \
+				or not restored_environment.glow_enabled or not local_light.shadow_enabled \
+				or not is_equal_approx(sun.directional_shadow_max_distance, 120.0) \
+				or not is_equal_approx(particles.amount_ratio, 1.0) \
+				or not (quality_camera.attributes as CameraAttributesPractical).dof_blur_far_enabled:
+			push_error("Menu validation: High did not restore authored render values")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Low effects scaling and High authored-value restoration")
+		quality_root.queue_free()
+		await process_frame
+		var saved_effects_quality := str(prefs.settings["effects_quality"])
+		prefs.settings["effects_quality"] = "low"
+		var preview_host := Control.new()
+		root.add_child(preview_host)
+		var lobby_preview = load("res://lobby_map_preview.gd").new()
+		root.add_child(lobby_preview)
+		var map_registry = load("res://map_registry.gd")
+		lobby_preview.setup(preview_host, map_registry.MAPS)
+		lobby_preview.apply(1, 0)
+		await process_frame
+		if lobby_preview.get("_viewport") == null or lobby_preview.get("_preview_root") == null \
+				or lobby_preview.current_index() != 0:
+			push_error("Menu validation: Low lobby preview did not retain its live 3D viewport")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Low lobby retains the live 3D map preview")
+		lobby_preview.queue_free()
+		preview_host.queue_free()
+		var low_viewport := SubViewport.new()
+		low_viewport.size = Vector2i(320, 180)
+		root.add_child(low_viewport)
+		var low_camera := Camera3D.new()
+		low_viewport.add_child(low_camera)
+		var low_menu_host := Control.new()
+		root.add_child(low_menu_host)
+		var low_fade := ColorRect.new()
+		low_menu_host.add_child(low_fade)
+		var low_cycler = load("res://menu_map_cycler.gd").new()
+		low_viewport.add_child(low_cycler)
+		low_cycler.setup(low_viewport, low_camera, low_fade, low_menu_host, false)
+		await process_frame
+		var low_maps: Array = low_cycler.get("_maps")
+		if low_maps.size() != 1 or str(low_maps[0].get("scene_path", "")) != "res://maps/test/title_bg_map.tscn":
+			push_error("Menu validation: Low main menu did not select the lightweight live world")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Low main menu uses the lightweight live title world")
+		low_viewport.queue_free()
+		low_menu_host.queue_free()
+		prefs.settings["effects_quality"] = saved_effects_quality
+		quality_manager.apply_effects_quality(saved_effects_quality)
+		await process_frame
 		var accessibility_script = load("res://UI/accessibility_manager.gd")
 		if accessibility_script.motion_blur_vector(Vector3(2.0, 0.5, 0.0), Vector2(0.1, -0.05)).is_zero_approx():
 			push_error("Menu validation: motion-dependent blur vector failed")

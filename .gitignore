@@ -13,7 +13,23 @@ Godot/app_userdata/
 *.py[cod]
 *.blend1
 addons/terrain_3d/bin/~*
-/build/
+/build/*
+!/build/.gdignore
+
+# Local environment files and backend credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+supabase/.temp/
+supabase/secrets/
+supabase/**/secrets/
+supabase/supabase_config.local.json
+
 build_metadata.json
 
 # Cloudflare Worker local secrets and generated dependencies

@@ -197,7 +197,8 @@ func is_follow_mode() -> bool:
 	return _mode == Mode.FOLLOW
 
 func _input(event):
-	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open():
+	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open() \
+			or OnlineChat.is_typing():
 		return
 
 	if event.is_action_pressed(_input_prefix + "_jump"):
@@ -251,7 +252,8 @@ func _update_control_hint() -> void:
 		_mode_label.text = "FREE CAM   [SPACE/A] Follow   [WASD] Fly   [SHIFT/CTRL] Up/Down   [F] Fast"
 
 func _process(delta):
-	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open():
+	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open() \
+			or OnlineChat.is_typing():
 		return
 
 	if _mode == Mode.FOLLOW:

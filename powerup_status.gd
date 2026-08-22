@@ -17,7 +17,6 @@ const DISPLAY_NAMES = {
 	"sticky_hands": "Sticky Hands",
 	"speed_surge": "Speed Surge",
 	"silent_steps": "Silent Steps",
-	"vampire_touch": "Vampire Touch",
 	"extra_life": "Extra Life",
 	"reach": "Reach",
 }
@@ -28,7 +27,6 @@ const DESCRIPTIONS = {
 	"sticky_hands": "blocks one disarm",
 	"speed_surge": "+40% move speed",
 	"silent_steps": "your footsteps are silent",
-	"vampire_touch": "melee hits refund stamina",
 	"extra_life": "survive one lethal weapon hit",
 	"reach": "8m pickup and melee reach",
 }
@@ -80,7 +78,6 @@ const TYPE_COLORS = {
 	"sticky_hands": Color(0.2, 1.0, 0.35),
 	"speed_surge": Color(0.3, 1.0, 0.3),
 	"silent_steps": Color(0.55, 0.55, 0.85),
-	"vampire_touch": Color(0.85, 0.15, 0.25),
 	"extra_life": Color(1.0, 0.72, 0.18),
 	"reach": Color(0.2, 1.0, 0.42),
 }

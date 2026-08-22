@@ -59,6 +59,9 @@ func setup(host: Control, maps: Array) -> void:
 	_maps = maps
 	name = "LobbyMapPreview"
 
+	# Keep the authored moving 3D presentation at every quality tier. The
+	# quality manager scales this SubViewport's internal 3D resolution and its
+	# expensive effects while the surrounding lobby UI remains native-resolution.
 	var vpc := SubViewportContainer.new()
 	vpc.name = "MapPreviewContainer"
 	vpc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -68,8 +71,8 @@ func setup(host: Control, maps: Array) -> void:
 
 	_viewport = SubViewport.new()
 	# Online already keeps a live ENet session and may be running on the lower-
-	# spec partner machine. Render the decorative lobby map at a lower internal
-	# resolution there to avoid a second full-resolution Forward+ world spike.
+	# spec partner machine. Keep the moving preview, but at a smaller base size;
+	# the selected quality tier can scale its internal 3D rendering further.
 	_viewport.size = Vector2i(960, 540) if NetworkManager.is_online() else Vector2i(1600, 900)
 	_viewport.own_world_3d = true
 	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
@@ -237,6 +240,10 @@ func _load_map(index: int) -> void:
 	if packed == null:
 		_fail_map_load(index, "The map scene could not be loaded.")
 		return
+	# The fade is already opaque during swaps. Release the old scene before
+	# instantiating the next one so the lobby never holds two complete maps at
+	# once; this preserves the live preview without a transition memory spike.
+	_clear_current_map()
 	var instance := packed.instantiate()
 	var map := instance as Node3D
 	if map == null:
@@ -253,7 +260,6 @@ func _load_map(index: int) -> void:
 		var preview_only_hidden := map.get_node_or_null(NodePath(str(node_path))) as Node3D
 		if preview_only_hidden != null:
 			preview_only_hidden.visible = false
-	_clear_current_map()
 	_preview_root.add_child(map)
 	_current_map = map
 	_current_index = index

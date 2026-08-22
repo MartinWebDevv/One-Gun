@@ -220,8 +220,11 @@ func _validate_reach_and_spawn_pools() -> void:
 	for field in ["powerups_enabled", "powerup_registry", "melee_weapon_registry"]:
 		_check(field in GameConfig.PRESET_FIELDS,
 			"spawn-pool field %s is missing from presets/network snapshots" % field)
-	_check(GameConfig.POWERUP_TYPES.size() == 7,
-		"collectible powerup registry does not cover all seven powerups")
+	_check(GameConfig.POWERUP_TYPES.size() == 6,
+		"collectible powerup registry does not cover all six powerups")
+	_check("vampire_touch" not in GameConfig.POWERUP_TYPES
+			and not GameConfig.powerup_registry.has("vampire_touch"),
+		"removed Vampire Touch is still registered")
 	_check(GameConfig.MELEE_WEAPON_NAMES.size() == 5,
 		"melee spawn registry does not cover all five weapons")
 	var original := GameConfig.snapshot_for_lobby()

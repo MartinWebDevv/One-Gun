@@ -1008,7 +1008,6 @@ func _resolve_local_hit(body, is_thrown: bool) -> void:
 	var will_eliminate := (GameConfig.melee_eliminates_anyone
 		or (was_holding_gun and GameConfig.melee_eliminates_gunholder))
 	if player_ref != null:
-		GameEvents.melee_hit_landed.emit(player_ref.get_display_name())
 		GameEvents.actor_melee_hit_landed.emit(int(player_ref.get("actor_id")) if player_ref.get("actor_id") != null else -1)
 		if not will_eliminate:
 			GameEvents.combat_feedback.emit(killer, "melee_hit")
@@ -1133,7 +1132,6 @@ func _net_apply_melee_hit(
 	var attacker_name: String = attacker.get_display_name() if attacker != null and attacker.has_method("get_display_name") else ""
 	var victim_name: String = body.get_display_name() if body.has_method("get_display_name") else body.name
 	if meaningful_hit and attacker_name != "":
-		GameEvents.melee_hit_landed.emit(attacker_name)
 		GameEvents.actor_melee_hit_landed.emit(attacker_id)
 		# Ordinary melee feedback for the attacker's own machine; an elimination
 		# comes through round_manager's typed server-confirmed path instead.

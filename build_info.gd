@@ -11,6 +11,10 @@ const REJECTION_GAME_VERSION := "game_version"
 const REJECTION_NETWORK_PROTOCOL := "network_protocol"
 const BUILD_METADATA_PATH := "res://build_metadata.json"
 const RELEASE_NOTES_PATH := "res://release_notes.json"
+const RELEASE_POPUP_STATE_PATH := "user://release_popup_state.cfg"
+const RELEASE_POPUP_STATE_SECTION := "release_notes"
+const RELEASE_POPUP_STATE_KEY := "last_seen_popup_id"
+
 
 static var _metadata_loaded := false
 static var _metadata: Dictionary = {}
@@ -130,3 +134,34 @@ static func load_latest_release() -> Dictionary:
 	var parsed = JSON.parse_string(file.get_as_text())
 	file.close()
 	return parsed if parsed is Dictionary else {"version": GAME_VERSION, "categories": {}}
+
+static func release_popup_id(release: Dictionary) -> String:
+	var explicit_id := str(release.get("popup_id", "")).strip_edges()
+	if explicit_id != "":
+		return explicit_id.substr(0, 128)
+	return str(release.get("version", GAME_VERSION)).strip_edges().substr(0, 128)
+
+
+static func should_show_release_popup(release: Dictionary) -> bool:
+	if not bool(release.get("show_on_launch", false)):
+		return false
+	var popup_id := release_popup_id(release)
+	if popup_id == "":
+		return false
+	var state := ConfigFile.new()
+	if state.load(RELEASE_POPUP_STATE_PATH) != OK:
+		return true
+	return str(state.get_value(
+			RELEASE_POPUP_STATE_SECTION, RELEASE_POPUP_STATE_KEY, "")) != popup_id
+
+
+static func mark_release_popup_seen(release: Dictionary) -> void:
+	var popup_id := release_popup_id(release)
+	if popup_id == "":
+		return
+	var state := ConfigFile.new()
+	state.load(RELEASE_POPUP_STATE_PATH)
+	state.set_value(RELEASE_POPUP_STATE_SECTION, RELEASE_POPUP_STATE_KEY, popup_id)
+	var error := state.save(RELEASE_POPUP_STATE_PATH)
+	if error != OK:
+		push_warning("Could not save release-popup state: %s" % error_string(error))

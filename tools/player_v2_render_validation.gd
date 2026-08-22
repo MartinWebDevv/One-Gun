@@ -22,6 +22,13 @@ func _ready() -> void:
 
 
 func _run() -> void:
+	if OS.get_environment("ONE_GUN_V2_MAIN_MENU_ONLY") == "1":
+		await _capture_main_menu()
+		await _replace_content(Node.new())
+		await _wait_frames(3)
+		print("PLAYER_V2_RENDER_VALIDATION_OK output=", _output_dir)
+		get_tree().quit(0)
+		return
 	if OS.get_environment("ONE_GUN_V2_GUN_HOLDER_ONLY") == "1":
 		await _capture_gun_holder_visibility()
 		await _replace_content(Node.new())
@@ -74,8 +81,38 @@ func _capture_main_menu() -> void:
 	var menu := MAIN_MENU_SCENE.instantiate()
 	await _replace_content(menu)
 	await _wait_frames(18)
+	var prompt := menu.get_node_or_null("InterfaceLayer/PatchNotesPrompt") as PanelContainer
+	var prompt_label := prompt.get_node_or_null("PatchNotesPromptLabel") as Label if prompt != null else null
+	if prompt == null or not prompt.visible or prompt_label == null \
+			or prompt_label.text != 'Press "N" to view patch notes':
+		push_error("PlayerV2RenderValidation: patch-notes home prompt is missing")
+		get_tree().quit(1)
+		return
 	await _capture("main_menu.png")
+	var n_key := InputEventKey.new()
+	n_key.keycode = KEY_N
+	n_key.physical_keycode = KEY_N
+	n_key.pressed = true
+	menu.call("_unhandled_input", n_key)
+	await _wait_frames(6)
+	var release_dialog := menu.get_node_or_null("ReleaseNotesPopup") as AcceptDialog
+	if release_dialog == null or release_dialog.size.x < 720 or prompt.visible:
+		push_error("PlayerV2RenderValidation: N did not open the release notes cleanly")
+		get_tree().quit(1)
+		return
+	await _capture("main_menu_release_notes.png")
+	release_dialog.queue_free()
+	await _wait_frames(2)
+	if not prompt.visible:
+		push_error("PlayerV2RenderValidation: patch-notes prompt did not return after close")
+		get_tree().quit(1)
+		return
 	menu.call("_on_character_customization_pressed")
+	await _wait_frames(2)
+	if prompt.visible:
+		push_error("PlayerV2RenderValidation: patch-notes prompt leaked over a modal")
+		get_tree().quit(1)
+		return
 	await _wait_frames(10)
 	await _capture("main_menu_customization.png")
 

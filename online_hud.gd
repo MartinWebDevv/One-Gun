@@ -3,6 +3,8 @@ extends CanvasLayer
 # One full-screen HUD per online machine. Gameplay state remains in the
 # authoritative RoundManager; this node only binds local presentation.
 
+const DamageDirectionIndicatorScript = preload("res://damage_direction_indicator.gd")
+
 var player = null
 var _local_player = null
 var match_hud: Control = null
@@ -17,6 +19,7 @@ var powerup_status: VBoxContainer = null
 var throw_arc_overlay: ThrowArcOverlay = null
 var flash_camera_overlay: FlashCameraOverlay = null
 var flash_blind_overlay: FlashBlindOverlay = null
+var damage_direction_indicator: Control = null
 var _hit_marker: Control = null
 var _last_banner_text := ""
 var pure_spectator := false
@@ -122,6 +125,9 @@ func _ready() -> void:
 	flash_blind_overlay = FlashBlindOverlay.new()
 	flash_blind_overlay.name = "FlashBlindOverlay"
 	add_child(flash_blind_overlay)
+	damage_direction_indicator = DamageDirectionIndicatorScript.new()
+	damage_direction_indicator.name = "DamageDirectionIndicator"
+	add_child(damage_direction_indicator)
 
 	var pause_overlay := Control.new()
 	pause_overlay.name = "PauseMenu"
@@ -191,6 +197,7 @@ func _bind_display_player(p) -> void:
 	throw_arc_overlay.set_player(player)
 	flash_camera_overlay.set_player(player)
 	flash_blind_overlay.set_player(player)
+	damage_direction_indicator.set_player(player)
 
 func _spectator_controller():
 	if _local_player != null:

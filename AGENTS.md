@@ -10,6 +10,18 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - `docs/DESIGN.md` — the design intent/pillars behind those mechanics
 - `docs/ARCHITECTURE.md` — full technical breakdown of every system and how they connect
 - `docs/TODO.md` — known gaps, incomplete features, technical debt
+- `docs/PERFORMANCE.md` — permanent Forward+ performance/lower-spec requirements, quality scaling, profiling and stress-test rules
+
+## Permanent performance requirement
+
+Performance and lower-end PC/laptop compatibility are development requirements, not a final polish phase. Before completing significant work, ask how it behaves on a substantially weaker PC than the development machine and follow `docs/PERFORMANCE.md`.
+
+- Keep Forward+ as the primary renderer.
+- Target approximately 60 FPS at 1080p Low with stable frame pacing and no major spawn, combat, death, ability, or map-change stutters.
+- Preserve gameplay and the intended visual identity; scale expensive visuals rather than changing mechanics or globally stripping features.
+- Treat regressions and repeated-transition RAM/VRAM growth as bugs.
+- Profile meaningful bottlenecks where possible; do not micro-optimize or rewrite working systems for hypothetical gains.
+- At useful checkpoints/releases, remind the user to test a build on the weaker laptop.
 
 ## Running / verifying changes
 
@@ -24,7 +36,7 @@ This surfaces GDScript parse errors and broken resource references without openi
 ## Architecture essentials
 
 - **Scarcity model**: exactly one gun (`gun.tscn`/`gun.gd`) exists per match. Every authored `melee_spawn_point` starts populated and independently refills with a fresh randomized instance 5s after pickup, so multiple carried melee weapons may accumulate. Do not casually add ammo pickups or extra guns without checking `docs/DESIGN.md` first.
-- **Autoloads** (declared in `project.godot` `[autoload]`, load order matters): `GameEvents` (signal bus) → `GameConfig` (all match rules + disk-backed presets) → `PlayerPrefs` (personal settings) → `PauseManager` (ESC routing) → `MeleeWeaponRegistry` → `ThemeManager` → `AudioManager`.
+- **Autoloads** (declared in `project.godot` `[autoload]`, load order matters): `GameEvents` (signal bus) → `GameConfig` (all match rules + disk-backed presets) → `PlayerPrefs` (personal settings) → `GraphicsQualityManager` (event-driven viewport/effects scaling) → `PauseManager` (ESC routing) → `MeleeWeaponRegistry` → `ThemeManager` → `AudioManager`.
 - **`GameConfig` is the single source of truth for match rules** — lobby UI (`game_setup.gd`), gameplay scripts, and the preset save/load system all read/write the same autoload fields. Don't shadow these values locally in a script.
 - **`GameEvents` is the only cross-system coupling** for match events — gameplay code never holds direct references to UI or `round_manager.gd`; everything communicates by emitting/listening to its signals.
 - **Splitscreen is one script, two instances**: `character_body_3d.gd` drives both P1 and P2, differentiated only by an exported `input_prefix` (`"p1"`/`"p2"`). Any new input action must follow the `input_prefix + "_action_name"` convention or it will silently break for one player.

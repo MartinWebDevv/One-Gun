@@ -37,6 +37,19 @@ func _expire() -> void:
 func _is_decoy(body: Node) -> bool:
 	return body != null and body.has_method("is_combat_decoy") and body.is_combat_decoy()
 
+func _incoming_source_direction() -> Vector3:
+	var direction := -linear_velocity
+	if direction.is_zero_approx() and shooter is Node3D:
+		direction = (shooter as Node3D).global_position - global_position
+	return direction.normalized() if not direction.is_zero_approx() else Vector3.ZERO
+
+func _emit_local_damage_direction(body: Node) -> void:
+	var victim_actor_id = body.get("actor_id") if body != null else null
+	if victim_actor_id == null:
+		return
+	GameEvents.actor_damage_direction.emit(
+		int(victim_actor_id), _incoming_source_direction(), "gun")
+
 func _hit_decoy(body: PhysicsBody3D) -> void:
 	var attacker = shooter
 	if attacker == null and NetworkManager.is_online():
@@ -63,6 +76,7 @@ func _on_body_entered(body):
 	var shooter_name: String = shooter.get_display_name() if shooter != null else ""
 	if body.has_method("is_bullet_immune") and body.is_bullet_immune():
 		if body.is_in_group("player") and GameConfig.can_affect(shooter, body):
+			_emit_local_damage_direction(body)
 			GameEvents.combat_feedback.emit(shooter_name, "gun_hit")
 			GameEvents.actor_combat_feedback.emit(int(shooter.get("actor_id")) if shooter != null and shooter.get("actor_id") != null else -1, "gun_hit")
 		queue_free()
@@ -70,6 +84,8 @@ func _on_body_entered(body):
 	if not GameConfig.can_affect(shooter, body):
 		queue_free()
 		return
+	if body.is_in_group("player"):
+		_emit_local_damage_direction(body)
 	if body.has_method("flash_hit"):
 		body.flash_hit()
 	if body.has_method("eliminate"):
@@ -102,6 +118,9 @@ func _on_hit_online(body):
 	if vid == null or vid == net_shooter_id:
 		return   # not a networked player, or the shooter — ignore
 	var rm = get_tree().current_scene.get_node_or_null("RoundManager")
+	if rm != null and rm.has_method("server_report_damage_direction"):
+		rm.server_report_damage_direction(
+			int(vid), net_shooter_id, _incoming_source_direction(), net_round_epoch)
 	if body.has_method("is_bullet_immune") and body.is_bullet_immune():
 		# Blocked by immunity — still confirm the connect to the shooter.
 		if rm != null and rm.has_method("server_confirm_hit"):

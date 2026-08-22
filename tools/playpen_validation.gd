@@ -81,8 +81,8 @@ func _run() -> void:
 			"Expected all five melee weapons in every armory bay")
 		_check(get_tree().get_nodes_in_group("online_item").size() == 27,
 			"Expected all nine items in every armory bay")
-		_check(get_tree().get_nodes_in_group("online_powerup").size() == 21,
-			"Expected all seven powerups in every armory bay")
+		_check(get_tree().get_nodes_in_group("online_powerup").size() == 18,
+			"Expected all six powerups in every armory bay")
 		var host_actor = playpen.get_node_or_null("NetPlayers/NP1")
 		if host_actor != null:
 			_check(is_zero_approx(host_actor.rotation.y),

@@ -1,6 +1,7 @@
 extends Control
 
 const ONLINE_PLAY_OVERLAY_SCRIPT = preload("res://UI/online_play_overlay.gd")
+const SUPABASE_OVERLAY_SCRIPT = preload("res://UI/supabase_overlay.gd")
 const BuildInfo = preload("res://build_info.gd")
 
 # Main-menu presentation only. Gameplay, lobby, and networking behavior remains
@@ -171,11 +172,13 @@ var _secondary_status_label: Label
 var _status_dot: Panel
 var _local_profile_portrait = null
 var _version_label: Label
+var _patch_notes_prompt: PanelContainer
 var _build_channel_label: Label
 var _primary_buttons: Array[Button] = []
 var _local_menu_button: Button
 var _online_menu_button: Button
 var _character_customization_button: Button
+var _account_store_button: Button
 
 var _map_cycler: Node
 var _background_viewport: SubViewport
@@ -194,6 +197,7 @@ var _local_panel: PanelContainer
 var _online_panel: PanelContainer
 var _player_settings_overlay: Control
 var _character_customization_overlay: Control
+var _supabase_overlay: Control
 var _showcase_actor: Node3D
 var _online_status: Label
 var _online_ip_field: LineEdit
@@ -227,6 +231,14 @@ func _ready() -> void:
 		NetworkManager.server_disconnected.connect(_refresh_connection_status)
 	if not NetworkManager.compatibility_rejected.is_connected(_on_main_compatibility_rejected):
 		NetworkManager.compatibility_rejected.connect(_on_main_compatibility_rejected)
+	if not SupabaseManager.login_state_changed.is_connected(_on_supabase_status_changed):
+		SupabaseManager.login_state_changed.connect(_on_supabase_status_changed)
+	if not SupabaseManager.profile_loaded.is_connected(_on_supabase_status_changed):
+		SupabaseManager.profile_loaded.connect(_on_supabase_status_changed)
+	if not SupabaseManager.currency_updated.is_connected(_on_supabase_status_changed):
+		SupabaseManager.currency_updated.connect(_on_supabase_status_changed)
+	if not SupabaseManager.logout_completed.is_connected(_on_supabase_status_changed):
+		SupabaseManager.logout_completed.connect(_on_supabase_status_changed)
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 	call_deferred("_finish_layout")
 	AudioManager.play_music("menu")
@@ -245,9 +257,22 @@ func _notification(what: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var patch_notes_shortcut := false
+	if event is InputEventKey:
+		var key_event := event as InputEventKey
+		patch_notes_shortcut = key_event.pressed and not key_event.echo \
+			and (key_event.keycode == KEY_N or key_event.physical_keycode == KEY_N) \
+			and not key_event.ctrl_pressed and not key_event.alt_pressed \
+			and not key_event.meta_pressed
+	if patch_notes_shortcut and _is_home_screen_active():
+		_open_release_notes()
+		get_viewport().set_input_as_handled()
+		return
 	if not _modal_layer.visible or not event.is_action_pressed("ui_cancel"):
 		return
-	if _character_customization_overlay != null:
+	if _supabase_overlay != null:
+		_supabase_overlay.call("_close")
+	elif _character_customization_overlay != null:
 		_close_character_customization()
 	elif _online_panel.visible:
 		_on_online_back()
@@ -268,6 +293,7 @@ func _finish_layout() -> void:
 		_on_player_settings_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" and OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("lobby_"):
 		_bootstrap_lobby_capture.call_deferred()
+	call_deferred("_maybe_open_launch_release_notes")
 	if not Input.get_connected_joypads().is_empty() and not _primary_buttons.is_empty():
 		_using_pointer = false
 		# Let the Local Play entrance finish before applying its selected-scale
@@ -876,6 +902,40 @@ func _build_main_interface() -> void:
 	# 16:9-proportioned safe region instead of stretching.
 	_build_brand_navigation()
 	_build_layout_guides()
+	_build_patch_notes_prompt()
+
+func _build_patch_notes_prompt() -> void:
+	_patch_notes_prompt = PanelContainer.new()
+	_patch_notes_prompt.name = "PatchNotesPrompt"
+	_patch_notes_prompt.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_patch_notes_prompt.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_patch_notes_prompt.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_patch_notes_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := _color("panel")
+	background.a = 0.90
+	var border := _color("cyan")
+	border.a = 0.70
+	_patch_notes_prompt.add_theme_stylebox_override(
+		"panel", _style_box(background, border, 10, 1, 5, 10.0))
+	var label := _make_label('Press "N" to view patch notes', OneGunUI.TEXT_S, "text")
+	label.name = "PatchNotesPromptLabel"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_patch_notes_prompt.add_child(label)
+	_interface_layer.add_child(_patch_notes_prompt)
+
+
+func _is_home_screen_active() -> bool:
+	return _modal_layer != null and not _modal_layer.visible \
+		and _player_settings_overlay == null \
+		and get_node_or_null("ReleaseNotesPopup") == null
+
+
+func _update_patch_notes_prompt_visibility() -> void:
+	if _patch_notes_prompt != null:
+		_patch_notes_prompt.visible = _is_home_screen_active()
+
 
 
 func _build_layout_guides() -> void:
@@ -1122,10 +1182,14 @@ func _build_brand_navigation() -> void:
 	_character_customization_button = _make_menu_button(
 		"CHARACTER CUSTOMIZATION", _on_character_customization_pressed, false,
 		"CHOOSE YOUR COLOR", MenuIconKind.SETTINGS, Color(0.08, 0.55, 0.58))
+	_account_store_button = _make_menu_button(
+		"ACCOUNT & STORE", _on_account_store_pressed, false,
+		"CLOUD PROFILE / COSMETICS", MenuIconKind.NETWORK, Color(0.16, 0.50, 0.38))
 	_primary_buttons = [
 		_local_menu_button,
 		_online_menu_button,
 		_character_customization_button,
+		_account_store_button,
 		_make_menu_button("PLAYER SETTINGS", _on_player_settings_pressed, false,
 			"AUDIO • VIDEO • CONTROLS", MenuIconKind.SETTINGS, Color(0.46, 0.20, 0.76)),
 	]
@@ -1181,7 +1245,9 @@ func _build_brand_navigation() -> void:
 		"res://UI/components/character_portrait.gd").new()
 	_local_profile_portrait.name = "LocalProfilePortrait"
 	_local_profile_portrait.custom_minimum_size = Vector2(42, 42)
-	_local_profile_portrait.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
+	_local_profile_portrait.set_appearance(
+		str(PlayerPrefs.get_setting("character_skin_id")),
+		str(PlayerPrefs.get_setting("character_model_id")))
 	portrait_frame.add_child(_local_profile_portrait)
 
 	var identity_column := VBoxContainer.new()
@@ -1882,6 +1948,7 @@ func _show_modal(panel: PanelContainer, initial_focus: Control = null) -> void:
 	_local_panel.visible = panel == _local_panel
 	_online_panel.visible = panel == _online_panel
 	_modal_layer.visible = true
+	_update_patch_notes_prompt_visibility()
 	_refresh_ambient_motion()
 	_modal_layer.modulate.a = 1.0
 	panel.modulate.a = 1.0
@@ -1903,6 +1970,7 @@ func _close_modal() -> void:
 	_modal_layer.visible = false
 	_local_panel.visible = false
 	_online_panel.visible = false
+	_update_patch_notes_prompt_visibility()
 	_refresh_ambient_motion()
 	if _last_modal_opener and is_instance_valid(_last_modal_opener):
 		_last_modal_opener.grab_focus.call_deferred()
@@ -2273,6 +2341,20 @@ func _apply_responsive_layout() -> void:
 	if _build_channel_label != null:
 		_build_channel_label.add_theme_font_size_override(
 			"font_size", clampi(roundi(10.0 * layout_scale), 10, 12))
+	if _patch_notes_prompt != null:
+		var prompt_width := clampf(300.0 * layout_scale, 250.0, 330.0)
+		var prompt_height := clampf(42.0 * layout_scale, 36.0, 46.0)
+		var prompt_right := clampf(28.0 * layout_scale, 18.0, 36.0)
+		var prompt_bottom := clampf(24.0 * layout_scale, 16.0, 30.0)
+		_patch_notes_prompt.offset_left = -prompt_right - prompt_width
+		_patch_notes_prompt.offset_top = -prompt_bottom - prompt_height
+		_patch_notes_prompt.offset_right = -prompt_right
+		_patch_notes_prompt.offset_bottom = -prompt_bottom
+		var prompt_label := _patch_notes_prompt.get_node_or_null(
+			"PatchNotesPromptLabel") as Label
+		if prompt_label != null:
+			prompt_label.add_theme_font_size_override(
+				"font_size", clampi(roundi(14.0 * layout_scale), 12, 15))
 	_apply_cabinet_rect()
 	call_deferred("_apply_cabinet_rect")
 	if _local_panel:
@@ -2352,31 +2434,62 @@ func _on_version_gui_input(event: InputEvent) -> void:
 		_open_release_notes()
 
 
-func _open_release_notes() -> void:
+func _maybe_open_launch_release_notes() -> void:
+	if DisplayServer.get_name() == "headless" \
+			or OS.get_environment("ONEGUN_UI_CAPTURE") != "":
+		return
 	var release := BuildInfo.load_latest_release()
+	if not BuildInfo.should_show_release_popup(release):
+		return
+	BuildInfo.mark_release_popup_seen(release)
+	_open_release_notes(release)
+
+
+func _open_release_notes(release: Dictionary = {}) -> void:
+	var existing := get_node_or_null("ReleaseNotesPopup") as AcceptDialog
+	if existing != null:
+		return
+	if release.is_empty():
+		release = BuildInfo.load_latest_release()
+	var viewport_size := get_viewport_rect().size
+	var popup_size := Vector2i(
+		int(clampf(viewport_size.x * 0.48, 760.0, 920.0)),
+		int(clampf(viewport_size.y * 0.64, 520.0, 680.0)))
+	popup_size.x = mini(popup_size.x, maxi(480, int(viewport_size.x) - 64))
+	popup_size.y = mini(popup_size.y, maxi(400, int(viewport_size.y) - 64))
 	var dialog := AcceptDialog.new()
 	dialog.name = "ReleaseNotesPopup"
 	dialog.title = "%s — v%s" % [str(release.get("title", "Latest Release")), str(release.get("version", BuildInfo.GAME_VERSION))]
 	dialog.ok_button_text = "CLOSE"
-	dialog.min_size = Vector2i(620, 480)
+	dialog.min_size = popup_size
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(580, 390)
+	scroll.custom_minimum_size = Vector2(popup_size.x - 72, popup_size.y - 140)
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	dialog.add_child(scroll)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	column.custom_minimum_size.x = popup_size.x - 104
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_L)
 	scroll.add_child(column)
 	var categories: Dictionary = release.get("categories", {})
 	for category in ["Added", "Improved", "Fixed", "Removed", "Misc"]:
 		var entries: Array = categories.get(category, [])
 		if entries.is_empty():
 			continue
-		column.add_child(OneGunUI.make_heading(category.to_upper(), OneGunUI.TEXT_M, "gold"))
+		var heading := OneGunUI.make_heading(category.to_upper(), OneGunUI.TEXT_L, "gold")
+		heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_child(heading)
 		for entry in entries:
-			var line := OneGunUI.make_label("• %s" % str(entry), OneGunUI.TEXT_S, "text")
+			var line := OneGunUI.make_label("•  %s" % str(entry), OneGunUI.TEXT_M, "text")
 			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			column.add_child(line)
 	add_child(dialog)
-	dialog.popup_centered()
+	_update_patch_notes_prompt_visibility()
+	dialog.popup_centered(popup_size)
+	dialog.tree_exited.connect(_update_patch_notes_prompt_visibility)
 	dialog.confirmed.connect(dialog.queue_free)
 	dialog.canceled.connect(dialog.queue_free)
 
@@ -2384,7 +2497,7 @@ func _open_release_notes() -> void:
 func _on_player_preference_changed(key: String, _value: Variant) -> void:
 	if key == "player_name":
 		_refresh_connection_status()
-	elif key == "character_skin_id":
+	elif key in ["character_skin_id", "character_model_id"]:
 		_apply_showcase_skin()
 		_apply_profile_portrait()
 	elif key == "reduced_motion":
@@ -2406,10 +2519,11 @@ func _refresh_connection_status() -> void:
 	_player_name_label.text = NetworkManager.local_name().to_upper()
 	if _version_label != null:
 		_version_label.text = _build_text()
+	var cloud_status := _cloud_profile_summary()
 	if NetworkManager.is_online():
 		_connection_label.text = "ONLINE"
 		_connection_label.add_theme_color_override("font_color", _color("positive"))
-		_secondary_status_label.text = "CONNECTED PROFILE"
+		_secondary_status_label.text = "CONNECTED / %s" % cloud_status
 		_set_footer_status_dot(_color("positive"))
 		return
 	# Packet §10: never display an IP address in the menu. Reachability only —
@@ -2419,13 +2533,24 @@ func _refresh_connection_status() -> void:
 	if tailscale_ip != "":
 		_connection_label.text = "READY"
 		_connection_label.add_theme_color_override("font_color", _color("positive"))
-		_secondary_status_label.text = "LOCAL PROFILE / NETWORK READY"
+		_secondary_status_label.text = "NETWORK READY / %s" % cloud_status
 	else:
 		_connection_label.text = "LOCAL"
 		_connection_label.add_theme_color_override("font_color", _color("positive"))
-		_secondary_status_label.text = "LOCAL PROFILE / OFFLINE"
+		_secondary_status_label.text = cloud_status
 	_set_footer_status_dot(_color("positive"))
 
+
+func _cloud_profile_summary() -> String:
+	if not SupabaseManager.is_authenticated():
+		return "CLOUD SIGNED OUT"
+	var username := str(SupabaseManager.profile.get("username", "")).strip_edges()
+	var identity := username.to_upper() if username != "" else "CLOUD PROFILE"
+	return "%s / %d TOKENS" % [identity, SupabaseManager.gun_tokens]
+
+
+func _on_supabase_status_changed(_value: Variant = null) -> void:
+	_refresh_connection_status()
 
 # -----------------------------------------------------------------------------
 # Existing scene and networking callbacks (behavior preserved)
@@ -2459,6 +2584,7 @@ func _on_player_settings_pressed() -> void:
 	_player_settings_overlay = preload("res://player_settings.tscn").instantiate()
 	_player_settings_overlay.is_overlay = true
 	_player_settings_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	_update_patch_notes_prompt_visibility()
 	add_child(_player_settings_overlay)
 	_player_settings_overlay.settings_closed.connect(_close_player_settings_overlay)
 
@@ -2476,7 +2602,30 @@ func _on_character_customization_pressed() -> void:
 	_local_panel.visible = false
 	_online_panel.visible = false
 	_modal_layer.visible = true
+	_update_patch_notes_prompt_visibility()
 	_refresh_ambient_motion()
+
+
+func _on_account_store_pressed() -> void:
+	AudioManager.play_click()
+	if _supabase_overlay != null:
+		return
+	_last_modal_opener = _account_store_button
+	_supabase_overlay = SUPABASE_OVERLAY_SCRIPT.new()
+	_supabase_overlay.closed.connect(_close_supabase_overlay)
+	_modal_layer.add_child(_supabase_overlay)
+	_local_panel.visible = false
+	_online_panel.visible = false
+	_modal_layer.visible = true
+	_update_patch_notes_prompt_visibility()
+	_refresh_ambient_motion()
+
+
+func _close_supabase_overlay() -> void:
+	_supabase_overlay = null
+	_close_modal()
+
+
 
 
 func _close_character_customization() -> void:
@@ -2490,14 +2639,35 @@ func _close_character_customization() -> void:
 func _apply_showcase_skin() -> void:
 	if _showcase_actor == null or not is_instance_valid(_showcase_actor):
 		return
-	var visual := _showcase_actor.get_node_or_null("CharacterModel")
+	var model_id := PlayerSkinRegistry.sanitize_model_id(str(
+		PlayerPrefs.get_setting("character_model_id")))
+	var visual := _showcase_actor.get_node_or_null("CharacterModel") as Node3D
+	if visual != null:
+		var current_model_id := PlayerSkinRegistry.sanitize_model_id(
+			str(visual.get("model_id")))
+		if current_model_id != model_id:
+			var visual_scene := PlayerSkinRegistry.load_visual_scene(model_id)
+			if visual_scene != null:
+				var replacement := visual_scene.instantiate() as Node3D
+				if replacement != null:
+					replacement.name = "CharacterModel"
+					replacement.position = visual.position
+					replacement.rotation = visual.rotation
+					replacement.visible = visual.visible
+					replacement.set("build_animation_library", false)
+					visual.free()
+					_showcase_actor.add_child(replacement)
+					visual = replacement
+					_setup_mascot_animations(_showcase_actor)
 	if visual != null and visual.has_method("set_skin"):
 		visual.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
 
 
 func _apply_profile_portrait() -> void:
 	if _local_profile_portrait != null and is_instance_valid(_local_profile_portrait):
-		_local_profile_portrait.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
+		_local_profile_portrait.set_appearance(
+			str(PlayerPrefs.get_setting("character_skin_id")),
+			str(PlayerPrefs.get_setting("character_model_id")))
 
 
 func _close_player_settings_overlay() -> void:
@@ -2505,6 +2675,7 @@ func _close_player_settings_overlay() -> void:
 		return
 	_player_settings_overlay.queue_free()
 	_player_settings_overlay = null
+	_update_patch_notes_prompt_visibility()
 
 
 func _on_online_back() -> void:

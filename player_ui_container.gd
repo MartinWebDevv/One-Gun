@@ -1,11 +1,14 @@
 extends Control
 
+const DamageDirectionIndicatorScript = preload("res://damage_direction_indicator.gd")
+
 @export var player_path: NodePath
 var player = null
 var _owner_player = null
 var throw_arc_overlay: ThrowArcOverlay = null
 var flash_camera_overlay: FlashCameraOverlay = null
 var flash_blind_overlay: FlashBlindOverlay = null
+var damage_direction_indicator: Control = null
 
 func _ready():
 	await get_tree().process_frame
@@ -38,6 +41,10 @@ func _ready():
 	flash_blind_overlay.name = "FlashBlindOverlay"
 	add_child(flash_blind_overlay)
 	flash_blind_overlay.set_player(player)
+	damage_direction_indicator = DamageDirectionIndicatorScript.new()
+	damage_direction_indicator.name = "DamageDirectionIndicator"
+	add_child(damage_direction_indicator)
+	damage_direction_indicator.set_player(player)
 
 func _process(_delta: float) -> void:
 	if _owner_player == null:

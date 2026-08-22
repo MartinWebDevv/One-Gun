@@ -6,6 +6,7 @@ const VisibilityRules = preload("res://combat_visibility.gd")
 const HitboxDebug = preload("res://hitbox_debug_visual.gd")
 const OneOfUsIntroScript = preload("res://one_of_us_intro.gd")
 const OneOfUsRoleVisualScript = preload("res://one_of_us_role_visual.gd")
+const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
 
 const ProtectionIconFactory = preload("res://protection_icon_factory.gd")
 
@@ -16,6 +17,8 @@ var net_authority_id := 1
 var actor_id := 1
 var owner_peer_id := 1
 var character_skin_id := PlayerSkinRegistry.DEFAULT_SKIN_ID
+var character_model_id := PlayerSkinRegistry.DEFAULT_MODEL_ID
+var cosmetic_loadout: Dictionary = CosmeticRegistry.empty_loadout()
 var _is_local_online := true   # true for local play + local-authority online
 var _online_name_tag: Label3D = null
 var _extra_life_icon: Sprite3D = null
@@ -225,7 +228,9 @@ func _ready():
 		remove_from_group("player")
 		visible = false
 		set_physics_process(false)
+	_apply_character_model(_initial_character_model_id())
 	_apply_character_skin(_initial_character_skin_id())
+	set_cosmetic_loadout(cosmetic_loadout)
 	model_anim_player = $CharacterModel.find_child("AnimationPlayer", true, false)
 	if model_anim_player != null:
 		_merge_animations()
@@ -243,7 +248,6 @@ func _ready():
 	dash_charges = max_dash_charges
 	_apply_player_prefs()
 	gamepad_response_curve_exponent = max(gamepad_response_curve_exponent, 0.1)
-	GameEvents.melee_hit_landed.connect(_on_melee_hit_for_vampire)
 	ads_look_sensitivity_multiplier = clamp(ads_look_sensitivity_multiplier, 0.05, 1.0)
 	if not PlayerPrefs.setting_changed.is_connected(_on_player_pref_changed):
 		PlayerPrefs.setting_changed.connect(_on_player_pref_changed)
@@ -254,7 +258,9 @@ func _ready():
 
 func _on_player_pref_changed(key: String, _value):
 	_apply_player_prefs()
-	if key == "character_skin_id" and not is_online and not is_player2:
+	if key in ["character_skin_id", "character_model_id"] \
+			and not is_online and not is_player2:
+		_apply_character_model(str(PlayerPrefs.get_setting("character_model_id")))
 		_apply_character_skin(str(PlayerPrefs.get_setting("character_skin_id")))
 
 func _apply_match_settings():
@@ -281,8 +287,93 @@ func _initial_character_skin_id() -> String:
 		str(PlayerPrefs.get_setting("character_skin_id")))
 
 
+func _initial_character_model_id() -> String:
+	if is_online:
+		return PlayerSkinRegistry.sanitize_model_id(character_model_id)
+	if is_player2:
+		return PlayerSkinRegistry.sanitize_model_id(str(GameConfig.player2_model_id))
+	return PlayerSkinRegistry.sanitize_model_id(
+		str(PlayerPrefs.get_setting("character_model_id")))
+
+
 func set_character_skin(requested_id: String) -> void:
 	_apply_character_skin(requested_id)
+
+
+func set_character_model(requested_id: String) -> void:
+	_apply_character_model(requested_id)
+	_apply_character_skin(character_skin_id)
+
+
+func set_character_appearance(requested_model_id: String,
+		requested_skin_id: String) -> void:
+	_apply_character_model(requested_model_id)
+	_apply_character_skin(requested_skin_id)
+
+
+func set_cosmetic_loadout(raw_loadout) -> void:
+	cosmetic_loadout = CosmeticRegistry.sanitize_loadout(raw_loadout)
+	CosmeticRegistry.apply_to_player(self, cosmetic_loadout)
+
+
+
+
+func _apply_character_model(requested_id: String) -> void:
+	var safe_id := PlayerSkinRegistry.sanitize_model_id(requested_id)
+	var current_visual := get_node_or_null("CharacterModel") as Node3D
+	if current_visual != null \
+			and PlayerSkinRegistry.sanitize_model_id(
+				str(current_visual.get("model_id"))) == safe_id:
+		character_model_id = safe_id
+		return
+	var visual_scene := PlayerSkinRegistry.load_visual_scene(safe_id)
+	if visual_scene == null:
+		push_warning("Player: visual scene is unavailable for model '%s'." % safe_id)
+		return
+	var visual_position := Vector3.ZERO
+	var visual_rotation := Vector3.ZERO
+	var visual_visible := true
+	var insert_index := get_child_count()
+	var socket_children := {}
+	if current_visual != null:
+		visual_position = current_visual.position
+		visual_rotation = current_visual.rotation
+		visual_visible = current_visual.visible
+		insert_index = current_visual.get_index()
+		for socket_name in [
+				"GunHoldPoint", "MeleeHoldPoint", "ItemHoldPoint",
+				"LeftFootSocket", "RightFootSocket"]:
+			var socket := current_visual.find_child(socket_name, true, false)
+			if socket == null:
+				continue
+			socket_children[socket_name] = socket.get_children()
+			for child in socket.get_children():
+				child.reparent(self, true)
+		current_visual.free()
+	var next_visual := visual_scene.instantiate() as Node3D
+	if next_visual == null:
+		return
+	next_visual.name = "CharacterModel"
+	next_visual.position = visual_position
+	next_visual.rotation = visual_rotation
+	next_visual.visible = visual_visible
+	add_child(next_visual)
+	move_child(next_visual, mini(insert_index, get_child_count() - 1))
+	for socket_name in socket_children:
+		var next_socket := next_visual.find_child(str(socket_name), true, false)
+		if next_socket == null:
+			continue
+		for child in socket_children[socket_name]:
+			if is_instance_valid(child):
+				child.reparent(next_socket, true)
+	character_model_id = safe_id
+	if model_anim_player != null:
+		model_anim_player = next_visual.find_child(
+			"AnimationPlayer", true, false) as AnimationPlayer
+		if model_anim_player != null:
+			_merge_animations()
+			if model_anim_player.has_animation(_current_anim):
+				model_anim_player.play(_current_anim)
 
 
 func _apply_character_skin(requested_id: String) -> void:
@@ -370,7 +461,8 @@ func play_one_of_us_transformation() -> void:
 func _input(event):
 	if _one_of_us_intro_input_locked:
 		return
-	if use_gamepad_look or not _is_local_online or PauseManager.is_pause_open():
+	if use_gamepad_look or not _is_local_online or PauseManager.is_pause_open() \
+			or OnlineChat.is_typing():
 		return
 	if event is InputEventMouseMotion:
 		var sens = MOUSE_LOOK_BASE * mouse_look_sensitivity
@@ -444,7 +536,8 @@ func _physics_process(delta):
 		move_and_slide()
 		return
 
-	if is_online and _is_local_online and PauseManager.is_pause_open():
+	if is_online and _is_local_online \
+			and (PauseManager.is_pause_open() or OnlineChat.is_typing()):
 		velocity.x = move_toward(velocity.x, 0.0, SPEED * delta)
 		velocity.z = move_toward(velocity.z, 0.0, SPEED * delta)
 		if not is_on_floor():
@@ -1516,9 +1609,9 @@ func _update_flash_blind(delta: float) -> void:
 # --- new powerup state ---
 var speed_surge_timer := 0.0
 const SPEED_SURGE_MULT := 1.4
-var vampire_timer := 0.0
-const VAMPIRE_STAMINA_REFUND := 30.0
 var second_wind_ready := false
+var sticky_hands_timer := 0.0
+var sticky_hands_cooldown_timer := 0.0
 var reach_timer := 0.0
 const REACH_PICKUP_RADIUS := GameConfig.REACH_POWERUP_DISTANCE
 const REACH_SCAN_INTERVAL := 0.10
@@ -1537,7 +1630,8 @@ func _canonical_powerup_type(power_type: String) -> String:
 func can_collect_powerup(power_type: String) -> bool:
 	match _canonical_powerup_type(power_type):
 		"sticky_hands":
-			return melee_disarm_shields <= 0
+			return melee_disarm_shields <= 0 \
+				and sticky_hands_cooldown_timer <= 0.0
 		"extra_life":
 			return not second_wind_ready
 		"extra_dash":
@@ -1559,12 +1653,11 @@ func apply_powerup(power_type: String, duration: float) -> bool:
 			extra_dash_charge = 1
 		"sticky_hands":
 			melee_disarm_shields = 1
+			sticky_hands_timer = GameConfig.STICKY_HANDS_DURATION
 		"speed_surge":
 			speed_surge_timer = _extend_timed_powerup(speed_surge_timer, duration)
 		"silent_steps":
 			silent_steps_timer = _extend_timed_powerup(silent_steps_timer, duration)
-		"vampire_touch":
-			vampire_timer = _extend_timed_powerup(vampire_timer, duration)
 		"extra_life":
 			second_wind_ready = true
 		"reach":
@@ -1584,17 +1677,14 @@ func get_active_powerups_for_display() -> Array:
 				if extra_dash_charge > 0:
 					result.append({"type": power_type, "timed": false, "time_left": 0.0})
 			"sticky_hands":
-				if melee_disarm_shields > 0:
-					result.append({"type": power_type, "timed": false, "time_left": 0.0})
+				if melee_disarm_shields > 0 and sticky_hands_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": sticky_hands_timer})
 			"speed_surge":
 				if speed_surge_timer > 0.0:
 					result.append({"type": power_type, "timed": true, "time_left": speed_surge_timer})
 			"silent_steps":
 				if silent_steps_timer > 0.0:
 					result.append({"type": power_type, "timed": true, "time_left": silent_steps_timer})
-			"vampire_touch":
-				if vampire_timer > 0.0:
-					result.append({"type": power_type, "timed": true, "time_left": vampire_timer})
 			"extra_life":
 				if second_wind_ready:
 					result.append({"type": power_type, "timed": false, "time_left": 0.0})
@@ -1607,10 +1697,16 @@ func get_active_powerups_for_display() -> Array:
 func _update_new_powerups(delta: float) -> void:
 	if speed_surge_timer > 0.0:
 		speed_surge_timer = maxf(speed_surge_timer - delta, 0.0)
+	if sticky_hands_cooldown_timer > 0.0:
+		sticky_hands_cooldown_timer = maxf(sticky_hands_cooldown_timer - delta, 0.0)
+	if melee_disarm_shields > 0:
+		sticky_hands_timer = maxf(sticky_hands_timer - delta, 0.0)
+		if sticky_hands_timer <= 0.0:
+			_clear_sticky_hands(true)
+	elif sticky_hands_timer > 0.0:
+		sticky_hands_timer = 0.0
 	if silent_steps_timer > 0.0:
 		silent_steps_timer = maxf(silent_steps_timer - delta, 0.0)
-	if vampire_timer > 0.0:
-		vampire_timer = maxf(vampire_timer - delta, 0.0)
 	if reach_timer > 0.0:
 		reach_timer = maxf(reach_timer - delta, 0.0)
 		if is_locally_controlled():
@@ -1696,7 +1792,6 @@ func confirm_online_double_jump_shoes() -> void:
 func clear_all_powerups() -> void:
 	speed_surge_timer = 0.0
 	silent_steps_timer = 0.0
-	vampire_timer = 0.0
 	reach_timer = 0.0
 	_reach_interactables.clear()
 	_rebuild_interactables()
@@ -1704,6 +1799,8 @@ func clear_all_powerups() -> void:
 	melee_disarm_shields = 0
 	extra_dash_charge = 0
 	active_powerup_order.clear()
+	sticky_hands_timer = 0.0
+	sticky_hands_cooldown_timer = 0.0
 
 func clear_overtime_protections() -> void:
 	# Standard OT preserves earned timed powers and Extra Dash, but removes
@@ -1712,12 +1809,22 @@ func clear_overtime_protections() -> void:
 	melee_disarm_shields = 0
 	active_powerup_order.erase("extra_life")
 	active_powerup_order.erase("sticky_hands")
+	sticky_hands_timer = 0.0
+	sticky_hands_cooldown_timer = 0.0
+
+func _clear_sticky_hands(start_cooldown: bool) -> void:
+	melee_disarm_shields = 0
+	sticky_hands_timer = 0.0
+	if start_cooldown:
+		sticky_hands_cooldown_timer = maxf(
+			sticky_hands_cooldown_timer, GameConfig.STICKY_HANDS_REPICKUP_COOLDOWN)
+	active_powerup_order.erase("sticky_hands")
+
 
 func consume_sticky_hands() -> bool:
 	if melee_disarm_shields <= 0:
 		return false
-	melee_disarm_shields = 0
-	active_powerup_order.erase("sticky_hands")
+	_clear_sticky_hands(true)
 	return true
 
 func consume_extra_life() -> bool:
@@ -1790,10 +1897,6 @@ func _update_reach_candidates(delta: float) -> void:
 			next_candidates.append(candidate)
 	_reach_interactables = next_candidates
 	_rebuild_interactables()
-
-func _on_melee_hit_for_vampire(hitter_name: String) -> void:
-	if vampire_timer > 0.0 and hitter_name == get_display_name():
-		stamina = minf(stamina + VAMPIRE_STAMINA_REFUND, MAX_STAMINA)
 
 func _start_dash():
 	var input_dir = _get_movement_input_dir()

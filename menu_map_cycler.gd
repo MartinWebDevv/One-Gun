@@ -20,6 +20,7 @@ extends Node
 
 const GAME_SETUP := preload("res://game_setup.gd")
 const LOBBY_PREVIEW := preload("res://lobby_map_preview.gd")
+const LOW_SPEC_PREVIEW_SCENE := "res://maps/test/title_bg_map.tscn"
 
 const VIEW_SECONDS := 10.0         # packet: exactly 10 s per map
 const FADE_TIME := 0.35            # x2 (out + in) = 0.7 s total transition
@@ -85,7 +86,12 @@ func setup(viewport: SubViewport, camera: Camera3D, fade_rect: ColorRect, menu_r
 	_fade_rect = fade_rect
 	_menu_root = menu_root
 	_reduced_motion = reduced_motion
-	_maps = GAME_SETUP.MAPS
+	# Low keeps the live 3D identity but uses the small purpose-built title
+	# world instead of loading/cycling complete playable maps behind the UI.
+	if GraphicsQualityManager.effects_quality() == "low":
+		_maps = [{"scene_path": LOW_SPEC_PREVIEW_SCENE}]
+	else:
+		_maps = GAME_SETUP.MAPS
 	if _maps.is_empty():
 		push_warning("MenuMapCycler: no maps registered in game_setup.MAPS")
 		return
@@ -235,10 +241,12 @@ func _instance_map(packed: PackedScene, index: int) -> void:
 	# pickup labels may leak into the menu.
 	for node in _collect_gameplay_nodes(map):
 		node.free()
-	_viewport.add_child(map)
-	_current_map = map
+	# Apply the menu grade before the scene enters the tree so the global
+	# quality manager caches this presentation as the authored baseline.
 	_current_index = index
 	_apply_menu_environment(map)
+	_viewport.add_child(map)
+	_current_map = map
 	_compute_orbit(map)
 	_setup_view_camera(map, gun_local)
 	_orbit_angle = randf() * TAU if _current_index > 0 else 0.0

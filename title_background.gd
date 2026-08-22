@@ -7,8 +7,6 @@ extends Node3D
 # No game logic — purely visual.
 # ============================================================
 
-const VISUAL_SCENE = preload("res://models/player_v2/player_v2_visual.tscn")
-
 # Camera pan settings
 const PAN_SPEED      = 0.04   # radians per second
 const PAN_MIN_Y      = -0.3
@@ -36,7 +34,12 @@ func _spawn_characters():
 	]
 
 	for i in positions.size():
-		var char_instance = VISUAL_SCENE.instantiate()
+		var model_id := str(PlayerPrefs.get_setting("character_model_id")) \
+			if i == 1 else PlayerSkinRegistry.DEFAULT_MODEL_ID
+		var visual_scene := PlayerSkinRegistry.load_visual_scene(model_id)
+		if visual_scene == null:
+			continue
+		var char_instance = visual_scene.instantiate()
 		char_instance.position = positions[i]
 		# Face roughly toward camera.
 		char_instance.rotation.y = PI

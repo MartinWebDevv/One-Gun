@@ -273,18 +273,31 @@ func _validate_all_gun() -> void:
 		return not bool(melee.get("personal_mode_melee")))
 	_check(ground_melee.is_empty(), "All Gun spawned forbidden ground melee weapons")
 
-	var target = actors.filter(func(actor): return "is_bot" in actor and actor.is_bot)[0]
-	target.eliminate("Validation", "GUN", "weapon", 1)
-	_check(not bool(target.get("is_eliminated")) and int(target.get("all_gun_hearts")) == 2,
-		"First All Gun shot did not consume exactly one heart")
-	target.eliminate("Validation", "GUN", "weapon", 1)
-	_check(int(target.get("all_gun_hearts")) == 2,
-		"All Gun post-hit protection did not block an immediate second hit")
 	var live_deadline := Time.get_ticks_msec() + 8000
 	while manager.get("round_state") != "live" and Time.get_ticks_msec() < live_deadline:
 		await get_tree().process_frame
 	_check(manager.get("round_state") == "live",
 		"All Gun did not preserve the normal match intro/countdown path")
+	_check(is_equal_approx(GameConfig.ALL_GUN_SPAWN_PROTECTION_TIME, 1.0),
+		"All Gun opening protection is not one second")
+	_check(is_equal_approx(GameConfig.ALL_GUN_HIT_PROTECTION_TIME, 1.0),
+		"All Gun post-hit protection is not one second")
+	_check(actors.all(func(actor): return float(actor.get("lethal_immunity_timer")) > 0.0),
+		"All Gun did not protect every actor as combat began")
+	var target = actors.filter(func(actor): return "is_bot" in actor and actor.is_bot)[0]
+	var opening_hearts := int(target.get("all_gun_hearts"))
+	target.eliminate("Validation", "GUN", "weapon", 1)
+	_check(int(target.get("all_gun_hearts")) == opening_hearts,
+		"All Gun opening protection did not block an immediate shot")
+	target.lethal_immunity_timer = 0.0
+	target.eliminate("Validation", "GUN", "weapon", 1)
+	_check(not bool(target.get("is_eliminated")) and int(target.get("all_gun_hearts")) == opening_hearts - 1,
+		"First unprotected All Gun shot did not consume exactly one heart")
+	_check(is_equal_approx(float(target.get("lethal_immunity_timer")), 1.0),
+		"All Gun shot did not grant one second of post-hit protection")
+	target.eliminate("Validation", "GUN", "weapon", 1)
+	_check(int(target.get("all_gun_hearts")) == opening_hearts - 1,
+		"All Gun post-hit protection did not block an immediate second hit")
 	var moving_bots := actors.filter(func(actor): return "is_bot" in actor and actor.is_bot)
 	var bot_start_positions: Array = moving_bots.map(func(actor): return actor.global_position)
 	await get_tree().create_timer(2.0).timeout

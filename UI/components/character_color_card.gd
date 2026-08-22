@@ -7,6 +7,7 @@ const SkinRegistry = preload("res://player_skin_registry.gd")
 const CHARACTER_PORTRAIT_SCRIPT = preload("res://UI/components/character_portrait.gd")
 
 var skin_id := SkinRegistry.DEFAULT_SKIN_ID
+var model_id := SkinRegistry.DEFAULT_MODEL_ID
 var _portrait = null
 var _name_label: Label
 var _check_badge: PanelContainer
@@ -22,8 +23,16 @@ func _ready() -> void:
 	pressed.connect(func() -> void: color_chosen.emit(skin_id))
 
 
-func setup(requested_id: String) -> void:
+func setup(requested_id: String,
+		requested_model_id := SkinRegistry.DEFAULT_MODEL_ID) -> void:
 	skin_id = SkinRegistry.sanitize_skin_id(requested_id)
+	model_id = SkinRegistry.sanitize_model_id(requested_model_id)
+	if is_inside_tree():
+		_refresh_contents()
+
+
+func set_model(requested_id: String) -> void:
+	model_id = SkinRegistry.sanitize_model_id(requested_id)
 	if is_inside_tree():
 		_refresh_contents()
 
@@ -87,10 +96,13 @@ func _build_contents() -> void:
 
 func _refresh_contents() -> void:
 	if _portrait != null:
-		_portrait.set_skin(skin_id)
+		_portrait.set_appearance(skin_id, model_id)
 	if _name_label != null:
 		_name_label.text = SkinRegistry.display_name(skin_id).to_upper()
-	tooltip_text = "Preview the %s color" % SkinRegistry.display_name(skin_id)
+	tooltip_text = "Preview the %s color on the %s model" % [
+		SkinRegistry.display_name(skin_id),
+		SkinRegistry.model_display_name(model_id),
+	]
 
 
 func _apply_styles() -> void:

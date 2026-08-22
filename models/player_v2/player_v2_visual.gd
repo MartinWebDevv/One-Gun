@@ -8,6 +8,10 @@ const THROW_SOURCE_RANGE := Vector2(2.75, 3.60)
 const GUN_IDLE_PITCH := deg_to_rad(55.0)
 const GUN_IDLE_POSITION_OFFSET := Vector3(0.0, -0.65, 0.0)
 const GUN_IDLE_BLEND_DURATION := 0.16
+# The female GLB is one mesh node, but Blender preserved its joined chest as
+# surface 0 with a separate material slot. That surface reuses UV space occupied
+# by the face in the corrected atlas, so it must keep the untouched female atlas.
+const FEMALE_CHEST_SURFACE_INDEX := 0
 
 const LOOPING_ANIMATIONS: Array[String] = [
 	"idle", "long_idle", "standard_run", "run", "fall", "pistol_run",
@@ -51,9 +55,8 @@ const SOCKET_ROTATIONS := {
 }
 
 static var _animation_cache: Dictionary = {}
-static var _master_bone_names: Array[String] = []
-static var _master_bone_parents := PackedInt32Array()
-static var _master_global_rests: Array[Transform3D] = []
+static var _target_profile_cache: Dictionary = {}
+@export var model_id := SkinRegistry.DEFAULT_MODEL_ID
 @export var skin_id := SkinRegistry.DEFAULT_SKIN_ID
 @export var build_animation_library := true
 
@@ -75,6 +78,7 @@ func _ready() -> void:
 	process_priority = 100
 	_animation_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
 	_skeleton = find_child("Skeleton3D", true, false) as Skeleton3D
+	model_id = SkinRegistry.sanitize_model_id(model_id)
 	_prepare_unique_skin_materials()
 	set_skin(skin_id)
 	_setup_hold_points()
@@ -119,10 +123,13 @@ func get_character_mesh_instances() -> Array[MeshInstance3D]:
 
 func set_skin(requested_id: String) -> void:
 	skin_id = SkinRegistry.sanitize_skin_id(requested_id)
-	var texture := SkinRegistry.load_texture(skin_id)
+	var texture := SkinRegistry.load_texture(skin_id, model_id)
 	if texture == null:
 		push_warning("PlayerV2Visual: texture is unavailable for skin '%s'." % skin_id)
 		return
+	var female_chest_texture: Texture2D = null
+	if model_id == "female":
+		female_chest_texture = SkinRegistry.load_female_chest_texture(skin_id)
 	if _skin_materials.is_empty():
 		_prepare_unique_skin_materials()
 	for binding in _skin_material_bindings:
@@ -131,7 +138,10 @@ func set_skin(requested_id: String) -> void:
 		var surface_index := int(binding.get("surface", -1))
 		if material == null:
 			continue
-		material.albedo_texture = texture
+		material.albedo_texture = female_chest_texture \
+			if model_id == "female" \
+				and surface_index == FEMALE_CHEST_SURFACE_INDEX \
+				and female_chest_texture != null else texture
 		# Rebind the authoritative per-instance material as well as updating its
 		# texture. Temporary hit effects replace surface overrides; rebinding here
 		# guarantees an interrupted/overlapping effect cannot strand the mesh on a
@@ -152,18 +162,22 @@ func ensure_animation_library() -> AnimationPlayer:
 func ensure_animations(requested: Array) -> AnimationPlayer:
 	if _animation_player == null:
 		_animation_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
-	if _animation_player == null:
-		push_warning("PlayerV2Visual: the rig has no AnimationPlayer.")
+	if _skeleton == null:
+		_skeleton = find_child("Skeleton3D", true, false) as Skeleton3D
+	if _animation_player == null or _skeleton == null:
+		push_warning("PlayerV2Visual: the rig has no animation player or skeleton.")
 		return null
+	_cache_target_profile()
 	if not _animation_player.has_animation_library(""):
 		_animation_player.add_animation_library("", AnimationLibrary.new())
 	var library := _animation_player.get_animation_library("")
 	for requested_name in requested:
 		var animation_name := str(requested_name)
 		_cache_animation(animation_name)
-		if _animation_cache.has(animation_name) \
+		var cache_key := _animation_cache_key(animation_name)
+		if _animation_cache.has(cache_key) \
 				and not library.has_animation(animation_name):
-			library.add_animation(animation_name, _animation_cache[animation_name])
+			library.add_animation(animation_name, _animation_cache[cache_key])
 	return _animation_player
 
 
@@ -272,13 +286,23 @@ func _update_foot_points() -> void:
 func get_foot_socket(left_foot: bool) -> Marker3D:
 	return _foot_points.get("left" if left_foot else "right") as Marker3D
 
-static func _cache_animation(animation_name: String) -> void:
-	if _animation_cache.has(animation_name):
+func _animation_cache_key(animation_name: String) -> String:
+	return "%s:%s" % [model_id, animation_name]
+
+
+func _cache_animation(animation_name: String) -> void:
+	var cache_key := _animation_cache_key(animation_name)
+	if _animation_cache.has(cache_key):
+		return
+	var target_profile: Dictionary = _target_profile_cache.get(model_id, {})
+	if target_profile.is_empty():
+		push_warning("PlayerV2Visual: target bind profile is unavailable for %s." % model_id)
 		return
 	if animation_name == "idle_pistol":
 		_cache_animation("idle")
-		if _animation_cache.has("idle"):
-			_animation_cache["idle_pistol"] = _animation_cache["idle"]
+		var idle_key := _animation_cache_key("idle")
+		if _animation_cache.has(idle_key):
+			_animation_cache[cache_key] = _animation_cache[idle_key]
 		return
 	if animation_name == "idle":
 		var model_scene := load(MASTER_RIG_PATH) as PackedScene
@@ -289,13 +313,14 @@ static func _cache_animation(animation_name: String) -> void:
 			"AnimationPlayer", true, false) as AnimationPlayer
 		var model_skeleton := model_instance.find_child(
 			"Skeleton3D", true, false) as Skeleton3D
-		_cache_master_profile(model_skeleton)
 		var idle := _first_animation(model_player)
 		if idle != null:
 			var prepared_idle := _prepare_animation(
-				idle, "idle", model_skeleton)
+				idle, "idle", model_skeleton, target_profile,
+				_skeleton_transform_from_animation_root(
+					model_player, model_skeleton))
 			if prepared_idle != null:
-				_animation_cache["idle"] = prepared_idle
+				_animation_cache[cache_key] = prepared_idle
 		model_instance.free()
 		return
 	if not ANIMATION_SOURCES.has(animation_name):
@@ -313,9 +338,11 @@ static func _cache_animation(animation_name: String) -> void:
 	var source_animation := _first_animation(source_player)
 	if source_animation != null and source_skeleton != null:
 		var prepared := _prepare_animation(
-			source_animation, animation_name, source_skeleton)
+			source_animation, animation_name, source_skeleton, target_profile,
+			_skeleton_transform_from_animation_root(
+				source_player, source_skeleton))
 		if prepared != null:
-			_animation_cache[animation_name] = prepared
+			_animation_cache[cache_key] = prepared
 	instance.free()
 
 
@@ -329,12 +356,27 @@ static func _first_animation(player: AnimationPlayer) -> Animation:
 
 
 static func _prepare_animation(source: Animation, animation_name: String,
-		source_skeleton: Skeleton3D) -> Animation:
-	if source_skeleton == null or _master_bone_names.is_empty():
-		push_warning("PlayerV2Visual: master bind profile is unavailable.")
+		source_skeleton: Skeleton3D, target_profile: Dictionary,
+		source_skeleton_transform: Transform3D) -> Animation:
+	var target_bone_names: Array = target_profile.get("bone_names", [])
+	var target_bone_parents: PackedInt32Array = target_profile.get(
+		"bone_parents", PackedInt32Array())
+	var target_global_rests: Array = target_profile.get("global_rests", [])
+	var target_local_rests: Array = target_profile.get("local_rests", [])
+	var target_model_id := str(target_profile.get("model_id", "male"))
+	var target_skeleton_path := str(target_profile.get(
+		"skeleton_path", "Skeleton3D"))
+	var target_skeleton_transform: Transform3D = target_profile.get(
+		"skeleton_transform", Transform3D.IDENTITY)
+	var target_skeleton_inverse := target_skeleton_transform.affine_inverse()
+	var source_scale := source_skeleton_transform.basis.get_scale().length()
+	var target_scale := target_skeleton_transform.basis.get_scale().length()
+	var skeleton_unit_ratio := source_scale / maxf(target_scale, 0.000001)
+	if source_skeleton == null or target_bone_names.is_empty():
+		push_warning("PlayerV2Visual: target bind profile is unavailable.")
 		return null
 	var source_indices: PackedInt32Array = []
-	for bone_name in _master_bone_names:
+	for bone_name in target_bone_names:
 		var source_index := source_skeleton.find_bone(bone_name)
 		if source_index < 0:
 			push_warning("PlayerV2Visual: source clip is missing bone %s." % bone_name)
@@ -356,15 +398,17 @@ static func _prepare_animation(source: Animation, animation_name: String,
 	var baked_positions: Array = []
 	var baked_rotations: Array = []
 	var baked_scales: Array = []
-	for _bone_index in _master_bone_names.size():
+	for _bone_index in target_bone_names.size():
 		baked_positions.append([])
 		baked_rotations.append([])
 		baked_scales.append([])
+	var source_locals: Array[Transform3D] = []
 	var source_globals: Array[Transform3D] = []
+	source_locals.resize(source_skeleton.get_bone_count())
 	source_globals.resize(source_skeleton.get_bone_count())
 	var target_globals: Array[Transform3D] = []
-	target_globals.resize(_master_bone_names.size())
-	var hips_index := _master_bone_names.find("mixamorig_Hips")
+	target_globals.resize(target_bone_names.size())
+	var hips_index := target_bone_names.find("mixamorig_Hips")
 	var hips_horizontal_anchor := Vector2.ZERO
 
 	for sample_index in sample_times.size():
@@ -373,17 +417,45 @@ static func _prepare_animation(source: Animation, animation_name: String,
 		for source_index in source_skeleton.get_bone_count():
 			var source_local := _sample_source_bone(
 				source, source_skeleton, source_tracks, source_index, source_sample_time)
+			source_locals[source_index] = source_local
 			var source_parent := source_skeleton.get_bone_parent(source_index)
 			source_globals[source_index] = source_local \
 				if source_parent < 0 else source_globals[source_parent] * source_local
-		for target_index in _master_bone_names.size():
+		for target_index in target_bone_names.size():
 			var source_index := source_indices[target_index]
-			var source_deformation := source_globals[source_index] \
-				* source_skeleton.get_bone_global_rest(source_index).affine_inverse()
-			target_globals[target_index] = source_deformation \
-				* _master_global_rests[target_index]
-		for target_index in _master_bone_names.size():
-			var target_parent := _master_bone_parents[target_index]
+			if target_model_id == "female":
+				# The female glTF's Skeleton3D node uses a different model-space
+				# axis convention from the Mixamo FBXs. Its imported native clip
+				# supplies the centered reference pose cached in target_rest.
+				# Apply source deformation in each matched bone's local space so
+				# the target keeps its authored bone axes and proportions.
+				var source_rest := source_skeleton.get_bone_rest(source_index)
+				var source_local: Transform3D = source_locals[source_index]
+				var target_rest: Transform3D = target_local_rests[target_index]
+				var rotation_delta := source_rest.basis.orthonormalized().inverse() \
+					* source_local.basis.orthonormalized()
+				var target_position := target_rest.origin
+				if target_bone_names[target_index] == "mixamorig_Hips":
+					target_position += (source_local.origin - source_rest.origin) \
+						* skeleton_unit_ratio
+				var target_local := Transform3D(
+					target_rest.basis * rotation_delta, target_position)
+				var target_parent := target_bone_parents[target_index]
+				target_globals[target_index] = target_local if target_parent < 0 \
+					else target_globals[target_parent] * target_local
+			else:
+				var source_pose_common: Transform3D = source_skeleton_transform \
+					* source_globals[source_index]
+				var source_rest_common: Transform3D = source_skeleton_transform \
+					* source_skeleton.get_bone_global_rest(source_index)
+				var source_deformation: Transform3D = source_pose_common \
+					* source_rest_common.affine_inverse()
+				var target_rest_common: Transform3D = target_skeleton_transform \
+					* target_global_rests[target_index]
+				target_globals[target_index] = target_skeleton_inverse \
+					* source_deformation * target_rest_common
+		for target_index in target_bone_names.size():
+			var target_parent := target_bone_parents[target_index]
 			var target_local := target_globals[target_index] \
 				if target_parent < 0 else target_globals[target_parent].affine_inverse() \
 				* target_globals[target_index]
@@ -403,25 +475,78 @@ static func _prepare_animation(source: Animation, animation_name: String,
 	animation.step = RETARGET_STEP
 	animation.loop_mode = Animation.LOOP_LINEAR \
 		if animation_name in LOOPING_ANIMATIONS else Animation.LOOP_NONE
-	for bone_index in _master_bone_names.size():
+	for bone_index in target_bone_names.size():
 		_add_baked_track(animation, Animation.TYPE_POSITION_3D,
-			_master_bone_names[bone_index], baked_positions[bone_index], sample_times,
+			target_skeleton_path, target_bone_names[bone_index],
+			baked_positions[bone_index], sample_times,
 			_values_vary(baked_positions[bone_index]))
 		_add_baked_track(animation, Animation.TYPE_ROTATION_3D,
-			_master_bone_names[bone_index], baked_rotations[bone_index], sample_times, true)
+			target_skeleton_path, target_bone_names[bone_index],
+			baked_rotations[bone_index], sample_times, true)
 		_add_baked_track(animation, Animation.TYPE_SCALE_3D,
-			_master_bone_names[bone_index], baked_scales[bone_index], sample_times,
+			target_skeleton_path, target_bone_names[bone_index],
+			baked_scales[bone_index], sample_times,
 			_values_vary(baked_scales[bone_index]))
 	return animation
 
 
-static func _cache_master_profile(skeleton: Skeleton3D) -> void:
-	if skeleton == null or not _master_bone_names.is_empty():
+func _cache_target_profile() -> void:
+	model_id = SkinRegistry.sanitize_model_id(model_id)
+	if _target_profile_cache.has(model_id) or _skeleton == null:
 		return
-	for bone_index in skeleton.get_bone_count():
-		_master_bone_names.append(skeleton.get_bone_name(bone_index))
-		_master_bone_parents.append(skeleton.get_bone_parent(bone_index))
-		_master_global_rests.append(skeleton.get_bone_global_rest(bone_index))
+	var bone_names: Array[String] = []
+	var bone_parents := PackedInt32Array()
+	var global_rests: Array[Transform3D] = []
+	var local_rests: Array[Transform3D] = []
+	var reference_animation: Animation = null
+	var reference_tracks := {}
+	if model_id == "female":
+		reference_animation = _first_animation(_animation_player)
+		if reference_animation != null:
+			reference_tracks = _animation_bone_tracks(reference_animation)
+	for bone_index in _skeleton.get_bone_count():
+		bone_names.append(_skeleton.get_bone_name(bone_index))
+		var bone_parent := _skeleton.get_bone_parent(bone_index)
+		bone_parents.append(bone_parent)
+		var local_rest := _skeleton.get_bone_rest(bone_index)
+		if reference_animation != null:
+			local_rest = _sample_source_bone(
+				reference_animation, _skeleton, reference_tracks, bone_index, 0.0)
+		local_rests.append(local_rest)
+		global_rests.append(local_rest if bone_parent < 0 \
+			else global_rests[bone_parent] * local_rest)
+	var skeleton_path := "Skeleton3D"
+	if _animation_player != null:
+		var animation_root := _animation_player.get_node_or_null(
+			_animation_player.root_node)
+		if animation_root != null:
+			skeleton_path = str(animation_root.get_path_to(_skeleton))
+	_target_profile_cache[model_id] = {
+		"bone_names": bone_names,
+		"bone_parents": bone_parents,
+		"global_rests": global_rests,
+		"local_rests": local_rests,
+		"model_id": model_id,
+		"skeleton_path": skeleton_path,
+		"skeleton_transform": _skeleton_transform_from_animation_root(
+			_animation_player, _skeleton),
+	}
+
+
+static func _skeleton_transform_from_animation_root(
+		player: AnimationPlayer, skeleton: Skeleton3D) -> Transform3D:
+	if player == null or skeleton == null:
+		return Transform3D.IDENTITY
+	var animation_root := player.get_node_or_null(player.root_node)
+	if animation_root == null:
+		return Transform3D.IDENTITY
+	var result := Transform3D.IDENTITY
+	var current: Node = skeleton
+	while current != null and current != animation_root:
+		if current is Node3D:
+			result = (current as Node3D).transform * result
+		current = current.get_parent()
+	return result if current == animation_root else Transform3D.IDENTITY
 
 
 static func _animation_bone_tracks(animation: Animation) -> Dictionary:
@@ -463,10 +588,11 @@ static func _sample_source_bone(animation: Animation, skeleton: Skeleton3D,
 
 
 static func _add_baked_track(animation: Animation, type: Animation.TrackType,
-		bone_name: String, values: Array, sample_times: Array[float],
-		write_all_keys: bool) -> void:
+		skeleton_path: String, bone_name: String, values: Array,
+		sample_times: Array[float], write_all_keys: bool) -> void:
 	var track_index := animation.add_track(type)
-	animation.track_set_path(track_index, NodePath("Skeleton3D:" + bone_name))
+	animation.track_set_path(
+		track_index, NodePath("%s:%s" % [skeleton_path, bone_name]))
 	var key_count := values.size() if write_all_keys else mini(values.size(), 1)
 	for key_index in key_count:
 		animation.track_insert_key(

@@ -45,6 +45,7 @@ var is_bot := false
 var actor_id := -1
 var owner_peer_id := -1
 var character_skin_id := PlayerSkinRegistry.DEFAULT_SKIN_ID
+var character_model_id := PlayerSkinRegistry.DEFAULT_MODEL_ID
 
 var _popped := false
 var _blocked_command_time := 0.0
@@ -78,6 +79,7 @@ func _ready() -> void:
 	add_to_group("combat_target")
 	add_to_group("combat_decoy")
 	_register_with_owner()
+	_apply_owner_model()
 	_setup_procedural_visual()
 	_apply_owner_skin()
 	_face_direction(initial_forward)
@@ -109,6 +111,34 @@ func _register_with_owner() -> void:
 	character_skin_id = PlayerSkinRegistry.sanitize_skin_id(
 		str(owner_player.get("character_skin_id")) \
 		if "character_skin_id" in owner_player else PlayerSkinRegistry.DEFAULT_SKIN_ID)
+	character_model_id = PlayerSkinRegistry.sanitize_model_id(
+		str(owner_player.get("character_model_id")) \
+		if "character_model_id" in owner_player else PlayerSkinRegistry.DEFAULT_MODEL_ID)
+
+
+func _apply_owner_model() -> void:
+	var visual_root := get_node_or_null("VisualRoot") as Node3D
+	var current_visual := get_node_or_null("VisualRoot/CatModel") as Node3D
+	if visual_root == null or current_visual == null:
+		return
+	var current_model_id := PlayerSkinRegistry.sanitize_model_id(
+		str(current_visual.get("model_id")))
+	if current_model_id == character_model_id:
+		return
+	var visual_scene := PlayerSkinRegistry.load_visual_scene(character_model_id)
+	if visual_scene == null:
+		push_warning("DecoyBody: character visual scene could not be loaded.")
+		return
+	var replacement := visual_scene.instantiate() as Node3D
+	if replacement == null:
+		return
+	replacement.name = "CatModel"
+	replacement.position = current_visual.position
+	replacement.rotation = current_visual.rotation
+	replacement.visible = current_visual.visible
+	replacement.set("build_animation_library", false)
+	current_visual.free()
+	visual_root.add_child(replacement)
 
 
 func _apply_owner_skin() -> void:

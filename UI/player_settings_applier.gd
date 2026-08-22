@@ -5,10 +5,22 @@ extends RefCounted
 # the menu means startup, Apply, and Cancel restoration all share one path.
 
 const QUALITY_PRESETS := {
-	"low": {"shadow_quality": "low", "anti_aliasing": "off", "render_scale": 0.75},
-	"medium": {"shadow_quality": "medium", "anti_aliasing": "fxaa", "render_scale": 0.9},
-	"high": {"shadow_quality": "high", "anti_aliasing": "fxaa", "render_scale": 1.0},
-	"ultra": {"shadow_quality": "ultra", "anti_aliasing": "msaa_4x", "render_scale": 1.0},
+	"low": {
+		"shadow_quality": "low", "anti_aliasing": "off", "render_scale": 0.75,
+		"effects_quality": "low",
+	},
+	"medium": {
+		"shadow_quality": "medium", "anti_aliasing": "fxaa", "render_scale": 0.9,
+		"effects_quality": "medium",
+	},
+	"high": {
+		"shadow_quality": "high", "anti_aliasing": "fxaa", "render_scale": 1.0,
+		"effects_quality": "high",
+	},
+	"ultra": {
+		"shadow_quality": "ultra", "anti_aliasing": "msaa_4x", "render_scale": 1.0,
+		"effects_quality": "ultra",
+	},
 }
 
 
@@ -31,11 +43,7 @@ static func apply_audio(values: Dictionary) -> void:
 
 static func apply_video(values: Dictionary, tree: SceneTree, include_display := true) -> void:
 	Engine.max_fps = int(values.get("fps_limit", 0))
-	var viewport := tree.root
-	_apply_antialiasing(viewport, str(values.get("anti_aliasing", "fxaa")))
-	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	viewport.scaling_3d_scale = clampf(float(values.get("render_scale", 1.0)), 0.5, 1.5)
-	viewport.positional_shadow_atlas_size = _shadow_atlas_size(str(values.get("shadow_quality", "high")))
+	_apply_viewports_in_subtree(tree.root, values)
 	if not include_display or DisplayServer.get_name().to_lower() == "headless":
 		return
 	DisplayServer.window_set_vsync_mode(
@@ -54,6 +62,20 @@ static func apply_video(values: Dictionary, tree: SceneTree, include_display := 
 			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 			DisplayServer.window_set_size(size)
 			_center_window(size)
+
+
+static func apply_viewport(viewport: Viewport, values: Dictionary) -> void:
+	_apply_antialiasing(viewport, str(values.get("anti_aliasing", "fxaa")))
+	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	viewport.scaling_3d_scale = clampf(float(values.get("render_scale", 1.0)), 0.5, 1.5)
+	viewport.positional_shadow_atlas_size = _shadow_atlas_size(str(values.get("shadow_quality", "high")))
+
+
+static func _apply_viewports_in_subtree(node: Node, values: Dictionary) -> void:
+	if node is Viewport:
+		apply_viewport(node as Viewport, values)
+	for child in node.get_children():
+		_apply_viewports_in_subtree(child, values)
 
 
 static func apply_quality_preset(values: Dictionary, preset: String) -> void:

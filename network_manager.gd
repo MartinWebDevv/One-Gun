@@ -2,6 +2,7 @@ extends Node
 
 const MatchLimitsData = preload("res://match_limits.gd")
 const BuildInfo = preload("res://build_info.gd")
+const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
 
 # ============================================================
 # NetworkManager — Autoload singleton (online multiplayer)
@@ -32,6 +33,8 @@ const REJECTION_HANDSHAKE_TIMEOUT := "handshake_timeout"
 const REJECTION_MATCH_TICKET_REQUIRED := "match_ticket_required"
 const REJECTION_MATCH_TICKET_INVALID := "match_ticket_invalid"
 const REJECTION_MATCH_TICKET_IN_USE := "match_ticket_in_use"
+const CHAT_MAX_MESSAGE_LENGTH := 200
+const CHAT_MIN_INTERVAL_MSEC := 250
 
 signal lobby_changed                     # roster added/removed/renamed
 signal lobby_readiness_changed           # host-authoritative pre-match ready state
@@ -50,6 +53,9 @@ signal match_load_status_changed
 signal spectator_state_changed
 signal playpen_members_changed
 signal one_of_us_preference_changed
+signal chat_message_received(sender_peer_id: int, sender_name: String,
+	message: String, context: String)
+signal chat_session_reset
 
 # peer_id -> { "name": String }
 var peers: Dictionary = {}
@@ -93,6 +99,7 @@ var _expected_match_tickets: Dictionary = {}
 var _claimed_match_tickets: Dictionary = {}
 var _peer_match_tickets: Dictionary = {}
 var _local_match_ticket_id := ""
+var _last_chat_message_msec: Dictionary = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -101,6 +108,8 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	if not SupabaseManager.loadout_updated.is_connected(_on_persistent_loadout_updated):
+		SupabaseManager.loadout_updated.connect(_on_persistent_loadout_updated)
 
 func _process(_delta: float) -> void:
 	if _discovery_responder == null or not is_host():
@@ -170,6 +179,8 @@ func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "",
 	peers[1] = {
 		"name": local_name(),
 		"skin_id": local_skin_id(),
+		"cosmetics": persistent_cosmetic_loadout(),
+		"model_id": local_model_id(),
 		"actor_id": 1,
 		"team_id": 0,
 		"role": "lobby",
@@ -724,12 +735,14 @@ func _reset_session(emit_change: bool) -> void:
 	_claimed_match_tickets.clear()
 	_peer_match_tickets.clear()
 	_local_match_ticket_id = ""
+	_last_chat_message_msec.clear()
 	_host_port = DEFAULT_PORT
 	if _discovery_responder != null:
 		_discovery_responder.close()
 		_discovery_responder = null
 	if emit_change:
 		lobby_changed.emit()
+	chat_session_reset.emit()
 
 func _join_timeout(attempt: int) -> void:
 	await get_tree().create_timer(JOIN_TIMEOUT_SECONDS).timeout
@@ -868,25 +881,106 @@ func peer_skin_id(peer_id: int) -> String:
 		peers.get(peer_id, {}).get("skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID)))
 
 
+func local_model_id() -> String:
+	if is_online() and peers.has(local_id()):
+		return PlayerSkinRegistry.sanitize_model_id(str(
+			peers[local_id()].get("model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID)))
+	return PlayerSkinRegistry.sanitize_model_id(str(
+		PlayerPrefs.get_setting("character_model_id")))
+
+
+func peer_model_id(peer_id: int) -> String:
+	return PlayerSkinRegistry.sanitize_model_id(str(
+		peers.get(peer_id, {}).get("model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID)))
+
+
+func persistent_cosmetic_loadout() -> Dictionary:
+	if SupabaseManager.is_authenticated():
+		return CosmeticRegistry.sanitize_loadout(
+			SupabaseManager.equipped_cosmetics())
+	return CosmeticRegistry.empty_loadout()
+
+
+func local_cosmetic_loadout() -> Dictionary:
+	if is_online() and peers.has(local_id()):
+		return CosmeticRegistry.sanitize_loadout(
+			peers[local_id()].get("cosmetics", {}))
+	return persistent_cosmetic_loadout()
+
+
+func peer_cosmetic_loadout(peer_id: int) -> Dictionary:
+	return CosmeticRegistry.sanitize_loadout(
+		peers.get(peer_id, {}).get("cosmetics", {}))
+
+
+func set_local_cosmetic_loadout(raw_loadout) -> bool:
+	var safe_loadout := CosmeticRegistry.sanitize_loadout(raw_loadout)
+	if not is_online():
+		return true
+	if lobby_in_progress:
+		return false
+	var id := local_id()
+	if not peers.has(id):
+		return false
+	if peer_cosmetic_loadout(id) == safe_loadout:
+		return true
+	peers[id]["cosmetics"] = safe_loadout
+	lobby_changed.emit()
+	if is_host():
+		_broadcast_lobby_state()
+	else:
+		_request_cosmetic_loadout_change.rpc_id(1, safe_loadout)
+	return true
+
+
+func _on_persistent_loadout_updated(next_loadout: Dictionary) -> void:
+	set_local_cosmetic_loadout(next_loadout)
+
+
+func _request_local_cosmetic_sync_if_needed() -> void:
+	if is_host() or not is_online() or not peers.has(local_id()) \
+			or lobby_in_progress:
+		return
+	var persistent := persistent_cosmetic_loadout()
+	if peer_cosmetic_loadout(local_id()) != persistent:
+		_request_cosmetic_loadout_change.rpc_id(1, persistent)
+
+
 func set_local_skin_id(requested_id: String) -> bool:
-	var safe_id := PlayerSkinRegistry.sanitize_skin_id(requested_id)
-	PlayerPrefs.set_setting("character_skin_id", safe_id)
+	return set_local_appearance(requested_id, local_model_id())
+
+
+func set_local_model_id(requested_id: String) -> bool:
+	return set_local_appearance(local_skin_id(), requested_id)
+
+
+func set_local_appearance(requested_skin_id: String,
+		requested_model_id: String) -> bool:
+	var safe_skin_id := PlayerSkinRegistry.sanitize_skin_id(requested_skin_id)
+	var safe_model_id := PlayerSkinRegistry.sanitize_model_id(requested_model_id)
+	var next_preferences := PlayerPrefs.snapshot()
+	next_preferences["character_skin_id"] = safe_skin_id
+	next_preferences["character_model_id"] = safe_model_id
+	if not PlayerPrefs.apply_transaction(next_preferences):
+		return false
 	if not is_online():
 		return true
 	if lobby_in_progress:
 		return false
 	var id := local_id()
 	if is_host():
-		peers[id]["skin_id"] = safe_id
+		peers[id]["skin_id"] = safe_skin_id
+		peers[id]["model_id"] = safe_model_id
 		lobby_changed.emit()
 		_broadcast_lobby_state()
 	else:
-		# Keep rapid local scrolling responsive while the host validates and
+		# Keep local appearance previews responsive while the host validates and
 		# echoes the authoritative roster state.
 		if peers.has(id):
-			peers[id]["skin_id"] = safe_id
+			peers[id]["skin_id"] = safe_skin_id
+			peers[id]["model_id"] = safe_model_id
 			lobby_changed.emit()
-		_request_skin_change.rpc_id(1, safe_id)
+		_request_appearance_change.rpc_id(1, safe_skin_id, safe_model_id)
 	return true
 
 func set_local_name(new_name: String) -> bool:
@@ -916,6 +1010,100 @@ func peer_ids_sorted() -> Array:
 	var ids := peers.keys()
 	ids.sort_custom(func(a, b): return actor_id_for_peer(int(a)) < actor_id_for_peer(int(b)))
 	return ids
+
+
+# ------------------------------------------------------------
+# Session text chat
+# ------------------------------------------------------------
+
+func send_chat_message(raw_message: String) -> bool:
+	if not is_online() or is_dedicated_server():
+		return false
+	var message := _sanitize_chat_message(raw_message)
+	if message == "":
+		return false
+	if is_host():
+		_host_accept_chat_message(local_id(), message)
+	else:
+		_request_chat_message.rpc_id(1, message)
+	return true
+
+
+func chat_context_for_peer(peer_id: int) -> String:
+	if not peers.has(peer_id):
+		return ""
+	var role := str(peers[peer_id].get("role", "lobby"))
+	if role in ["participant", "spectator"]:
+		return "match"
+	if role in ["playpen", "playpen_loading", "playpen_hosting"]:
+		return "playpen"
+	return "lobby"
+
+
+@rpc("any_peer", "reliable")
+func _request_chat_message(raw_message: String) -> void:
+	if not multiplayer.is_server():
+		return
+	_host_accept_chat_message(multiplayer.get_remote_sender_id(), raw_message)
+
+
+func _host_accept_chat_message(sender_peer_id: int, raw_message: String) -> void:
+	if not is_host() or not peers.has(sender_peer_id):
+		return
+	var message := _sanitize_chat_message(raw_message)
+	if message == "":
+		return
+	var now := Time.get_ticks_msec()
+	var last_sent := int(_last_chat_message_msec.get(
+		sender_peer_id, now - CHAT_MIN_INTERVAL_MSEC))
+	if now - last_sent < CHAT_MIN_INTERVAL_MSEC:
+		return
+	_last_chat_message_msec[sender_peer_id] = now
+	var context := chat_context_for_peer(sender_peer_id)
+	if context == "":
+		return
+	var sender_name := peer_name(sender_peer_id)
+	for recipient_peer_id in _chat_recipient_peer_ids(context):
+		if recipient_peer_id == local_id():
+			_deliver_chat_message(sender_peer_id, sender_name, message, context)
+		else:
+			_receive_chat_message.rpc_id(
+				recipient_peer_id, sender_peer_id, sender_name, message, context)
+
+
+func _chat_recipient_peer_ids(context: String) -> Array[int]:
+	var result: Array[int] = []
+	var connected_peer_ids := multiplayer.get_peers()
+	for peer_id_value in peers:
+		var peer_id := int(peer_id_value)
+		if peer_id != local_id() and not connected_peer_ids.has(peer_id):
+			continue
+		if chat_context_for_peer(peer_id) == context:
+			result.append(peer_id)
+	result.sort()
+	return result
+
+
+@rpc("authority", "reliable")
+func _receive_chat_message(sender_peer_id: int, sender_name: String,
+		raw_message: String, context: String) -> void:
+	if context not in ["lobby", "match", "playpen"]:
+		return
+	var message := _sanitize_chat_message(raw_message)
+	if message == "":
+		return
+	_deliver_chat_message(sender_peer_id, sender_name.strip_edges().substr(0, 24),
+		message, context)
+
+
+func _deliver_chat_message(sender_peer_id: int, sender_name: String,
+		message: String, context: String) -> void:
+	chat_message_received.emit(sender_peer_id, sender_name, message, context)
+
+
+func _sanitize_chat_message(raw_message: String) -> String:
+	return raw_message.replace("\r", " ").replace("\n", " ").replace("\t", " ") \
+		.strip_edges().substr(0, CHAT_MAX_MESSAGE_LENGTH)
 
 
 func participant_peer_ids() -> Array:
@@ -1359,7 +1547,7 @@ func _pull_roster() -> void:
 			return
 		_register_client_hello.rpc_id(
 			1, BuildInfo.compatibility_payload(), local_name(), local_skin_id(),
-			_local_match_ticket_id)
+			local_model_id(), _local_match_ticket_id)
 		_request_roster.rpc_id(1)
 		await get_tree().create_timer(0.4).timeout
 		if peers.size() >= 1:
@@ -1395,7 +1583,7 @@ func _on_server_disconnected() -> void:
 @rpc("any_peer", "reliable")
 func _register_client_hello(
 		compatibility: Dictionary, pname: String, requested_skin_id := "blue",
-		match_ticket_id := "") -> void:
+		requested_model_id := "male", match_ticket_id := "") -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
@@ -1427,8 +1615,10 @@ func _register_client_hello(
 		cleaned = "Player"
 	var role := "participant" if match_server_mode else ("waiting" if lobby_in_progress else "lobby")
 	peers[sender] = {
+		"cosmetics": CosmeticRegistry.empty_loadout(),
 		"name": cleaned,
 		"skin_id": PlayerSkinRegistry.sanitize_skin_id(requested_skin_id),
+		"model_id": PlayerSkinRegistry.sanitize_model_id(requested_model_id),
 		"actor_id": _next_human_actor_id,
 		"team_id": _least_populated_team(),
 		"role": role,
@@ -1498,13 +1688,32 @@ func _request_name_change(pname: String) -> void:
 
 
 @rpc("any_peer", "reliable")
-func _request_skin_change(requested_id: String) -> void:
+func _request_appearance_change(requested_skin_id: String,
+		requested_model_id: String) -> void:
 	if not multiplayer.is_server() or lobby_in_progress:
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if not peers.has(sender):
 		return
-	peers[sender]["skin_id"] = PlayerSkinRegistry.sanitize_skin_id(requested_id)
+	peers[sender]["skin_id"] = PlayerSkinRegistry.sanitize_skin_id(
+		requested_skin_id)
+	peers[sender]["model_id"] = PlayerSkinRegistry.sanitize_model_id(
+		requested_model_id)
+	lobby_changed.emit()
+	_broadcast_lobby_state()
+
+
+@rpc("any_peer", "reliable")
+func _request_cosmetic_loadout_change(raw_loadout: Dictionary) -> void:
+	if not multiplayer.is_server() or lobby_in_progress:
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	if not peers.has(sender):
+		return
+	var safe_loadout := CosmeticRegistry.sanitize_loadout(raw_loadout)
+	if peer_cosmetic_loadout(sender) == safe_loadout:
+		return
+	peers[sender]["cosmetics"] = safe_loadout
 	lobby_changed.emit()
 	_broadcast_lobby_state()
 
@@ -1573,6 +1782,7 @@ func _send_roster(roster: Dictionary, session_name: String = "",
 		if _joining:
 			_joining = false
 			connection_succeeded.emit()
+	_request_local_cosmetic_sync_if_needed()
 	lobby_changed.emit()
 	lobby_readiness_changed.emit()
 	_refresh_gameplay_replication_visibility.call_deferred()

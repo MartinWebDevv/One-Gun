@@ -1,0 +1,7 @@
+{
+	"schema": 1,
+	"enabled": true,
+	"project_url": "https://xvpchpvkjbkklryszscn.supabase.co",
+	"publishable_key": "sb_publishable_fiHEtcnj9UgMMHaHFmdQew_lMRrchu1",
+	"credential_note": "This file may contain only a client-safe Supabase publishable/anon key. Never place a secret or service-role key in the game client."
+}

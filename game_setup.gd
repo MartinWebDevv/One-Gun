@@ -996,7 +996,7 @@ func _refresh_roster() -> void:
 			if not NetworkManager.is_lobby_controller(id):
 				ready_state = OneGunRosterRow.ReadyState.READY if NetworkManager.is_peer_lobby_ready(id) else OneGunRosterRow.ReadyState.NOT_READY
 			row.set_human(peer_name, NetworkManager.is_lobby_controller(id), is_me, ready_state,
-				NetworkManager.peer_skin_id(id))
+				NetworkManager.peer_skin_id(id), NetworkManager.peer_model_id(id))
 			if GameConfig.teams_enabled:
 				var team_id := int(NetworkManager.peers[id].get("team_id", 0))
 				var can_edit_team := NetworkManager.can_manage_lobby() or is_me
@@ -1016,7 +1016,8 @@ func _refresh_roster() -> void:
 		_roster_list.add_child(p1)
 		p1.set_human(str(PlayerPrefs.get_setting("player_name")), true, false,
 			OneGunRosterRow.ReadyState.NONE,
-			str(PlayerPrefs.get_setting("character_skin_id")))
+			str(PlayerPrefs.get_setting("character_skin_id")),
+			str(PlayerPrefs.get_setting("character_model_id")))
 		if GameConfig.teams_enabled:
 			p1.add_team_chip(int(GameConfig.local_player_teams[0]), _is_team_uneven(int(GameConfig.local_player_teams[0])), false)
 			p1.add_trailing(_make_team_dropdown(int(GameConfig.local_player_teams[0]), func(value: int):
@@ -1028,7 +1029,8 @@ func _refresh_roster() -> void:
 			var p2 := OneGunRosterRow.new()
 			_roster_list.add_child(p2)
 			p2.set_human(str(GameConfig.player2_name), false, false,
-				OneGunRosterRow.ReadyState.NONE, str(GameConfig.player2_skin_id))
+				OneGunRosterRow.ReadyState.NONE, str(GameConfig.player2_skin_id),
+				str(GameConfig.player2_model_id))
 			if GameConfig.teams_enabled:
 				p2.add_team_chip(int(GameConfig.local_player_teams[1]), _is_team_uneven(int(GameConfig.local_player_teams[1])), false)
 				p2.add_trailing(_make_team_dropdown(int(GameConfig.local_player_teams[1]), func(value: int):

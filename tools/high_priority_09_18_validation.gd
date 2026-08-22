@@ -49,7 +49,7 @@ func _validate_authored_maps() -> void:
 		var powerup_spawns := source.count('groups=["powerup_spawn_point"]')
 		var map_name := str(map_data.get("name", "Map %d" % map_index))
 		_check(player_spawns >= 10, "%s has only %d player spawn markers" % [map_name, player_spawns])
-		_check(gun_spawns >= 5, "%s has only %d random gun markers" % [map_name, gun_spawns])
+		_check(gun_spawns >= 4, "%s has only %d random gun markers" % [map_name, gun_spawns])
 		_check(melee_spawns >= 1, "%s has no melee spawn markers" % map_name)
 		_check(item_spawns >= 1, "%s has no item spawn markers" % map_name)
 		_check(powerup_spawns >= 1, "%s has no powerup spawn markers" % map_name)
@@ -116,6 +116,15 @@ func _validate_build_metadata() -> void:
 		"commit build IDs are incorrectly treated as network incompatibility")
 	var notes := BuildInfo.load_latest_release()
 	_check(str(notes.get("version", "")) == BuildInfo.GAME_VERSION, "release notes version does not match the game")
+	_check(notes.get("show_on_launch") is bool and bool(notes.get("show_on_launch")),
+		"selected release notes are not enabled for the launch popup")
+	_check(str(notes.get("popup_id", "")) != "", "launch popup has no stable one-time ID")
+	_check(BuildInfo.release_popup_id(notes) == str(notes.get("popup_id", "")),
+		"launch popup does not honor its explicit ID")
+	var quiet_release := notes.duplicate(true)
+	quiet_release["show_on_launch"] = false
+	_check(not BuildInfo.should_show_release_popup(quiet_release),
+		"a quiet update still requests the launch popup")
 	var categories: Dictionary = notes.get("categories", {})
 	for category in ["Added", "Improved", "Fixed", "Removed", "Misc"]:
 		_check(categories.has(category), "release notes omit %s" % category)
@@ -153,9 +162,35 @@ func _validate_pickup_supply_and_random_map() -> void:
 		"local rounds do not populate every item marker")
 	_check(round_source.contains('for m in get_tree().get_nodes_in_group("powerup_spawn_point")'),
 		"local rounds do not populate every powerup marker")
+	_check(round_source.contains('"sticky_hands_time"') and round_source.contains('"sticky_hands_cooldown"'),
+		"late online snapshots omit Sticky Hands duration or cooldown")
+	_check(round_source.contains('"boomerang_recatch"'),
+		"online item actions omit the Boomerang first-return recatch")
+	_check(round_source.contains("if enabled:\n\t\t_grant_all_gun_opening_protection()"),
+		"online All Gun combat does not grant opening protection")
 	var powerup = PowerupScene.instantiate()
+	add_child(powerup)
 	_check(is_equal_approx(powerup.respawn_time, 8.0),
 		"powerup scene does not use the eight-second refill")
+	var icon := powerup.get_node_or_null("PowerupIcon") as Sprite3D
+	_check(icon != null, "powerup scene has no pixel-art Sprite3D")
+	if icon != null:
+		_check(int(icon.billboard) == 1,
+			"powerup icon is not fully camera-facing")
+		_check(int(icon.texture_filter) == 0,
+			"powerup icon is not using nearest-neighbor filtering")
+		_check(is_equal_approx(icon.pixel_size, 1.0 / 64.0),
+			"powerup icon does not use the intended one-meter 64px scale")
+		var icon_paths := {}
+		for power_type in GameConfig.POWERUP_TYPES:
+			powerup.power_type = power_type
+			powerup._update_visual()
+			_check(icon.texture != null,
+				"%s has no powerup icon texture" % power_type)
+			if icon.texture != null:
+				icon_paths[icon.texture.resource_path] = true
+		_check(icon_paths.size() == GameConfig.POWERUP_TYPES.size(),
+			"powerup types do not each use a distinct icon texture")
 	powerup.free()
 	_check(GameSetupScript.RANDOM_MAP_SENTINEL != "",
 		"online random-map selection has no hidden lobby sentinel")

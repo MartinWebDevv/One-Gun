@@ -20,6 +20,17 @@ func _ready() -> void:
 	var pre_asset_packed := load(PRE_ASSET_MAP_PATH) as PackedScene
 	_check(pre_asset_packed != null,
 			"preserved pre-asset Neon Circuit snapshot remains F6-playable")
+	var neon_index := MapRegistry.find_index_by_path(MAP_PATH)
+	_check(neon_index >= 0, "Neon Circuit remains in the map rotation")
+	if neon_index >= 0:
+		var neon_data := MapRegistry.get_map(neon_index)
+		_check(str(neon_data.get("thumbnail_path", "")) == "res://UI/map_thumbnails/neon_circuit.png",
+			"Neon Circuit does not use its dedicated thumbnail")
+		_check(float(neon_data.get("preview_radius", 100.0)) <= 12.5
+			and float(neon_data.get("preview_height_ratio", 1.0)) <= 0.2,
+			"Neon Circuit lobby preview is not framed from inside the play area")
+		_check(MapRegistry.load_thumbnail(neon_index) != null,
+			"Neon Circuit thumbnail does not import as a texture")
 
 	var arena := packed.instantiate() as Node3D
 	arena.process_mode = Node.PROCESS_MODE_DISABLED
