@@ -14,6 +14,10 @@ const MINIMUM_VIEW_TIME := 10.0
 const AUTO_RETURN_TIME := 25.0
 const GUN_MODEL_PATH := "res://models/weaponModels/water_gun.glb"
 const TROPHY_MODEL_PATH := "res://models/rewards/winners_circle_trophy.glb"
+const CEREMONY_AUDIO_KEY := "winners_circle_ceremony"
+const PERFORMER_PRE_ROLL := 0.18
+const INTRO_FADE_DURATION := 0.45
+const RESULTS_FADE_DURATION := 0.34
 
 signal ready_changed(ready: bool)
 signal force_return_requested
@@ -37,15 +41,23 @@ var _standing_ready_labels: Dictionary = {}
 var _local_ready_buttons: Dictionary = {}
 var _local_ready_actor_ids: Dictionary = {}
 var _performers: Array[Dictionary] = []
-var _stage_blockout: Node3D
+var _stage_blockout: WinnersCircleStageBlockout
 var _trophy_root: Node3D
 var _confetti: GPUParticles3D
 var _full_stats_overlay: Control
+var _results_interface: Control
+var _cinematic_overlay: Control
+var _cinematic_shade: ColorRect
+var _ceremony_complete := false
 
 
 func _ready() -> void:
 	layer = 300
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+func _exit_tree() -> void:
+	AudioManager.stop_ceremony()
 
 
 func present(result: Dictionary, viewer_actor_ids: Array,
@@ -124,7 +136,8 @@ func _process(_delta: float) -> void:
 		return
 	var now := Time.get_ticks_msec()
 	var elapsed := float(now - _started_msec) / 1000.0
-	var controls_unlocked := elapsed >= MINIMUM_VIEW_TIME and _return_deadline_msec < 0
+	var controls_unlocked := _ceremony_complete \
+		and elapsed >= MINIMUM_VIEW_TIME and _return_deadline_msec < 0
 	if _ready_button != null:
 		_ready_button.disabled = not controls_unlocked
 	if _host_return_button != null:
@@ -168,8 +181,11 @@ func _build_interface() -> void:
 	_root.add_child(outer)
 
 	var column := VBoxContainer.new()
+	column.name = "ResultsInterface"
 	column.add_theme_constant_override("separation", 10)
 	outer.add_child(column)
+	_results_interface = column
+	_results_interface.modulate.a = 0.0
 	_build_header(column)
 
 	var main_row := HBoxContainer.new()
@@ -182,11 +198,8 @@ func _build_interface() -> void:
 	_build_controls(column)
 	_build_full_stats_overlay()
 
+	_build_cinematic_overlay()
 	_root.modulate.a = 0.0
-	var tween := create_tween()
-	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tween.tween_property(_root, "modulate:a", 1.0,
-		0.12 if _reduced_motion() else 0.35)
 
 
 func _build_header(parent: VBoxContainer) -> void:
@@ -221,6 +234,39 @@ func _build_stage_panel(parent: HBoxContainer) -> void:
 	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cabinet.get_content().add_child(container)
 	_build_stage_world(container)
+
+
+func _build_cinematic_overlay() -> void:
+	if _stage_viewport == null:
+		return
+	_cinematic_overlay = Control.new()
+	_cinematic_overlay.name = "CinematicStage"
+	_cinematic_overlay.z_index = 40
+	_cinematic_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_cinematic_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(_cinematic_overlay)
+
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0.0015, 0.003, 0.012, 1.0)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cinematic_overlay.add_child(backdrop)
+
+	var stage_texture := TextureRect.new()
+	stage_texture.name = "CinematicStageTexture"
+	stage_texture.texture = _stage_viewport.get_texture()
+	stage_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	stage_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	stage_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage_texture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cinematic_overlay.add_child(stage_texture)
+
+	_cinematic_shade = ColorRect.new()
+	_cinematic_shade.name = "CinematicTransitionShade"
+	_cinematic_shade.color = Color(0.0, 0.0, 0.0, 0.0)
+	_cinematic_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cinematic_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cinematic_overlay.add_child(_cinematic_shade)
 
 
 func _build_standings_panel(parent: HBoxContainer) -> void:
@@ -524,15 +570,15 @@ func _build_stage_world(container: SubViewportContainer) -> void:
 	_stage_viewport.own_world_3d = true
 	_stage_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	container.add_child(_stage_viewport)
-	_stage_blockout = StageBlockoutScene.instantiate() as Node3D
+	_stage_blockout = StageBlockoutScene.instantiate() as WinnersCircleStageBlockout
 	if _stage_blockout == null:
 		push_error("Winners Circle stage blockout failed to instantiate")
 		return
 	_stage_viewport.add_child(_stage_blockout)
-	_stage_blockout.call("configure", _entries, _result)
-	_performers = _stage_blockout.call("performer_records")
-	_trophy_root = _stage_blockout.call("trophy_root") as Node3D
-	_confetti = _stage_blockout.call("confetti") as GPUParticles3D
+	_stage_blockout.configure(_entries, _result)
+	_performers = _stage_blockout.performer_records()
+	_trophy_root = _stage_blockout.trophy_root()
+	_confetti = _stage_blockout.confetti()
 
 
 func _build_legacy_stage_world(container: SubViewportContainer) -> void:
@@ -807,27 +853,79 @@ func _stage_material(albedo: Color, emission: Color,
 
 
 func _run_presentation_sequence() -> void:
-	await get_tree().create_timer(2.35, true).timeout
+	var reduced_motion := _reduced_motion()
+	_start_performers(reduced_motion)
+	if _stage_blockout != null:
+		_stage_blockout.prepare_cinematic(reduced_motion)
+	await get_tree().create_timer(PERFORMER_PRE_ROLL, true).timeout
 	if not is_inside_tree():
 		return
+	AudioManager.stop_music(0.2)
+	AudioManager.play_ceremony(CEREMONY_AUDIO_KEY, 0.86)
+	var fade_in := create_tween()
+	fade_in.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	fade_in.tween_property(_root, "modulate:a", 1.0,
+		0.12 if reduced_motion else INTRO_FADE_DURATION)
+	if _stage_blockout != null:
+		await _stage_blockout.play_cinematic(reduced_motion)
+	else:
+		await get_tree().create_timer(1.0 if reduced_motion else 9.25, true).timeout
+	if not is_inside_tree():
+		return
+	await _reveal_results_interface(reduced_motion)
+	_ceremony_complete = true
+
+
+func _start_performers(reduced_motion: bool) -> void:
 	for performer in _performers:
 		var animation_player := performer.get("animation_player") as AnimationPlayer
+		var visual := performer.get("visual") as Node3D
 		if animation_player == null:
+			if visual != null:
+				visual.visible = false
 			continue
 		var animation_name := str(performer.get("animation", ""))
-		if _reduced_motion() or animation_name == "" \
+		if reduced_motion or animation_name == "" \
 				or not animation_player.has_animation(animation_name):
 			if animation_player.has_animation("long_idle"):
-				animation_player.play("long_idle", 0.0)
+				animation_name = "long_idle"
 			elif animation_player.has_animation("idle"):
-				animation_player.play("idle", 0.0)
-		else:
-			animation_player.play(animation_name, 0.0)
-	if _confetti != null and not _reduced_motion():
-		_confetti.restart()
-	await get_tree().create_timer(4.0, true).timeout
-	if is_inside_tree() and _trophy_root != null:
-		_drop_trophy()
+				animation_name = "idle"
+			else:
+				animation_name = ""
+		if animation_name == "":
+			if visual != null:
+				visual.visible = false
+			continue
+		animation_player.play(animation_name, 0.0)
+		animation_player.advance(0.01)
+		if visual != null:
+			visual.visible = true
+
+
+func _reveal_results_interface(reduced_motion: bool) -> void:
+	if _results_interface == null:
+		return
+	if _cinematic_overlay == null or _cinematic_shade == null:
+		_results_interface.modulate.a = 1.0
+		return
+	var blackout := create_tween()
+	blackout.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	blackout.tween_property(_cinematic_shade, "color:a", 1.0,
+		0.06 if reduced_motion else 0.16)
+	await blackout.finished
+	if not is_inside_tree():
+		return
+	_results_interface.modulate.a = 1.0
+	var reveal := create_tween()
+	reveal.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	reveal.tween_property(_cinematic_overlay, "modulate:a", 0.0,
+		0.12 if reduced_motion else RESULTS_FADE_DURATION)
+	await reveal.finished
+	if is_instance_valid(_cinematic_overlay):
+		_cinematic_overlay.queue_free()
+	_cinematic_overlay = null
+	_cinematic_shade = null
 
 
 func _drop_trophy() -> void:

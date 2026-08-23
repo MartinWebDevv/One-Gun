@@ -5,6 +5,7 @@ extends SceneTree
 # Godot --headless --path <project> --script res://tools/menu_systems_validation.gd
 
 const TARGETS := [
+	"res://audio_manager.gd",
 	"res://network_manager.gd",
 	"res://player_prefs.gd",
 	"res://graphics_quality_manager.gd",
@@ -56,6 +57,18 @@ func _validate() -> void:
 			settings_screen.call("_select_category", category)
 			await process_frame
 		print("MENU RUNTIME OK: Player Settings categories")
+		settings_screen.call("_select_category", "Audio")
+		await process_frame
+		var ceremony_slider_found := false
+		for label in settings_screen.find_children("*", "Label", true, false):
+			if str(label.text) == "Ceremony Volume":
+				ceremony_slider_found = true
+				break
+		if not ceremony_slider_found:
+			push_error("Menu validation: Audio settings did not expose Ceremony Volume")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Ceremony Volume slider is present")
 		settings_screen.set("_accessibility_subpage", "crosshair")
 		for tab in ["shape", "behavior", "feedback"]:
 			settings_screen.set("_crosshair_tab", tab)
@@ -64,6 +77,21 @@ func _validate() -> void:
 		print("MENU RUNTIME OK: Crosshair Shape / Behavior / Feedback tabs")
 		var prefs = root.get_node("PlayerPrefs")
 		var before: Dictionary = prefs.snapshot()
+		var audio = root.get_node("AudioManager")
+		var ceremony_bus_index := AudioServer.get_bus_index("Ceremony")
+		var ceremony_player := audio.get_node_or_null("CeremonyPlayer") as AudioStreamPlayer
+		if ceremony_bus_index < 0 or ceremony_player == null or ceremony_player.bus != &"Ceremony":
+			push_error("Menu validation: dedicated Ceremony audio bus/player is incomplete")
+			failed = true
+		else:
+			audio.set_ceremony_volume(0.5)
+			var expected_ceremony_db := linear_to_db(0.25)
+			if not is_equal_approx(AudioServer.get_bus_volume_db(ceremony_bus_index), expected_ceremony_db):
+				push_error("Menu validation: Ceremony Volume did not control its bus")
+				failed = true
+			else:
+				print("MENU RUNTIME OK: dedicated Ceremony bus follows its saved mix control")
+			audio.set_ceremony_volume(float(before.get("ceremony_volume", 0.8)))
 		var preview_descriptor := {"type": "key", "code": KEY_F12}
 		settings_screen.call("_store_bindings", "p1_move_forward",
 			"keyboard_mouse", [preview_descriptor])
@@ -127,6 +155,12 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU RUNTIME OK: accessibility/crosshair preference migration defaults")
+		var normalized_audio: Dictionary = prefs.call("_normalize", {"ceremony_volume": 4.0})
+		if not is_equal_approx(float(normalized_audio["ceremony_volume"]), 1.0):
+			push_error("Menu validation: Ceremony Volume preference normalization failed")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Ceremony Volume defaults/migration schema")
 		var migrated_low: Dictionary = prefs.call("_normalize", {"quality_preset": "low"})
 		if migrated_low["effects_quality"] != "low":
 			push_error("Menu validation: pre-effects-tier Low preset did not migrate to Low effects")

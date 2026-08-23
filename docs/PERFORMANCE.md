@@ -153,6 +153,8 @@ Profile actual bottlenecks when possible. Test maximum players, simultaneous att
 
 The weaker laptop is a real release target. At good checkpoints/releases, explicitly recommend a laptop build test. Use its profiler/crash evidence to find the specific weakness instead of globally lowering quality.
 
+**Verified checkpoint — 2026-08-22:** the current build received a successful user-reported gameplay check on the weaker laptop using the Low preset. This checks off the current compatibility smoke test; it is not a measured 60 FPS/frame-time profile. Retest after the Winners Circle cinematic and after other substantial rendering, map, character-count or transition changes.
+
 ## 12. Decision rule for discovered problems
 
 A small, safe, clearly beneficial fix may be included in current work.

@@ -9,7 +9,7 @@ signal setting_changed(key: String, value)
 const SAVE_PATH := "user://player_prefs.json"
 const BACKUP_PATH := "user://player_prefs.backup.json"
 const TEMP_PATH := "user://player_prefs.pending.json"
-const SETTINGS_VERSION := 6
+const SETTINGS_VERSION := 7
 const SETTINGS_APPLIER = preload("res://UI/player_settings_applier.gd")
 
 const DEFAULT_SETTINGS := {
@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS := {
 	"master_volume": 1.0,
 	"music_volume": 1.0,
 	"sfx_volume": 1.0,
+	"ceremony_volume": 0.8,
 	"mouse_sensitivity": 1.0,
 	"gamepad_sensitivity": 6.0,
 	"ads_sensitivity_multiplier": 0.5,
@@ -317,7 +318,7 @@ func _normalize(values: Dictionary) -> Dictionary:
 		str(normalized["character_skin_id"]))
 	normalized["character_model_id"] = PlayerSkinRegistry.sanitize_model_id(
 		str(normalized["character_model_id"]))
-	for key in ["master_volume", "music_volume", "sfx_volume"]:
+	for key in ["master_volume", "music_volume", "sfx_volume", "ceremony_volume"]:
 		normalized[key] = clampf(float(normalized[key]), 0.0, 1.0)
 	normalized["mouse_sensitivity"] = clampf(float(normalized["mouse_sensitivity"]), 0.1, 5.0)
 	normalized["gamepad_sensitivity"] = clampf(float(normalized["gamepad_sensitivity"]), 1.0, 15.0)

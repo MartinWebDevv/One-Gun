@@ -51,7 +51,7 @@ Autoload order is significant and should be preserved.
 | 4 | `PauseManager` | `pause_manager.gd` | ESC routing and local/online pause behavior |
 | 5 | `MeleeWeaponRegistry` | `melee_weapon_registry.gd` | Five melee definitions, fixed base handling, and randomized type/effect selection |
 | 6 | `ThemeManager` | `theme_manager.gd` | Runtime theme construction and styling helpers |
-| 7 | `AudioManager` | `audio_manager.gd` | Music, ambience, and pooled SFX playback |
+| 7 | `AudioManager` | `audio_manager.gd` | Music, ambience, pooled SFX, and dedicated Master-routed Ceremony playback |
 | 8 | `NetworkManager` | `network_manager.gd` | ENet/Tailscale session, roster, discovery, config, scene coordination |
 
 ## Scene organization

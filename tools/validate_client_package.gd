@@ -15,6 +15,7 @@ const REQUIRED_RESOURCES: Array[Dictionary] = [
 	{"path": "res://UI/assets/character_portraits/female/black.png", "type": "Texture2D"},
 	{"path": "res://models/player_v2/animations/Idle.fbx", "type": "PackedScene"},
 	{"path": "res://models/menu/TrophyPedestal.glb", "type": "PackedScene"},
+	{"path": "res://audio/ui/winners_circle_ceremony.wav", "type": "AudioStream"},
 	{"path": "res://UI/MainMenu/OneGunLogoV2.png", "type": "Texture2D"},
 	{"path": "res://UI/MainMenu/TaglineRibbon.png", "type": "Texture2D"},
 	{"path": "res://UI/assets/character_portraits/green.png", "type": "Texture2D"},
@@ -31,6 +32,11 @@ const REQUIRED_RESOURCES: Array[Dictionary] = [
 
 
 func _initialize() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
+	await process_frame
 	var failures: Array[String] = []
 	for requirement in REQUIRED_RESOURCES:
 		var path := str(requirement["path"])

@@ -5,7 +5,7 @@
   "popup_id": "0.0.49-winners-circle-accounts-1",
   "categories": {
 	"Added": [
-	  "Introducing the Winners Circle! After a free-for-all One Gun or All Gun match, the top three players now take the podium for a full victory celebration.",
+	  "Introducing the Winners Circle! After a free-for-all One Gun or All Gun match, the celebration fades in on third place, swishes to second, circles the champion, and finishes with a Trophy-drop hero moment set to an original arcade-rock ceremony cue.",
 	  "Podium winners appear with their chosen character, color, and equipped Victory Move. All three can celebrate together while the final standings are revealed.",
 	  "Official Classic champions now receive a special Trophy-drop celebration in front of first place.",
 	  "Every player gets a personal results card with their placement, round wins, kills, disarms, and reward preview.",
@@ -20,6 +20,7 @@
 	"Improved": [
 	  "Default One Gun and All Gun matches now use three-minute rounds, three round wins per set, and one set to win the match.",
 	  "New Low, Medium, High, and Ultra quality tuning improves performance across gameplay, menus, map previews, effects, and the Winners Circle.",
+	  "A new Ceremony Volume setting lets you tune Winners Circle celebrations separately from music and sound effects.",
 	  "Winners Circle placements now use match performance to produce consistent final standings.",
 	  "Chat messages stay separated between the lobby, Playpen, and active match so each conversation remains in the right place.",
       "Cosmetics with unfinished artwork can still be owned and equipped safely while their final visuals are being prepared."

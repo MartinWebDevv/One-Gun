@@ -10,14 +10,15 @@ extends Node
 #   AudioManager.play_hover()
 #   AudioManager.play_click()
 #   AudioManager.play_sfx("gun_pickup")
+#   AudioManager.play_ceremony("winners_circle_ceremony")
 #   AudioManager.play_music("menu")
 #   AudioManager.play_music("game")
 #   AudioManager.stop_music()
 #
 # To add a new sound:
 #   1. Drop the file into res://audio/
-#   2. Add an entry to SFX_PATHS or MUSIC_PATHS below
-#   3. Call AudioManager.play_sfx("your_key") anywhere
+#   2. Add an entry to SFX_PATHS, CEREMONY_PATHS, or MUSIC_PATHS below
+#   3. Call the matching AudioManager playback method anywhere
 # ============================================================
 
 # ============================================================
@@ -61,6 +62,10 @@ const SFX_PATHS = {
 	# "death":      "res://audio/sfx/death.wav",
 }
 
+const CEREMONY_PATHS = {
+	"winners_circle_ceremony": "res://audio/ui/winners_circle_ceremony.wav",
+}
+
 # ============================================================
 # Volume — adjust these or wire to sliders later
 # ============================================================
@@ -69,9 +74,11 @@ const SFX_PATHS = {
 # added on top as dB offsets so the authored mix is preserved at full volume.
 const MUSIC_BASE_DB   := -5.0
 const HOVER_OFFSET_DB := -6.0   # hover sits this much under the SFX level
+const CEREMONY_BUS_NAME := &"Ceremony"
 
 var MUSIC_VOLUME_DB  = MUSIC_BASE_DB  # current effective music level (base + user)
 var SFX_VOLUME_DB    = 0.0            # current effective sfx level (user)
+var CEREMONY_VOLUME_DB = 0.0           # dedicated celebration mix under Master
 var AMBIENT_OFFSET_DB = -10.0  # ambience sits this much under the SFX level
 
 # Squared perceptual curve: raw linear_to_db leaves most of the slider's travel
@@ -86,6 +93,7 @@ func _user_db(linear: float) -> float:
 
 var _music_player  : AudioStreamPlayer
 var _ambient_player: AudioStreamPlayer
+var _ceremony_player: AudioStreamPlayer
 var _sfx_players   : Array[AudioStreamPlayer] = []
 var _sfx_pool_size : int = 8   # concurrent sfx allowed
 var _sfx_index     : int = 0
@@ -94,7 +102,9 @@ var _current_music_key : String = ""
 var _music_tween       : Tween  = null
 
 func _ready():
+	_ensure_ceremony_bus()
 	_build_music_player()
+	_build_ceremony_player()
 	_build_sfx_pool()
 	_apply_saved_volumes()
 
@@ -104,9 +114,19 @@ func _apply_saved_volumes():
 	var master = PlayerPrefs.get_setting("master_volume")
 	var music  = PlayerPrefs.get_setting("music_volume")
 	var sfx    = PlayerPrefs.get_setting("sfx_volume")
+	var ceremony = PlayerPrefs.get_setting("ceremony_volume")
 	set_master_volume(master)
 	set_music_volume(music)
 	set_sfx_volume(sfx)
+	set_ceremony_volume(ceremony)
+
+func _ensure_ceremony_bus():
+	var bus_index := AudioServer.get_bus_index(CEREMONY_BUS_NAME)
+	if bus_index < 0:
+		AudioServer.add_bus(AudioServer.bus_count)
+		bus_index = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(bus_index, CEREMONY_BUS_NAME)
+	AudioServer.set_bus_send(bus_index, &"Master")
 
 func _build_music_player():
 	_music_player = AudioStreamPlayer.new()
@@ -119,6 +139,12 @@ func _build_music_player():
 	_ambient_player.bus = "Master"
 	_ambient_player.volume_db = SFX_VOLUME_DB + AMBIENT_OFFSET_DB
 	add_child(_ambient_player)
+
+func _build_ceremony_player():
+	_ceremony_player = AudioStreamPlayer.new()
+	_ceremony_player.name = "CeremonyPlayer"
+	_ceremony_player.bus = CEREMONY_BUS_NAME
+	add_child(_ceremony_player)
 
 func _build_sfx_pool():
 	# Pool of AudioStreamPlayers for overlapping sound effects.
@@ -232,6 +258,31 @@ func stop_ambient():
 	_ambient_player.stop()
 
 # ============================================================
+# Ceremony audio (Winners Circle and future celebration cues)
+# ============================================================
+
+func play_ceremony(key: String, volume_scale: float = 1.0):
+	if NetworkManager.is_dedicated_server():
+		return
+	if not CEREMONY_PATHS.has(key):
+		push_warning("AudioManager: no ceremony key '%s'" % key)
+		return
+	var path = CEREMONY_PATHS[key]
+	if not ResourceLoader.exists(path):
+		push_warning("AudioManager: ceremony file not found: %s" % path)
+		return
+	var stream = load(path)
+	if stream == null:
+		return
+	_ceremony_player.stream = stream
+	_ceremony_player.volume_db = -80.0 if volume_scale <= 0.0 else linear_to_db(clampf(volume_scale, 0.0, 1.0))
+	_ceremony_player.play()
+
+func stop_ceremony():
+	if _ceremony_player:
+		_ceremony_player.stop()
+
+# ============================================================
 # SFX
 # ============================================================
 
@@ -296,3 +347,9 @@ func set_sfx_volume(linear: float):
 		p.volume_db = SFX_VOLUME_DB
 	if _ambient_player:
 		_ambient_player.volume_db = SFX_VOLUME_DB + AMBIENT_OFFSET_DB
+
+func set_ceremony_volume(linear: float):
+	CEREMONY_VOLUME_DB = _user_db(linear)
+	var bus_index := AudioServer.get_bus_index(CEREMONY_BUS_NAME)
+	if bus_index >= 0:
+		AudioServer.set_bus_volume_db(bus_index, CEREMONY_VOLUME_DB)

@@ -10,12 +10,38 @@ const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
 
 const GUN_MODEL_PATH := "res://models/weaponModels/water_gun.glb"
 const TROPHY_MODEL_PATH := "res://models/rewards/winners_circle_trophy.glb"
+const THIRD_START_POSITION := Vector3(5.25, 2.82, 5.10)
+const THIRD_PULLBACK_POSITION := Vector3(5.75, 3.18, 8.15)
+const SECOND_SWISH_POSITION := Vector3(-5.55, 2.92, 5.10)
+const SECOND_SETTLE_POSITION := Vector3(-6.10, 3.16, 5.85)
+const HERO_POSITION := Vector3(0.0, 3.90, 10.40)
+const CHAMPION_ORBIT_POINTS := [
+	Vector3(-5.35, 3.18, 3.70),
+	Vector3(-5.05, 3.35, 1.35),
+	Vector3(-4.35, 3.55, -0.95),
+	Vector3(0.0, 3.74, -1.48),
+	Vector3(4.35, 3.55, -0.95),
+	Vector3(5.05, 3.35, 1.35),
+	Vector3(4.55, 3.48, 4.90),
+	Vector3(2.35, 3.72, 8.10),
+	HERO_POSITION,
+]
 
 var _entries: Array = []
 var _result: Dictionary = {}
 var _performers: Array[Dictionary] = []
 var _trophy_root: Node3D = null
 var _confetti: GPUParticles3D = null
+var _camera: Camera3D = null
+var _camera_focus := Vector3.ZERO
+var _champion_spot: SpotLight3D = null
+var _second_spot: SpotLight3D = null
+var _third_spot: SpotLight3D = null
+var _authored_spot_energy := {
+	"champion": 8.0,
+	"second": 4.6,
+	"third": 3.8,
+}
 
 
 func _ready() -> void:
@@ -64,10 +90,157 @@ func confetti() -> GPUParticles3D:
 	return _confetti
 
 
+func prepare_cinematic(reduced_motion: bool) -> void:
+	if _camera == null:
+		return
+	if reduced_motion:
+		_camera.position = HERO_POSITION
+		_camera.fov = 42.0
+		_set_camera_focus(
+			(get_node("LookTargets/CameraTarget") as Marker3D).global_position)
+		_set_spotlight_mix(1.0, 1.0, 1.0)
+		return
+	_camera.position = THIRD_START_POSITION
+	_camera.fov = 34.0
+	_set_camera_focus(
+		(get_node("LookTargets/ThirdTarget") as Marker3D).global_position)
+	_set_spotlight_mix(0.12, 0.28, 1.05)
+
+
+func play_cinematic(reduced_motion: bool) -> void:
+	if _camera == null:
+		return
+	if reduced_motion:
+		_celebrate_champion(true)
+		await get_tree().create_timer(1.05, true).timeout
+		return
+
+	var third_target := (
+		get_node("LookTargets/ThirdTarget") as Marker3D).global_position
+	var second_target := (
+		get_node("LookTargets/SecondTarget") as Marker3D).global_position
+	var champion_target := (
+		get_node("LookTargets/ChampionTarget") as Marker3D).global_position
+
+	await _tween_camera(THIRD_PULLBACK_POSITION, third_target, 39.0,
+		2.05, Tween.TRANS_CUBIC, Tween.EASE_OUT)
+	_tween_spotlights(0.14, 1.06, 0.48, 0.55)
+	await _tween_camera(SECOND_SWISH_POSITION, second_target, 38.0,
+		0.68, Tween.TRANS_QUINT, Tween.EASE_IN_OUT)
+	await _tween_camera(SECOND_SETTLE_POSITION, second_target, 36.5,
+		1.25, Tween.TRANS_SINE, Tween.EASE_OUT)
+	_tween_spotlights(1.04, 0.62, 0.62, 0.95)
+	await _tween_camera(CHAMPION_ORBIT_POINTS[0], champion_target, 43.0,
+		0.45, Tween.TRANS_QUAD, Tween.EASE_IN_OUT)
+	await _play_champion_orbit(champion_target, 3.55)
+	_celebrate_champion(false)
+	await get_tree().create_timer(1.40, true).timeout
+
+
+func _tween_camera(target_position: Vector3, target_focus: Vector3,
+		target_fov: float, duration: float, transition: Tween.TransitionType,
+		easing: Tween.EaseType) -> void:
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_parallel(true)
+	tween.set_trans(transition)
+	tween.set_ease(easing)
+	tween.tween_property(_camera, "position", target_position, duration)
+	tween.tween_property(_camera, "fov", target_fov, duration)
+	tween.tween_method(_set_camera_focus, _camera_focus, target_focus, duration)
+	await tween.finished
+
+
+func _play_champion_orbit(target_focus: Vector3, duration: float) -> void:
+	_camera_focus = target_focus
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_SINE)
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.tween_method(_set_champion_orbit_progress, 0.0, 1.0, duration)
+	tween.tween_property(_camera, "fov", 39.5, duration)
+	await tween.finished
+
+
+func _set_champion_orbit_progress(progress: float) -> void:
+	_camera.position = _sample_catmull_rom(CHAMPION_ORBIT_POINTS, progress)
+	_camera.look_at(_camera_focus, Vector3.UP)
+
+
+func _sample_catmull_rom(points: Array, progress: float) -> Vector3:
+	if points.size() < 2:
+		return Vector3.ZERO
+	var segment_count := points.size() - 1
+	var scaled := clampf(progress, 0.0, 1.0) * float(segment_count)
+	var segment := mini(floori(scaled), segment_count - 1)
+	var local_t := scaled - float(segment)
+	var p0: Vector3 = points[maxi(segment - 1, 0)]
+	var p1: Vector3 = points[segment]
+	var p2: Vector3 = points[mini(segment + 1, points.size() - 1)]
+	var p3: Vector3 = points[mini(segment + 2, points.size() - 1)]
+	var t2 := local_t * local_t
+	var t3 := t2 * local_t
+	return 0.5 * ((2.0 * p1) + (-p0 + p2) * local_t \
+		+ (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 \
+		+ (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3)
+
+
+func _set_camera_focus(value: Vector3) -> void:
+	_camera_focus = value
+	_camera.look_at(_camera_focus, Vector3.UP)
+
+
+func _set_spotlight_mix(champion: float, second: float, third: float) -> void:
+	_champion_spot.light_energy = float(_authored_spot_energy["champion"]) * champion
+	_second_spot.light_energy = float(_authored_spot_energy["second"]) * second
+	_third_spot.light_energy = float(_authored_spot_energy["third"]) * third
+
+
+func _tween_spotlights(champion: float, second: float, third: float,
+		duration: float) -> void:
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_SINE)
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(_champion_spot, "light_energy",
+		float(_authored_spot_energy["champion"]) * champion, duration)
+	tween.tween_property(_second_spot, "light_energy",
+		float(_authored_spot_energy["second"]) * second, duration)
+	tween.tween_property(_third_spot, "light_energy",
+		float(_authored_spot_energy["third"]) * third, duration)
+
+
+func _celebrate_champion(reduced_motion: bool) -> void:
+	_tween_spotlights(1.0, 1.0, 1.0, 0.32)
+	if _confetti != null and not reduced_motion:
+		_confetti.set_meta("ceremony_fired", true)
+		_confetti.restart()
+	if _trophy_root == null:
+		return
+	_trophy_root.visible = true
+	var target_y := float(_trophy_root.get_meta("landing_y", 0.76))
+	if reduced_motion:
+		_trophy_root.position.y = target_y
+		return
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.tween_property(_trophy_root, "position:y", target_y, 0.82) \
+		.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+
+
 func _configure_camera_and_lights() -> void:
-	var camera := get_node("WinnersCircleCamera") as Camera3D
-	camera.look_at(get_node("LookTargets/CameraTarget").global_position, Vector3.UP)
-	camera.current = true
+	_camera = get_node("WinnersCircleCamera") as Camera3D
+	_champion_spot = get_node("Lights/ChampionSpot") as SpotLight3D
+	_second_spot = get_node("Lights/SecondSpot") as SpotLight3D
+	_third_spot = get_node("Lights/ThirdSpot") as SpotLight3D
+	_authored_spot_energy["champion"] = _champion_spot.light_energy
+	_authored_spot_energy["second"] = _second_spot.light_energy
+	_authored_spot_energy["third"] = _third_spot.light_energy
+	_set_camera_focus(
+		(get_node("LookTargets/CameraTarget") as Marker3D).global_position)
+	_camera.current = true
 	for pair in [
 		["Lights/ChampionSpot", "LookTargets/ChampionTarget"],
 		["Lights/SecondSpot", "LookTargets/SecondTarget"],
@@ -92,6 +265,7 @@ func _build_competitor(anchor: Node3D, entry: Dictionary) -> void:
 	visual.set("skin_id", SkinRegistry.sanitize_skin_id(
 		str(entry.get("skin_id", "blue"))))
 	visual.set("build_animation_library", false)
+	visual.visible = false
 	anchor.add_child(visual)
 	var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
 	var move_id := str(cosmetics.get("emote", ""))
@@ -103,6 +277,7 @@ func _build_competitor(anchor: Node3D, entry: Dictionary) -> void:
 	_performers.append({
 		"animation_player": animation_player,
 		"animation": move_animation,
+		"visual": visual,
 	})
 
 

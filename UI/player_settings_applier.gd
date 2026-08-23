@@ -39,6 +39,7 @@ static func apply_audio(values: Dictionary) -> void:
 	audio.set_master_volume(float(values.get("master_volume", 1.0)))
 	audio.set_music_volume(float(values.get("music_volume", 1.0)))
 	audio.set_sfx_volume(float(values.get("sfx_volume", 1.0)))
+	audio.set_ceremony_volume(float(values.get("ceremony_volume", 0.8)))
 
 
 static func apply_video(values: Dictionary, tree: SceneTree, include_display := true) -> void:

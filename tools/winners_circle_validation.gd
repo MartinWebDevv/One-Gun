@@ -21,9 +21,12 @@ func _run() -> void:
 	var winners_circle_script = load("res://UI/winners_circle.gd")
 	var reward_preview = load("res://match_reward_preview.gd")
 	var stage_scene = load("res://UI/winners_circle_stage_blockout.tscn") as PackedScene
+	var ceremony_audio = load("res://audio/ui/winners_circle_ceremony.wav") as AudioStream
 	_check(result_builder != null and winners_circle_script != null
 			and reward_preview != null and stage_scene != null,
 		"Winners Circle presentation resources load")
+	_check(ceremony_audio != null,
+		"the original 10-second ceremony audio loads")
 	var stage := stage_scene.instantiate() as Node3D
 	root.add_child(stage)
 	for required_path in [
@@ -96,6 +99,36 @@ func _run() -> void:
 		"the full-screen Winners Circle interface builds")
 	_check(circle.find_child("PodiumStage", true, false) != null,
 		"the isolated 3D podium stage builds")
+	var cinematic_stage := circle.find_child("CinematicStage", true, false) as Control
+	_check(cinematic_stage != null and cinematic_stage.visible,
+		"the ceremony begins on the full-screen cinematic stage")
+	var results_interface := circle.find_child(
+		"ResultsInterface", true, false) as Control
+	_check(results_interface != null and results_interface.modulate.a <= 0.01,
+		"standings, personal results and controls stay hidden during the cinematic")
+	var cinematic_camera := circle.find_child(
+		"WinnersCircleCamera", true, false) as Camera3D
+	_check(cinematic_camera != null
+			and cinematic_camera.position.x >= 5.20
+			and cinematic_camera.position.x <= 5.80
+			and cinematic_camera.position.z >= 5.05
+			and cinematic_camera.position.z <= 8.20,
+		"the camera begins on the third-place reveal track")
+	var active_performers := 0
+	var visible_bind_poses := 0
+	for performer_value in circle.find_children(
+			"VictoryPerformer", "Node3D", true, false):
+		var performer := performer_value as Node3D
+		if not performer.visible:
+			continue
+		var animation_player := performer.find_child(
+			"AnimationPlayer", true, false) as AnimationPlayer
+		if animation_player == null or animation_player.current_animation == "":
+			visible_bind_poses += 1
+		else:
+			active_performers += 1
+	_check(active_performers == 3 and visible_bind_poses == 0,
+		"all three visible performers start in an active Victory Move or idle")
 	_check(circle.find_child("FinalStandingsCabinet", true, false) != null,
 		"the shared standings panel builds")
 	_check(circle.find_child("ReadyButton", true, false) != null,
@@ -105,6 +138,27 @@ func _run() -> void:
 	circle.set_ready_peers([1, 3], [1, 2, 3])
 	var personal_results: Node = circle.find_child("PersonalResults", true, false)
 	_check(personal_results != null, "the local player receives a personalized result card")
+
+	var original_time_scale := Engine.time_scale
+	Engine.time_scale = 20.0
+	await create_timer(10.40, true).timeout
+	Engine.time_scale = original_time_scale
+	await process_frame
+	_check(circle.find_child("CinematicStage", true, false) == null
+			and results_interface.modulate.a >= 0.99,
+		"the full cinematic finishes by revealing the results interface")
+	_check(cinematic_camera.position.distance_to(
+		Vector3(0.0, 3.90, 10.40)) < 0.05,
+		"the champion orbit finishes on the first-place hero angle")
+	var trophy := circle.find_child("VictoryTrophy", true, false) as Node3D
+	_check(trophy != null and trophy.visible
+			and absf(trophy.position.y - float(
+				trophy.get_meta("landing_y", trophy.position.y))) < 0.05,
+		"the Official Classic Trophy finishes on its landing plinth")
+	var confetti := circle.find_child("WinnerConfetti", true, false) as GPUParticles3D
+	_check(confetti != null and bool(
+		confetti.get_meta("ceremony_fired", false)),
+		"the champion hero beat fires quality-scaled confetti")
 	circle.queue_free()
 	await process_frame
 

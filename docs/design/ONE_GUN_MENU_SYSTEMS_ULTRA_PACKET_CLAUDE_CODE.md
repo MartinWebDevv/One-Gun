@@ -711,9 +711,9 @@ Use the approved Player Settings Gameplay reference.
 
 The Audio concept is approved with one correction:
 
-- Keep Master Volume, Music Volume, and SFX Volume.
+- Keep Master Volume, Music Volume, SFX Volume, and the later-approved Ceremony Volume.
 - Remove the entire `AUDIO PREVIEW` equalizer and `TEST SOUND` panel.
-- Vertically center and comfortably space the three volume rows.
+- Vertically center and comfortably space the four volume rows.
 - Bind to the actual audio buses, using decibel conversion and a safe silence floor.
 - Defaults: use current approved/project defaults.
 
@@ -743,7 +743,7 @@ Requirements:
 - Implement category navigation and persistent Defaults/Cancel/Apply actions.
 - Separate pending, active, and saved settings.
 - Cancel reliably restores live previews.
-- Audio has only Master, Music, and SFX volume rows; remove the Audio Preview/Test Sound concept element.
+- Audio has Master, Music, SFX, and Ceremony volume rows; remove the Audio Preview/Test Sound concept element.
 - Bind audio sliders to real audio buses.
 - Bind gameplay controls to the existing camera/input/player systems.
 - Preserve additional existing gameplay preferences.

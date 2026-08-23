@@ -205,11 +205,12 @@ func _page_column(intro: String) -> VBoxContainer:
 
 
 func _build_audio_page() -> void:
-	var column := _page_column("Three buses, three clear controls. Changes preview live and restore on Cancel.")
+	var column := _page_column("Four clear mix controls. Changes preview live and restore on Cancel.")
 	_add_section(column, "VOLUME")
 	_add_slider(column, "Master Volume", "master_volume", 0.0, 1.0, 0.01, true, true)
 	_add_slider(column, "Music Volume", "music_volume", 0.0, 1.0, 0.01, true, true)
 	_add_slider(column, "SFX Volume", "sfx_volume", 0.0, 1.0, 0.01, true, true)
+	_add_slider(column, "Ceremony Volume", "ceremony_volume", 0.0, 1.0, 0.01, true, true)
 
 
 func _build_gameplay_page() -> void:
@@ -751,7 +752,7 @@ func _reset_binding_row(action: String) -> void:
 func _defaults_for_category() -> void:
 	match _category:
 		"Audio":
-			for key in ["master_volume", "music_volume", "sfx_volume"]: _pending[key] = PlayerPrefs.get_default(key)
+			for key in ["master_volume", "music_volume", "sfx_volume", "ceremony_volume"]: _pending[key] = PlayerPrefs.get_default(key)
 			APPLIER.apply_audio(_pending)
 		"Gameplay":
 			for key in ["mouse_sensitivity", "gamepad_sensitivity", "ads_sensitivity_multiplier",
