@@ -6,6 +6,13 @@ extends RefCounted
 # entries without art remain purchasable/ownable and never become resource
 # paths supplied by the server.
 
+const DEFAULT_CEREMONY_THEME_ID := "wc_theme_ceremony_march"
+const DEFAULT_CEREMONY_AUDIO_KEY := "winners_circle_ceremony"
+
+const LEGACY_LOADOUT_SLOTS: Array[String] = [
+	"character_skin", "hat", "accessory", "gun_skin", "melee_skin", "emote",
+]
+
 const LOADOUT_SLOTS: Array[String] = [
 	"character_skin",
 	"hat",
@@ -13,6 +20,7 @@ const LOADOUT_SLOTS: Array[String] = [
 	"gun_skin",
 	"melee_skin",
 	"emote",
+	"ceremony_theme",
 ]
 
 const KNOWN_ART_PENDING := {
@@ -29,6 +37,26 @@ const VICTORY_MOVE_ANIMATIONS := {
 	"victory_hip_hop": "hip_hop_dance",
 	"swing_dance": "swing_dance",
 	"victory_swing": "swing_dance",
+}
+
+const CEREMONY_THEME_AUDIO_KEYS := {
+	"wc_theme_ceremony_march": "winners_circle_ceremony",
+	"wc_theme_neon_victory": "winners_circle_neon_victory",
+	"wc_theme_western_toybox": "winners_circle_western_toybox",
+	"wc_theme_grand_arena": "winners_circle_grand_arena",
+	"wc_theme_pixel_champion": "winners_circle_pixel_champion",
+	"wc_theme_champion_groove": "winners_circle_champion_groove",
+	"wc_theme_deep_orbit": "winners_circle_deep_orbit",
+}
+
+const CEREMONY_THEME_DISPLAY_NAMES := {
+	"wc_theme_ceremony_march": "Ceremony March",
+	"wc_theme_neon_victory": "Neon Victory",
+	"wc_theme_western_toybox": "Western Toybox",
+	"wc_theme_grand_arena": "Grand Arena",
+	"wc_theme_pixel_champion": "Pixel Champion",
+	"wc_theme_champion_groove": "Champion Groove",
+	"wc_theme_deep_orbit": "Deep Orbit",
 }
 
 static var _warned_missing_visuals: Dictionary = {}
@@ -77,12 +105,24 @@ static func has_local_visual(item_id: String, slot := "") -> bool:
 		return _is_builtin_character_skin(safe_id)
 	if safe_slot == "emote":
 		return local_victory_animation(safe_id) != ""
+	if safe_slot == "ceremony_theme":
+		return local_ceremony_audio_key(safe_id) != ""
 	return false
 
 
 static func local_victory_animation(item_id: String) -> String:
 	var safe_id := sanitize_item_id(item_id)
 	return str(VICTORY_MOVE_ANIMATIONS.get(safe_id, ""))
+
+
+static func local_ceremony_audio_key(item_id: String) -> String:
+	var safe_id := sanitize_item_id(item_id)
+	return str(CEREMONY_THEME_AUDIO_KEYS.get(safe_id, ""))
+
+
+static func resolved_ceremony_audio_key(item_id: String) -> String:
+	var mapped := local_ceremony_audio_key(item_id)
+	return mapped if mapped != "" else DEFAULT_CEREMONY_AUDIO_KEY
 
 
 static func apply_gun_skin_to_display(display_root: Node3D,
@@ -106,11 +146,15 @@ static func known_slot_for_id(item_id: String) -> String:
 	var safe_id := sanitize_item_id(item_id)
 	if KNOWN_ART_PENDING.has(safe_id):
 		return str(KNOWN_ART_PENDING[safe_id])
+	if CEREMONY_THEME_AUDIO_KEYS.has(safe_id):
+		return "ceremony_theme"
 	return "character_skin" if _is_builtin_character_skin(safe_id) else ""
 
 
 static func display_name_fallback(item_id: String) -> String:
 	var safe_id := sanitize_item_id(item_id)
+	if CEREMONY_THEME_DISPLAY_NAMES.has(safe_id):
+		return str(CEREMONY_THEME_DISPLAY_NAMES[safe_id])
 	return safe_id.replace("_", " ").replace("-", " ").capitalize() \
 		if safe_id != "" else "Unknown Cosmetic"
 

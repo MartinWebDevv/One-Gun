@@ -12,9 +12,10 @@ const GUN_MODEL_PATH := "res://models/weaponModels/water_gun.glb"
 const TROPHY_MODEL_PATH := "res://models/rewards/winners_circle_trophy.glb"
 const THIRD_START_POSITION := Vector3(5.25, 2.82, 5.10)
 const THIRD_PULLBACK_POSITION := Vector3(5.75, 3.18, 8.15)
-const SECOND_SWISH_POSITION := Vector3(-5.55, 2.92, 5.10)
-const SECOND_SETTLE_POSITION := Vector3(-6.10, 3.16, 5.85)
-const HERO_POSITION := Vector3(0.0, 3.90, 10.40)
+const SECOND_SWISH_POSITION := Vector3(-5.45, 3.10, 7.25)
+const SECOND_SETTLE_POSITION := Vector3(-5.75, 3.18, 8.15)
+const HERO_POSITION := Vector3(0.0, 4.15, 12.20)
+const HERO_FOV := 48.0
 const CHAMPION_ORBIT_POINTS := [
 	Vector3(-5.35, 3.18, 3.70),
 	Vector3(-5.05, 3.35, 1.35),
@@ -95,7 +96,7 @@ func prepare_cinematic(reduced_motion: bool) -> void:
 		return
 	if reduced_motion:
 		_camera.position = HERO_POSITION
-		_camera.fov = 42.0
+		_camera.fov = HERO_FOV
 		_set_camera_focus(
 			(get_node("LookTargets/CameraTarget") as Marker3D).global_position)
 		_set_spotlight_mix(1.0, 1.0, 1.0)
@@ -125,9 +126,9 @@ func play_cinematic(reduced_motion: bool) -> void:
 	await _tween_camera(THIRD_PULLBACK_POSITION, third_target, 39.0,
 		2.05, Tween.TRANS_CUBIC, Tween.EASE_OUT)
 	_tween_spotlights(0.14, 1.06, 0.48, 0.55)
-	await _tween_camera(SECOND_SWISH_POSITION, second_target, 38.0,
+	await _tween_camera(SECOND_SWISH_POSITION, second_target, 40.0,
 		0.68, Tween.TRANS_QUINT, Tween.EASE_IN_OUT)
-	await _tween_camera(SECOND_SETTLE_POSITION, second_target, 36.5,
+	await _tween_camera(SECOND_SETTLE_POSITION, second_target, 39.0,
 		1.25, Tween.TRANS_SINE, Tween.EASE_OUT)
 	_tween_spotlights(1.04, 0.62, 0.62, 0.95)
 	await _tween_camera(CHAMPION_ORBIT_POINTS[0], champion_target, 43.0,
@@ -159,7 +160,7 @@ func _play_champion_orbit(target_focus: Vector3, duration: float) -> void:
 	tween.set_trans(Tween.TRANS_SINE)
 	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.tween_method(_set_champion_orbit_progress, 0.0, 1.0, duration)
-	tween.tween_property(_camera, "fov", 39.5, duration)
+	tween.tween_property(_camera, "fov", HERO_FOV, duration)
 	await tween.finished
 
 

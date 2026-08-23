@@ -64,6 +64,12 @@ const SFX_PATHS = {
 
 const CEREMONY_PATHS = {
 	"winners_circle_ceremony": "res://audio/ui/winners_circle_ceremony.wav",
+	"winners_circle_neon_victory": "res://audio/ui/winners_circle_themes/neon_victory.wav",
+	"winners_circle_western_toybox": "res://audio/ui/winners_circle_themes/western_toybox.wav",
+	"winners_circle_grand_arena": "res://audio/ui/winners_circle_themes/grand_arena.wav",
+	"winners_circle_pixel_champion": "res://audio/ui/winners_circle_themes/pixel_champion.wav",
+	"winners_circle_champion_groove": "res://audio/ui/winners_circle_themes/champion_groove.wav",
+	"winners_circle_deep_orbit": "res://audio/ui/winners_circle_themes/deep_orbit.wav",
 }
 
 # ============================================================

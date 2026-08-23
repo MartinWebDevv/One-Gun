@@ -224,11 +224,23 @@ func load_loadout() -> bool:
 	var columns := ",".join(SupabaseCosmeticRegistry.LOADOUT_SLOTS)
 	var response := await _authenticated_request(
 		"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
+	var used_legacy_schema := false
+	# Keep clients usable while the accompanying migration is being applied.
+	# PostgREST reports a missing ceremony_theme column as HTTP 400; only that
+	# schema case retries the six-column legacy read.
+	if not bool(response.get("ok", false)) \
+			and int(response.get("status", 0)) == 400:
+		used_legacy_schema = true
+		columns = ",".join(SupabaseCosmeticRegistry.LEGACY_LOADOUT_SLOTS)
+		response = await _authenticated_request(
+			"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
 	if not _response_ok_or_report(response, "loadout", "Could not load the cosmetic loadout."):
 		return false
 	var rows = response.get("data", [])
 	loadout = SupabaseCosmeticRegistry.sanitize_loadout(
 		rows[0] if rows is Array and not rows.is_empty() else {})
+	if used_legacy_schema or str(loadout.get("ceremony_theme", "")) == "":
+		loadout["ceremony_theme"] = SupabaseCosmeticRegistry.DEFAULT_CEREMONY_THEME_ID
 	_apply_local_character_skin()
 	loadout_updated.emit(loadout.duplicate(true))
 	return true
@@ -303,9 +315,15 @@ func equip_cosmetic(slot: String, item_id: String) -> bool:
 	if not owns_item(safe_id):
 		equip_failed.emit(safe_slot, safe_id, "This item is not in the loaded inventory.")
 		return false
-	var response := await _authenticated_request(
-		"/rest/v1/rpc/equip_cosmetic", HTTPClient.METHOD_POST,
-		{"p_slot": safe_slot, "p_item_id": safe_id})
+	var response: Dictionary
+	if safe_slot == "ceremony_theme":
+		response = await _authenticated_request(
+			"/rest/v1/rpc/equip_ceremony_theme", HTTPClient.METHOD_POST,
+			{"p_item_id": safe_id})
+	else:
+		response = await _authenticated_request(
+			"/rest/v1/rpc/equip_cosmetic", HTTPClient.METHOD_POST,
+			{"p_slot": safe_slot, "p_item_id": safe_id})
 	if not bool(response.get("ok", false)):
 		var message := _response_message(response, "Equip failed.")
 		equip_failed.emit(safe_slot, safe_id, message)

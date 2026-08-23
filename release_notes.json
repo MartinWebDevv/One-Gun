@@ -5,13 +5,15 @@
   "popup_id": "0.0.49-winners-circle-accounts-1",
   "categories": {
 	"Added": [
-	  "Introducing the Winners Circle! After a free-for-all One Gun or All Gun match, the celebration fades in on third place, swishes to second, circles the champion, and finishes with a Trophy-drop hero moment set to an original arcade-rock ceremony cue.",
+	  "Introducing the Winners Circle! After a free-for-all One Gun or All Gun match, the celebration fades in on third place, swishes to second, circles the champion, and finishes with a Trophy-drop hero moment set to the new Ceremony March theme.",
+	  "Ceremony March is included for everyone, while Neon Victory, Western Toybox, Grand Arena, Pixel Champion, Champion Groove, and Deep Orbit can be unlocked with Gun Tokens in the Prize Counter and equipped from the Locker.",
+	  "The match champion's equipped Winners Circle theme now scores the ceremony for every player.",
 	  "Podium winners appear with their chosen character, color, and equipped Victory Move. All three can celebrate together while the final standings are revealed.",
 	  "Official Classic champions now receive a special Trophy-drop celebration in front of first place.",
 	  "Every player gets a personal results card with their placement, round wins, kills, disarms, and reward preview.",
 	  "Check the complete match standings, mark yourself Ready when you are finished, or let the host return everyone to the lobby.",
-	  "Account & Store is now available from the main menu! Create an account, sign in, view your Gun Tokens, browse the shop, check owned items, and equip cosmetics.",
-	  "Your equipped character skin, hat, accessory, gun skin, melee skin, and Victory Move now travel with you into online lobbies and matches.",
+	  "Account & Prize Counter is now available from the main menu! Create an account, sign in, view your Gun Tokens, browse unlocks, and equip owned cosmetics from the Locker.",
+	  "Your equipped character skin, hat, accessory, gun skin, melee skin, Victory Move, and Winners Circle theme now travel with you into online lobbies and matches.",
 	  "A new Female character joins Character Customization with all 13 colors and their matching portraits.",
 	  "Online chat is now available in lobbies, the Playpen, matches, and spectator mode. Messages appear as quick notifications and speech bubbles above players. Press T to open chat window and Enter to start typing!",
 	  "A new red damage indicator shows the direction of incoming gunfire.",
@@ -22,6 +24,9 @@
 	  "New Low, Medium, High, and Ultra quality tuning improves performance across gameplay, menus, map previews, effects, and the Winners Circle.",
 	  "A new Ceremony Volume setting lets you tune Winners Circle celebrations separately from music and sound effects.",
 	  "Winners Circle placements now use match performance to produce consistent final standings.",
+	  "Podium camera framing now keeps every top-three character and the complete Winners Circle medallion visible during the champion shot.",
+	  "Final match results now spotlight your placement, performance, and rewards in a new ceremony-style results card.",
+	  "Brighter twinkling lights now frame the results without distracting from the standings and podium presentation.",
 	  "Chat messages stay separated between the lobby, Playpen, and active match so each conversation remains in the right place.",
       "Cosmetics with unfinished artwork can still be owned and equipped safely while their final visuals are being prepared."
 	],

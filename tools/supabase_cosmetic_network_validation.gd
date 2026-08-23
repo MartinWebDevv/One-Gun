@@ -51,7 +51,8 @@ func _run_host() -> void:
 	if remote_id < 0 or not await _wait_until(func() -> bool:
 		var cosmetics: Dictionary = _network.peer_cosmetic_loadout(remote_id)
 		return str(cosmetics.get("hat", "")) == "cowboy_hat" \
-			and str(cosmetics.get("gun_skin", "")) == "golden_gun_skin"
+			and str(cosmetics.get("gun_skin", "")) == "golden_gun_skin" \
+			and str(cosmetics.get("ceremony_theme", "")) == "wc_theme_deep_orbit"
 	):
 		_fail("Host never received the client's persistent cosmetic IDs")
 		return
@@ -79,7 +80,8 @@ func _run_client() -> void:
 	if not await _wait_until(func() -> bool:
 		var cosmetics: Dictionary = _network.local_cosmetic_loadout()
 		return str(cosmetics.get("hat", "")) == "cowboy_hat" \
-			and str(cosmetics.get("gun_skin", "")) == "golden_gun_skin"
+			and str(cosmetics.get("gun_skin", "")) == "golden_gun_skin" \
+			and str(cosmetics.get("ceremony_theme", "")) == "wc_theme_deep_orbit"
 	):
 		_fail("Client's persistent cosmetic IDs did not reconcile")
 		return
@@ -100,6 +102,7 @@ func _seed_test_session() -> void:
 	_supabase.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
 		"hat": "cowboy_hat",
 		"gun_skin": "golden_gun_skin",
+		"ceremony_theme": "wc_theme_deep_orbit",
 	})
 
 

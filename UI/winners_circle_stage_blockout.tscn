@@ -113,7 +113,7 @@ position = Vector3(0, 3.0, 0)
 position = Vector3(0, 2.2, 0)
 
 [node name="SecondTarget" type="Marker3D" parent="LookTargets"]
-position = Vector3(-3.2, 1.8, -0.18)
+position = Vector3(-3.2, 2.05, -0.18)
 
 [node name="ThirdTarget" type="Marker3D" parent="LookTargets"]
 position = Vector3(3.2, 1.6, -0.34)
@@ -154,6 +154,6 @@ text = "THIRD"
 horizontal_alignment = 1
 
 [node name="WinnersCircleCamera" type="Camera3D" parent="."]
-position = Vector3(0, 3.9, 10.9)
-fov = 42.0
+position = Vector3(0, 4.15, 12.2)
+fov = 48.0
 current = true

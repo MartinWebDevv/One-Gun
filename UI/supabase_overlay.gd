@@ -73,7 +73,7 @@ func _build_ui() -> void:
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	column.add_child(header)
-	var title := OneGunUI.make_heading("ACCOUNT & STORE", OneGunUI.TEXT_TITLE, "gold")
+	var title := OneGunUI.make_heading("ACCOUNT & PRIZE COUNTER", OneGunUI.TEXT_TITLE, "gold")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	var close_button := _make_button("CLOSE", "red")
@@ -87,7 +87,7 @@ func _build_ui() -> void:
 	column.add_child(subtitle)
 
 	var tabs := OneGunTabBar.new()
-	tabs.tabs = PackedStringArray(["ACCOUNT", "STORE", "INVENTORY"])
+	tabs.tabs = PackedStringArray(["ACCOUNT", "PRIZE COUNTER", "LOCKER"])
 	tabs.tab_selected.connect(_show_page)
 	column.add_child(tabs)
 
@@ -300,6 +300,11 @@ func _make_store_row(item: Dictionary) -> Control:
 	price.custom_minimum_size.x = 150.0
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	horizontal.add_child(price)
+	if slot == "ceremony_theme":
+		var preview := _make_button("PREVIEW", "blue")
+		preview.custom_minimum_size.x = 116.0
+		preview.pressed.connect(_on_preview_theme.bind(item_id))
+		horizontal.add_child(preview)
 	var authenticated: bool = bool(_backend.is_authenticated())
 	var owned: bool = authenticated and bool(_backend.owns_item(item_id))
 	var action_text := "OWNED" if owned else ("BUY" if authenticated \
@@ -352,6 +357,11 @@ func _make_inventory_row(entry: Dictionary) -> Control:
 	copy.add_child(OneGunUI.make_label("%s • %s • %s" % [
 		slot.replace("_", " ").to_upper() if slot != "" else "UNKNOWN SLOT",
 		source, art_state], OneGunUI.TEXT_S, "muted"))
+	if slot == "ceremony_theme":
+		var preview := _make_button("PREVIEW", "blue")
+		preview.custom_minimum_size.x = 116.0
+		preview.pressed.connect(_on_preview_theme.bind(item_id))
+		horizontal.add_child(preview)
 	var equipped := slot != "" and str(_backend.loadout.get(slot, "")) == item_id
 	var action := _make_button(
 		"EQUIPPED" if equipped else ("EQUIP" if slot != "" else "DATA ONLY"),
@@ -406,6 +416,17 @@ func _on_buy(item_id: String) -> void:
 	await _backend.purchase_shop_item(item_id)
 
 
+func _on_preview_theme(item_id: String) -> void:
+	var audio_key := SupabaseCosmeticRegistry.local_ceremony_audio_key(item_id)
+	if audio_key == "":
+		_set_feedback("THIS CEREMONY THEME IS NOT INSTALLED", true)
+		return
+	AudioManager.stop_ceremony()
+	AudioManager.play_ceremony(audio_key, 0.78)
+	_set_feedback("PREVIEWING %s" % SupabaseCosmeticRegistry.display_name_fallback(
+		item_id).to_upper(), false)
+
+
 func _on_equip(slot: String, item_id: String) -> void:
 	_set_feedback("EQUIPPING %s…" % item_id.to_upper(), false)
 	await _backend.equip_cosmetic(slot, item_id)
@@ -457,8 +478,12 @@ func _on_purchase_failed(_item_id: String, message: String) -> void:
 
 
 func _on_equip_succeeded(_slot: String, item_id: String) -> void:
+	var catalog: Dictionary = _backend.catalog_item(item_id)
+	var item_slot := SupabaseCosmeticRegistry.item_slot(catalog)
+	if item_slot == "":
+		item_slot = SupabaseCosmeticRegistry.known_slot_for_id(item_id)
 	var visual_note := "" if SupabaseCosmeticRegistry.has_local_visual(
-		item_id, str(_backend.catalog_item(item_id).get("item_type", ""))) \
+		item_id, item_slot) \
 		else " — LOCAL ART PENDING"
 	_set_feedback("EQUIPPED %s%s" % [item_id.to_upper(), visual_note], false)
 	_refresh_all()
@@ -528,5 +553,6 @@ func _clear_children(container: Node) -> void:
 
 
 func _close() -> void:
+	AudioManager.stop_ceremony()
 	closed.emit()
 	queue_free()

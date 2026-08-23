@@ -1,8 +1,10 @@
-"""Generate One Gun's original 10-second Winners Circle ceremony sting.
+"""Generate One Gun's retired prototype Winners Circle ceremony sting.
 
 The cue is intentionally synthetic and lightweight: a mysterious 90s-arcade
 bed, short left/right placement reveals, a rising champion orbit, and a final
 rock-influenced Trophy impact. It is deterministic so the WAV can be rebuilt.
+This script is retained for provenance and no longer writes over the approved
+Ceremony March default.
 """
 
 from __future__ import annotations
@@ -20,9 +22,10 @@ DURATION = 10.0
 FRAME_COUNT = int(SAMPLE_RATE * DURATION)
 OUTPUT_PATH = (
     Path(__file__).resolve().parents[1]
+    / "art_src"
     / "audio"
-    / "ui"
-    / "winners_circle_ceremony.wav"
+    / "winners_circle"
+    / "retired_arcade_rock.wav"
 )
 
 left = array("f", [0.0]) * FRAME_COUNT

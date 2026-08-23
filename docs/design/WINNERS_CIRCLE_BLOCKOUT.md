@@ -15,8 +15,9 @@ The blockout is not final art. Its measurements and named anchors are the contra
 - Signs, banners, shelves, bulbs, and toy silhouettes: `models/winners_circle/blockout/wc_decor_blockout.glb`
 - Godot assembly: `UI/winners_circle_stage_blockout.tscn`
 - Live-stage adapter: `UI/winners_circle_stage_blockout.gd`
-- Original 10s ceremony cue: `audio/ui/winners_circle_ceremony.wav`
-- Deterministic audio generator: `tools/generate_winners_circle_audio.py`
+- Default 10s Ceremony March cue (Option A): `audio/ui/winners_circle_ceremony.wav`
+- Approved alternate themes (Options B, C, D, E, and H): `audio/ui/winners_circle_themes/`
+- Retired prototype cue generator, retained only for provenance: `tools/generate_winners_circle_audio.py`
 
 All three GLBs are exported at a shared origin and instanced separately at `(0, 0, 0)`. A production artist can replace the room shell, podiums, or decor independently without changing match/result code.
 
@@ -44,11 +45,15 @@ The podium-facing `DynamicLabels/FirstName`, `SecondName`, and `ThirdName` are G
 
 The result UI is constructed underneath a full-screen view of the existing stage SubViewport; the 3D stage is never duplicated. Competitor visuals stay hidden while their selected Victory Move or fallback idle begins and pre-rolls. A visual that cannot produce a valid animation stays hidden instead of displaying its T-pose.
 
-The normal-motion timeline lasts approximately 10s: third-place close reveal and pullback, a fast swish to second, an almost-full Catmull-Rom orbit around the champion, then the Trophy drop/confetti hero beat. A brief black transition replaces the full-screen stage with the standings, personalized result, Full Stats and Ready/return interface. The 10s original audio cue mirrors those placement beats and follows the dedicated Ceremony Volume setting, which remains subordinate to Master Volume and independent of Music/SFX.
+The normal-motion timeline lasts approximately 10s: third-place close reveal and pullback, a fast swish to second, an almost-full Catmull-Rom orbit around the champion, then the Trophy drop/confetti hero beat. A brief black transition replaces the full-screen stage with the standings, personalized result, Full Stats and Ready/return interface over a near-black field of soft twinkling lights. Ceremony March is the permanent free default; Neon Victory, Western Toybox, Grand Arena, Pixel Champion, Champion Groove, and Deep Orbit are Prize Counter unlocks. The champion's equipped theme is frozen into the match result and plays for every peer, with unknown/missing IDs falling back to Ceremony March. All cues follow the dedicated Ceremony Volume setting, which remains subordinate to Master Volume and independent of Music/SFX.
 
-Camera points are runtime constants in `UI/winners_circle_stage_blockout.gd`, but the stable `LookTargets` above remain the art-replacement contract. Any replacement shell must leave the current orbit corridor clear: the path passes outside the side podium performers and briefly between the champion and rear sign before returning to the front hero angle. Victory Moves must remain in-place and inside their podium-safe envelope.
+The post-cinematic composition keeps its screen-filling cabinet footprint: the podium and standings remain the primary upper presentation, while the full-width personal card separates the viewer's finish, performance stats, and reward status into three readable zones. Podium rows use gold, silver, and bronze hierarchy, and the viewing player's row receives a separate identity treatment without enlarging the gaps between panels.
 
-Reduced Motion uses a static wide camera, fallback idles, immediate Trophy placement, no confetti and a short fade into results. Camera movement remains identical across graphics-quality presets; Low scales the existing viewport/effects rather than changing ceremony timing.
+The results star field is composed around the existing header, footer, perimeter, and cabinet gaps instead of being evenly scattered. High/Ultra uses 52 soft lights, Medium 38, and Low 26; the field redraws at 15 FPS, and Reduced Motion holds the lights static. The near-black base and opaque cabinet faces keep the results as the visual focus.
+
+Camera points are runtime constants in `UI/winners_circle_stage_blockout.gd`, but the stable `LookTargets` above remain the art-replacement contract. The third-place reveal and second-place swish/settle retain the complete performer, podium face, and live name label inside frame; second place uses the third-place pullback depth as its framing baseline. The champion hero composition pulls back far enough to keep all three podium performers and the complete outer rim of the background Winners Circle medallion inside frame with visible safety margin. Any replacement shell must leave the current orbit corridor clear: the path passes outside the side podium performers and briefly between the champion and rear sign before returning to the front hero angle. Victory Moves must remain in-place and inside their podium-safe envelope.
+
+Reduced Motion uses a static wide camera, fallback idles, immediate Trophy placement, no confetti, a static star field and a short fade into results. Camera movement remains identical across graphics-quality presets; Low scales the existing viewport/effects and reduces the results star count rather than changing ceremony timing.
 
 ## Regenerating the blockout
 
@@ -76,7 +81,7 @@ Run Godot's editor import once after generating new GLBs, then run:
 
 ## Performance contract
 
-The current three GLBs total less than 6 MB, contain no collisions, and use shadowless stage lights. The cinematic and results panel share the same isolated 960×540 SubViewport, which `GraphicsQualityManager` scales with the selected render quality. Confetti density is also quality-scaled, the camera uses event-driven tweens instead of per-frame scene scans, and the 10s stereo WAV is about 1.7 MB before Godot import compression. Reduced Motion replaces dances with idle plus an immediate Trophy placement.
+The current three GLBs total less than 6 MB, contain no collisions, and use shadowless stage lights. The cinematic and results panel share the same isolated 960×540 SubViewport, which `GraphicsQualityManager` scales with the selected render quality. Confetti density is also quality-scaled, the camera uses event-driven tweens instead of per-frame scene scans, and each 10s stereo theme WAV is about 1.7 MB before Godot import compression. Only the equipped cue is streamed for a ceremony. Reduced Motion replaces dances with idle plus an immediate Trophy placement.
 
 The current build has passed a user-reported weaker-laptop play check on Low. The cinematic itself still needs a rendered weaker-laptop check after this camera/audio pass. The final-art pass must retain Forward+, and repeated match-to-Winners-Circle-to-lobby transitions must not grow RAM/VRAM or produce a visible transition hitch.
 
@@ -84,7 +89,7 @@ The current build has passed a user-reported weaker-laptop play check on Low. Th
 
 - Authored Trophy GLB at `models/rewards/winners_circle_trophy.glb`
 - Final room, podium, shelf/toy, banner, logo, bulb, and ceremonial-gun-display art
-- Production replacement or mix polish for the generated ceremony cue, plus optional crowd ambience
+- Optional crowd ambience and final production mix polish
 - Production Victory Move catalog mappings
 - Production gun-skin display mappings
 

@@ -40,16 +40,22 @@ func _run() -> void:
 
 	var store_list = overlay.get("_store_list") as VBoxContainer
 	var inventory_list = overlay.get("_inventory_list") as VBoxContainer
-	_check(store_list != null and store_list.get_child_count() == 2,
-		"store did not render exactly the two public items")
-	_check(inventory_list != null and inventory_list.get_child_count() == 2,
-		"inventory did not render both owned items")
+	_check(store_list != null and store_list.get_child_count() == 3,
+		"Prize Counter did not render the public cosmetic items")
+	_check(inventory_list != null and inventory_list.get_child_count() == 3,
+		"Locker did not render all owned cosmetics")
 	var store_text := _descendant_text(store_list)
 	var inventory_text := _descendant_text(inventory_list)
 	_check(not store_text.contains("FOUNDER CROWN"),
 		"hidden founder crown appeared in the public store")
 	_check(inventory_text.contains("FOUNDER CROWN"),
 		"owned hidden founder crown did not appear in inventory")
+	_check(inventory_text.contains("DEEP ORBIT") \
+			and inventory_text.contains("CEREMONY THEME") \
+			and inventory_text.contains("EQUIPPED"),
+		"owned ceremony theme did not render as a ready equipped unlock")
+	_check(store_text.contains("PREVIEW") and inventory_text.contains("PREVIEW"),
+		"ceremony themes were not previewable before purchase or equip")
 	_check(inventory_text.contains("ART PENDING"),
 		"missing local cosmetic art was not surfaced safely")
 
@@ -59,8 +65,8 @@ func _run() -> void:
 	overlay.call("_refresh_all")
 	await process_frame
 	store_text = _descendant_text(store_list)
-	_check(store_list.get_child_count() == 2,
-		"signed-out public store rows disappeared")
+	_check(store_list.get_child_count() == 3,
+		"signed-out public Prize Counter rows disappeared")
 	_check(store_text.contains("SIGN IN TO BUY"),
 		"signed-out purchase controls were not authentication-gated")
 	_check(not store_text.contains("FOUNDER CROWN"),
@@ -111,12 +117,23 @@ func _seed_runtime_data(supabase: Node) -> void:
 		"price": 500, "rarity": "rare", "purchasable": true,
 		"shop_visible": true, "active": true,
 	})
+	supabase.shop_items.append({
+		"id": "wc_theme_deep_orbit", "display_name": "Deep Orbit",
+		"item_type": "ceremony_theme", "description": "Test ceremony theme",
+		"price": 2200, "rarity": "legendary", "purchasable": true,
+		"shop_visible": true, "active": true,
+	})
 	supabase.inventory.clear()
 	supabase.inventory.append({"item_id": "cowboy_hat", "source": "purchase"})
 	supabase.inventory.append({"item_id": "founder_crown", "source": "founder_grant"})
-	supabase.set("_owned_item_ids", {"cowboy_hat": true, "founder_crown": true})
+	supabase.inventory.append({"item_id": "wc_theme_deep_orbit", "source": "purchase"})
+	supabase.set("_owned_item_ids", {
+		"cowboy_hat": true, "founder_crown": true,
+		"wc_theme_deep_orbit": true,
+	})
 	supabase.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
 		"hat": "founder_crown",
+		"ceremony_theme": "wc_theme_deep_orbit",
 	})
 
 

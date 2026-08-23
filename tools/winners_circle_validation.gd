@@ -2,6 +2,16 @@ extends SceneTree
 
 var _failures := 0
 
+const CEREMONY_THEME_PATHS: Array[String] = [
+	"res://audio/ui/winners_circle_ceremony.wav",
+	"res://audio/ui/winners_circle_themes/neon_victory.wav",
+	"res://audio/ui/winners_circle_themes/western_toybox.wav",
+	"res://audio/ui/winners_circle_themes/grand_arena.wav",
+	"res://audio/ui/winners_circle_themes/pixel_champion.wav",
+	"res://audio/ui/winners_circle_themes/champion_groove.wav",
+	"res://audio/ui/winners_circle_themes/deep_orbit.wav",
+]
+
 
 func _initialize() -> void:
 	call_deferred("_run")
@@ -21,12 +31,12 @@ func _run() -> void:
 	var winners_circle_script = load("res://UI/winners_circle.gd")
 	var reward_preview = load("res://match_reward_preview.gd")
 	var stage_scene = load("res://UI/winners_circle_stage_blockout.tscn") as PackedScene
-	var ceremony_audio = load("res://audio/ui/winners_circle_ceremony.wav") as AudioStream
 	_check(result_builder != null and winners_circle_script != null
 			and reward_preview != null and stage_scene != null,
 		"Winners Circle presentation resources load")
-	_check(ceremony_audio != null,
-		"the original 10-second ceremony audio loads")
+	for theme_path in CEREMONY_THEME_PATHS:
+		_check(load(theme_path) is AudioStream,
+			"ceremony theme loads: %s" % theme_path.get_file())
 	var stage := stage_scene.instantiate() as Node3D
 	root.add_child(stage)
 	for required_path in [
@@ -99,6 +109,8 @@ func _run() -> void:
 		"the full-screen Winners Circle interface builds")
 	_check(circle.find_child("PodiumStage", true, false) != null,
 		"the isolated 3D podium stage builds")
+	_check(str(circle.call("_ceremony_audio_key")) == "winners_circle_deep_orbit",
+		"the champion's equipped ceremony theme selects the shared audio cue")
 	var cinematic_stage := circle.find_child("CinematicStage", true, false) as Control
 	_check(cinematic_stage != null and cinematic_stage.visible,
 		"the ceremony begins on the full-screen cinematic stage")
@@ -106,6 +118,10 @@ func _run() -> void:
 		"ResultsInterface", true, false) as Control
 	_check(results_interface != null and results_interface.modulate.a <= 0.01,
 		"standings, personal results and controls stay hidden during the cinematic")
+	var results_twinkles := circle.find_child(
+		"ResultsTwinkleBackdrop", true, false) as Control
+	_check(results_twinkles != null,
+		"the result interface builds its soft twinkling backdrop")
 	var cinematic_camera := circle.find_child(
 		"WinnersCircleCamera", true, false) as Camera3D
 	_check(cinematic_camera != null
@@ -138,6 +154,15 @@ func _run() -> void:
 	circle.set_ready_peers([1, 3], [1, 2, 3])
 	var personal_results: Node = circle.find_child("PersonalResults", true, false)
 	_check(personal_results != null, "the local player receives a personalized result card")
+	_check(circle.find_child("PersonalPlacementBadge", true, false) != null,
+		"the personalized card emphasizes the local placement")
+	_check(circle.find_child("PersonalPerformance", true, false) != null,
+		"the personalized card groups the local performance stats")
+	_check(circle.find_child("PersonalRewards", true, false) != null,
+		"the personalized card separates match rewards from performance")
+	var local_standing: Node = circle.find_child("StandingRow_1", true, false)
+	_check(local_standing != null and bool(local_standing.get_meta("viewer_row", false)),
+		"the final standings identify the viewing player's row")
 
 	var original_time_scale := Engine.time_scale
 	Engine.time_scale = 20.0
@@ -148,8 +173,9 @@ func _run() -> void:
 			and results_interface.modulate.a >= 0.99,
 		"the full cinematic finishes by revealing the results interface")
 	_check(cinematic_camera.position.distance_to(
-		Vector3(0.0, 3.90, 10.40)) < 0.05,
-		"the champion orbit finishes on the first-place hero angle")
+		Vector3(0.0, 4.15, 12.20)) < 0.05
+			and cinematic_camera.fov >= 47.9,
+		"the champion hero angle preserves outer-medallion headroom")
 	var trophy := circle.find_child("VictoryTrophy", true, false) as Node3D
 	_check(trophy != null and trophy.visible
 			and absf(trophy.position.y - float(
@@ -181,6 +207,7 @@ func _sample_state(actor_id: int, player_name: String, round_wins: int,
 		"cosmetics": {
 			"character_skin": "", "hat": "", "accessory": "",
 			"gun_skin": "", "melee_skin": "", "emote": "hip_hop_dance",
+			"ceremony_theme": "wc_theme_deep_orbit" if actor_id == 1 else "",
 		},
 		"sets": 1 if actor_id == 1 else 0,
 		"total_round_wins": round_wins,

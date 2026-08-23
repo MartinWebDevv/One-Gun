@@ -9,12 +9,12 @@ const SkinRegistry = preload("res://player_skin_registry.gd")
 const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
 const RewardPreview = preload("res://match_reward_preview.gd")
 const StageBlockoutScene = preload("res://UI/winners_circle_stage_blockout.tscn")
+const TwinkleBackdrop = preload("res://UI/winners_circle_twinkle_backdrop.gd")
 
 const MINIMUM_VIEW_TIME := 10.0
 const AUTO_RETURN_TIME := 25.0
 const GUN_MODEL_PATH := "res://models/weaponModels/water_gun.glb"
 const TROPHY_MODEL_PATH := "res://models/rewards/winners_circle_trophy.glb"
-const CEREMONY_AUDIO_KEY := "winners_circle_ceremony"
 const PERFORMER_PRE_ROLL := 0.18
 const INTRO_FADE_DURATION := 0.45
 const RESULTS_FADE_DURATION := 0.34
@@ -169,10 +169,16 @@ func _build_interface() -> void:
 	add_child(_root)
 
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(0.008, 0.014, 0.044, 1.0)
+	backdrop.name = "ResultsBackdropBase"
+	backdrop.color = Color(0.0015, 0.002, 0.006, 1.0)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(backdrop)
+
+	var twinkles := TwinkleBackdrop.new()
+	twinkles.name = "ResultsTwinkleBackdrop"
+	twinkles.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(twinkles)
 
 	var outer := MarginContainer.new()
 	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -279,11 +285,14 @@ func _build_standings_panel(parent: HBoxContainer) -> void:
 	cabinet.size_flags_stretch_ratio = 0.85
 	parent.add_child(cabinet)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 7)
 	cabinet.get_content().add_child(column)
-	var heading := OneGunUI.make_heading("━━  FINAL STANDINGS  ━━", 28, "gold")
+	var heading := OneGunUI.make_heading("FINAL STANDINGS", 28, "gold")
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
+	var subtitle := OneGunUI.make_label("MATCH PLACEMENTS", 12, "muted", true)
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(subtitle)
 	column.add_child(_make_standings_header(false))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -298,16 +307,16 @@ func _build_standings_panel(parent: HBoxContainer) -> void:
 		rows.add_child(_make_standings_row(entry, false))
 	var full_stats := OneGunButton.new()
 	full_stats.name = "FullStatsButton"
-	full_stats.text = "FULL STATS"
+	full_stats.text = "VIEW FULL MATCH STATS"
 	full_stats.variant = "navy"
-	full_stats.custom_minimum_size.y = 50.0
+	full_stats.custom_minimum_size.y = 42.0
 	full_stats.pressed.connect(_show_full_stats)
 	column.add_child(full_stats)
 
 
 func _make_standings_header(full: bool) -> Control:
 	var row := HBoxContainer.new()
-	row.custom_minimum_size.y = 38.0
+	row.custom_minimum_size.y = 32.0
 	var fields := [
 		["PLACE", 58.0], ["PLAYER", 175.0], ["RW", 42.0],
 		["K", 34.0], ["DIS", 42.0], ["READY", 62.0],
@@ -319,7 +328,7 @@ func _make_standings_header(full: bool) -> Control:
 			["DIS", 58.0], ["PICK", 58.0], ["MELEE", 70.0],
 		]
 	for field in fields:
-		var label := OneGunUI.make_label(str(field[0]), 14, "muted", true)
+		var label := OneGunUI.make_label(str(field[0]), 12, "muted", true)
 		label.custom_minimum_size.x = float(field[1])
 		if str(field[0]) == "PLAYER":
 			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -331,18 +340,29 @@ func _make_standings_header(full: bool) -> Control:
 func _make_standings_row(entry: Dictionary, full: bool) -> Control:
 	var panel := PanelContainer.new()
 	var placement := int(entry.get("placement", 0))
-	var border_role := "gold" if placement == 1 else "border"
-	var background := OneGunUI.color("face_raised")
+	panel.name = "StandingRow_%d" % placement
+	var viewer_row := _is_viewer_entry(entry)
+	panel.set_meta("viewer_row", viewer_row)
+	var placement_color := _placement_color(placement)
+	var border_color := OneGunUI.color("border")
+	var background := OneGunUI.color("face_raised").darkened(0.10)
 	if placement == 1:
-		background = OneGunUI.color("gold").darkened(0.72)
+		background = Color(0.16, 0.105, 0.025)
+		border_color = placement_color
 	elif placement == 2:
-		background = Color(0.19, 0.22, 0.30)
+		background = Color(0.075, 0.09, 0.13)
+		border_color = placement_color.darkened(0.18)
 	elif placement == 3:
-		background = Color(0.28, 0.17, 0.09)
+		background = Color(0.13, 0.068, 0.028)
+		border_color = placement_color.darkened(0.14)
+	elif viewer_row:
+		border_color = OneGunUI.color("cyan")
+	if viewer_row:
+		background = background.lightened(0.035)
 	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		background, OneGunUI.color(border_role), 8, 2, 0, 5.0))
+		background, border_color, 9, 2, 7 if placement == 1 else 2, 5.0))
 	var row := HBoxContainer.new()
-	row.custom_minimum_size.y = 52.0
+	row.custom_minimum_size.y = 56.0
 	panel.add_child(row)
 	var values: Array = [
 		[_ordinal(placement), 58.0],
@@ -365,11 +385,23 @@ func _make_standings_row(entry: Dictionary, full: bool) -> Control:
 		]
 	var column_index := 0
 	for value in values:
-		var label := OneGunUI.make_label(str(value[0]), 16,
-			"gold" if placement == 1 else "text", placement <= 3)
+		var label_text := str(value[0])
+		if column_index == 0 and placement <= 3:
+			label_text = "★  %s" % label_text
+		elif column_index == 1 and viewer_row:
+			label_text = "%s  • YOU" % label_text
+		var label := OneGunUI.make_label(label_text, 16, "text",
+			column_index <= 1 or placement <= 3)
 		label.custom_minimum_size.x = float(value[1])
 		if column_index == 1:
 			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			label.add_theme_color_override("font_color",
+				OneGunUI.color("cyan") if viewer_row else (
+					placement_color if placement <= 3 else OneGunUI.color("text")))
+		elif column_index == 0:
+			label.add_theme_color_override("font_color", placement_color)
+		else:
+			label.add_theme_color_override("font_color", OneGunUI.color("text_bright"))
 		label.clip_text = true
 		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -389,7 +421,7 @@ func _make_standings_row(entry: Dictionary, full: bool) -> Control:
 func _build_personal_results(parent: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.name = "PersonalResults"
-	row.custom_minimum_size.y = 164.0
+	row.custom_minimum_size.y = 168.0
 	row.add_theme_constant_override("separation", 10)
 	parent.add_child(row)
 	var found := false
@@ -422,23 +454,125 @@ func _make_personal_card(entry: Dictionary) -> Control:
 
 
 func _finish_personal_card(cabinet: OneGunCabinet) -> void:
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
-	cabinet.get_content().add_child(column)
 	var entry: Dictionary = cabinet.get_meta("personal_entry", {})
-	var heading := OneGunUI.make_heading("YOUR RESULT — %s" % _ordinal(
-		int(entry.get("placement", 0))), 25, "gold" if int(entry.get("placement", 0)) <= 3 else "text")
-	column.add_child(heading)
-	var stats := OneGunUI.make_label(
-		"ROUND WINS  %d     KILLS  %d     DISARMS  %d" % [
-			int(entry.get("round_wins", 0)), int(entry.get("kills", 0)),
-			int(entry.get("disarms", 0))], 18, "text", true)
-	column.add_child(stats)
 	var reward := RewardPreview.for_actor(
 		_result, int(entry.get("actor_id", -1)))
-	var rewards := OneGunUI.make_label(RewardPreview.summary_text(reward), 16,
-		"green" if bool(_result.get("official", false)) else "muted", true)
-	column.add_child(rewards)
+	var compact := _viewer_actor_ids.size() > 1
+	var card_row := HBoxContainer.new()
+	card_row.name = "PersonalPerformanceCard"
+	card_row.add_theme_constant_override("separation", 10 if compact else 14)
+	cabinet.get_content().add_child(card_row)
+	card_row.add_child(_make_placement_badge(entry, compact))
+	card_row.add_child(_make_performance_summary(entry, compact))
+	card_row.add_child(_make_reward_summary(reward, compact))
+
+
+func _make_placement_badge(entry: Dictionary, compact: bool) -> Control:
+	var placement := int(entry.get("placement", 0))
+	var accent := _placement_color(placement)
+	var panel := PanelContainer.new()
+	panel.name = "PersonalPlacementBadge"
+	panel.custom_minimum_size.x = 98.0 if compact else 142.0
+	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		accent.darkened(0.78), accent, 12, 2, 2, 8.0))
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 2)
+	panel.add_child(column)
+	var eyebrow := OneGunUI.make_label("YOUR FINISH", 10 if compact else 12,
+		"muted", true)
+	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(eyebrow)
+	var rank := OneGunUI.make_heading(_ordinal(placement),
+		34 if compact else 46, "text")
+	rank.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rank.add_theme_color_override("font_color", accent)
+	column.add_child(rank)
+	var player_name := OneGunUI.make_label(_entry_display_name(entry).to_upper(),
+		11 if compact else 13, "text", true)
+	player_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_name.clip_text = true
+	player_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	column.add_child(player_name)
+	return panel
+
+
+func _make_performance_summary(entry: Dictionary, compact: bool) -> Control:
+	var column := VBoxContainer.new()
+	column.name = "PersonalPerformance"
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 7)
+	var heading := OneGunUI.make_heading("YOUR PERFORMANCE",
+		14 if compact else 17, "gold")
+	column.add_child(heading)
+	var stats := HBoxContainer.new()
+	stats.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stats.add_theme_constant_override("separation", 6 if compact else 9)
+	column.add_child(stats)
+	for stat in [
+		["ROUND WINS", int(entry.get("round_wins", 0))],
+		["KILLS", int(entry.get("kills", 0))],
+		["DISARMS", int(entry.get("disarms", 0))],
+	]:
+		stats.add_child(_make_personal_stat(str(stat[0]), int(stat[1]), compact))
+	return column
+
+
+func _make_personal_stat(title: String, value: int, compact: bool) -> Control:
+	var panel := PanelContainer.new()
+	panel.name = "%sStat" % title.to_pascal_case().replace(" ", "")
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		OneGunUI.color("well").darkened(0.14),
+		Color(OneGunUI.color("border"), 0.82), 9, 1, 0, 5.0))
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel.add_child(column)
+	var title_label := OneGunUI.make_label(title, 9 if compact else 11, "muted", true)
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(title_label)
+	var value_label := OneGunUI.make_heading(str(value),
+		24 if compact else 30, "text_bright")
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(value_label)
+	return panel
+
+
+func _make_reward_summary(reward: Dictionary, compact: bool) -> Control:
+	var official := bool(_result.get("official", false))
+	var trophy_delta := int(reward.get("trophy_delta", 0))
+	var panel := PanelContainer.new()
+	panel.name = "PersonalRewards"
+	panel.custom_minimum_size.x = 210.0 if compact else 360.0
+	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		Color(0.015, 0.025, 0.045),
+		Color(OneGunUI.color("gold"), 0.72 if official else 0.34),
+		12, 1, 0, 9.0))
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 5)
+	panel.add_child(column)
+	var heading := OneGunUI.make_label("MATCH REWARDS", 11 if compact else 13,
+		"muted", true)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(heading)
+	var primary_text := "CUSTOM MATCH"
+	var primary_role := "muted"
+	var secondary_text := "RESULTS ONLY"
+	if official:
+		primary_text = "★  +1 TROPHY" if trophy_delta > 0 else "OFFICIAL RESULT"
+		primary_role = "gold" if trophy_delta > 0 else "green"
+		secondary_text = "XP + GUN TOKENS  •  PENDING"
+	var primary := OneGunUI.make_heading(primary_text,
+		16 if compact else 20, primary_role)
+	primary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(primary)
+	var secondary := OneGunUI.make_label(secondary_text,
+		9 if compact else 12, "green" if official else "muted", true)
+	secondary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	secondary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(secondary)
+	return panel
 
 
 func _build_controls(parent: VBoxContainer) -> void:
@@ -852,6 +986,16 @@ func _stage_material(albedo: Color, emission: Color,
 	return material
 
 
+func _ceremony_audio_key() -> String:
+	if _entries.is_empty():
+		return CosmeticRegistry.DEFAULT_CEREMONY_AUDIO_KEY
+	var champion: Dictionary = _entries[0]
+	var cosmetics := CosmeticRegistry.sanitize_loadout(
+		champion.get("cosmetics", {}))
+	return CosmeticRegistry.resolved_ceremony_audio_key(
+		str(cosmetics.get("ceremony_theme", "")))
+
+
 func _run_presentation_sequence() -> void:
 	var reduced_motion := _reduced_motion()
 	_start_performers(reduced_motion)
@@ -861,7 +1005,7 @@ func _run_presentation_sequence() -> void:
 	if not is_inside_tree():
 		return
 	AudioManager.stop_music(0.2)
-	AudioManager.play_ceremony(CEREMONY_AUDIO_KEY, 0.86)
+	AudioManager.play_ceremony(_ceremony_audio_key(), 0.86)
 	var fade_in := create_tween()
 	fade_in.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	fade_in.tween_property(_root, "modulate:a", 1.0,
@@ -946,6 +1090,22 @@ func _entry_for_actor(actor_id: int) -> Dictionary:
 		if int(entry.get("actor_id", -1)) == actor_id:
 			return entry
 	return {}
+
+
+func _is_viewer_entry(entry: Dictionary) -> bool:
+	return int(entry.get("actor_id", -1)) in _viewer_actor_ids
+
+
+func _placement_color(placement: int) -> Color:
+	match placement:
+		1:
+			return OneGunUI.color("gold")
+		2:
+			return Color(0.73, 0.82, 0.95)
+		3:
+			return Color(0.86, 0.43, 0.16)
+		_:
+			return OneGunUI.color("muted")
 
 
 func _entry_display_name(entry: Dictionary) -> String:
