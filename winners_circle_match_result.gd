@@ -5,22 +5,46 @@ const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
 
 
 static func build_online(actor_state: Dictionary, champion_actor_id: int,
-		official: bool) -> Dictionary:
+		official: bool, match_id: String, map_id: String,
+		started_humans := -1, departed_actor_state: Dictionary = {},
+		forfeit_winner_actor_id := -1) -> Dictionary:
 	var entries: Array = []
 	for actor_id_value in actor_state:
 		var actor_id := int(actor_id_value)
-		var state: Dictionary = actor_state[actor_id_value]
+		var state: Dictionary = (actor_state[actor_id_value] as Dictionary).duplicate(true)
+		state["finished_match"] = true
+		state["forfeit_winner"] = actor_id == forfeit_winner_actor_id
+		entries.append(_entry_from_state(state, actor_id))
+	for actor_id_value in departed_actor_state:
+		var actor_id := int(actor_id_value)
+		var state: Dictionary = (departed_actor_state[actor_id_value] as Dictionary).duplicate(true)
+		state["finished_match"] = false
+		state["forfeit_winner"] = false
+		state["activity_eligible"] = false
 		entries.append(_entry_from_state(state, actor_id))
 	_sort_and_place(entries, champion_actor_id)
 	_mark_duplicate_names(entries)
+	var finisher_humans := 0
+	for entry_value in entries:
+		var entry: Dictionary = entry_value
+		if not bool(entry.get("is_bot", false)) and bool(entry.get("finished_match", true)):
+			finisher_humans += 1
+	var official_starters := started_humans if started_humans >= 0 else entries.size()
 	return {
-		"schema": 1,
+		"schema": 3,
+		"match_id": match_id,
+		"ruleset_id": GameConfig.OFFICIAL_BETA_RULESET_ID,
 		"mode": GameConfig.game_mode,
 		"mode_name": mode_display_name(GameConfig.game_mode),
+		"map_id": map_id,
+		"expected_humans": entries.size(),
+		"started_humans": official_starters,
+		"finisher_humans": finisher_humans,
 		"official": official,
 		"champion_actor_id": champion_actor_id,
+		"forfeit_win": forfeit_winner_actor_id >= 0,
 		"trophy_awarded": official and champion_actor_id >= 0,
-		"reward_state": "economy_pending",
+		"reward_state": "verifying" if official else "not_official",
 		"entries": entries,
 	}
 
@@ -71,7 +95,7 @@ static func build_local(players: Array, champion_actor_id: int,
 	_sort_and_place(entries, champion_actor_id)
 	_mark_duplicate_names(entries)
 	return {
-		"schema": 1,
+		"schema": 2,
 		"mode": GameConfig.game_mode,
 		"mode_name": mode_display_name(GameConfig.game_mode),
 		"official": false,
@@ -114,6 +138,12 @@ static func _entry_from_state(state: Dictionary, actor_id: int) -> Dictionary:
 		"disarms": int(state.get("disarms", 0)),
 		"pickups": int(state.get("pickups", 0)),
 		"melee": int(state.get("melee", 0)),
+		"rounds_participated": int(state.get("rounds_participated", 0)),
+		"active_samples": int(state.get("active_samples", 0)),
+		"activity_eligible": bool(state.get("activity_eligible", false)),
+		"finished_match": bool(state.get("finished_match", true)),
+		"forfeit_winner": bool(state.get("forfeit_winner", false)),
+		"reward_claim_hash": str(state.get("reward_claim_hash", "")),
 	}
 
 
@@ -125,6 +155,10 @@ static func _sort_and_place(entries: Array, champion_actor_id: int) -> void:
 			return true
 		if b_id == champion_actor_id and a_id != champion_actor_id:
 			return false
+		var a_finished := bool(a.get("finished_match", true))
+		var b_finished := bool(b.get("finished_match", true))
+		if a_finished != b_finished:
+			return a_finished
 		for field in ["sets", "round_wins", "runner_up_finishes",
 				"third_place_finishes", "kills", "disarms"]:
 			var a_value := int(a.get(field, 0))

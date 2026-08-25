@@ -106,6 +106,8 @@ var _sfx_index     : int = 0
 
 var _current_music_key : String = ""
 var _music_tween       : Tween  = null
+var _ceremony_preview_active := false
+var _preview_paused_music := false
 
 func _ready():
 	_ensure_ceremony_bus()
@@ -150,6 +152,7 @@ func _build_ceremony_player():
 	_ceremony_player = AudioStreamPlayer.new()
 	_ceremony_player.name = "CeremonyPlayer"
 	_ceremony_player.bus = CEREMONY_BUS_NAME
+	_ceremony_player.finished.connect(_on_ceremony_finished)
 	add_child(_ceremony_player)
 
 func _build_sfx_pool():
@@ -287,6 +290,51 @@ func play_ceremony(key: String, volume_scale: float = 1.0):
 func stop_ceremony():
 	if _ceremony_player:
 		_ceremony_player.stop()
+
+
+func play_ceremony_preview(key: String, volume_scale: float = 1.0) -> bool:
+	if not CEREMONY_PATHS.has(key):
+		return false
+	# Keep the menu soundtrack paused for the whole audition, including when
+	# the player switches directly from one preview to another.
+	if not _ceremony_preview_active:
+		_preview_paused_music = _music_player != null \
+			and _music_player.playing and not _music_player.stream_paused
+		if _preview_paused_music:
+			_music_player.stream_paused = true
+	_ceremony_preview_active = true
+	stop_ceremony()
+	play_ceremony(key, volume_scale)
+	if _ceremony_player != null and _ceremony_player.playing:
+		return true
+	_ceremony_preview_active = false
+	_resume_music_after_preview()
+	return false
+
+
+func stop_ceremony_preview() -> void:
+	if not _ceremony_preview_active:
+		return
+	_ceremony_preview_active = false
+	stop_ceremony()
+	_resume_music_after_preview()
+
+
+func is_ceremony_preview_active() -> bool:
+	return _ceremony_preview_active
+
+
+func _on_ceremony_finished() -> void:
+	if not _ceremony_preview_active:
+		return
+	_ceremony_preview_active = false
+	_resume_music_after_preview()
+
+
+func _resume_music_after_preview() -> void:
+	if _preview_paused_music and _music_player != null:
+		_music_player.stream_paused = false
+	_preview_paused_music = false
 
 # ============================================================
 # SFX

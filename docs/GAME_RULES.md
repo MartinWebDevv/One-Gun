@@ -1,6 +1,6 @@
 # One Gun — Game Rules
 
-> Source of truth: this document describes mechanics as implemented in the codebase as of 2026-08-14. Numbers are pulled directly from the gameplay, configuration, registry, round, weapon, item, and bot scripts. Where a value is configurable per match, the default is listed.
+> Source of truth: this document describes mechanics as implemented in the codebase as of 2026-08-24. Numbers are pulled directly from gameplay, configuration, registry, round, reward, database, weapon, item, and bot code. Where a value is configurable per match, the default is listed.
 
 ## 1. Overview
 
@@ -37,17 +37,62 @@ Three fixed armory bays remove random scavenging from practice. Every bay contai
 
 ### Official Beta classification
 
-A current **Official Beta** candidate is an online Classic One Gun FFA with at least three humans, no bots, teams/friendly fire off, the 3:00 Standard-OT timer, first-to-three rounds, one set per match, and every other combat/spawn/registry setting at the approved defaults. A private Tailscale listen-host match is eligible; transport does not make it unofficial. Changing an official rule makes the result a custom match.
+A current **Official Beta** match is an authenticated online Classic One Gun FFA with at least three humans, no bots, teams/friendly fire off, the 3:00 Standard-OT timer, first-to-three rounds, one set per match, and every other combat/spawn/registry setting at the approved defaults. A private Tailscale listen-host match is fully eligible during Beta; transport does not make it unofficial. Changing an official rule makes the result a custom match.
 
-`GameConfig.is_official_beta_ruleset()` currently performs that deterministic rules/roster check for presentation. Trophy/XP/Gun Token persistence remains disabled until the authenticated backend reward receipt exists, so this client classification cannot grant currency by itself. The future service must also verify that every qualifying human is authenticated.
+`GameConfig.is_official_beta_ruleset()` performs the deterministic rules/roster check when the match begins. The authenticated starting roster is then locked for Official eligibility. Each finisher contributes a private per-session confirmation after the match; Supabase settles one idempotent receipt after a matching majority of the remaining finishers confirms the exact result. ENet receives only random claim hashes—never Supabase user IDs, access tokens, refresh tokens, balances, inventory, or the private claim secret. Replaying the same match ID cannot award anything twice.
+
+A participant must finish the match and be active to earn rewards. The host records round participation and samples meaningful movement/combat activity once per second without adding a network RPC. A player is active after at least two participated rounds and five active samples, or after recording meaningful match stats/a round win. Quitters and inactive participants receive nothing, remain visible as DNF results, and cannot confirm or claim the receipt. If only one participant remains, the match ends immediately as an Official forfeit victory: that sole finisher bypasses the ordinary activity threshold, keeps XP from actual recorded stats plus participation/first-place XP, receives 250 Gun Tokens, and receives 1 Trophy. It can also claim the once-daily victory bonus if that account has not won earlier in the current UTC day. A match that started Official remains Official with one or two finishers. Winners Circle Ready state never gates rewards.
+
+Current Tailscale matches are listen-hosted: the immediate one-player forfeit finish works while peer 1 remains authoritative. If that listen host disconnects, ENet ends the session before another peer can authoritatively finish it; production dedicated servers remove that limitation without changing the reward rule.
+
+### Official Beta match rewards
+
+All eligible finishers receive the base **20 XP**. Match performance adds, with base match XP capped at **100**:
+
+| Source | XP |
+|---|---:|
+| Each round win | 10, first 3 |
+| 1st place | 25 |
+| 2nd place | 15 |
+| 3rd place | 10 |
+| Each kill | 1, first 10 |
+| Each disarm | 3, first 5 |
+
+The first Official Classic victory for an account each UTC day adds **25 Season XP** and **100 Gun Tokens** once. The database date and unique player/date receipt enforce the reset; changing a PC clock cannot repeat it. The daily XP does not feed Career XP, so a match can award at most 100 Career XP and 125 Season XP.
+
+Gun Tokens are a separate fixed placement payout. Performance statistics never add or subtract Tokens:
+
+| Final placement | Gun Tokens |
+|---|---:|
+| 1st | 250 |
+| 2nd | 200 |
+| 3rd | 150 |
+| 4th-10th | 100 |
+
+Separate Level Road bonuses and the one-time daily victory bonus are added after the placement payout. Third place receives 150 Tokens even in a three-player match. Only the first-place winner receives **1 Trophy**, and only in an Official Classic One Gun match. The current private Tailscale Beta uses the complete reward rules with no same-roster reduction.
+
+
+### Levels, roads, seasons, and Prestige
+
+Season XP required for the next level uses the current Season Level `L`: `150 + 2 * (L - 1)`. Level 1 therefore needs 150 XP to reach Level 2, Level 100 needs 348 XP, Level 200 needs 548 XP, and the gradual increase continues indefinitely. Every Career Level requires a flat **400 XP**.
+
+Every eligible base match XP award feeds two independent tracks. The daily first-win XP feeds only Season XP. **Career Level** is the lifetime overall level and never resets. **Season Level** is the live overall level for the active three-month season and resets to Level 1 with zero XP at rollover. Both display Prestige beside the overall level using `floor((level - 1) / 100)`; for example, Career Level 545 is Career Prestige 5, while Season Level 132 is Season Prestige 1.
+
+Season Levels continue indefinitely during their season. Career Levels continue indefinitely for the life of the account.
+
+The Level Road grants Gun Tokens at levels **5/15/25/35/45/55/65/75/85/95** for **50/75/75/100/100/125/125/150/150/200** tokens. Permanent seasonal cosmetics unlock at levels **10/30/50/70/90/100**. After level 100, every tenth level grants **100 Gun Tokens** indefinitely.
+
+The Trophy Road grants a different permanent seasonal cosmetic at **1, 3, 5, 10, 20, 35, and 50** Official Classic wins. Road prizes unlock once, enter the owned-only Locker permanently, and never disappear after a season reset.
+
+A season lasts three months. On rollover, Season Level, Season Prestige, current seasonal XP, Trophies, the Level Road, and the Trophy Road reset for the new reward set. The completed Season Level/Prestige and a snapshot of the account's Career Level/Prestige archive to the **Legacy Hall**. Gun Tokens, every purchased/earned/gifted cosmetic, Career Level, Career Prestige, career wins, and per-mode career stats never reset. The current non-production season is named **Beta Season**.
 
 ### Winners Circle
 
-FFA One Gun and All Gun match endings freeze a result snapshot and open a dedicated full-screen Winners Circle. First place is the match champion; remaining places sort by total round wins, runner-up finishes, third-place finishes, kills, disarms, then stable actor ID. The top three use their selected character appearance and equipped Victory Move; missing moves fall back to a long idle. Every performer is prepared and pre-rolled while hidden, so a T-pose is never part of the visible ceremony. The champion's ceremonial gun display uses the default One Gun model until a mapped equipped gun skin exists.
+FFA One Gun and All Gun match endings freeze a result snapshot and open a dedicated full-screen Winners Circle. First place is the match champion; remaining places sort by total round wins, runner-up finishes, third-place finishes, kills, disarms, then stable actor ID. The top three use their selected character appearance and equipped Winners Circle dance or pose; missing moves fall back to a long idle. Every performer is prepared and pre-rolled while hidden, so a T-pose is never part of the visible ceremony. The champion's ceremonial gun display uses the default One Gun model until a mapped equipped gun skin exists.
 
-The normal-motion ceremony is a shared approximately 10s reveal: it fades in while pulling away from third place, swishes to second, then follows a large orbit around the champion before settling into the first-place hero shot. All three Victory Moves are already running from the first visible frame. The Trophy drops and confetti fires at the champion beat, then the screen briefly fades through black into the normal Winners Circle layout. Shared standings, personalized results, Full Stats, Ready controls, and the return countdown remain hidden for the cinematic. The champion's equipped Winners Circle theme plays for all peers; Ceremony March is the free/default fallback. Reduced Motion uses a short static wide reveal, long idles, immediate Trophy placement, no confetti, and the same results interface afterward.
+The normal-motion ceremony is a shared approximately 10s reveal: it fades in while pulling away from third place, swishes to second, then follows a large orbit around the champion before settling into the first-place hero shot. All three selected podium celebrations are already running from the first visible frame. Every owned animated dance may be assigned independently to the Winners Circle slot, the Round Win slot, or both. The Trophy drops and confetti fires at the champion beat, then the screen briefly fades through black into the normal Winners Circle layout. Shared standings, personalized results, Full Stats, Ready controls, and the return countdown remain hidden for the cinematic. The champion's equipped Winners Circle theme plays for all peers; Ceremony March is the free/default fallback. Reduced Motion uses a short static wide reveal, long idles, immediate Trophy placement, no confetti, and the same results interface afterward.
 
-An Official Classic winner also receives a trophy-drop presentation in front of the champion, independent of their skeleton and dance. The built-in placeholder is used until `res://models/rewards/winners_circle_trophy.glb` exists. This is a reward preview only; it does not write a Trophy yet.
+An Official Classic winner also receives a trophy-drop presentation in front of the champion, independent of their skeleton and dance. The built-in placeholder is used until `res://models/rewards/winners_circle_trophy.glb` exists. The personalized result panel verifies and then shows the persisted XP, Gun Tokens, Trophy, road bonuses, and unlocks from Supabase.
 
 Every participant sees shared final standings plus a personalized results card. Online participants may mark themselves Ready after a **10s minimum viewing time**; when every still-connected participant is ready, everyone sees a synchronized **3s** return countdown. The host may return everyone after the same minimum. Otherwise the host automatically returns the match at **25s**. Local players receive separate Ready controls and results cards, but local matches are always results-only.
 
@@ -222,15 +267,17 @@ Spectating uses LMB/RMB (LB/RB) to cycle living players and Space (A/Cross) to s
 
 Online lobbies, matches, spectators, and The Playpen include session text chat. **T** opens or closes the chat history while not composing; **Enter** starts composing and a second **Enter** sends the message to everyone in the same lobby/match context with the sender's player name. T types normally once composition has started. Opening history does not interrupt gameplay, but composing captures gameplay and spectator input. With chat history closed, each incoming message appears as its own compact sender/message card on the left side for four seconds before fading; receiving a message never opens the full history panel. In a match or The Playpen, the newest message also appears for four seconds in a themed bubble above the sender's spawned actor; long bubble previews are shortened while the complete message remains in history. Each context retains the latest 50 messages, and each message is limited to 200 characters.
 
-### Character customization
+### Locker and character customization
 
-Human players may choose the Male or Female V2 model and any of 13 color textures: Black, Blue, Brown, Cyan, Green, Grey, Orange, Pink, Purple, Red, Salmon, White, or Yellow. M and F buttons beneath the rotating 3D preview switch the pending model immediately; colors can still be cycled or selected from the 5/5/3 portrait grid. The selector is available from both the main menu and lobby, allows duplicate appearances, and can be dragged with the mouse (P1) or turned with P2's right stick. P1's model and color persist together in `PlayerPrefs`; local P2's pair is session-only. Online peers synchronize both stable IDs through the lobby and match spawn data. Bots retain their existing model and appearance. A deployed decoy copies its owner's selected human model and color.
+Human players may choose the Male or Female V2 model and any of 13 color textures: Black, Blue, Brown, Cyan, Green, Grey, Orange, Pink, Purple, Red, Salmon, White, or Yellow. M and F buttons beneath the still 3D preview switch the pending model immediately; colors can still be cycled or selected from the 5/5/3 portrait grid. The preview rotates only while the player holds the left mouse button and drags: right drag turns right and left drag turns left. The Locker is available from both the main menu and lobby and allows duplicate appearances. Its Character / Weapons / Victory / Audio categories and nested clothing/outfit/skin/pose/dance/theme filters show only cosmetics owned by the authenticated Player 1 account; animated dances can be assigned to either independent celebration slot. Equipped cards read UNEQUIP. A two-click Reset Loadout clears cosmetic pieces and returns weapons, celebrations, and ceremony music to their base choices while preserving the selected model and color. Base character colors remain freely selectable, and local Player 2 remains a guest appearance. P1's model and color persist together in `PlayerPrefs`; local P2's pair is session-only. Online peers synchronize stable appearance/loadout IDs through the lobby and match spawn data. Bots retain their existing model and appearance. A deployed decoy copies its owner's selected human model and color.
+
+Maps appear alphabetically by default. The lobby's Map Sort control can switch the same stable map registry to newest-added order without changing network map IDs.
 
 ## 11. Match Settings (configurable per-lobby, save/load-able as presets)
 
 All of the following are toggled in the lobby (`game_setup.gd`) and stored on the `GameConfig` autoload; up to 5 full presets ("house rules") can be saved to disk and reloaded:
 
-The lobby exposes one transactional **Settings** cabinet with a vertical Overview / Match Flow / Combat / Spawns / Bots / Presets / Testing rail. Overview is read-only, Bots is part of the same pending transaction, Close discards, and Apply Changes commits the complete snapshot.
+The lobby exposes one transactional **Match Settings** cabinet with a vertical Overview / Match Flow / Combat / Spawns / Bots / Presets / Testing rail. Overview is read-only, Bots is part of the same pending transaction, Close discards, and Apply Changes commits the complete snapshot. New online lobby sessions start with no bots in the roster; the host adds any bots intentionally through this cabinet.
 
 The list includes the host-adjustable `round_time_limit` and `chaos_overtime_enabled` rules in addition to the combat, item, bot, and scoring settings below.
 

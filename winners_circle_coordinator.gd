@@ -2,6 +2,7 @@ class_name WinnersCircleCoordinator
 extends Node
 
 const WinnersCircle = preload("res://UI/winners_circle.gd")
+const RewardCalculator = preload("res://match_reward_calculator.gd")
 
 signal local_return_requested
 
@@ -62,6 +63,25 @@ func _net_show(result: Dictionary) -> void:
 	_overlay.ready_changed.connect(_on_ready_changed)
 	_overlay.force_return_requested.connect(_on_force_return)
 	_overlay.present(local_result, viewer_actor_ids, true, NetworkManager.is_host())
+	_submit_local_reward.call_deferred(local_result, viewer_actor_ids)
+
+
+func _submit_local_reward(local_result: Dictionary,
+		viewer_actor_ids: Array[int]) -> void:
+	if not bool(local_result.get("official", false)) or viewer_actor_ids.is_empty():
+		return
+	var actor_id := int(viewer_actor_ids[0])
+	var secret := RewardIdentityManager.local_claim_secret()
+	if secret == "":
+		return
+	var preview := RewardCalculator.preview_for_actor(local_result, actor_id)
+	preview["state"] = "verifying"
+	if _overlay != null and _overlay.has_method("set_actor_reward"):
+		_overlay.call("set_actor_reward", actor_id, preview)
+	var receipt: Dictionary = await ProgressionManager.confirm_official_match(
+		local_result, actor_id, secret)
+	if _overlay != null and _overlay.has_method("set_actor_reward"):
+		_overlay.call("set_actor_reward", actor_id, receipt)
 
 
 func _on_ready_changed(is_ready: bool) -> void:

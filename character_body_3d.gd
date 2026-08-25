@@ -230,7 +230,7 @@ func _ready():
 		set_physics_process(false)
 	_apply_character_model(_initial_character_model_id())
 	_apply_character_skin(_initial_character_skin_id())
-	set_cosmetic_loadout(cosmetic_loadout)
+	set_cosmetic_loadout(_initial_cosmetic_loadout())
 	model_anim_player = $CharacterModel.find_child("AnimationPlayer", true, false)
 	if model_anim_player != null:
 		_merge_animations()
@@ -309,11 +309,21 @@ func set_character_appearance(requested_model_id: String,
 		requested_skin_id: String) -> void:
 	_apply_character_model(requested_model_id)
 	_apply_character_skin(requested_skin_id)
+func _initial_cosmetic_loadout() -> Dictionary:
+	if is_online or is_player2:
+		return cosmetic_loadout
+	if SupabaseManager.is_authenticated():
+		return SupabaseManager.equipped_cosmetics()
+	return cosmetic_loadout
+
+
 
 
 func set_cosmetic_loadout(raw_loadout) -> void:
 	cosmetic_loadout = CosmeticRegistry.sanitize_loadout(raw_loadout)
 	CosmeticRegistry.apply_to_player(self, cosmetic_loadout)
+	if is_node_ready():
+		_ensure_round_victory_animation()
 
 
 
@@ -1172,6 +1182,23 @@ func _merge_animations():
 	var visual := get_node_or_null("CharacterModel")
 	if visual != null and visual.has_method("ensure_animation_library"):
 		model_anim_player = visual.ensure_animation_library()
+		_ensure_round_victory_animation()
+
+
+func _round_victory_animation_name() -> String:
+	var item_id := str(cosmetic_loadout.get("round_victory_move", ""))
+	var mapped := CosmeticRegistry.local_round_victory_animation(item_id)
+	return mapped if mapped != "" else ANIM_DANCE
+
+
+func _ensure_round_victory_animation() -> void:
+	var visual := get_node_or_null("CharacterModel")
+	if visual == null or not visual.has_method("ensure_animations"):
+		return
+	var animation_name := _round_victory_animation_name()
+	var player := visual.call("ensure_animations", [animation_name]) as AnimationPlayer
+	if player != null:
+		model_anim_player = player
 
 func _play_anim(anim_name: String, force := false, custom_speed := 1.0):
 	if model_anim_player == null:
@@ -1241,13 +1268,14 @@ func play_death(headshot: bool = false):
 func play_victory_dance():
 	if model_anim_player == null:
 		return
-	if not model_anim_player.has_animation(ANIM_DANCE):
+	var animation_name := _round_victory_animation_name()
+	if not model_anim_player.has_animation(animation_name):
 		return
 	_victory_dance_active = true
 	_set_held_gun_visual_visible(false)
-	_current_anim = ANIM_DANCE
+	_current_anim = animation_name
 	_anim_rotation_offset = 0.0
-	model_anim_player.play(ANIM_DANCE)
+	model_anim_player.play(animation_name)
 
 
 func _set_held_gun_visual_visible(show_gun: bool) -> void:

@@ -38,6 +38,7 @@ var _host_return_button: OneGunButton
 var _ready_count_label: Label
 var _auto_return_label: Label
 var _standing_ready_labels: Dictionary = {}
+var _reward_labels: Dictionary = {}
 var _local_ready_buttons: Dictionary = {}
 var _local_ready_actor_ids: Dictionary = {}
 var _performers: Array[Dictionary] = []
@@ -115,6 +116,21 @@ func set_ready_peers(ready_peer_ids: Array,
 		_ready_button.set_pressed_no_signal(local_ready)
 		_ready_button.text = "READY  ✓" if local_ready else "READY"
 		_ready_button.variant = "green" if local_ready else "gold"
+
+
+func set_actor_reward(actor_id: int, reward: Dictionary) -> void:
+	var labels = _reward_labels.get(actor_id, {})
+	if not labels is Dictionary:
+		return
+	var primary := labels.get("primary") as Label
+	var secondary := labels.get("secondary") as Label
+	var presentation := _reward_presentation(reward)
+	if primary != null:
+		primary.text = str(presentation.get("primary", "MATCH REWARDS"))
+		primary.add_theme_color_override("font_color", OneGunUI.color(
+			str(presentation.get("role", "green"))))
+	if secondary != null:
+		secondary.text = str(presentation.get("secondary", ""))
 
 
 func start_return_countdown(seconds: float) -> void:
@@ -464,7 +480,8 @@ func _finish_personal_card(cabinet: OneGunCabinet) -> void:
 	cabinet.get_content().add_child(card_row)
 	card_row.add_child(_make_placement_badge(entry, compact))
 	card_row.add_child(_make_performance_summary(entry, compact))
-	card_row.add_child(_make_reward_summary(reward, compact))
+	card_row.add_child(_make_reward_summary(
+		reward, compact, int(entry.get("actor_id", -1))))
 
 
 func _make_placement_badge(entry: Dictionary, compact: bool) -> Control:
@@ -538,9 +555,8 @@ func _make_personal_stat(title: String, value: int, compact: bool) -> Control:
 	return panel
 
 
-func _make_reward_summary(reward: Dictionary, compact: bool) -> Control:
+func _make_reward_summary(reward: Dictionary, compact: bool, actor_id: int) -> Control:
 	var official := bool(_result.get("official", false))
-	var trophy_delta := int(reward.get("trophy_delta", 0))
 	var panel := PanelContainer.new()
 	panel.name = "PersonalRewards"
 	panel.custom_minimum_size.x = 210.0 if compact else 360.0
@@ -556,23 +572,61 @@ func _make_reward_summary(reward: Dictionary, compact: bool) -> Control:
 		"muted", true)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
-	var primary_text := "CUSTOM MATCH"
-	var primary_role := "muted"
-	var secondary_text := "RESULTS ONLY"
-	if official:
-		primary_text = "★  +1 TROPHY" if trophy_delta > 0 else "OFFICIAL RESULT"
-		primary_role = "gold" if trophy_delta > 0 else "green"
-		secondary_text = "XP + GUN TOKENS  •  PENDING"
-	var primary := OneGunUI.make_heading(primary_text,
-		16 if compact else 20, primary_role)
+	var presentation := _reward_presentation(reward)
+	var primary := OneGunUI.make_heading(str(presentation["primary"]),
+		16 if compact else 20, str(presentation["role"]))
 	primary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(primary)
-	var secondary := OneGunUI.make_label(secondary_text,
+	var secondary := OneGunUI.make_label(str(presentation["secondary"]),
 		9 if compact else 12, "green" if official else "muted", true)
 	secondary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	secondary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(secondary)
+	_reward_labels[actor_id] = {
+		"primary": primary,
+		"secondary": secondary,
+	}
 	return panel
+
+
+func _reward_presentation(reward: Dictionary) -> Dictionary:
+	var state := str(reward.get("state", "results_only"))
+	var xp := int(reward.get("xp_delta", 0))
+	var tokens := int(reward.get("gun_tokens_delta", 0))
+	var trophy := int(reward.get("trophy_delta", 0))
+	match state:
+		"settled":
+			var unlocks = reward.get("unlocks", [])
+			var secondary := "REWARDS BANKED"
+			if bool(reward.get("daily_victory_bonus_awarded", false)):
+				secondary = "FIRST OFFICIAL WIN  +25 XP / +100 TOKENS  •  " \
+					+ secondary
+			if trophy > 0:
+				secondary = "★ +1 TROPHY  •  " + secondary
+			if unlocks is Array and not unlocks.is_empty():
+				secondary += "  •  %d ROAD UNLOCK%s" % [
+					unlocks.size(), "" if unlocks.size() == 1 else "S"]
+			return {
+				"primary": "+%d XP  •  +%d TOKENS" % [xp, tokens],
+				"secondary": secondary,
+				"role": "gold" if trophy > 0 else "green",
+			}
+		"verifying", "pending":
+			var verifying_text := "VERIFYING OFFICIAL MATCH…"
+			if bool(reward.get("daily_victory_bonus_pending", false)):
+				verifying_text += "  •  CHECKING DAILY WIN BONUS"
+			return {
+				"primary": "+%d XP  •  +%d TOKENS" % [xp, tokens],
+				"secondary": verifying_text,
+				"role": "green",
+			}
+		"ineligible":
+			return {"primary": "NO MATCH REWARD",
+				"secondary": "ACTIVE MATCH COMPLETION REQUIRED", "role": "muted"}
+		"sign_in_required":
+			return {"primary": "SIGN IN REQUIRED",
+				"secondary": "RESULT RECORDED LOCALLY ONLY", "role": "muted"}
+	return {"primary": "CUSTOM MATCH", "secondary": "RESULTS ONLY", "role": "muted"}
 
 
 func _build_controls(parent: VBoxContainer) -> void:
@@ -848,7 +902,7 @@ func _build_podium_competitor(world: Node3D, entry: Dictionary,
 			pivot.add_child(visual)
 			var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
 			var move_id := str(cosmetics.get("emote", ""))
-			var move_animation := CosmeticRegistry.local_victory_animation(move_id)
+			var move_animation := CosmeticRegistry.local_podium_animation(move_id)
 			var requested := ["idle", "long_idle"]
 			if move_animation != "":
 				requested.append(move_animation)

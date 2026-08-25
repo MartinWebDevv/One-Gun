@@ -312,7 +312,11 @@ func _normalize(values: Dictionary) -> Dictionary:
 	# an existing Low/Medium user High effects.
 	if not values.has("effects_quality") and str(normalized["quality_preset"]) in ["low", "medium", "high", "ultra"]:
 		normalized["effects_quality"] = str(normalized["quality_preset"])
-	normalized["player_name"] = str(normalized["player_name"]).strip_edges().substr(0, 24)
+	var raw_player_name = normalized["player_name"]
+	normalized["player_name"] = "" if raw_player_name == null \
+		else str(raw_player_name).strip_edges().substr(0, 24)
+	if str(normalized["player_name"]).to_lower() in ["null", "<null>"]:
+		normalized["player_name"] = ""
 	if normalized["player_name"] == "": normalized["player_name"] = "Player 1"
 	normalized["character_skin_id"] = PlayerSkinRegistry.sanitize_skin_id(
 		str(normalized["character_skin_id"]))

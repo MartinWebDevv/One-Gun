@@ -17,6 +17,12 @@ const LOOPING_ANIMATIONS: Array[String] = [
 	"idle", "long_idle", "standard_run", "run", "fall", "pistol_run",
 	"pistol_backward", "pistol_strafe_left", "pistol_strafe_right",
 	"run_with_sword", "hip_hop_dance", "swing_dance",
+	"podium_backbeat_bounce", "podium_champion_canter",
+	"podium_fresh_footwork", "podium_house_party_heat",
+	"podium_serpent_flow", "podium_midnight_monster", "podium_victory_wave",
+	"round_breakspin_finale", "round_floorwork_finish", "round_birdie_boogie",
+	"round_arena_clapline", "round_soul_cyclone", "round_quickstep_shuffle",
+	"round_victory_swing",
 ]
 
 const ANIMATION_SOURCES := {
@@ -37,7 +43,23 @@ const ANIMATION_SOURCES := {
 	"hit": "res://models/player_v2/animations/Hit.fbx",
 	"hip_hop_dance": "res://models/player_v2/animations/Hip Hop Dancing.fbx",
 	"swing_dance": "res://models/player_v2/animations/Swing Dancing.fbx",
+	"podium_backbeat_bounce": "res://models/player_v2/animations/victory_moves/podium/backbeat_bounce.fbx",
+	"podium_champion_canter": "res://models/player_v2/animations/victory_moves/podium/champion_canter.fbx",
+	"podium_fresh_footwork": "res://models/player_v2/animations/victory_moves/podium/fresh_footwork.fbx",
+	"podium_house_party_heat": "res://models/player_v2/animations/victory_moves/podium/house_party_heat.fbx",
+	"podium_serpent_flow": "res://models/player_v2/animations/victory_moves/podium/serpent_flow.fbx",
+	"podium_midnight_monster": "res://models/player_v2/animations/victory_moves/podium/midnight_monster.fbx",
+	"podium_victory_wave": "res://models/player_v2/animations/victory_moves/podium/victory_wave.fbx",
+	"round_breakspin_finale": "res://models/player_v2/animations/victory_moves/round/breakspin_finale.fbx",
+	"round_floorwork_finish": "res://models/player_v2/animations/victory_moves/round/floorwork_finish.fbx",
+	"round_birdie_boogie": "res://models/player_v2/animations/victory_moves/round/birdie_boogie.fbx",
+	"round_arena_clapline": "res://models/player_v2/animations/victory_moves/round/arena_clapline.fbx",
+	"round_soul_cyclone": "res://models/player_v2/animations/victory_moves/round/soul_cyclone.fbx",
+	"round_quickstep_shuffle": "res://models/player_v2/animations/victory_moves/round/quickstep_shuffle.fbx",
+	"round_victory_swing": "res://models/player_v2/animations/victory_moves/round/victory_swing.fbx",
 }
+
+const OPTIONAL_VICTORY_PREFIXES: Array[String] = ["podium_", "round_"]
 
 const SOCKET_OFFSETS := {
 	"GunHoldPoint": Vector3(-0.16, 0.02, 0.04),
@@ -155,6 +177,13 @@ func set_skin(requested_id: String) -> void:
 func ensure_animation_library() -> AnimationPlayer:
 	var requested: Array[String] = ["idle", "idle_pistol"]
 	for animation_name in ANIMATION_SOURCES:
+		var optional := false
+		for prefix in OPTIONAL_VICTORY_PREFIXES:
+			if str(animation_name).begins_with(prefix):
+				optional = true
+				break
+		if optional:
+			continue
 		requested.append(str(animation_name))
 	return ensure_animations(requested)
 

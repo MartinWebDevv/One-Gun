@@ -96,6 +96,12 @@ func _run() -> void:
 	# rotations and bone-to-Hips positions must match exactly; only horizontal
 	# Hips translation may differ because CharacterBody3D owns world movement.
 	for animation_name in VisualScript.ANIMATION_SOURCES:
+		if not animation_player.has_animation(str(animation_name)):
+			animation_player = visual.call(
+				"ensure_animations", [str(animation_name)]) as AnimationPlayer
+		if animation_player == null or not animation_player.has_animation(str(animation_name)):
+			_fail("lazy runtime animation missing: %s" % str(animation_name))
+			return
 		var source_path: String = VisualScript.ANIMATION_SOURCES[animation_name]
 		var pose_error := _compare_clip_to_source(
 			str(animation_name), source_path, animation_player, runtime_skeleton)
@@ -266,8 +272,8 @@ func _run() -> void:
 	customization.queue_free()
 	await get_tree().process_frame
 
-	print("PLAYER_V2_VALIDATION_OK bones=33 animations=%d skins=%d decoy=true customization=true bounds=%s" % [
-		EXPECTED_ANIMATIONS.size(), SkinRegistry.skin_count(), combined])
+	print("PLAYER_V2_VALIDATION_OK bones=33 animations=%d lazy_optional=14 skins=%d decoy=true customization=true bounds=%s" % [
+		VisualScript.ANIMATION_SOURCES.size(), SkinRegistry.skin_count(), combined])
 	get_tree().quit(0)
 
 

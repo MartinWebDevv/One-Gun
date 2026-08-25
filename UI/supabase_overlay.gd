@@ -7,9 +7,16 @@ var _backend
 var _account_page: Control
 var _store_page: Control
 var _inventory_page: Control
+var _main_tabs: OneGunTabBar
 var _email_field: LineEdit
 var _password_field: LineEdit
+var _account_name_field: LineEdit
+var _account_name_caption: Control
+var _account_name_hint: Control
+var _rename_field: LineEdit
+var _display_name_field: LineEdit
 var _account_status: Label
+var _rename_cooldown_label: Label
 var _currency_label: Label
 var _feedback_label: Label
 var _store_list: VBoxContainer
@@ -17,7 +24,18 @@ var _inventory_list: VBoxContainer
 var _sign_in_button: OneGunButton
 var _create_button: OneGunButton
 var _sign_out_button: OneGunButton
+var _rename_button: OneGunButton
 var _refresh_button: OneGunButton
+var _signed_out_content: Control
+var _signed_in_content: Control
+var _profile_pages: Array[Control] = []
+var _auth_mode := 0
+var _active_store_category := "FEATURED"
+var _initial_page := "profile"
+
+
+func configure(initial_page: String) -> void:
+	_initial_page = "prize_counter" if initial_page == "prize_counter" else "profile"
 
 
 func _ready() -> void:
@@ -63,7 +81,9 @@ func _build_ui() -> void:
 
 	var cabinet := OneGunCabinet.new()
 	cabinet.name = "SupabaseCabinet"
-	cabinet.custom_minimum_size = Vector2(1040.0, 760.0)
+	var cabinet_space := get_viewport_rect().size - Vector2(64.0, 56.0)
+	cabinet.custom_minimum_size = Vector2(
+		minf(1040.0, cabinet_space.x), minf(760.0, cabinet_space.y))
 	center.add_child(cabinet)
 
 	var column := VBoxContainer.new()
@@ -73,7 +93,7 @@ func _build_ui() -> void:
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	column.add_child(header)
-	var title := OneGunUI.make_heading("ACCOUNT & PRIZE COUNTER", OneGunUI.TEXT_TITLE, "gold")
+	var title := OneGunUI.make_heading("PLAYER HUB", OneGunUI.TEXT_TITLE, "gold")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	var close_button := _make_button("CLOSE", "red")
@@ -81,15 +101,16 @@ func _build_ui() -> void:
 	header.add_child(close_button)
 
 	var subtitle := OneGunUI.make_label(
-		"Supabase stores identity, Gun Tokens, ownership, and persistent cosmetics. Gameplay networking stays on Godot/ENet.",
+		"Manage your public player identity or browse the rotating Prize Counter. Gameplay networking remains on Godot/ENet.",
 		OneGunUI.TEXT_S, "muted")
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(subtitle)
 
-	var tabs := OneGunTabBar.new()
-	tabs.tabs = PackedStringArray(["ACCOUNT", "PRIZE COUNTER", "LOCKER"])
-	tabs.tab_selected.connect(_show_page)
-	column.add_child(tabs)
+	_main_tabs = OneGunTabBar.new()
+	_main_tabs.tabs = PackedStringArray(["PROFILE", "PRIZE COUNTER"])
+	_main_tabs.selected = 1 if _initial_page == "prize_counter" else 0
+	_main_tabs.tab_selected.connect(_show_page)
+	column.add_child(_main_tabs)
 
 	var page_holder := MarginContainer.new()
 	page_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -105,11 +126,12 @@ func _build_ui() -> void:
 	_feedback_label.custom_minimum_size.y = 24.0
 	_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_feedback_label)
-	_show_page(0)
+	_show_page(_main_tabs.selected)
 
 
 func _build_account_page() -> Control:
 	var scroll := ScrollContainer.new()
+	scroll.name = "ProfileScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var column := VBoxContainer.new()
@@ -119,36 +141,131 @@ func _build_account_page() -> Control:
 
 	_account_status = OneGunUI.make_heading("SIGNED OUT", OneGunUI.TEXT_XL, "muted")
 	column.add_child(_account_status)
+
+	_signed_out_content = VBoxContainer.new()
+	(_signed_out_content as VBoxContainer).add_theme_constant_override(
+		"separation", OneGunUI.SPACE_M)
+	column.add_child(_signed_out_content)
 	var safety := OneGunUI.make_label(
 		"Passwords are sent directly to Supabase Auth and are never saved by One Gun. The local session file stores only the returned session tokens for sign-in restoration.",
 		OneGunUI.TEXT_S, "muted")
 	safety.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(safety)
+	_signed_out_content.add_child(safety)
 
-	column.add_child(OneGunUI.make_heading("EMAIL", OneGunUI.TEXT_M, "text"))
+	var auth_tabs := OneGunTabBar.new()
+	auth_tabs.name = "AuthenticationModeTabs"
+	auth_tabs.tabs = PackedStringArray(["SIGN IN", "CREATE ACCOUNT"])
+	auth_tabs.tab_selected.connect(_show_auth_mode)
+	_signed_out_content.add_child(auth_tabs)
+
+	_signed_out_content.add_child(OneGunUI.make_heading("EMAIL", OneGunUI.TEXT_M, "text"))
 	_email_field = _make_line_edit("player@example.com")
 	_email_field.name = "SupabaseEmail"
-	column.add_child(_email_field)
-	column.add_child(OneGunUI.make_heading("PASSWORD", OneGunUI.TEXT_M, "text"))
+	_signed_out_content.add_child(_email_field)
+	_signed_out_content.add_child(OneGunUI.make_heading("PASSWORD", OneGunUI.TEXT_M, "text"))
 	_password_field = _make_line_edit("Password")
 	_password_field.name = "SupabasePassword"
 	_password_field.secret = true
 	_password_field.secret_character = "•"
-	_password_field.text_submitted.connect(func(_value: String) -> void: _on_sign_in())
-	column.add_child(_password_field)
+	_password_field.text_submitted.connect(func(_value: String) -> void:
+		if _auth_mode == 0:
+			_on_sign_in()
+		else:
+			_on_create_account())
+	_signed_out_content.add_child(_password_field)
+
+	_account_name_caption = OneGunUI.make_heading(
+		"ACCOUNT NAME", OneGunUI.TEXT_M, "text")
+	_signed_out_content.add_child(_account_name_caption)
+	_account_name_field = _make_line_edit("Unique Account Name")
+	_account_name_field.name = "SupabaseAccountName"
+	_account_name_field.max_length = _backend.ACCOUNT_NAME_MAX_LENGTH
+	_account_name_field.tooltip_text = \
+		"3–20 characters. Letters, numbers, and underscores only."
+	_signed_out_content.add_child(_account_name_field)
+	_account_name_hint = OneGunUI.make_label(
+		"This unique Account Name is separate from the Display Name used in matches.",
+		OneGunUI.TEXT_S, "muted")
+	(_account_name_hint as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_signed_out_content.add_child(_account_name_hint)
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", OneGunUI.SPACE_M)
-	column.add_child(actions)
+	_signed_out_content.add_child(actions)
 	_sign_in_button = _make_button("SIGN IN", "gold")
 	_sign_in_button.pressed.connect(_on_sign_in)
 	actions.add_child(_sign_in_button)
 	_create_button = _make_button("CREATE ACCOUNT", "blue")
 	_create_button.pressed.connect(_on_create_account)
 	actions.add_child(_create_button)
+
+	_signed_in_content = VBoxContainer.new()
+	(_signed_in_content as VBoxContainer).add_theme_constant_override(
+		"separation", OneGunUI.SPACE_M)
+	column.add_child(_signed_in_content)
+	var profile_tabs := OneGunTabBar.new()
+	profile_tabs.name = "ProfileSectionTabs"
+	profile_tabs.tabs = PackedStringArray([
+		"OVERVIEW", "STATS", "LEGACY HALL", "MATCH HISTORY"])
+	profile_tabs.tab_selected.connect(_show_profile_section)
+	_signed_in_content.add_child(profile_tabs)
+
+	var overview := VBoxContainer.new()
+	overview.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	overview.add_child(OneGunUI.make_heading(
+		"CURRENT SEASON — BETA SEASON", OneGunUI.TEXT_L, "gold"))
+	var season_copy := OneGunUI.make_label(
+		"Level, XP, Prestige, and Classic Trophies will appear here when the server-authoritative progression and reward migration is activated.",
+		OneGunUI.TEXT_M, "muted")
+	season_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	overview.add_child(season_copy)
+	overview.add_child(OneGunUI.make_heading(
+		"IN-GAME DISPLAY NAME", OneGunUI.TEXT_M, "text"))
+	var display_name_row := HBoxContainer.new()
+	display_name_row.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	overview.add_child(display_name_row)
+	_display_name_field = _make_line_edit("Name shown during matches")
+	_display_name_field.name = "ProfileDisplayName"
+	_display_name_field.max_length = 24
+	_display_name_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	display_name_row.add_child(_display_name_field)
+	var save_display_name := _make_button("SAVE DISPLAY NAME", "blue")
+	save_display_name.pressed.connect(_on_save_display_name)
+	display_name_row.add_child(save_display_name)
+	overview.add_child(OneGunUI.make_heading(
+		"ACCOUNT SETTINGS", OneGunUI.TEXT_M, "text"))
+	var rename_row := HBoxContainer.new()
+	rename_row.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	overview.add_child(rename_row)
+	_rename_field = _make_line_edit("New Account Name")
+	_rename_field.name = "ProfileAccountRename"
+	_rename_field.max_length = _backend.ACCOUNT_NAME_MAX_LENGTH
+	_rename_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rename_row.add_child(_rename_field)
+	_rename_button = _make_button("RENAME ACCOUNT", "gold")
+	_rename_button.pressed.connect(_on_rename_account)
+	rename_row.add_child(_rename_button)
+	_rename_cooldown_label = OneGunUI.make_label("", OneGunUI.TEXT_S, "muted")
+	overview.add_child(_rename_cooldown_label)
 	_sign_out_button = _make_button("SIGN OUT", "red")
 	_sign_out_button.pressed.connect(_on_sign_out)
-	actions.add_child(_sign_out_button)
+	overview.add_child(_sign_out_button)
+	_profile_pages.append(overview)
+	_signed_in_content.add_child(overview)
+
+	_profile_pages.append(_make_profile_placeholder(
+		"CAREER STATS",
+		"Classic One Gun will be selected by default, with Current Season and Career views for every game mode."))
+	_profile_pages.append(_make_profile_placeholder(
+		"LEGACY HALL",
+		"Completed seasons will archive final Level, Prestige, Trophies, mode wins, and reward-road milestones here."))
+	_profile_pages.append(_make_profile_placeholder(
+		"MATCH HISTORY",
+		"Recent official match placements, combat stats, XP, Gun Tokens, and Trophy results will appear after persistent match rewards are enabled."))
+	for page_index in range(1, _profile_pages.size()):
+		_signed_in_content.add_child(_profile_pages[page_index])
+	_show_auth_mode(0)
+	_show_profile_section(0)
 	return scroll
 
 
@@ -164,6 +281,12 @@ func _build_store_page() -> Control:
 	_refresh_button = _make_button("REFRESH", "navy")
 	_refresh_button.pressed.connect(_on_refresh)
 	toolbar.add_child(_refresh_button)
+	var category_tabs := OneGunTabBar.new()
+	category_tabs.name = "PrizeCounterCategories"
+	category_tabs.tabs = PackedStringArray([
+		"FEATURED", "CHARACTER", "WEAPONS", "MOVES", "MUSIC"])
+	category_tabs.tab_selected.connect(_on_store_category_selected)
+	column.add_child(category_tabs)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -202,6 +325,8 @@ func _connect_backend() -> void:
 		[_backend.account_created, _on_backend_success_message],
 		[_backend.account_creation_failed, _on_backend_message],
 		[_backend.logout_completed, _on_logout_completed],
+		[_backend.account_name_changed, _on_account_name_changed],
+		[_backend.account_name_change_failed, _on_backend_message],
 		[_backend.profile_loaded, _on_profile_loaded],
 		[_backend.currency_updated, _on_currency_updated],
 		[_backend.inventory_updated, _on_inventory_updated],
@@ -221,21 +346,22 @@ func _connect_backend() -> void:
 
 
 func _show_page(index: int) -> void:
+	if index != 1:
+		AudioManager.stop_ceremony_preview()
 	_account_page.visible = index == 0
 	_store_page.visible = index == 1
-	_inventory_page.visible = index == 2
+	_inventory_page.visible = false
 
 
 func _refresh_all() -> void:
 	_refresh_account()
 	_refresh_currency()
 	_rebuild_store()
-	_rebuild_inventory()
 
 
 func _refresh_account() -> void:
 	var authenticated: bool = bool(_backend.is_authenticated())
-	var username := str(_backend.profile.get("username", "")).strip_edges()
+	var username := str(_backend.current_account_name())
 	if authenticated:
 		_account_status.text = "SIGNED IN — %s" % (
 			username.to_upper() if username != "" else "CLOUD PROFILE")
@@ -245,11 +371,14 @@ func _refresh_account() -> void:
 		_account_status.text = "SIGNED OUT"
 		_account_status.add_theme_color_override(
 			"font_color", OneGunUI.color("muted"))
-	_email_field.editable = not authenticated
-	_password_field.editable = not authenticated
-	_sign_in_button.visible = not authenticated
-	_create_button.visible = not authenticated
-	_sign_out_button.visible = authenticated
+	_signed_out_content.visible = not authenticated
+	_signed_in_content.visible = authenticated
+	if authenticated:
+		if not _display_name_field.has_focus():
+			_display_name_field.text = str(PlayerPrefs.get_setting("player_name"))
+		if not _rename_field.has_focus():
+			_rename_field.text = username
+		_refresh_rename_cooldown()
 
 
 func _refresh_currency() -> void:
@@ -259,13 +388,51 @@ func _refresh_currency() -> void:
 
 func _rebuild_store() -> void:
 	_clear_children(_store_list)
+	var filtered_items: Array[Dictionary] = []
+	for item in _backend.shop_items:
+		if _store_category_for_item(item) == _active_store_category \
+				or _active_store_category == "FEATURED":
+			filtered_items.append(item)
 	if _backend.shop_items.is_empty():
 		_store_list.add_child(_empty_label(
 			"No active public shop items were returned." if _backend.is_configured() \
 			else "Supabase is not configured for this build."))
 		return
-	for item in _backend.shop_items:
+	if filtered_items.is_empty():
+		_store_list.add_child(_empty_label(
+			"No %s items are in the current rotation." % \
+			_active_store_category.to_lower()))
+		return
+	filtered_items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_owned := bool(_backend.owns_item(str(a.get("id", ""))))
+		var b_owned := bool(_backend.owns_item(str(b.get("id", ""))))
+		if a_owned != b_owned:
+			return not a_owned
+		return str(a.get("display_name", "")).nocasecmp_to(
+			str(b.get("display_name", ""))) < 0)
+	for item in filtered_items:
 		_store_list.add_child(_make_store_row(item))
+
+
+func _store_category_for_item(item: Dictionary) -> String:
+	var slot := SupabaseCosmeticRegistry.item_slot(item)
+	if slot in ["character_skin", "hat", "accessory"]:
+		return "CHARACTER"
+	if slot in ["gun_skin", "melee_skin"]:
+		return "WEAPONS"
+	if slot == "emote":
+		return "MOVES"
+	if slot == "ceremony_theme":
+		return "MUSIC"
+	return "FEATURED"
+
+
+func _on_store_category_selected(index: int) -> void:
+	var categories := ["FEATURED", "CHARACTER", "WEAPONS", "MOVES", "MUSIC"]
+	_active_store_category = categories[clampi(index, 0, categories.size() - 1)]
+	if _active_store_category != "MUSIC":
+		AudioManager.stop_ceremony_preview()
+	_rebuild_store()
 
 
 func _make_store_row(item: Dictionary) -> Control:
@@ -386,7 +553,8 @@ func _on_sign_in() -> void:
 func _on_create_account() -> void:
 	_set_feedback("CREATING ACCOUNT…", false)
 	_set_auth_busy(true)
-	await _backend.create_account(_email_field.text, _password_field.text)
+	await _backend.create_account(
+		_email_field.text, _password_field.text, _account_name_field.text)
 	_set_auth_busy(false)
 	_password_field.clear()
 	_refresh_all()
@@ -421,9 +589,9 @@ func _on_preview_theme(item_id: String) -> void:
 	if audio_key == "":
 		_set_feedback("THIS CEREMONY THEME IS NOT INSTALLED", true)
 		return
-	AudioManager.stop_ceremony()
-	AudioManager.play_ceremony(audio_key, 0.78)
-	_set_feedback("PREVIEWING %s" % SupabaseCosmeticRegistry.display_name_fallback(
+	var started := AudioManager.play_ceremony_preview(audio_key, 0.78)
+	_set_feedback(("PREVIEWING " if started else "COULD NOT PREVIEW ") \
+		+ SupabaseCosmeticRegistry.display_name_fallback(
 		item_id).to_upper(), false)
 
 
@@ -447,6 +615,11 @@ func _on_logout_completed() -> void:
 
 
 func _on_profile_loaded(_profile: Dictionary) -> void:
+	_refresh_account()
+
+
+func _on_account_name_changed(username: String) -> void:
+	_set_feedback("ACCOUNT NAME CHANGED TO %s" % username.to_upper(), false)
 	_refresh_account()
 
 
@@ -509,6 +682,79 @@ func _set_auth_busy(busy: bool) -> void:
 	_sign_in_button.disabled = busy
 	_create_button.disabled = busy
 	_sign_out_button.disabled = busy
+	if busy:
+		_rename_button.disabled = true
+	elif _backend != null and _backend.is_authenticated():
+		_refresh_rename_cooldown()
+
+
+func _show_auth_mode(index: int) -> void:
+	_auth_mode = clampi(index, 0, 1)
+	var creating := _auth_mode == 1
+	_account_name_caption.visible = creating
+	_account_name_field.visible = creating
+	_account_name_hint.visible = creating
+	_sign_in_button.visible = not creating
+	_create_button.visible = creating
+
+
+func _show_profile_section(index: int) -> void:
+	for page_index in _profile_pages.size():
+		_profile_pages[page_index].visible = page_index == index
+
+
+func _make_profile_placeholder(title: String, body: String) -> Control:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	column.add_child(OneGunUI.make_heading(title, OneGunUI.TEXT_L, "gold"))
+	var copy := OneGunUI.make_label(body, OneGunUI.TEXT_M, "muted")
+	copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(copy)
+	return column
+
+
+func _on_save_display_name() -> void:
+	var display_name := _display_name_field.text.strip_edges().substr(0, 24)
+	if display_name == "":
+		_set_feedback("DISPLAY NAME CANNOT BE EMPTY", true)
+		return
+	PlayerPrefs.set_setting("player_name", display_name)
+	_display_name_field.text = str(PlayerPrefs.get_setting("player_name"))
+	_set_feedback("IN-GAME DISPLAY NAME UPDATED", false)
+
+
+func _on_rename_account() -> void:
+	_set_feedback("CHECKING ACCOUNT NAME…", false)
+	_rename_button.disabled = true
+	await _backend.rename_account_name(_rename_field.text)
+	_refresh_rename_cooldown()
+
+
+func _refresh_rename_cooldown() -> void:
+	if _backend.current_account_name() == "":
+		_rename_button.text = "SET ACCOUNT NAME"
+		_rename_button.disabled = false
+		_rename_cooldown_label.text = \
+			"Choose your unique Account Name. The 14-day rename cooldown starts after it is set."
+		_rename_cooldown_label.add_theme_color_override(
+			"font_color", OneGunUI.color("cyan"))
+		return
+	_rename_button.text = "RENAME ACCOUNT"
+	var available_at := int(_backend.account_name_change_available_unix())
+	var now := int(Time.get_unix_time_from_system())
+	if available_at <= now:
+		_rename_cooldown_label.text = \
+			"Account Name changes are available once every 14 days — AVAILABLE NOW."
+		_rename_cooldown_label.add_theme_color_override(
+			"font_color", OneGunUI.color("green"))
+		_rename_button.disabled = false
+		return
+	var date := Time.get_date_string_from_unix_time(available_at)
+	_rename_cooldown_label.text = \
+		"NEXT ACCOUNT NAME CHANGE: %s (14-DAY COOLDOWN)" % date
+	_rename_cooldown_label.add_theme_color_override(
+		"font_color", OneGunUI.color("muted"))
+	_rename_button.disabled = true
 
 
 func _set_feedback(message: String, is_error: bool) -> void:
@@ -553,6 +799,6 @@ func _clear_children(container: Node) -> void:
 
 
 func _close() -> void:
-	AudioManager.stop_ceremony()
+	AudioManager.stop_ceremony_preview()
 	closed.emit()
 	queue_free()

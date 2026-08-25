@@ -1,5 +1,7 @@
 extends Node
 
+const Catalog = preload("res://supabase/one_gun_catalog.gd")
+
 # Client-only Supabase REST/Auth integration. The configured key must be a
 # client-safe publishable/anon credential protected by Row Level Security.
 # A Supabase secret/service-role/admin key must never be shipped here.
@@ -9,6 +11,9 @@ const SESSION_PATH := "user://supabase_session.json"
 const SESSION_TEMP_PATH := "user://supabase_session.pending.json"
 const REQUEST_TIMEOUT_SECONDS := 15.0
 const REFRESH_MARGIN_SECONDS := 60
+const ACCOUNT_NAME_MIN_LENGTH := 3
+const ACCOUNT_NAME_MAX_LENGTH := 20
+const ACCOUNT_RENAME_COOLDOWN_SECONDS := 14 * 24 * 60 * 60
 
 signal configuration_loaded(configured: bool, message: String)
 signal login_state_changed(state: String)
@@ -17,6 +22,8 @@ signal login_failed(message: String)
 signal account_created(message: String)
 signal account_creation_failed(message: String)
 signal logout_completed
+signal account_name_changed(username: String)
+signal account_name_change_failed(message: String)
 signal profile_loaded(profile: Dictionary)
 signal currency_updated(gun_tokens: int)
 signal inventory_updated(inventory: Array)
@@ -26,6 +33,10 @@ signal purchase_succeeded(item_id: String)
 signal purchase_failed(item_id: String, message: String)
 signal equip_succeeded(slot: String, item_id: String)
 signal equip_failed(slot: String, item_id: String, message: String)
+signal unequip_succeeded(slot: String)
+signal unequip_failed(slot: String, message: String)
+signal loadout_reset_succeeded
+signal loadout_reset_failed(message: String)
 signal backend_error(operation: String, message: String)
 signal initial_data_loaded(success: bool)
 signal session_refresh_finished(success: bool)
@@ -37,6 +48,7 @@ var refresh_token := ""
 var authenticated_user_id := ""
 var access_token_expires_at := 0
 var login_state := "logged_out"
+var _auth_username_claim := ""
 
 var profile: Dictionary = {}
 var gun_tokens := 0
@@ -97,13 +109,22 @@ func catalog_item(item_id: String) -> Dictionary:
 	return {}
 
 
-func create_account(email: String, password: String) -> bool:
+func create_account(email: String, password: String, username: String) -> bool:
+	var username_error := account_name_error(username)
+	if username_error != "":
+		account_creation_failed.emit(username_error)
+		return false
+	var safe_username := sanitize_account_name(username)
 	if not _can_start_auth(email, password):
 		return false
 	_set_login_state("authenticating")
 	var response: Dictionary = await _request(
 		"/auth/v1/signup", HTTPClient.METHOD_POST,
-		{"email": email.strip_edges(), "password": password}, false)
+		{
+			"email": email.strip_edges(),
+			"password": password,
+			"data": {"username": safe_username},
+		}, false)
 	if not bool(response.get("ok", false)):
 		var message := _response_message(response, "Account creation failed.")
 		_set_login_state("logged_out")
@@ -117,10 +138,12 @@ func create_account(email: String, password: String) -> bool:
 		account_created.emit("Account created and signed in.")
 		login_succeeded.emit(authenticated_user_id)
 		await load_all_player_data()
+		await _claim_username_from_auth_metadata()
 		return true
 	_set_login_state("logged_out")
 	account_created.emit(
-		"Account created. Check your email to confirm it, then sign in.")
+		"Account created for %s. Check your email to confirm it, then sign in." \
+			% safe_username)
 	return true
 
 
@@ -142,6 +165,7 @@ func sign_in(email: String, password: String) -> bool:
 		return false
 	login_succeeded.emit(authenticated_user_id)
 	await load_all_player_data()
+	await _claim_username_from_auth_metadata()
 	return true
 
 
@@ -169,17 +193,96 @@ func load_all_player_data() -> bool:
 	return success
 
 
+func sanitize_account_name(value: String) -> String:
+	var source := value.strip_edges().substr(0, ACCOUNT_NAME_MAX_LENGTH)
+	var cleaned := ""
+	for character in source:
+		if character in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_":
+			cleaned += character
+	return cleaned
+
+
+func current_account_name() -> String:
+	var raw_username = profile.get("username", "")
+	if raw_username == null:
+		return ""
+	var username := str(raw_username).strip_edges()
+	if username.to_lower() in ["null", "<null>"]:
+		return ""
+	return username
+
+
+func account_name_error(value: String) -> String:
+	var source := value.strip_edges()
+	if source.length() < ACCOUNT_NAME_MIN_LENGTH:
+		return "Account Name must be at least %d characters." % ACCOUNT_NAME_MIN_LENGTH
+	if source.length() > ACCOUNT_NAME_MAX_LENGTH:
+		return "Account Name cannot exceed %d characters." % ACCOUNT_NAME_MAX_LENGTH
+	var cleaned := sanitize_account_name(source)
+	if cleaned != source:
+		return "Use only letters, numbers, and underscores in the Account Name."
+	if cleaned.begins_with("_"):
+		return "Account Name must begin with a letter or number."
+	return ""
+
+
+func rename_account_name(username: String) -> bool:
+	var safe_username := sanitize_account_name(username)
+	var validation_error := account_name_error(username)
+	if validation_error != "":
+		account_name_change_failed.emit(validation_error)
+		return false
+	if not is_authenticated():
+		account_name_change_failed.emit("Sign in before renaming the account.")
+		return false
+	var is_initial_claim := current_account_name() == ""
+	var rpc_name := "claim_profile_username" if is_initial_claim \
+		else "rename_profile_username"
+	var response := await _authenticated_request(
+		"/rest/v1/rpc/%s" % rpc_name, HTTPClient.METHOD_POST,
+		{"p_username": safe_username})
+	if not bool(response.get("ok", false)):
+		var message := _response_message(response,
+			"Account Name could not be set." if is_initial_claim \
+			else "Account Name could not be changed.")
+		account_name_change_failed.emit(message)
+		return false
+	if not await load_profile():
+		account_name_change_failed.emit(
+			"The name changed, but the refreshed profile could not be loaded.")
+		return false
+	account_name_changed.emit(current_account_name() if current_account_name() != "" else safe_username)
+	return true
+
+
+func account_name_change_available_unix() -> int:
+	var timestamp := str(profile.get("username_changed_at", "")).strip_edges()
+	if timestamp == "":
+		return 0
+	var normalized := timestamp.trim_suffix("Z")
+	var plus_index := normalized.find("+")
+	if plus_index >= 0:
+		normalized = normalized.substr(0, plus_index)
+	if normalized.contains("."):
+		normalized = normalized.get_slice(".", 0)
+	return int(Time.get_unix_time_from_datetime_string(normalized)) \
+		+ ACCOUNT_RENAME_COOLDOWN_SECONDS
+
+
 func load_profile() -> bool:
 	var response := await _authenticated_request(
-		"/rest/v1/profiles?select=id,username&limit=1")
+		"/rest/v1/profiles?select=id,username,created_at,username_changed_at&limit=1")
+	# The Profile screen stays usable before the account-name migration runs.
+	if not bool(response.get("ok", false)) and int(response.get("status", 0)) == 400:
+		response = await _authenticated_request(
+			"/rest/v1/profiles?select=id,username&limit=1")
 	if not _response_ok_or_report(response, "profile", "Could not load the profile."):
 		return false
 	var rows = response.get("data", [])
 	profile = rows[0].duplicate(true) if rows is Array and not rows.is_empty() \
 		and rows[0] is Dictionary else {}
-	var username := str(profile.get("username", "")).strip_edges().substr(0, 24)
-	if username != "" and username != str(PlayerPrefs.get_setting("player_name")):
-		PlayerPrefs.set_setting("player_name", username)
+	if profile.has("username") and current_account_name() == "":
+		profile["username"] = ""
 	profile_loaded.emit(profile.duplicate(true))
 	return true
 
@@ -225,12 +328,16 @@ func load_loadout() -> bool:
 	var response := await _authenticated_request(
 		"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
 	var used_legacy_schema := false
-	# Keep clients usable while the accompanying migration is being applied.
-	# PostgREST reports a missing ceremony_theme column as HTTP 400; only that
-	# schema case retries the six-column legacy read.
+	# Keep clients usable across the pre-progression seven-slot schema and the
+	# original six-slot schema while deployments roll forward.
 	if not bool(response.get("ok", false)) \
 			and int(response.get("status", 0)) == 400:
 		used_legacy_schema = true
+		columns = ",".join(SupabaseCosmeticRegistry.PRE_PROGRESSION_LOADOUT_SLOTS)
+		response = await _authenticated_request(
+			"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
+	if not bool(response.get("ok", false)) \
+			and int(response.get("status", 0)) == 400:
 		columns = ",".join(SupabaseCosmeticRegistry.LEGACY_LOADOUT_SLOTS)
 		response = await _authenticated_request(
 			"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
@@ -248,14 +355,25 @@ func load_loadout() -> bool:
 
 func load_shop() -> bool:
 	var query := "/rest/v1/shop_items?active=eq.true&shop_visible=eq.true" \
-		+ "&select=id,display_name,item_type,description,price,rarity,purchasable,shop_visible,active" \
-		+ "&order=display_name.asc"
+		+ "&select=id,display_name,item_type,description,price,rarity,purchasable," \
+		+ "shop_visible,active,category,subcategory,featured,rotation_scope," \
+		+ "rotation_starts_at,rotation_ends_at,purchase_count,sort_order,created_at" \
+		+ "&order=sort_order.asc,display_name.asc"
 	var response: Dictionary
 	if is_authenticated():
 		response = await _authenticated_request(query)
 	else:
 		response = await _request(
 			query, HTTPClient.METHOD_GET, null, false)
+	if not bool(response.get("ok", false)) \
+			and int(response.get("status", 0)) == 400:
+		query = "/rest/v1/shop_items?active=eq.true&shop_visible=eq.true" \
+			+ "&select=id,display_name,item_type,description,price,rarity," \
+			+ "purchasable,shop_visible,active,created_at&order=display_name.asc"
+		if is_authenticated():
+			response = await _authenticated_request(query)
+		else:
+			response = await _request(query, HTTPClient.METHOD_GET, null, false)
 	if not _response_ok_or_report(response, "shop", "Could not load the shop."):
 		return false
 	shop_items.clear()
@@ -269,7 +387,7 @@ func load_shop() -> bool:
 			var item_id := SupabaseCosmeticRegistry.sanitize_item_id(str(item.get("id", "")))
 			if item_id == "":
 				continue
-			item["id"] = item_id
+			item = Catalog.normalize_item(item)
 			shop_items.append(item)
 			var slot := SupabaseCosmeticRegistry.item_slot(item)
 			if slot != "" and not SupabaseCosmeticRegistry.has_local_visual(item_id, slot):
@@ -337,6 +455,49 @@ func equip_cosmetic(slot: String, item_id: String) -> bool:
 	return true
 
 
+func unequip_cosmetic(slot: String) -> bool:
+	var safe_slot := SupabaseCosmeticRegistry.sanitize_slot(slot)
+	if not is_authenticated():
+		unequip_failed.emit(safe_slot, "Sign in before unequipping an item.")
+		return false
+	if safe_slot == "":
+		unequip_failed.emit(safe_slot, "This cosmetic has an invalid loadout slot.")
+		return false
+	var response := await _authenticated_request(
+		"/rest/v1/rpc/unequip_cosmetic", HTTPClient.METHOD_POST,
+		{"p_slot": safe_slot})
+	if not bool(response.get("ok", false)):
+		var message := _response_message(response, "Unequip failed.")
+		unequip_failed.emit(safe_slot, message)
+		backend_error.emit("unequip", message)
+		return false
+	if not await load_loadout():
+		unequip_failed.emit(safe_slot,
+			"Unequipped on the backend, but the refreshed loadout could not be loaded.")
+		return false
+	unequip_succeeded.emit(safe_slot)
+	return true
+
+
+func reset_cosmetic_loadout() -> bool:
+	if not is_authenticated():
+		loadout_reset_failed.emit("Sign in before resetting your loadout.")
+		return false
+	var response := await _authenticated_request(
+		"/rest/v1/rpc/reset_cosmetic_loadout", HTTPClient.METHOD_POST, {})
+	if not bool(response.get("ok", false)):
+		var message := _response_message(response, "Loadout reset failed.")
+		loadout_reset_failed.emit(message)
+		backend_error.emit("reset_loadout", message)
+		return false
+	if not await load_loadout():
+		loadout_reset_failed.emit(
+			"Reset on the backend, but the refreshed loadout could not be loaded.")
+		return false
+	loadout_reset_succeeded.emit()
+	return true
+
+
 func _restore_session() -> void:
 	if not is_configured() or not FileAccess.file_exists(SESSION_PATH):
 		return
@@ -347,6 +508,9 @@ func _restore_session() -> void:
 	refresh_token = str(parsed.get("refresh_token", ""))
 	authenticated_user_id = str(parsed.get("user_id", ""))
 	access_token_expires_at = int(parsed.get("expires_at", 0))
+	var saved_claim = parsed.get("username_claim", "")
+	_auth_username_claim = "" if saved_claim == null else \
+		sanitize_account_name(str(saved_claim))
 	if not is_authenticated():
 		_clear_runtime_session(false)
 		return
@@ -359,6 +523,7 @@ func _restore_session() -> void:
 			return
 	login_succeeded.emit(authenticated_user_id)
 	await load_all_player_data()
+	await _claim_username_from_auth_metadata()
 
 
 func _authenticated_request(path: String, method := HTTPClient.METHOD_GET,
@@ -450,6 +615,11 @@ func _accept_auth_response(value) -> bool:
 	var next_refresh_token := str(value.get("refresh_token", ""))
 	var user = value.get("user", {})
 	var next_user_id := str(user.get("id", "")) if user is Dictionary else ""
+	var user_metadata = user.get("user_metadata", {}) if user is Dictionary else {}
+	if user_metadata is Dictionary:
+		var metadata_username = user_metadata.get("username", "")
+		_auth_username_claim = "" if metadata_username == null else \
+			sanitize_account_name(str(metadata_username))
 	if next_access_token == "" or next_refresh_token == "" or next_user_id == "":
 		return false
 	access_token = next_access_token
@@ -475,6 +645,7 @@ func _save_session() -> void:
 		"refresh_token": refresh_token,
 		"user_id": authenticated_user_id,
 		"expires_at": access_token_expires_at,
+		"username_claim": _auth_username_claim,
 	}))
 	file.close()
 	var pending := ProjectSettings.globalize_path(SESSION_TEMP_PATH)
@@ -490,6 +661,7 @@ func _clear_runtime_session(remove_saved: bool) -> void:
 	refresh_token = ""
 	authenticated_user_id = ""
 	access_token_expires_at = 0
+	_auth_username_claim = ""
 	profile.clear()
 	gun_tokens = 0
 	inventory.clear()
@@ -503,6 +675,25 @@ func _clear_runtime_session(remove_saved: bool) -> void:
 	inventory_updated.emit([])
 	shop_loaded.emit(shop_items.duplicate(true))
 	loadout_updated.emit(loadout.duplicate(true))
+
+
+func _claim_username_from_auth_metadata() -> bool:
+	if not is_authenticated() or _auth_username_claim == "":
+		return false
+	if current_account_name() != "":
+		_auth_username_claim = ""
+		_save_session()
+		return true
+	var response := await _authenticated_request(
+		"/rest/v1/rpc/claim_profile_username", HTTPClient.METHOD_POST,
+		{"p_username": _auth_username_claim})
+	if not bool(response.get("ok", false)):
+		# Keep the claim in the session so a temporary migration/network gap can
+		# be retried on the next authenticated launch.
+		return false
+	_auth_username_claim = ""
+	_save_session()
+	return await load_profile()
 
 
 func _apply_local_character_skin() -> void:

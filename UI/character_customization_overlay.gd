@@ -6,6 +6,7 @@ signal skin_changed(player_slot: int, skin_id: String)
 
 const SkinRegistry = preload("res://player_skin_registry.gd")
 const COLOR_CARD_SCRIPT = preload("res://UI/components/character_color_card.gd")
+const Catalog = preload("res://supabase/one_gun_catalog.gd")
 const BASE_SIZE := Vector2(1600.0, 900.0)
 const LEFT_PANEL_RECT := Rect2(64.0, 142.0, 566.0, 638.0)
 const RIGHT_PANEL_RECT := Rect2(658.0, 142.0, 878.0, 638.0)
@@ -14,6 +15,7 @@ var online_mode := false
 var local_player_count := 1
 
 var _canvas: Control
+var _backend
 var _preview_pivot: Node3D
 var _preview_visual: Node3D
 var _player_name_label: Label
@@ -28,6 +30,26 @@ var _model_buttons: Dictionary = {}
 var _active_slot := 0
 var _dragging_preview := false
 var _confirm_button: OneGunButton
+var _randomize_button: OneGunButton
+var _default_button: OneGunButton
+var _reset_loadout_button: OneGunButton
+var _reset_loadout_armed := false
+var _reset_loadout_generation := 0
+var _character_content: Control
+var _color_content: Control
+var _owned_content: Control
+var _owned_list: VBoxContainer
+var _locker_feedback: Label
+var _locker_category := "character"
+var _character_owned_gear := false
+var _character_locker_section := "colors"
+var _locker_subcategory := "ALL"
+var _locker_cosmetic_filter := "ALL"
+var _locker_sort_id := "rarity_asc"
+var _locker_favorites_only := false
+var _locker_subcategory_option: OptionButton
+var _locker_cosmetic_option: OptionButton
+var _locker_sort_option: OptionButton
 
 
 func configure(is_online: bool, player_count: int) -> void:
@@ -36,29 +58,15 @@ func configure(is_online: bool, player_count: int) -> void:
 
 
 func _ready() -> void:
+	_backend = get_node("/root/SupabaseManager")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_snapshot_confirmed_colors()
 	_build_ui()
+	_connect_locker_backend()
 	_apply_responsive_layout()
 	resized.connect(_apply_responsive_layout)
-	set_process(true)
-
-
-func _process(delta: float) -> void:
-	if _preview_pivot == null:
-		return
-	var prefix := "p%d" % (_active_slot + 1)
-	var left_action := prefix + "_look_left"
-	var right_action := prefix + "_look_right"
-	var look_axis := 0.0
-	if InputMap.has_action(left_action) and InputMap.has_action(right_action):
-		look_axis = Input.get_action_strength(right_action) \
-			- Input.get_action_strength(left_action)
-	if absf(look_axis) >= 0.08:
-		_preview_pivot.rotate_y(-look_axis * delta * 2.2)
-	elif not _dragging_preview and not _reduced_motion_enabled():
-		_preview_pivot.rotate_y(delta * 0.26)
+	set_process(false)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -151,13 +159,13 @@ func _build_header() -> void:
 			title_row.add_child(star)
 		else:
 			var title := OneGunUI.make_heading(
-				"CHARACTER CUSTOMIZATION", 42, "text_bright")
+				"LOCKER", 42, "text_bright")
 			title.name = "CustomizationTitle"
 			title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			title_row.add_child(title)
 
 	var subtitle := OneGunUI.make_label(
-		"PERSONALIZE YOUR CHARACTER  •  13 COLORS AVAILABLE NOW  •  SKINS COMING SOON",
+		"EQUIP WHAT YOU OWN  •  CHARACTER  •  WEAPONS  •  MOVES  •  MUSIC",
 		17, "muted")
 	subtitle.name = "CustomizationSubtitle"
 	subtitle.position = Vector2(250.0, 72.0)
@@ -385,7 +393,7 @@ func _build_preview_podium(world: Node3D) -> void:
 
 func _build_selection_panel() -> void:
 	var panel := OneGunCabinet.new()
-	panel.name = "CharacterCustomizationCabinet"
+	panel.name = "LockerCabinet"
 	panel.variant = OneGunCabinet.Variant.CABINET
 	panel.content_padding = 16
 	panel.position = RIGHT_PANEL_RECT.position
@@ -397,31 +405,32 @@ func _build_selection_panel() -> void:
 	column.add_theme_constant_override("separation", 6)
 	panel.get_content().add_child(column)
 
-	var category_tabs := HBoxContainer.new()
-	category_tabs.name = "CategoryTabs"
-	category_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
-	category_tabs.add_theme_constant_override("separation", 10)
+	var category_tabs := OneGunTabBar.new()
+	category_tabs.name = "LockerCategoryTabs"
+	category_tabs.tabs = PackedStringArray([
+		"CHARACTER", "WEAPONS", "VICTORY", "AUDIO"])
+	category_tabs.tab_selected.connect(_show_locker_category)
 	column.add_child(category_tabs)
-	var colors_tab := OneGunButton.new()
-	colors_tab.name = "ColorsTab"
-	colors_tab.text = "COLORS"
-	colors_tab.variant = "gold"
-	colors_tab.custom_minimum_size = Vector2(398.0, 52.0)
-	category_tabs.add_child(colors_tab)
-	var skins_tab := OneGunButton.new()
-	skins_tab.name = "SkinsTab"
-	skins_tab.text = "SKINS  •  COMING SOON"
-	skins_tab.variant = "navy"
-	skins_tab.disabled = true
-	skins_tab.tooltip_text = "Skins are coming soon"
-	skins_tab.custom_minimum_size = Vector2(398.0, 52.0)
-	category_tabs.add_child(skins_tab)
 
-	column.add_child(_make_divider_heading("★   CHOOSE A COLOR   ★"))
+	_character_content = VBoxContainer.new()
+	(_character_content as VBoxContainer).add_theme_constant_override(
+		"separation", 6)
+	column.add_child(_character_content)
+	var character_tabs := OneGunTabBar.new()
+	character_tabs.name = "CharacterLockerTabs"
+	character_tabs.tabs = PackedStringArray(["SKINS", "COLORS", "COSMETICS"])
+	character_tabs.selected = 1
+	character_tabs.tab_selected.connect(_show_character_subcategory)
+	_character_content.add_child(character_tabs)
+
+	_color_content = VBoxContainer.new()
+	(_color_content as VBoxContainer).add_theme_constant_override("separation", 6)
+	_character_content.add_child(_color_content)
+	_color_content.add_child(_make_divider_heading("★   CHOOSE A COLOR   ★"))
 	var grid := VBoxContainer.new()
 	grid.name = "ColorGrid"
 	grid.add_theme_constant_override("separation", 10)
-	column.add_child(grid)
+	_color_content.add_child(grid)
 	var index := 0
 	for row_index in 3:
 		var row := HBoxContainer.new()
@@ -440,14 +449,340 @@ func _build_selection_panel() -> void:
 			_color_cards.append(card)
 			index += 1
 
-	column.add_child(_make_divider_heading("SKINS  •  COMING SOON"))
-	var locked_row := HBoxContainer.new()
-	locked_row.name = "LockedSkins"
-	locked_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	locked_row.add_theme_constant_override("separation", 12)
-	column.add_child(locked_row)
-	for locked_index in 5:
-		locked_row.add_child(_make_locked_skin_card(locked_index + 1))
+	_owned_content = VBoxContainer.new()
+	_owned_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	(_owned_content as VBoxContainer).add_theme_constant_override("separation", 6)
+	column.add_child(_owned_content)
+	var filters := HBoxContainer.new()
+	filters.name = "LockerCatalogFilters"
+	filters.add_theme_constant_override("separation", 6)
+	_owned_content.add_child(filters)
+	_locker_subcategory_option = OptionButton.new()
+	_locker_subcategory_option.name = "LockerSubcategoryFilter"
+	_locker_subcategory_option.custom_minimum_size = Vector2(170.0, 38.0)
+	_locker_subcategory_option.item_selected.connect(_on_locker_subcategory_selected)
+	filters.add_child(_locker_subcategory_option)
+	_locker_cosmetic_option = OptionButton.new()
+	_locker_cosmetic_option.name = "LockerCosmeticFilter"
+	_locker_cosmetic_option.custom_minimum_size = Vector2(150.0, 38.0)
+	for option in Catalog.COSMETIC_SUBCATEGORIES:
+		_locker_cosmetic_option.add_item(option)
+	_locker_cosmetic_option.item_selected.connect(_on_locker_cosmetic_selected)
+	filters.add_child(_locker_cosmetic_option)
+	_locker_sort_option = OptionButton.new()
+	_locker_sort_option.name = "LockerSortOrder"
+	_locker_sort_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_locker_sort_option.custom_minimum_size.y = 38.0
+	for label in Catalog.SORT_LABELS:
+		_locker_sort_option.add_item(label)
+	_locker_sort_option.item_selected.connect(_on_locker_sort_selected)
+	filters.add_child(_locker_sort_option)
+	var favorites := OneGunButton.new()
+	favorites.name = "LockerFavoritesFilter"
+	favorites.text = "★"
+	favorites.tooltip_text = "Show only Favorites"
+	favorites.variant = "navy"
+	favorites.toggle_mode = true
+	favorites.custom_minimum_size = Vector2(52.0, 38.0)
+	favorites.toggled.connect(func(value: bool) -> void:
+		_locker_favorites_only = value
+		favorites.variant = "gold" if value else "navy"
+		_rebuild_owned_locker())
+	filters.add_child(favorites)
+	_locker_feedback = OneGunUI.make_label("", OneGunUI.TEXT_S, "muted")
+	_locker_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_owned_content.add_child(_locker_feedback)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_owned_content.add_child(scroll)
+	_owned_list = VBoxContainer.new()
+	_owned_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_owned_list.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	scroll.add_child(_owned_list)
+	_show_locker_category(0)
+	_show_character_subcategory(1)
+
+
+func _connect_locker_backend() -> void:
+	var connections := [
+		[_backend.inventory_updated, _on_locker_data_updated],
+		[_backend.shop_loaded, _on_locker_data_updated],
+		[_backend.loadout_updated, _on_locker_data_updated],
+		[_backend.login_state_changed, _on_locker_data_updated],
+		[_backend.equip_succeeded, _on_locker_equip_succeeded],
+		[_backend.equip_failed, _on_locker_equip_failed],
+		[_backend.unequip_succeeded, _on_locker_unequip_succeeded],
+		[_backend.unequip_failed, _on_locker_unequip_failed],
+		[_backend.loadout_reset_succeeded, _on_locker_reset_succeeded],
+		[_backend.loadout_reset_failed, _on_locker_reset_failed],
+		[ProgressionManager.catalog_updated, _on_locker_data_updated],
+		[ProgressionManager.favorites_updated, _on_locker_data_updated],
+		[ProgressionManager.usage_updated, _on_locker_data_updated],
+	]
+	for connection in connections:
+		var backend_signal: Signal = connection[0]
+		var callback: Callable = connection[1]
+		if not backend_signal.is_connected(callback):
+			backend_signal.connect(callback)
+
+
+func _show_locker_category(index: int) -> void:
+	var categories := ["character", "weapons", "victory", "audio"]
+	_locker_category = categories[clampi(index, 0, categories.size() - 1)]
+	_character_content.visible = _locker_category == "character"
+	if _locker_category == "character":
+		_color_content.visible = _character_locker_section == "colors"
+		_owned_content.visible = _character_locker_section != "colors"
+	if _locker_category != "character":
+		_owned_content.visible = true
+		_locker_subcategory = "ALL"
+		_locker_cosmetic_filter = "ALL"
+		_configure_locker_filters()
+		_rebuild_owned_locker()
+	if _locker_category != "audio":
+		AudioManager.stop_ceremony_preview()
+	_update_locker_action_bar()
+
+
+func _show_character_subcategory(index: int) -> void:
+	_character_locker_section = ["skins", "colors", "cosmetics"][clampi(index, 0, 2)]
+	var show_colors := _character_locker_section == "colors"
+	_character_owned_gear = not show_colors
+	_color_content.visible = show_colors
+	_owned_content.visible = not show_colors
+	if not show_colors:
+		_locker_subcategory = "SKINS" if _character_locker_section == "skins" \
+			else "COSMETICS"
+		_locker_cosmetic_filter = "ALL"
+		_configure_locker_filters()
+		_rebuild_owned_locker()
+	_update_locker_action_bar()
+
+
+func _configure_locker_filters() -> void:
+	if _locker_subcategory_option == null:
+		return
+	_locker_subcategory_option.clear()
+	var primary := _locker_category.to_upper()
+	var options := Catalog.category_subcategories(primary)
+	if primary == "CHARACTER" and _character_locker_section == "skins":
+		options.assign(["SKINS"])
+	elif primary == "CHARACTER" and _character_locker_section == "cosmetics":
+		options.assign(["COSMETICS"])
+	for option in options:
+		_locker_subcategory_option.add_item(option)
+	_locker_subcategory_option.select(0)
+	_locker_subcategory = str(options[0]) if not options.is_empty() else "ALL"
+	_locker_cosmetic_option.select(0)
+	_locker_cosmetic_option.visible = primary == "CHARACTER" \
+		and _locker_subcategory == "COSMETICS"
+
+
+func _on_locker_subcategory_selected(index: int) -> void:
+	_locker_subcategory = _locker_subcategory_option.get_item_text(index)
+	_locker_cosmetic_filter = "ALL"
+	_locker_cosmetic_option.select(0)
+	_locker_cosmetic_option.visible = _locker_category == "character" \
+		and _locker_subcategory == "COSMETICS"
+	_rebuild_owned_locker()
+
+
+func _on_locker_cosmetic_selected(index: int) -> void:
+	_locker_cosmetic_filter = _locker_cosmetic_option.get_item_text(index)
+	_rebuild_owned_locker()
+
+
+func _on_locker_sort_selected(index: int) -> void:
+	_locker_sort_id = Catalog.SORT_IDS[clampi(
+		index, 0, Catalog.SORT_IDS.size() - 1)]
+	_rebuild_owned_locker()
+
+
+func _locker_catalog(item_id: String) -> Dictionary:
+	var extended := ProgressionManager.item(item_id)
+	return extended if not extended.is_empty() else _backend.catalog_item(item_id)
+
+
+func _locker_primary_category() -> String:
+	match _locker_category:
+		"character": return "CHARACTER"
+		"weapons": return "WEAPONS"
+		"victory": return "VICTORY"
+		"audio": return "AUDIO"
+	return "FEATURED"
+
+
+func _locker_usage_counts() -> Dictionary:
+	var counts := {}
+	for item_id in ProgressionManager.usage:
+		counts[item_id] = ProgressionManager.usage_count(str(item_id))
+	return counts
+
+
+func _rebuild_owned_locker() -> void:
+	for child in _owned_list.get_children():
+		child.queue_free()
+	if local_player_count > 1 and _active_slot == 1:
+		_locker_feedback.text = \
+			"Cloud-owned items belong to Player 1. Player 2 can still choose a base character and color."
+		_owned_list.add_child(_locker_empty_label("SELECT PLAYER 1 TO EQUIP OWNED ITEMS"))
+		return
+	if not _backend.is_authenticated():
+		_locker_feedback.text = "Sign in through Profile to load cloud-owned items."
+		_owned_list.add_child(_locker_empty_label("PROFILE SIGN-IN REQUIRED"))
+		return
+	_locker_feedback.text = _locker_category_description()
+	var matching: Array[Dictionary] = []
+	for entry in _backend.inventory:
+		var item_id := str(entry.get("item_id", ""))
+		var catalog := Catalog.normalize_item(_locker_catalog(item_id))
+		if catalog.is_empty():
+			continue
+		if not Catalog.item_matches(catalog, _locker_primary_category(),
+				_locker_subcategory, _locker_cosmetic_filter):
+			continue
+		if _locker_favorites_only and not ProgressionManager.is_favorite(item_id):
+			continue
+		var owned := catalog.duplicate(true)
+		owned["item_id"] = item_id
+		owned["source"] = entry.get("source", "owned")
+		owned["obtained_at"] = entry.get("obtained_at", "")
+		matching.append(owned)
+	matching = Catalog.sorted_items(
+		matching, _locker_sort_id, _locker_usage_counts())
+	if matching.is_empty():
+		_owned_list.add_child(_locker_empty_label(
+			"NO OWNED %s ITEMS YET" % _locker_category.to_upper()))
+		return
+	for entry in matching:
+		_owned_list.add_child(_make_owned_locker_row(entry))
+
+
+func _locker_slot_matches(slot: String) -> bool:
+	match _locker_category:
+		"character":
+			return slot in ["character_skin", "hat", "shirt", "pants", "shoes", "accessory", "outfit_bundle"]
+		"weapons":
+			return slot in ["gun_skin", "melee_skin"]
+		"victory":
+			return slot in ["emote", "round_victory_move", "victory_dance"]
+		"audio":
+			return slot == "ceremony_theme"
+	return false
+
+
+func _locker_category_description() -> String:
+	match _locker_category:
+		"character": return "OWNED SKINS, COLORS, COSMETICS, AND MIXABLE OUTFIT PIECES"
+		"weapons": return "OWNED GUN AND MELEE SKINS"
+		"victory": return "OWNED POSES AND DANCES • ASSIGN ANY DANCE TO EITHER CELEBRATION"
+		"audio": return "OWNED WINNERS CIRCLE THEMES • PREVIEW USES CEREMONY VOLUME"
+	return "OWNED ITEMS"
+
+
+func _make_owned_locker_row(entry: Dictionary) -> Control:
+	var item_id := str(entry.get("item_id", ""))
+	var catalog: Dictionary = _locker_catalog(item_id)
+	var slot := SupabaseCosmeticRegistry.item_slot(catalog)
+	if slot == "":
+		slot = str(catalog.get("item_type",
+			SupabaseCosmeticRegistry.known_slot_for_id(item_id)))
+	var is_dance := slot == "victory_dance" or (
+		Catalog.subcategory(catalog) == "dances"
+		and SupabaseCosmeticRegistry.local_victory_animation(item_id) != "")
+	var visual_slot := "victory_dance" if is_dance else slot
+	var row := PanelContainer.new()
+	row.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		OneGunUI.color("face_raised"), OneGunUI.color("border"),
+		OneGunUI.RADIUS_SECTION, OneGunUI.BORDER_THIN, 2, OneGunUI.SPACE_M))
+	var horizontal := HBoxContainer.new()
+	horizontal.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	row.add_child(horizontal)
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	horizontal.add_child(copy)
+	copy.add_child(OneGunUI.make_heading(str(catalog.get("display_name",
+		SupabaseCosmeticRegistry.display_name_fallback(item_id))).to_upper(),
+		OneGunUI.TEXT_M, "text"))
+	var art_state := "READY" if SupabaseCosmeticRegistry.has_local_visual(
+		item_id, visual_slot) else "ART PENDING"
+	copy.add_child(OneGunUI.make_label("%s • %s" % [
+		_locker_slot_display_name(visual_slot), art_state], OneGunUI.TEXT_S, "muted"))
+	if slot == "ceremony_theme":
+		var preview := OneGunButton.new()
+		preview.text = "PREVIEW"
+		preview.variant = "blue"
+		preview.custom_minimum_size = Vector2(116.0, 46.0)
+		preview.pressed.connect(_preview_locker_theme.bind(item_id))
+		horizontal.add_child(preview)
+	elif is_dance:
+		var preview := OneGunButton.new()
+		preview.text = "PREVIEW"
+		preview.variant = "blue"
+		preview.custom_minimum_size = Vector2(116.0, 46.0)
+		preview.pressed.connect(_preview_locker_move.bind(item_id))
+		horizontal.add_child(preview)
+	if is_dance:
+		horizontal.add_child(_make_locker_slot_button(
+			"emote", item_id, "EQUIP PODIUM"))
+		horizontal.add_child(_make_locker_slot_button(
+			"round_victory_move", item_id, "EQUIP ROUND"))
+		return row
+	var equipped := str(_backend.loadout.get(slot, "")) == item_id
+	if slot == "outfit_bundle":
+		equipped = ProgressionManager.components_for(item_id).all(func(component_id):
+			var component := _locker_catalog(str(component_id))
+			var component_slot := SupabaseCosmeticRegistry.item_slot(component)
+			return str(_backend.loadout.get(component_slot, "")) == str(component_id))
+	var equip := OneGunButton.new()
+	equip.text = "UNEQUIP" if equipped else "EQUIP"
+	equip.variant = "green" if equipped else "gold"
+	equip.custom_minimum_size = Vector2(132.0, 46.0)
+	equip.disabled = slot == ""
+	if not equip.disabled:
+		if equipped and slot == "outfit_bundle":
+			equip.pressed.connect(_unequip_locker_outfit.bind(item_id))
+		elif equipped:
+			equip.pressed.connect(_unequip_locker_item.bind(slot, item_id))
+		elif slot == "outfit_bundle":
+			equip.pressed.connect(_equip_locker_outfit.bind(item_id))
+		else:
+			equip.pressed.connect(_equip_locker_item.bind(slot, item_id))
+	horizontal.add_child(equip)
+	return row
+
+
+func _make_locker_slot_button(slot: String, item_id: String,
+		equip_label: String) -> OneGunButton:
+	var button := OneGunButton.new()
+	var equipped := str(_backend.loadout.get(slot, "")) == item_id
+	button.text = "UNEQUIP" if equipped else equip_label
+	button.variant = "green" if equipped else "gold"
+	button.custom_minimum_size = Vector2(142.0, 46.0)
+	button.tooltip_text = "%s slot" % _locker_slot_display_name(slot).capitalize()
+	if equipped:
+		button.pressed.connect(_unequip_locker_item.bind(slot, item_id))
+	else:
+		button.pressed.connect(_equip_locker_item.bind(slot, item_id))
+	return button
+
+
+func _locker_slot_display_name(slot: String) -> String:
+	if slot == "emote":
+		return "PODIUM POSE"
+	if slot in ["victory_dance", "round_victory_move"]:
+		return "VICTORY DANCE"
+	if slot == "ceremony_theme":
+		return "WINNERS CIRCLE MUSIC"
+	return slot.replace("_", " ").to_upper()
+
+
+func _locker_empty_label(text: String) -> Label:
+	var label := OneGunUI.make_label(text, OneGunUI.TEXT_M, "muted")
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.custom_minimum_size.y = 90.0
+	return label
 
 
 func _make_divider_heading(text: String) -> Control:
@@ -503,28 +838,37 @@ func _build_action_bar() -> void:
 	back.pressed.connect(_cancel)
 	_canvas.add_child(back)
 
-	var randomize := OneGunButton.new()
-	randomize.name = "Randomize"
-	randomize.text = "RANDOMIZE"
-	randomize.variant = "navy"
-	randomize.position = Vector2(658.0, 808.0)
-	randomize.size = Vector2(210.0, 60.0)
-	randomize.pressed.connect(_randomize_active_skin)
-	_canvas.add_child(randomize)
+	_randomize_button = OneGunButton.new()
+	_randomize_button.name = "Randomize"
+	_randomize_button.text = "RANDOMIZE"
+	_randomize_button.variant = "navy"
+	_randomize_button.position = Vector2(658.0, 808.0)
+	_randomize_button.size = Vector2(210.0, 60.0)
+	_randomize_button.pressed.connect(_randomize_active_skin)
+	_canvas.add_child(_randomize_button)
 
-	var default_button := OneGunButton.new()
-	default_button.name = "Default"
-	default_button.text = "DEFAULT"
-	default_button.variant = "navy"
-	default_button.position = Vector2(884.0, 808.0)
-	default_button.size = Vector2(190.0, 60.0)
-	default_button.tooltip_text = "Preview the default Blue color"
-	default_button.pressed.connect(_default_active_skin)
-	_canvas.add_child(default_button)
+	_default_button = OneGunButton.new()
+	_default_button.name = "Default"
+	_default_button.text = "DEFAULT"
+	_default_button.variant = "navy"
+	_default_button.position = Vector2(884.0, 808.0)
+	_default_button.size = Vector2(190.0, 60.0)
+	_default_button.tooltip_text = "Preview the default Blue color"
+	_default_button.pressed.connect(_default_active_skin)
+	_canvas.add_child(_default_button)
+
+	_reset_loadout_button = OneGunButton.new()
+	_reset_loadout_button.name = "ResetLoadout"
+	_reset_loadout_button.text = "RESET LOADOUT"
+	_reset_loadout_button.variant = "navy"
+	_reset_loadout_button.position = Vector2(658.0, 808.0)
+	_reset_loadout_button.size = Vector2(416.0, 60.0)
+	_reset_loadout_button.pressed.connect(_on_reset_loadout_pressed)
+	_canvas.add_child(_reset_loadout_button)
 
 	_confirm_button = OneGunButton.new()
 	_confirm_button.name = "Confirm"
-	_confirm_button.text = "CONFIRM"
+	_confirm_button.text = "SAVE & CLOSE"
 	_confirm_button.variant = "gold"
 	_confirm_button.position = Vector2(1090.0, 808.0)
 	_confirm_button.size = Vector2(446.0, 60.0)
@@ -534,14 +878,30 @@ func _build_action_bar() -> void:
 	var focus_controls: Array = []
 	for card in _color_cards:
 		focus_controls.append(card)
-	focus_controls.append(randomize)
-	focus_controls.append(default_button)
+	focus_controls.append(_randomize_button)
+	focus_controls.append(_default_button)
+	focus_controls.append(_reset_loadout_button)
 	focus_controls.append(_confirm_button)
 	focus_controls.append(back)
 	OneGunUI.chain_focus_vertical(focus_controls)
+	_update_locker_action_bar()
 	var selected_card = _card_for_skin(_pending_skin_for_slot(_active_slot))
 	if selected_card != null:
 		selected_card.grab_focus.call_deferred()
+
+
+func _update_locker_action_bar() -> void:
+	if _randomize_button == null or _default_button == null \
+			or _reset_loadout_button == null:
+		return
+	var colors_visible := _locker_category == "character" \
+		and _color_content != null and _color_content.visible
+	_randomize_button.visible = colors_visible
+	_default_button.visible = colors_visible
+	_reset_loadout_button.visible = not colors_visible
+	_reset_loadout_button.disabled = not _backend.is_authenticated()
+	if colors_visible:
+		_clear_reset_loadout_confirmation()
 
 
 func _apply_responsive_layout() -> void:
@@ -558,6 +918,8 @@ func _apply_responsive_layout() -> void:
 func _set_active_slot(slot: int) -> void:
 	_active_slot = clampi(slot, 0, local_player_count - 1)
 	_refresh_active_player()
+	if _owned_content != null and _owned_content.visible:
+		_rebuild_owned_locker()
 
 
 func _refresh_active_player() -> void:
@@ -632,6 +994,7 @@ func _confirm() -> void:
 		_confirmed_skin_ids[slot] = skin_id
 		_confirmed_model_ids[slot] = model_id
 		skin_changed.emit(slot, skin_id)
+	AudioManager.stop_ceremony_preview()
 	closed.emit()
 	queue_free()
 
@@ -640,8 +1003,94 @@ func _cancel() -> void:
 	# Pending selections only ever touch the isolated preview. Since no stored
 	# value is mutated until Confirm, Back/Escape restores the prior selection
 	# simply by closing this screen.
+	AudioManager.stop_ceremony_preview()
 	closed.emit()
 	queue_free()
+
+
+func _preview_locker_theme(item_id: String) -> void:
+	var audio_key := SupabaseCosmeticRegistry.local_ceremony_audio_key(item_id)
+	if audio_key == "" or not AudioManager.play_ceremony_preview(audio_key, 0.78):
+		_locker_feedback.text = "THIS WINNERS CIRCLE THEME IS NOT INSTALLED"
+		_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
+		return
+	_locker_feedback.text = "PREVIEWING %s — MENU MUSIC PAUSED" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+
+
+func _preview_locker_move(item_id: String) -> void:
+	var animation_name := SupabaseCosmeticRegistry.local_victory_animation(item_id)
+	if animation_name == "" or _preview_visual == null:
+		_locker_feedback.text = "THIS VICTORY MOVE IS NOT INSTALLED"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("red"))
+		return
+	var animation_player := _preview_visual.call(
+		"ensure_animations", [animation_name]) as AnimationPlayer
+	if animation_player == null or not animation_player.has_animation(animation_name):
+		_locker_feedback.text = "THIS VICTORY MOVE COULD NOT BE PREVIEWED"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("red"))
+		return
+	AudioManager.stop_ceremony_preview()
+	animation_player.play(animation_name, 0.12)
+	var catalog := _locker_catalog(item_id)
+	_locker_feedback.text = "PREVIEWING %s" % str(catalog.get(
+		"display_name", SupabaseCosmeticRegistry.display_name_fallback(item_id))).to_upper()
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+
+
+func _equip_locker_item(slot: String, item_id: String) -> void:
+	_locker_feedback.text = "EQUIPPING %s…" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	await _backend.equip_cosmetic(slot, item_id)
+
+
+func _unequip_locker_item(slot: String, item_id: String) -> void:
+	_locker_feedback.text = "UNEQUIPPING %s…" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	await _backend.unequip_cosmetic(slot)
+
+
+func _unequip_locker_outfit(item_id: String) -> void:
+	_locker_feedback.text = "REMOVING FULL %s SET…" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	if await ProgressionManager.unequip_outfit(item_id):
+		_locker_feedback.text = "OUTFIT UNEQUIPPED"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("green"))
+		_rebuild_owned_locker()
+	else:
+		_locker_feedback.text = "THIS OUTFIT COULD NOT BE UNEQUIPPED"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("red"))
+
+
+func _equip_locker_outfit(item_id: String) -> void:
+	_locker_feedback.text = "EQUIPPING FULL %s SET…" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	if await ProgressionManager.equip_outfit(item_id):
+		_locker_feedback.text = "FULL OUTFIT EQUIPPED — EACH PIECE REMAINS MIXABLE"
+		_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+		_rebuild_owned_locker()
+
+
+func _on_locker_data_updated(_value = null, _extra = null) -> void:
+	if _owned_list != null and _owned_content.visible:
+		_rebuild_owned_locker()
+
+
+func _on_locker_equip_succeeded(_slot: String, item_id: String) -> void:
+	_locker_feedback.text = "EQUIPPED %s" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+	_rebuild_owned_locker()
+
+
+func _on_locker_equip_failed(_slot: String, _item_id: String, message: String) -> void:
+	_locker_feedback.text = message
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
 
 
 func _on_preview_gui_input(event: InputEvent) -> void:
@@ -649,8 +1098,74 @@ func _on_preview_gui_input(event: InputEvent) -> void:
 		_dragging_preview = event.pressed
 		accept_event()
 	elif event is InputEventMouseMotion and _dragging_preview:
-		_preview_pivot.rotate_y(-event.relative.x * 0.012)
+		_preview_pivot.rotate_y(event.relative.x * 0.012)
 		accept_event()
+
+func _on_locker_unequip_succeeded(slot: String) -> void:
+	_locker_feedback.text = "%s RETURNED TO ITS BASE SETTING" % \
+		_locker_slot_display_name(slot)
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+	_rebuild_owned_locker()
+
+
+func _on_locker_unequip_failed(_slot: String, message: String) -> void:
+	_locker_feedback.text = message
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
+
+
+func _on_reset_loadout_pressed() -> void:
+	if not _backend.is_authenticated():
+		_locker_feedback.text = "SIGN IN THROUGH PROFILE TO RESET YOUR LOADOUT"
+		_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
+		return
+	if not _reset_loadout_armed:
+		_reset_loadout_armed = true
+		_reset_loadout_generation += 1
+		var generation := _reset_loadout_generation
+		_reset_loadout_button.text = "CONFIRM RESET"
+		_reset_loadout_button.variant = "red"
+		_locker_feedback.text = \
+			"PRESS CONFIRM RESET WITHIN 5 SECONDS • MODEL AND COLOR WILL BE PRESERVED"
+		_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("gold"))
+		_expire_reset_loadout_confirmation(generation)
+		return
+	_clear_reset_loadout_confirmation()
+	_reset_loadout_button.disabled = true
+	_locker_feedback.text = "RESTORING THE BASE ONE GUN LOADOUT…"
+	if not await ProgressionManager.reset_loadout():
+		_reset_loadout_button.disabled = false
+
+
+func _expire_reset_loadout_confirmation(generation: int) -> void:
+	await get_tree().create_timer(5.0, true).timeout
+	if generation == _reset_loadout_generation:
+		_clear_reset_loadout_confirmation()
+
+
+func _clear_reset_loadout_confirmation() -> void:
+	_reset_loadout_armed = false
+	_reset_loadout_generation += 1
+	if _reset_loadout_button == null:
+		return
+	_reset_loadout_button.text = "RESET LOADOUT"
+	_reset_loadout_button.variant = "navy"
+	_reset_loadout_button.disabled = not _backend.is_authenticated()
+
+
+func _on_locker_reset_succeeded() -> void:
+	_clear_reset_loadout_confirmation()
+	_locker_feedback.text = \
+		"BASE LOADOUT RESTORED • CHARACTER MODEL AND COLOR PRESERVED"
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+	_rebuild_owned_locker()
+
+
+func _on_locker_reset_failed(message: String) -> void:
+	_clear_reset_loadout_confirmation()
+	_locker_feedback.text = message
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
+
+
 
 
 func _player_name(slot: int) -> String:

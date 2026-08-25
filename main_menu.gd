@@ -1,7 +1,8 @@
 extends Control
 
 const ONLINE_PLAY_OVERLAY_SCRIPT = preload("res://UI/online_play_overlay.gd")
-const SUPABASE_OVERLAY_SCRIPT = preload("res://UI/supabase_overlay.gd")
+const SUPABASE_OVERLAY_SCRIPT = preload("res://UI/player_hub_overlay.gd")
+const PROGRESSION_OVERLAY_SCRIPT = preload("res://UI/progression_road_overlay.gd")
 const BuildInfo = preload("res://build_info.gd")
 
 # Main-menu presentation only. Gameplay, lobby, and networking behavior remains
@@ -179,6 +180,8 @@ var _local_menu_button: Button
 var _online_menu_button: Button
 var _character_customization_button: Button
 var _account_store_button: Button
+var _profile_button: Button
+var _progression_button: Button
 
 var _map_cycler: Node
 var _background_viewport: SubViewport
@@ -198,6 +201,7 @@ var _online_panel: PanelContainer
 var _player_settings_overlay: Control
 var _character_customization_overlay: Control
 var _supabase_overlay: Control
+var _progression_overlay: Control
 var _showcase_actor: Node3D
 var _online_status: Label
 var _online_ip_field: LineEdit
@@ -289,6 +293,15 @@ func _finish_layout() -> void:
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
 			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE") == "character_customization":
 		_on_character_customization_pressed.call_deferred()
+	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
+			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE") == "profile":
+		_on_profile_pressed.call_deferred()
+	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
+			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("prize_counter"):
+		_on_account_store_pressed.call_deferred()
+	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
+			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE") == "progression":
+		_on_progression_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" and (OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("settings_") or OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("crosshair_")):
 		_on_player_settings_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" and OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("lobby_"):
@@ -1175,22 +1188,27 @@ func _build_brand_navigation() -> void:
 	column.add_child(navigation)
 
 	# Concept-art toy buttons: molded color fill, icon tile, title + subtitle, star.
-	_local_menu_button = _make_menu_button("LOCAL PLAY", _on_local_menu_pressed, false,
-		"SOLO • BOTS • SPLITSCREEN", MenuIconKind.PLAY, _color("gold"))
-	_online_menu_button = _make_menu_button("ONLINE PLAY", _on_online_pressed, false,
-		"HOST OR JOIN A LOBBY", MenuIconKind.NETWORK, Color(0.16, 0.39, 0.82))
+	_local_menu_button = _make_menu_button("PLAY", _on_local_menu_pressed, false,
+		"LOCAL • ONLINE • BOTS", MenuIconKind.PLAY, _color("gold"))
 	_character_customization_button = _make_menu_button(
-		"CHARACTER CUSTOMIZATION", _on_character_customization_pressed, false,
-		"CHOOSE YOUR COLOR", MenuIconKind.SETTINGS, Color(0.08, 0.55, 0.58))
+		"LOCKER", _on_character_customization_pressed, false,
+		"OWNED COSMETICS & LOADOUT", MenuIconKind.SETTINGS, Color(0.08, 0.55, 0.58))
 	_account_store_button = _make_menu_button(
-		"ACCOUNT & STORE", _on_account_store_pressed, false,
-		"CLOUD PROFILE / COSMETICS", MenuIconKind.NETWORK, Color(0.16, 0.50, 0.38))
+		"PRIZE COUNTER", _on_account_store_pressed, false,
+		"FEATURED & ROTATING ITEMS", MenuIconKind.NETWORK, Color(0.16, 0.50, 0.38))
+	_progression_button = _make_menu_button(
+		"PROGRESSION", _on_progression_pressed, false,
+		"LEVEL ROAD • TROPHY ROAD", MenuIconKind.PLAY, Color(0.80, 0.48, 0.10))
+	_profile_button = _make_menu_button(
+		"PROFILE", _on_profile_pressed, false,
+		"SIGN IN • STATS • LEGACY HALL", MenuIconKind.NETWORK, Color(0.16, 0.39, 0.82))
 	_primary_buttons = [
 		_local_menu_button,
-		_online_menu_button,
 		_character_customization_button,
 		_account_store_button,
-		_make_menu_button("PLAYER SETTINGS", _on_player_settings_pressed, false,
+		_progression_button,
+		_profile_button,
+		_make_menu_button("SETTINGS", _on_player_settings_pressed, false,
 			"AUDIO • VIDEO • CONTROLS", MenuIconKind.SETTINGS, Color(0.46, 0.20, 0.76)),
 	]
 	_primary_buttons.append(_make_menu_button("QUIT GAME", _on_quit_pressed, true,
@@ -1743,7 +1761,7 @@ func _build_modal_layer() -> void:
 func _build_local_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.name = "LocalPlayPanel"
-	panel.custom_minimum_size = Vector2(640, 440)
+	panel.custom_minimum_size = Vector2(700, 610)
 	panel.add_theme_stylebox_override("panel", _panel_style(true))
 	var margin := MarginContainer.new()
 	_apply_margin(margin, 30)
@@ -1752,8 +1770,8 @@ func _build_local_panel() -> PanelContainer:
 	column.add_theme_constant_override("separation", 14)
 	margin.add_child(column)
 
-	column.add_child(_make_modal_header("LOCAL PLAY", "PICK A COUCH MODE"))
-	var explanation := _make_label("Both routes use the existing local lobby and match setup.", 16, "muted")
+	column.add_child(_make_modal_header("PLAY", "CHOOSE HOW TO PLAY"))
+	var explanation := _make_label("Local and online routes keep their existing lobby and match rules.", 16, "muted")
 	column.add_child(explanation)
 
 	var solo := _make_menu_button("SOLO + BOTS", _on_single_pressed)
@@ -1772,13 +1790,22 @@ func _build_local_panel() -> PanelContainer:
 	var split_hint := _make_label("Two local players share the screen. Match rules stay unchanged.", 14, "muted")
 	column.add_child(split_hint)
 
+	var online := _make_menu_button("ONLINE PLAY", _on_online_pressed)
+	online.name = "OnlinePlayChoice"
+	online.custom_minimum_size.y = 68
+	_set_accessible_text(online, "Online play", "Host or join a private Tailscale lobby")
+	column.add_child(online)
+	var online_hint := _make_label(
+		"Host or join a full-experience private online match.", 14, "muted")
+	column.add_child(online_hint)
+
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(spacer)
 	var cancel := _make_dialog_button("CANCEL", _close_modal)
 	cancel.name = "CancelLocal"
 	column.add_child(cancel)
-	_configure_vertical_focus_cycle([solo, split, cancel])
+	_configure_vertical_focus_cycle([solo, split, online, cancel])
 	return panel
 
 
@@ -1927,7 +1954,7 @@ func _on_local_menu_pressed() -> void:
 
 func _on_online_pressed() -> void:
 	AudioManager.play_click()
-	_last_modal_opener = _online_menu_button
+	_last_modal_opener = _local_menu_button
 	var overlay = _online_panel
 	var capture_state := OS.get_environment("ONEGUN_UI_CAPTURE_STATE") if OS.get_environment("ONEGUN_UI_CAPTURE") != "" else ""
 	overlay.open(capture_state.trim_prefix("online_"))
@@ -1941,7 +1968,12 @@ func _close_online_overlay() -> void:
 
 
 func _on_online_session_started() -> void:
+	_prepare_online_lobby_defaults()
 	get_tree().change_scene_to_file("res://game_setup.tscn")
+
+
+func _prepare_online_lobby_defaults() -> void:
+	GameConfig.set_bot_count(0)
 
 
 func _show_modal(panel: PanelContainer, initial_focus: Control = null) -> void:
@@ -2263,30 +2295,33 @@ func _apply_responsive_layout() -> void:
 	var ribbon_holder := _logo_stack.find_child("TaglineRibbon", true, false) as Control if _logo_stack else null
 	var tagline_row := _logo_stack.find_child("TaglineCarousel", true, false) as Control if _logo_stack else null
 
-	var inner_margin := 14 if compact_height else clampi(roundi(26.0 * layout_scale), 22, 30)
+	var compact_home_rail := compact_height and _primary_buttons.size() >= 7
+	var inner_margin := 10 if compact_home_rail else (14 if compact_height else clampi(roundi(26.0 * layout_scale), 22, 30))
 	if cabinet_inner != null:
 		_apply_margin(cabinet_inner, inner_margin)
 	if cabinet_column != null:
 		cabinet_column.add_theme_constant_override(
-			"separation", 6 if compact_height else clampi(roundi(12.0 * layout_scale), 10, 12))
+			"separation", 3 if compact_home_rail else (6 if compact_height else clampi(roundi(12.0 * layout_scale), 10, 12)))
 	if navigation != null:
 		navigation.add_theme_constant_override(
-			"separation", 6 if compact_height else clampi(roundi(10.0 * layout_scale), 8, 12))
+			"separation", 3 if compact_home_rail else (6 if compact_height else clampi(roundi(10.0 * layout_scale), 8, 12)))
 
 	var logo_size := clampi(roundi(96.0 * layout_scale), 68, 108)
 	var dense_navigation := _primary_buttons.size() >= 6
+	var extra_dense_navigation := _primary_buttons.size() >= 7
 	if _logo_stack != null:
 		_logo_stack.custom_minimum_size.y = (
+			130.0 if compact_home_rail else \
 			210.0 if compact_height else clampf(
 				viewport_size.y * (0.30 if dense_navigation else 0.36),
 				260.0 if dense_navigation else 300.0, 520.0))
-	var ribbon_height := clampf(120.0 * layout_scale, 82.0, 140.0)
+	var ribbon_height := 70.0 if compact_home_rail else clampf(120.0 * layout_scale, 82.0, 140.0)
 	if ribbon_holder != null:
 		ribbon_holder.offset_top = -ribbon_height
 	if tagline_row != null:
-		tagline_row.offset_left = 48.0 * layout_scale
-		tagline_row.offset_right = -48.0 * layout_scale
-		tagline_row.offset_bottom = -18.0 * layout_scale
+		tagline_row.offset_left = (30.0 if compact_home_rail else 48.0) * layout_scale
+		tagline_row.offset_right = -(30.0 if compact_home_rail else 48.0) * layout_scale
+		tagline_row.offset_bottom = -(8.0 if compact_home_rail else 18.0) * layout_scale
 	if _logo_image != null:
 		_logo_image.offset_bottom = -(ribbon_height - 8.0 * layout_scale)
 	_title_label.add_theme_font_size_override("font_size", logo_size)
@@ -2294,31 +2329,37 @@ func _apply_responsive_layout() -> void:
 		_title_label2.add_theme_font_size_override("font_size", logo_size)
 	_refresh_tagline_typography.call_deferred()
 
+	var dense_button_base := 48.0 if compact_home_rail else (60.0 if extra_dense_navigation else 72.0)
 	var button_height := clampf(
-		(72.0 if dense_navigation else 88.0) * layout_scale, 56.0, 96.0)
-	var button_title_size := clampi(roundi(23.0 * layout_scale), 18, 24)
+		(dense_button_base if dense_navigation else 88.0) * layout_scale, 42.0, 96.0)
+	var button_title_size := 17 if compact_home_rail else clampi(roundi(23.0 * layout_scale), 18, 24)
 	var button_subtitle_size := clampi(roundi(13.0 * layout_scale), 10, 14)
-	var icon_size := clampf(62.0 * layout_scale, 46.0, 66.0)
-	var star_size := clampi(roundi(22.0 * layout_scale), 18, 24)
+	var icon_size := 38.0 if compact_home_rail else clampf(62.0 * layout_scale, 46.0, 66.0)
+	var star_size := 16 if compact_home_rail else clampi(roundi(22.0 * layout_scale), 18, 24)
 	for button in _primary_buttons:
 		button.custom_minimum_size.y = button_height
 		var button_title := button.find_child("ButtonTitle", true, false) as Label
 		var button_subtitle := button.find_child("ButtonSubtitle", true, false) as Label
 		var icon_compartment := button.find_child("IconCompartment", true, false) as Control
 		var button_star := button.find_child("ButtonStar", true, false) as Label
+		var button_content := button.find_child("ButtonContent", true, false) as MarginContainer
 		if button_title:
 			button_title.add_theme_font_size_override("font_size", button_title_size)
 		if button_subtitle:
 			button_subtitle.add_theme_font_size_override("font_size", button_subtitle_size)
+			button_subtitle.visible = not compact_home_rail
+		if button_content and compact_home_rail:
+			button_content.add_theme_constant_override("margin_top", 2)
+			button_content.add_theme_constant_override("margin_bottom", 4)
 		if icon_compartment:
 			icon_compartment.custom_minimum_size = Vector2(icon_size, icon_size)
 		if button_star:
 			button_star.add_theme_font_size_override("font_size", star_size)
 
 	if footer != null:
-		footer.custom_minimum_size.y = clampf(70.0 * layout_scale, 64.0, 82.0)
+		footer.custom_minimum_size.y = 56.0 if compact_home_rail else clampf(70.0 * layout_scale, 64.0, 82.0)
 	if portrait != null:
-		var portrait_size := clampf(46.0 * layout_scale, 42.0, 54.0)
+		var portrait_size := 36.0 if compact_home_rail else clampf(46.0 * layout_scale, 42.0, 54.0)
 		portrait.custom_minimum_size = Vector2(portrait_size, portrait_size)
 	if build_identity != null:
 		build_identity.custom_minimum_size.x = clampf(108.0 * layout_scale, 100.0, 125.0)
@@ -2359,8 +2400,8 @@ func _apply_responsive_layout() -> void:
 	call_deferred("_apply_cabinet_rect")
 	if _local_panel:
 		_local_panel.custom_minimum_size = Vector2(
-			minf(640.0, viewport_size.x - 44.0),
-			minf(440.0, viewport_size.y - 44.0)
+			minf(700.0, viewport_size.x - 44.0),
+			minf(610.0, viewport_size.y - 44.0)
 		)
 	if _online_panel:
 		_online_panel.custom_minimum_size = Vector2(
@@ -2407,6 +2448,7 @@ func _capture_name() -> String:
 	var state := OS.get_environment("ONEGUN_UI_CAPTURE_STATE")
 	return state if state.begins_with("online_") or state.begins_with("settings_") \
 		or state.begins_with("crosshair_") or state == "character_customization" \
+		or state == "profile" or state.begins_with("prize_counter") or state == "progression" \
 		else "main_menu"
 
 
@@ -2544,7 +2586,7 @@ func _refresh_connection_status() -> void:
 func _cloud_profile_summary() -> String:
 	if not SupabaseManager.is_authenticated():
 		return "CLOUD SIGNED OUT"
-	var username := str(SupabaseManager.profile.get("username", "")).strip_edges()
+	var username := SupabaseManager.current_account_name()
 	var identity := username.to_upper() if username != "" else "CLOUD PROFILE"
 	return "%s / %d TOKENS" % [identity, SupabaseManager.gun_tokens]
 
@@ -2595,7 +2637,7 @@ func _on_character_customization_pressed() -> void:
 		return
 	_last_modal_opener = _character_customization_button
 	_character_customization_overlay = preload(
-		"res://UI/character_customization_overlay.gd").new()
+		"res://UI/themed_locker_overlay.gd").new()
 	_character_customization_overlay.configure(false, 1)
 	_character_customization_overlay.closed.connect(_close_character_customization)
 	_modal_layer.add_child(_character_customization_overlay)
@@ -2608,10 +2650,20 @@ func _on_character_customization_pressed() -> void:
 
 func _on_account_store_pressed() -> void:
 	AudioManager.play_click()
+	_open_supabase_overlay("prize_counter", _account_store_button)
+
+
+func _on_profile_pressed() -> void:
+	AudioManager.play_click()
+	_open_supabase_overlay("profile", _profile_button)
+
+
+func _open_supabase_overlay(initial_page: String, opener: Control) -> void:
 	if _supabase_overlay != null:
 		return
-	_last_modal_opener = _account_store_button
+	_last_modal_opener = opener
 	_supabase_overlay = SUPABASE_OVERLAY_SCRIPT.new()
+	_supabase_overlay.configure(initial_page)
 	_supabase_overlay.closed.connect(_close_supabase_overlay)
 	_modal_layer.add_child(_supabase_overlay)
 	_local_panel.visible = false
@@ -2625,6 +2677,27 @@ func _close_supabase_overlay() -> void:
 	_supabase_overlay = null
 	_close_modal()
 
+
+
+
+func _on_progression_pressed() -> void:
+	AudioManager.play_click()
+	if _progression_overlay != null:
+		return
+	_last_modal_opener = _progression_button
+	_progression_overlay = PROGRESSION_OVERLAY_SCRIPT.new()
+	_progression_overlay.closed.connect(_close_progression_overlay)
+	_modal_layer.add_child(_progression_overlay)
+	_local_panel.visible = false
+	_online_panel.visible = false
+	_modal_layer.visible = true
+	_update_patch_notes_prompt_visibility()
+	_refresh_ambient_motion()
+
+
+func _close_progression_overlay() -> void:
+	_progression_overlay = null
+	_close_modal()
 
 
 

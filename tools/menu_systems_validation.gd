@@ -6,6 +6,7 @@ extends SceneTree
 
 const TARGETS := [
 	"res://audio_manager.gd",
+	"res://map_registry.gd",
 	"res://network_manager.gd",
 	"res://player_prefs.gd",
 	"res://graphics_quality_manager.gd",
@@ -14,6 +15,10 @@ const TARGETS := [
 	"res://player_settings.tscn",
 	"res://game_setup.gd",
 	"res://game_setup.tscn",
+	"res://supabase/supabase_manager.gd",
+	"res://UI/supabase_overlay.gd",
+	"res://UI/character_customization_overlay.gd",
+	"res://UI/progression_road_overlay.gd",
 	"res://lobby_map_preview.gd",
 	"res://menu_map_cycler.gd",
 	"res://maps/test/title_bg_map.tscn",
@@ -91,7 +96,29 @@ func _validate() -> void:
 				failed = true
 			else:
 				print("MENU RUNTIME OK: dedicated Ceremony bus follows its saved mix control")
+			audio.play_music("menu", 0.0)
+			await process_frame
+			var music_player := audio.get_node_or_null("MusicPlayer") as AudioStreamPlayer
+			var preview_started := bool(audio.play_ceremony_preview(
+				"winners_circle_deep_orbit", 0.2))
+			if not preview_started or music_player == null or not music_player.stream_paused:
+				push_error("Menu validation: ceremony preview did not pause menu music")
+				failed = true
+			audio.stop_ceremony_preview()
+			if music_player != null and music_player.stream_paused:
+				push_error("Menu validation: stopping ceremony preview did not resume menu music")
+				failed = true
+			else:
+				print("MENU RUNTIME OK: ceremony preview pauses and resumes menu music")
+			audio.stop_music(0.0)
 			audio.set_ceremony_volume(float(before.get("ceremony_volume", 0.8)))
+		var alphabetical := MapRegistry.sorted_indices("alphabetical")
+		var newest := MapRegistry.sorted_indices("newest")
+		if alphabetical.is_empty() or newest.is_empty() or str(MapRegistry.MAPS[newest[0]]["name"]) != "Neon Circuit":
+			push_error("Menu validation: map sorting modes are incomplete")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: alphabetical and newest map sorting")
 		var preview_descriptor := {"type": "key", "code": KEY_F12}
 		settings_screen.call("_store_bindings", "p1_move_forward",
 			"keyboard_mouse", [preview_descriptor])
@@ -155,6 +182,15 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU RUNTIME OK: accessibility/crosshair preference migration defaults")
+		var null_name: Dictionary = prefs.call("_normalize", {"player_name": null})
+		var placeholder_name: Dictionary = prefs.call(
+			"_normalize", {"player_name": "<null>"})
+		if str(null_name.get("player_name", "")) != "Player 1" \
+				or str(placeholder_name.get("player_name", "")) != "Player 1":
+			push_error("Menu validation: legacy null Display Name did not normalize")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: null Display Name migration fallback")
 		var normalized_audio: Dictionary = prefs.call("_normalize", {"ceremony_volume": 4.0})
 		if not is_equal_approx(float(normalized_audio["ceremony_volume"]), 1.0):
 			push_error("Menu validation: Ceremony Volume preference normalization failed")

@@ -270,7 +270,7 @@ func _build_competitor(anchor: Node3D, entry: Dictionary) -> void:
 	anchor.add_child(visual)
 	var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
 	var move_id := str(cosmetics.get("emote", ""))
-	var move_animation := CosmeticRegistry.local_victory_animation(move_id)
+	var move_animation := CosmeticRegistry.local_podium_animation(move_id)
 	var requested := ["idle", "long_idle"]
 	if move_animation != "":
 		requested.append(move_animation)

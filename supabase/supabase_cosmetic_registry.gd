@@ -8,19 +8,31 @@ extends RefCounted
 
 const DEFAULT_CEREMONY_THEME_ID := "wc_theme_ceremony_march"
 const DEFAULT_CEREMONY_AUDIO_KEY := "winners_circle_ceremony"
+const BASE_GUN_SKIN_ID := "base_one_gun"
+const BASE_MELEE_SKIN_ID := "base_arena_melee"
 
 const LEGACY_LOADOUT_SLOTS: Array[String] = [
 	"character_skin", "hat", "accessory", "gun_skin", "melee_skin", "emote",
 ]
 
+const PRE_PROGRESSION_LOADOUT_SLOTS: Array[String] = [
+	"character_skin", "hat", "accessory", "gun_skin", "melee_skin", "emote",
+	"ceremony_theme",
+]
+
 const LOADOUT_SLOTS: Array[String] = [
 	"character_skin",
 	"hat",
+	"shirt",
+	"pants",
+	"shoes",
 	"accessory",
 	"gun_skin",
 	"melee_skin",
 	"emote",
+	"round_victory_move",
 	"ceremony_theme",
+	"profile_badge",
 ]
 
 const KNOWN_ART_PENDING := {
@@ -32,12 +44,31 @@ const KNOWN_ART_PENDING := {
 # Stable Supabase item IDs map only to locally shipped animation names. New
 # victory moves are added here when their animation assets enter the project;
 # backend strings are never treated as resource paths.
-const VICTORY_MOVE_ANIMATIONS := {
+const VICTORY_DANCE_ANIMATIONS := {
 	"hip_hop_dance": "hip_hop_dance",
 	"victory_hip_hop": "hip_hop_dance",
 	"swing_dance": "swing_dance",
 	"victory_swing": "swing_dance",
+	"podium_backbeat_bounce": "podium_backbeat_bounce",
+	"podium_champion_canter": "podium_champion_canter",
+	"podium_fresh_footwork": "podium_fresh_footwork",
+	"podium_house_party_heat": "podium_house_party_heat",
+	"podium_serpent_flow": "podium_serpent_flow",
+	"podium_midnight_monster": "podium_midnight_monster",
+	"podium_victory_wave": "podium_victory_wave",
+	"round_breakspin_finale": "round_breakspin_finale",
+	"round_floorwork_finish": "round_floorwork_finish",
+	"round_birdie_boogie": "round_birdie_boogie",
+	"round_arena_clapline": "round_arena_clapline",
+	"round_soul_cyclone": "round_soul_cyclone",
+	"round_quickstep_shuffle": "round_quickstep_shuffle",
+	"round_victory_swing": "round_victory_swing",
 }
+
+# Compatibility aliases keep older gameplay and validation callers working
+# while both equip slots now share the exact same dance library.
+const PODIUM_DANCE_ANIMATIONS := VICTORY_DANCE_ANIMATIONS
+const ROUND_VICTORY_MOVE_ANIMATIONS := VICTORY_DANCE_ANIMATIONS
 
 const CEREMONY_THEME_AUDIO_KEYS := {
 	"wc_theme_ceremony_march": "winners_circle_ceremony",
@@ -95,24 +126,38 @@ static func empty_loadout() -> Dictionary:
 
 
 static func item_slot(item: Dictionary) -> String:
-	return sanitize_slot(str(item.get("item_type", "")))
+	var raw_slot := str(item.get("item_type", "")).strip_edges().to_lower()
+	return "victory_dance" if raw_slot == "victory_dance" \
+		else sanitize_slot(raw_slot)
 
 
 static func has_local_visual(item_id: String, slot := "") -> bool:
 	var safe_id := sanitize_item_id(item_id)
-	var safe_slot := sanitize_slot(slot)
+	var safe_slot := str(slot).strip_edges().to_lower()
 	if safe_slot == "character_skin":
 		return _is_builtin_character_skin(safe_id)
-	if safe_slot == "emote":
+	if safe_slot in ["victory_dance", "emote", "round_victory_move"]:
 		return local_victory_animation(safe_id) != ""
 	if safe_slot == "ceremony_theme":
 		return local_ceremony_audio_key(safe_id) != ""
+	if safe_slot == "gun_skin":
+		return safe_id == BASE_GUN_SKIN_ID
+	if safe_slot == "melee_skin":
+		return safe_id == BASE_MELEE_SKIN_ID
 	return false
+
+
+static func local_podium_animation(item_id: String) -> String:
+	return local_victory_animation(item_id)
 
 
 static func local_victory_animation(item_id: String) -> String:
 	var safe_id := sanitize_item_id(item_id)
-	return str(VICTORY_MOVE_ANIMATIONS.get(safe_id, ""))
+	return str(VICTORY_DANCE_ANIMATIONS.get(safe_id, ""))
+
+
+static func local_round_victory_animation(item_id: String) -> String:
+	return local_victory_animation(item_id)
 
 
 static func local_ceremony_audio_key(item_id: String) -> String:
@@ -134,7 +179,7 @@ static func apply_gun_skin_to_display(display_root: Node3D,
 	# The current project has no gun-skin material renderer. The ceremonial
 	# display intentionally keeps the default gun until a safe local mapping is
 	# added; ownership/equipment data still survives end to end.
-	return safe_id == ""
+	return safe_id in ["", BASE_GUN_SKIN_ID]
 
 
 static func local_character_skin_id(item_id: String) -> String:
@@ -148,6 +193,12 @@ static func known_slot_for_id(item_id: String) -> String:
 		return str(KNOWN_ART_PENDING[safe_id])
 	if CEREMONY_THEME_AUDIO_KEYS.has(safe_id):
 		return "ceremony_theme"
+	if VICTORY_DANCE_ANIMATIONS.has(safe_id):
+		return "victory_dance"
+	if safe_id == BASE_GUN_SKIN_ID:
+		return "gun_skin"
+	if safe_id == BASE_MELEE_SKIN_ID:
+		return "melee_skin"
 	return "character_skin" if _is_builtin_character_skin(safe_id) else ""
 
 

@@ -26,6 +26,7 @@ const MAPS := [
 		"playstyle": "Mixed",
 		"hazards": true,
 		"tint": Color(0.16, 0.32, 0.20),
+		"added_order": 1,
 	},
 	{
 		"name": "Western Town",
@@ -38,6 +39,7 @@ const MAPS := [
 		"playstyle": "Duels & sightlines",
 		"hazards": true,
 		"tint": Color(0.35, 0.26, 0.14),
+		"added_order": 2,
 	},
 	{
 		"name": "Gun Square",
@@ -50,6 +52,7 @@ const MAPS := [
 		"playstyle": "Urban & vertical",
 		"hazards": true,
 		"tint": Color(0.20, 0.22, 0.34),
+		"added_order": 3,
 	},
 	{
 		"name": "Cat Tower",
@@ -62,6 +65,7 @@ const MAPS := [
 		"playstyle": "Vertical scramble",
 		"hazards": true,
 		"tint": Color(0.34, 0.16, 0.30),
+		"added_order": 4,
 		"preview_center": Vector3(-89.67, 7.69, -126.75),
 		"preview_radius": 46.0,
 		"preview_angle": 1.62,
@@ -79,6 +83,7 @@ const MAPS := [
 		"playstyle": "Fast cover & crossfire",
 		"hazards": false,
 		"tint": Color(0.24, 0.10, 0.40),
+		"added_order": 5,
 		"preview_center": Vector3(0.0, 0.85, 0.0),
 		"preview_radius": 12.5,
 		"preview_angle": 1.5708,
@@ -96,6 +101,25 @@ static func get_map(index: int) -> Dictionary:
 	if index < 0 or index >= MAPS.size():
 		return {}
 	return MAPS[index]
+
+
+static func sorted_indices(mode := "alphabetical") -> Array[int]:
+	var result: Array[int] = []
+	for index in MAPS.size():
+		result.append(index)
+	if mode == "newest":
+		result.sort_custom(func(a: int, b: int) -> bool:
+			var a_order := int(MAPS[a].get("added_order", 0))
+			var b_order := int(MAPS[b].get("added_order", 0))
+			if a_order != b_order:
+				return a_order > b_order
+			return str(MAPS[a].get("name", "")).nocasecmp_to(
+				str(MAPS[b].get("name", ""))) < 0)
+	else:
+		result.sort_custom(func(a: int, b: int) -> bool:
+			return str(MAPS[a].get("name", "")).nocasecmp_to(
+				str(MAPS[b].get("name", ""))) < 0)
+	return result
 
 
 static func find_index_by_path(scene_path: String) -> int:

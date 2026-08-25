@@ -15,6 +15,7 @@ const WinnersCoordinator = preload("res://winners_circle_coordinator.gd")
 const ONLINE_BOT_ACTOR_ID_BASE := 10000
 const MELEE_MARKER_REFILL_TIME := 5.0
 const PICKUP_MARKER_REFILL_TIME := 8.0
+const ONLINE_REWARD_ACTIVITY_SAMPLE_SECONDS := 1.0
 
 const DummyScene = preload("res://DummyModel.tscn")
 const GunScene = preload("res://gun.tscn")
@@ -111,6 +112,15 @@ var one_of_us_first_actor_id := -1
 var _one_of_us_respawn_generation: Dictionary = {}
 var _one_of_us_round_finishing := false
 var _winners_circle_coordinator: Node = null
+var _online_reward_activity_timer := 0.0
+var _online_reward_last_positions: Dictionary = {}
+var _online_reward_last_aims: Dictionary = {}
+var _online_reward_match_id := ""
+var _online_departed_actor_state: Dictionary = {}
+var _online_official_started := false
+var _online_official_start_humans := 0
+var _online_official_start_bots := 0
+var _online_forfeit_winner_actor_id := -1
 
 
 func _setup_online_freeroam() -> void:
@@ -1069,6 +1079,15 @@ func _initialize_online_match() -> void:
 	online_round_epoch = 1
 	online_match_over = false
 	online_actor_state.clear()
+	_online_departed_actor_state.clear()
+	_online_official_started = false
+	_online_official_start_humans = 0
+	_online_official_start_bots = 0
+	_online_forfeit_winner_actor_id = -1
+	_online_reward_activity_timer = 0.0
+	_online_reward_last_positions.clear()
+	_online_reward_last_aims.clear()
+	_online_reward_match_id = RewardIdentityManager.new_match_receipt_id()
 	for p in players:
 		var id := int(p.actor_id)
 		var skin_id := PlayerSkinRegistry.DEFAULT_SKIN_ID
@@ -1099,6 +1118,10 @@ func _initialize_online_match() -> void:
 			"third_place_finishes": 0,
 			"kills": 0,
 			"deaths": 0,
+			"rounds_participated": 0,
+			"active_samples": 0,
+			"activity_eligible": false,
+			"reward_claim_hash": RewardIdentityManager.peer_claim_hash(int(p.owner_peer_id)),
 			"pickups": 0,
 			"disarms": 0,
 			"melee": 0,
@@ -1107,6 +1130,18 @@ func _initialize_online_match() -> void:
 			"eliminated_at_ms": -1,
 			"hearts": GameConfig.ALL_GUN_MAX_HEARTS if GameConfig.game_mode == GameConfig.MODE_ALL_GUN else 0,
 		}
+	var participant_peer_ids: Array = []
+	for actor_id_value in online_actor_state:
+		var actor_id := int(actor_id_value)
+		if actor_id >= ONLINE_BOT_ACTOR_ID_BASE:
+			_online_official_start_bots += 1
+		else:
+			_online_official_start_humans += 1
+			participant_peer_ids.append(int((online_actor_state[actor_id_value] as Dictionary).get(
+				"owner_peer_id", -1)))
+	_online_official_started = GameConfig.is_official_beta_ruleset(
+		_online_official_start_humans, _online_official_start_bots) \
+		and RewardIdentityManager.all_participants_ready(participant_peer_ids)
 	if not GameEvents.gun_picked_up.is_connected(_on_online_gun_picked_up):
 		GameEvents.gun_picked_up.connect(_on_online_gun_picked_up)
 	if not NetworkManager.lobby_changed.is_connected(_on_online_roster_changed):
@@ -1136,6 +1171,9 @@ func _online_start_round() -> void:
 	_online_unlock_melee_after_delay(online_round_epoch)
 	for actor_id in online_actor_state:
 		var entry: Dictionary = online_actor_state[actor_id]
+		if int(actor_id) < ONLINE_BOT_ACTOR_ID_BASE:
+			entry["rounds_participated"] = int(
+				entry.get("rounds_participated", 0)) + 1
 		entry["alive"] = true
 		entry["round_kills"] = 0
 		entry["storm_time"] = 0.0
@@ -1155,11 +1193,17 @@ func _online_start_round() -> void:
 		else:
 			NetworkManager.broadcast_match_rpc(self, &"_net_play_first_round_intro", [_intro_authored_position()])
 			await get_tree().create_timer(3.0).timeout
+			if online_match_over:
+				return
 	if not skip_countdown:
 		for count in range(countdown_time, 0, -1):
+			if online_match_over:
+				return
 			online_announcement = str(count)
 			_broadcast_online_state()
 			await get_tree().create_timer(1.0).timeout
+	if online_match_over:
+		return
 	online_announcement = "GO!"
 	round_elapsed = 0.0
 	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_combat",
@@ -1970,6 +2014,8 @@ func _online_finish_round(winner_id: int, winner_label := "",
 		round_state = "set_end"
 		_broadcast_online_state()
 		await get_tree().create_timer(set_end_display_time).timeout
+		if online_match_over:
+			return
 		for actor_id in online_actor_state:
 			var entry: Dictionary = online_actor_state[actor_id]
 			entry["rounds"] = 0
@@ -1983,6 +2029,8 @@ func _online_finish_round(winner_id: int, winner_label := "",
 		round_state = "ended"
 		_broadcast_online_state()
 		await get_tree().create_timer(round_end_display_time).timeout
+		if online_match_over:
+			return
 		round_number += 1
 
 	online_round_epoch += 1
@@ -2014,9 +2062,54 @@ func _on_online_roster_changed() -> void:
 		if not NetworkManager.peers.has(owner_id):
 			removed.append(int(actor_id))
 	for actor_id in removed:
+		var departed: Dictionary = (online_actor_state[actor_id] as Dictionary).duplicate(true)
+		departed["finished_match"] = false
+		departed["activity_eligible"] = false
+		_online_departed_actor_state[actor_id] = departed
+		_online_reward_last_positions.erase(actor_id)
+		_online_reward_last_aims.erase(actor_id)
 		online_actor_state.erase(actor_id)
 		NetworkManager.broadcast_match_rpc(self, &"_net_remove_online_actor", [actor_id])
 	_broadcast_online_state()
+	_maybe_finish_online_forfeit()
+
+
+func _maybe_finish_online_forfeit() -> void:
+	if not _online_official_started or online_match_over \
+			or _online_forfeit_winner_actor_id >= 0 \
+			or GameConfig.game_mode != GameConfig.MODE_ONE_GUN \
+			or GameConfig.teams_enabled:
+		return
+	var human_actor_ids: Array[int] = []
+	for actor_id_value in online_actor_state:
+		var actor_id := int(actor_id_value)
+		if actor_id < ONLINE_BOT_ACTOR_ID_BASE:
+			human_actor_ids.append(actor_id)
+	if human_actor_ids.size() != 1:
+		return
+	_online_forfeit_winner_actor_id = human_actor_ids[0]
+	_finish_online_forfeit.call_deferred(_online_forfeit_winner_actor_id)
+
+
+func _finish_online_forfeit(champion_actor_id: int) -> void:
+	if online_match_over or not online_actor_state.has(champion_actor_id):
+		return
+	online_match_over = true
+	_online_transitioning = true
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_combat",
+		[false, online_round_epoch])
+	NetworkManager.broadcast_match_rpc(self, &"_net_set_online_players_enabled", [false])
+	var champion: Dictionary = online_actor_state[champion_actor_id]
+	champion["activity_eligible"] = true
+	champion["rounds_participated"] = maxi(int(champion.get("rounds_participated", 0)), 2)
+	champion["finished_match"] = true
+	champion["forfeit_winner"] = true
+	online_actor_state[champion_actor_id] = champion
+	online_announcement = "%s WINS BY FORFEIT!" % str(champion.get("name", "Player"))
+	round_state = "match_end"
+	_broadcast_online_state()
+	await get_tree().create_timer(0.75).timeout
+	_begin_online_winners_circle(champion_actor_id)
 
 func _on_online_gun_picked_up(_player_name: String) -> void:
 	if not NetworkManager.is_host():
@@ -2511,15 +2604,65 @@ func _begin_online_winners_circle(champion_actor_id: int) -> void:
 		return
 	var human_count := 0
 	var bot_count := 0
+	var participant_peer_ids: Array = []
 	for actor_id_value in online_actor_state:
-		if int(actor_id_value) >= ONLINE_BOT_ACTOR_ID_BASE:
+		var actor_id := int(actor_id_value)
+		var entry: Dictionary = online_actor_state[actor_id_value]
+		if actor_id >= ONLINE_BOT_ACTOR_ID_BASE:
 			bot_count += 1
 		else:
 			human_count += 1
-	var official := GameConfig.is_official_beta_ruleset(human_count, bot_count)
+			var peer_id := int(entry.get("owner_peer_id", -1))
+			participant_peer_ids.append(peer_id)
+			entry["reward_claim_hash"] = RewardIdentityManager.peer_claim_hash(peer_id)
+			entry["forfeit_winner"] = actor_id == _online_forfeit_winner_actor_id
+			entry["finished_match"] = true
+			entry["activity_eligible"] = bool(entry["forfeit_winner"]) \
+				or (int(entry.get("rounds_participated", 0)) >= 2 \
+				and (int(entry.get("active_samples", 0)) >= 5 \
+				or int(entry.get("kills", 0)) > 0 \
+				or int(entry.get("disarms", 0)) > 0 \
+				or int(entry.get("pickups", 0)) > 0 \
+				or int(entry.get("melee", 0)) > 0 \
+				or int(entry.get("total_round_wins", 0)) > 0))
+			online_actor_state[actor_id_value] = entry
+	var official := _online_official_started and human_count >= 1 and bot_count == 0 \
+		and RewardIdentityManager.all_participants_ready(participant_peer_ids, 1)
+	if _online_reward_match_id == "":
+		_online_reward_match_id = RewardIdentityManager.new_match_receipt_id()
+	var map_id := NetworkManager.pending_map_path
+	if map_id == "" and get_tree().current_scene != null:
+		map_id = get_tree().current_scene.scene_file_path
 	var result := WinnersResult.build_online(
-		online_actor_state, champion_actor_id, official)
+		online_actor_state, champion_actor_id, official,
+		_online_reward_match_id, map_id, _online_official_start_humans,
+		_online_departed_actor_state, _online_forfeit_winner_actor_id)
 	_winners_circle_coordinator.begin_online(result)
+
+
+func _sample_online_reward_activity() -> void:
+	for actor_id_value in online_actor_state:
+		var actor_id := int(actor_id_value)
+		if actor_id >= ONLINE_BOT_ACTOR_ID_BASE:
+			continue
+		var actor = NetworkManager.find_actor(actor_id)
+		if not actor is Node3D:
+			continue
+		var position := (actor as Node3D).global_position
+		var aim := Vector3.ZERO
+		if actor.has_method("get_aim_direction"):
+			aim = actor.call("get_aim_direction")
+		var moved := _online_reward_last_positions.has(actor_id) \
+			and position.distance_to(_online_reward_last_positions[actor_id]) >= 0.15
+		var aimed := _online_reward_last_aims.has(actor_id) and aim != Vector3.ZERO \
+			and aim.normalized().dot(
+				(_online_reward_last_aims[actor_id] as Vector3).normalized()) < 0.995
+		_online_reward_last_positions[actor_id] = position
+		_online_reward_last_aims[actor_id] = aim
+		if moved or aimed:
+			var entry: Dictionary = online_actor_state[actor_id_value]
+			entry["active_samples"] = int(entry.get("active_samples", 0)) + 1
+			online_actor_state[actor_id_value] = entry
 
 
 func _show_local_winners_circle(champion) -> void:
@@ -2760,6 +2903,11 @@ func _apply_melee_spawn_delay(generation: int):
 
 func _process(delta):
 	if NetworkManager.is_online():
+		if NetworkManager.is_host() and online_combat_live:
+			_online_reward_activity_timer -= delta
+			if _online_reward_activity_timer <= 0.0:
+				_online_reward_activity_timer = ONLINE_REWARD_ACTIVITY_SAMPLE_SECONDS
+				_sample_online_reward_activity()
 		if overtime_active:
 			overtime_elapsed += delta
 			if NetworkManager.is_host():

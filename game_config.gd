@@ -11,6 +11,7 @@ var player2_name = "Player 2"  # session-only, not saved to disk — P2 may be a
 
 # -- Game modes --
 const MODE_ONE_GUN := "one_gun"
+const OFFICIAL_BETA_RULESET_ID := "classic_beta_v1"
 const MODE_ALL_GUN := "all_gun"
 const MODE_ONE_OF_US := "one_of_us"
 const GAME_MODES := [MODE_ONE_GUN, MODE_ALL_GUN, MODE_ONE_OF_US]

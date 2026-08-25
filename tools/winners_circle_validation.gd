@@ -79,7 +79,8 @@ func _run() -> void:
 	state[2]["runner_up_finishes"] = 2
 	state[3]["runner_up_finishes"] = 1
 	state[3]["third_place_finishes"] = 2
-	var result: Dictionary = result_builder.build_online(state, 1, true)
+	var result: Dictionary = result_builder.build_online(
+		state, 1, true, "validation-match", "res://maps/test/ForestMap.tscn")
 	var entries: Array = result["entries"]
 	_check(entries.size() == 4, "all match participants enter the frozen result")
 	_check(int(entries[0]["actor_id"]) == 1 and int(entries[0]["placement"]) == 1,
@@ -90,10 +91,10 @@ func _run() -> void:
 		"an Official Classic result marks the champion Trophy presentation")
 	var champion_reward: Dictionary = reward_preview.for_actor(result, 1)
 	_check(int(champion_reward["trophy_delta"]) == 1
-			and champion_reward["xp_delta"] == null
-			and champion_reward["gun_tokens_delta"] == null
+			and int(champion_reward["xp_delta"]) == 85
+			and int(champion_reward["gun_tokens_delta"]) == 250
 			and not bool(champion_reward["persisted"]),
-		"the reward boundary previews one Trophy without inventing economy values")
+		"the reward boundary mirrors the locked official formula before settlement")
 	var custom_result := result.duplicate(true)
 	custom_result["official"] = false
 	_check(int(reward_preview.for_actor(custom_result, 1)["trophy_delta"]) == 0,
@@ -101,6 +102,21 @@ func _run() -> void:
 
 	result["local_peer_id"] = 1
 	var circle = winners_circle_script.new()
+	var forfeit_result: Dictionary = result_builder.build_online(
+		{1: state[1]}, 1, true, "forfeit-validation",
+		"res://maps/test/ForestMap.tscn", 3,
+		{2: state[2], 3: state[3]}, 1)
+	var forfeit_entries: Array = forfeit_result["entries"]
+	_check(int(forfeit_result.get("started_humans", 0)) == 3
+		and int(forfeit_result.get("finisher_humans", 0)) == 1
+		and bool(forfeit_result.get("forfeit_win", false)),
+		"a match that started Official preserves its one-finisher forfeit state")
+	_check(forfeit_entries.size() == 3
+		and bool((forfeit_entries[0] as Dictionary).get("finished_match", false))
+		and not bool((forfeit_entries[1] as Dictionary).get("finished_match", true))
+		and not bool((forfeit_entries[2] as Dictionary).get("finished_match", true)),
+		"the sole finisher stays first while departed players remain visible as DNF")
+
 	root.add_child(circle)
 	circle.present(result, [1], true, true)
 	await process_frame
@@ -218,4 +234,7 @@ func _sample_state(actor_id: int, player_name: String, round_wins: int,
 		"disarms": disarms,
 		"pickups": 2,
 		"melee": 3,
+		"rounds_participated": 3,
+		"active_samples": 12,
+		"activity_eligible": true,
 	}

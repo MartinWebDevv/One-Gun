@@ -47,6 +47,10 @@ Tiny particle bursts of four particles or fewer retain their full count so gamep
 Render scale, AA, and shadow-atlas settings apply to the root viewport and every SubViewport, including splitscreen and menu/showcase viewports. UI remains at native resolution.
 
 Low uses the purpose-built lightweight maps/test/title_bg_map.tscn for the live main-menu world instead of cycling complete playable maps. The lobby keeps its authored live 3D map preview on every quality tier; its SubViewport inherits render-scale and effects reductions, and map swaps release the previous preview scene before instantiating the next one to avoid a two-map memory peak.
+Profile, Prize Counter, Locker, and Progression reuse static 1600×900 backdrop
+textures plus a quality-scaled lightweight mote layer; only Locker keeps its one
+existing character-preview SubViewport. Official reward activity sampling runs
+once per second on the host and adds no movement/combat RPC or per-frame database work.
 
 When adding an expensive visual feature, integrate it with this architecture or explain why it must remain invariant. Do not hardcode maximum-cost effects for every machine.
 
@@ -155,6 +159,14 @@ The weaker laptop is a real release target. At good checkpoints/releases, explic
 
 **Verified checkpoint — 2026-08-22:** the current build received a successful user-reported gameplay check on the weaker laptop using the Low preset. This checks off the current compatibility smoke test; it is not a measured 60 FPS/frame-time profile. Retest after the Winners Circle cinematic and after other substantial rendering, map, character-count or transition changes.
 
+**Victory-move checkpoint — 2026-08-24:** all 14 optional FBX clips remain below
+the 10 MB per-asset intake threshold and are not part of the eager gameplay animation
+set. Only the equipped or actively previewed move is retargeted and cached for a
+given character model. Retest repeated Locker previews and ceremonies on Low.
+The Prize Counter reuses one shadow-free 512×256 move viewport and does not create
+a character until a locally mapped Victory item is selected. The viewport and its
+animation player stop when inspecting ordinary items or leaving the page. Keep this
+single-preview/lazy-load behavior when adding future poses or move types.
 ## 12. Decision rule for discovered problems
 
 A small, safe, clearly beneficial fix may be included in current work.

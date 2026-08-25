@@ -1,6 +1,7 @@
 extends Node
 
-const CUSTOMIZATION_SCRIPT = preload("res://UI/character_customization_overlay.gd")
+const CUSTOMIZATION_SCRIPT = preload("res://UI/themed_locker_overlay.gd")
+const Catalog = preload("res://supabase/one_gun_catalog.gd")
 
 var _failed := false
 var _overlay = null
@@ -28,6 +29,7 @@ func _run() -> void:
 	var original_p2 := str(GameConfig.player2_skin_id)
 	var original_p1_model := str(PlayerPrefs.get_setting("character_model_id"))
 	var original_p2_model := str(GameConfig.player2_model_id)
+	_seed_locker_data()
 	_overlay = CUSTOMIZATION_SCRIPT.new()
 	_overlay.configure(false, 2)
 	add_child(_overlay)
@@ -42,8 +44,15 @@ func _run() -> void:
 		var expected := 5 if row_index < 2 else 3
 		_check(row != null and row.get_child_count() == expected,
 			"color row %d should contain %d cards" % [row_index + 1, expected])
-	_check(_overlay.find_child("LockedSkins", true, false).get_child_count() == 5,
-		"locked Skins preview should stay visible")
+	_check(_overlay.find_child("LockedSkins", true, false) == null,
+		"Locker should not show unowned locked-item placeholders")
+	_check(_overlay.find_child("LockerCategoryTabs", true, false) != null,
+		"Locker should expose Character, Weapons, Victory, and Audio")
+	_check(_overlay.find_child("CharacterLockerTabs", true, false) != null,
+		"Character Locker should expose Skins, Colors, and Cosmetics")
+	var title := _overlay.find_child("CustomizationTitle", true, false) as Label
+	_check(title != null and title.text == "THE LOCKER",
+		"customization screen did not build the themed Locker header")
 	_check(_overlay.find_child("Player1Tab", true, false) != null
 		and _overlay.find_child("Player2Tab", true, false) != null,
 		"split-screen customization should show P1/P2 tabs")
@@ -52,8 +61,55 @@ func _run() -> void:
 		"customization should show M/F model buttons beneath the preview")
 	_check(_overlay.find_child("Randomize", true, false) != null
 		and _overlay.find_child("Default", true, false) != null
+		and _overlay.find_child("ResetLoadout", true, false) != null
 		and _overlay.find_child("Confirm", true, false) != null,
-		"action bar should contain Randomize, Default, and Confirm")
+		"action bar should contain color tools, Reset Loadout, and Confirm")
+
+	_overlay.call("_show_character_subcategory", 2)
+	await _wait_frames(2)
+	var owned_list = _overlay.get("_owned_list") as VBoxContainer
+	var owned_text := _descendant_text(owned_list)
+	_check(owned_text.contains("COWBOY HAT") and owned_text.contains("FOUNDER CROWN"),
+		"Character Owned Gear did not include owned hidden/public cosmetics")
+	_check(not owned_text.contains("GOLDEN GUN"),
+		"Character Owned Gear included an item from another category")
+	_overlay.call("_show_locker_category", 1)
+	await _wait_frames(2)
+	owned_text = _descendant_text(owned_list)
+	_check(owned_text.contains("GOLDEN GUN") and not owned_text.contains("COWBOY HAT"),
+		"Weapons Locker did not isolate owned weapon cosmetics")
+	_overlay.call("_show_locker_category", 2)
+	await _wait_frames(2)
+	owned_text = _descendant_text(owned_list)
+	var reset_loadout = _overlay.find_child("ResetLoadout", true, false) as Button
+	_check(reset_loadout != null and reset_loadout.visible,
+		"Reset Loadout should replace color tools outside the Colors screen")
+	_check(owned_text.contains("FRESH FOOTWORK")
+		and owned_text.contains("BIRDIE BOOGIE")
+		and owned_text.contains("PREVIEW")
+		and owned_text.contains("EQUIP PODIUM")
+		and owned_text.contains("EQUIP ROUND")
+		and owned_text.contains("UNEQUIP"),
+		"Victory Locker did not expose dual-slot dance controls")
+	_overlay.call("_on_locker_subcategory_selected", 1)
+	await _wait_frames(2)
+	owned_text = _descendant_text(owned_list)
+	_check(not owned_text.contains("FRESH FOOTWORK")
+		and not owned_text.contains("BIRDIE BOOGIE"),
+		"Animated dances leaked into the Poses filter")
+	_overlay.call("_on_locker_subcategory_selected", 2)
+	await _wait_frames(2)
+	owned_text = _descendant_text(owned_list)
+	_check(owned_text.contains("FRESH FOOTWORK")
+		and owned_text.contains("BIRDIE BOOGIE"),
+		"Dances filter did not keep all animated victory moves together")
+	_overlay.call("_show_locker_category", 3)
+	await _wait_frames(2)
+	owned_text = _descendant_text(owned_list)
+	_check(owned_text.contains("DEEP ORBIT") and owned_text.contains("PREVIEW"),
+		"Music Locker did not expose the owned Winners Circle theme")
+	_overlay.call("_show_locker_category", 0)
+	_overlay.call("_show_character_subcategory", 0)
 
 	for skin in PlayerSkinRegistry.SKINS:
 		var skin_id := str(skin["id"])
@@ -68,6 +124,28 @@ func _run() -> void:
 	_check(preview != null and animation_player != null
 		and animation_player.current_animation == "idle",
 		"shared preview should show an evaluated Idle pose")
+	var preview_pivot = _overlay.get("_preview_pivot") as Node3D
+	var still_rotation := preview_pivot.rotation.y
+	await _wait_frames(8)
+	_check(is_equal_approx(preview_pivot.rotation.y, still_rotation),
+		"Locker preview rotated without a click-drag")
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	_overlay.call("_on_preview_gui_input", press)
+	var drag_right := InputEventMouseMotion.new()
+	drag_right.relative = Vector2(32.0, 0.0)
+	_overlay.call("_on_preview_gui_input", drag_right)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	_overlay.call("_on_preview_gui_input", release)
+	_check(preview_pivot.rotation.y > still_rotation,
+		"dragging right did not rotate the model to the right")
+	var released_rotation := preview_pivot.rotation.y
+	await _wait_frames(8)
+	_check(is_equal_approx(preview_pivot.rotation.y, released_rotation),
+		"Locker preview kept rotating after the mouse was released")
 
 	_overlay.call("_select_skin", "salmon")
 	_overlay.call("_select_model", "female")
@@ -96,8 +174,8 @@ func _run() -> void:
 	var viewport_rect := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 	_check(canvas != null and _rect_fits(canvas.get_global_rect(), viewport_rect),
 		"responsive customization canvas extends out of frame")
-	for control_name in ["CharacterPreviewPanel", "CharacterCustomizationCabinet",
-			"Back", "Randomize", "Default", "Confirm"]:
+	for control_name in ["CharacterPreviewPanel", "LockerCabinet",
+			"Back", "Randomize", "Default", "ResetLoadout", "Confirm"]:
 		var control := _overlay.find_child(control_name, true, false) as Control
 		_check(control != null and _rect_fits(control.get_global_rect(), viewport_rect),
 			"%s extends out of frame" % control_name)
@@ -144,8 +222,81 @@ func _run() -> void:
 	if _failed:
 		get_tree().quit(1)
 	else:
-		print("CHARACTER_CUSTOMIZATION_VALIDATION_OK colors=13 models=2 rows=5/5/3 portraits=online-ready")
+		print("LOCKER_VALIDATION_OK colors=13 owned-only categories=4 models=2 portraits=online-ready")
 		get_tree().quit(0)
+
+
+func _seed_locker_data() -> void:
+	var supabase = get_node("/root/SupabaseManager")
+	supabase.project_url = ""
+	supabase.publishable_key = ""
+	supabase.access_token = "validation-access-token"
+	supabase.refresh_token = "validation-refresh-token"
+	supabase.authenticated_user_id = "00000000-0000-0000-0000-000000000003"
+	supabase.access_token_expires_at = int(Time.get_unix_time_from_system()) + 3600
+	supabase.login_state = "authenticated"
+	supabase.shop_items.clear()
+	supabase.shop_items.append({"id": "cowboy_hat", "display_name": "Cowboy Hat", "item_type": "hat"})
+	supabase.shop_items.append({"id": "golden_gun_skin", "display_name": "Golden Gun Skin", "item_type": "gun_skin"})
+	supabase.shop_items.append({"id": "base_one_gun", "display_name": "Original One Gun", "item_type": "gun_skin", "category": "weapons", "subcategory": "gun_skins"})
+	supabase.shop_items.append({"id": "base_arena_melee", "display_name": "Original Melee Finish", "item_type": "melee_skin", "category": "weapons", "subcategory": "melee_skins"})
+	supabase.shop_items.append({"id": "hip_hop_dance", "display_name": "Hip Hop Dance", "item_type": "victory_dance", "category": "victory", "subcategory": "dances"})
+	supabase.shop_items.append({
+		"id": "podium_fresh_footwork", "display_name": "Fresh Footwork",
+		"item_type": "victory_dance", "category": "victory", "subcategory": "dances",
+	})
+	supabase.shop_items.append({
+		"id": "round_birdie_boogie", "display_name": "Birdie Boogie",
+		"item_type": "victory_dance", "category": "victory", "subcategory": "dances",
+	})
+	supabase.shop_items.append({"id": "wc_theme_deep_orbit", "display_name": "Deep Orbit", "item_type": "ceremony_theme"})
+	var progression = get_node("/root/ProgressionManager")
+	progression.catalog_items.clear()
+	for shop_item in supabase.shop_items:
+		progression.catalog_items.append(Catalog.normalize_item(shop_item))
+	progression.catalog_items.append(Catalog.normalize_item({
+		"id": "founder_crown", "display_name": "Founder Crown",
+		"item_type": "hat", "shop_visible": false, "active": true,
+	}))
+	supabase.inventory.clear()
+	supabase.inventory.append({"item_id": "cowboy_hat", "source": "purchase"})
+	supabase.inventory.append({"item_id": "founder_crown", "source": "founder_grant"})
+	supabase.inventory.append({"item_id": "golden_gun_skin", "source": "purchase"})
+	supabase.inventory.append({"item_id": "base_one_gun", "source": "base_game"})
+	supabase.inventory.append({"item_id": "base_arena_melee", "source": "base_game"})
+	supabase.inventory.append({"item_id": "hip_hop_dance", "source": "purchase"})
+	supabase.inventory.append({"item_id": "wc_theme_deep_orbit", "source": "purchase"})
+	supabase.inventory.append({"item_id": "podium_fresh_footwork", "source": "purchase"})
+	supabase.inventory.append({"item_id": "round_birdie_boogie", "source": "purchase"})
+	supabase.set("_owned_item_ids", {
+		"cowboy_hat": true,
+		"founder_crown": true,
+		"golden_gun_skin": true,
+		"base_one_gun": true,
+		"base_arena_melee": true,
+		"hip_hop_dance": true,
+		"wc_theme_deep_orbit": true,
+		"podium_fresh_footwork": true,
+		"round_birdie_boogie": true,
+	})
+	supabase.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
+		"hat": "founder_crown",
+		"gun_skin": "base_one_gun",
+		"melee_skin": "base_arena_melee",
+		"emote": "podium_fresh_footwork",
+		"round_victory_move": "round_birdie_boogie",
+		"ceremony_theme": "wc_theme_deep_orbit",
+	})
+
+func _descendant_text(root_node: Node) -> String:
+	var result := ""
+	if root_node == null:
+		return result
+	for child in root_node.find_children("*", "Label", true, false):
+		result += "%s\n" % str((child as Label).text)
+	for child in root_node.find_children("*", "Button", true, false):
+		result += "%s\n" % str((child as Button).text)
+	return result
 
 
 func _capture(file_name: String) -> void:

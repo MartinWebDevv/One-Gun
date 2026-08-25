@@ -38,6 +38,7 @@ var _map_preview = null
 
 # UI references (built procedurally in _build_lobby_ui).
 var _map_dropdown: OptionButton
+var _map_sort_dropdown: OptionButton
 var _mode_dropdown: OptionButton
 var _bot_settings_button: OneGunButton
 var _match_settings_button: OneGunButton
@@ -55,6 +56,7 @@ var _info_labels := {}          # stat key -> value Label
 var _roster_title: Label
 var _roster_list: VBoxContainer
 var _map_cards: Array = []      # OneGunMapCard per map
+var _map_order: Array[int] = []
 var _carousel_prev: OneGunButton
 var _carousel_next: OneGunButton
 var _thumbnails := {}           # map index -> ImageTexture captured from live preview
@@ -90,6 +92,9 @@ const PLAY_HEIGHT := 84.0
 
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_map_order = MapRegistry.sorted_indices("alphabetical")
+	if not _map_order.is_empty():
+		selected_map_index = _map_order[0]
 	_build_map_preview()
 	_build_lobby_ui()
 	_setup_online_mode()
@@ -190,7 +195,7 @@ func _on_net_config_synced():
 	if NetworkManager.pending_map_path == RANDOM_MAP_SENTINEL:
 		map_select_mode = MapSelectMode.RANDOM
 		if _map_dropdown != null:
-			_map_dropdown.select(MAPS.size())
+			_select_map_dropdown_id(RANDOM_ITEM_ID)
 		if _map_preview != null:
 			_map_preview.apply(MapSelectMode.RANDOM, selected_map_index)
 		_sync_carousel()
@@ -202,7 +207,7 @@ func _on_net_config_synced():
 		selected_map_index = index
 		map_select_mode = MapSelectMode.SPECIFIC
 		if _map_dropdown != null:
-			_map_dropdown.select(index)
+			_select_map_dropdown_id(index)
 		if _map_preview != null:
 			_map_preview.apply(MapSelectMode.SPECIFIC, index)
 		_sync_carousel()
@@ -321,16 +326,26 @@ func _build_left_cabinet() -> void:
 
 	column.add_child(OneGunUI.make_label("MAP", OneGunUI.TEXT_XS, "muted", true))
 	_map_dropdown = OneGunUI.make_dropdown()
-	for i in MAPS.size():
-		_map_dropdown.add_item(str(MAPS[i].get("name", "Unnamed Map")), i)
+	for map_index in _map_order:
+		_map_dropdown.add_item(
+			str(MAPS[map_index].get("name", "Unnamed Map")), map_index)
 	if MAPS.is_empty():
 		_map_dropdown.add_item("No maps available", -1)
 		_map_dropdown.disabled = true
 	else:
 		_map_dropdown.add_item("Random Map", RANDOM_ITEM_ID)
-		_map_dropdown.select(clampi(selected_map_index, 0, MAPS.size() - 1))
+		_select_map_dropdown_id(selected_map_index)
 	_map_dropdown.item_selected.connect(_on_map_dropdown_selected)
 	column.add_child(_map_dropdown)
+	column.add_child(OneGunUI.make_label(
+		"SORT MAPS", OneGunUI.TEXT_XS, "muted", true))
+	_map_sort_dropdown = OneGunUI.make_dropdown(
+		PackedStringArray(["A–Z", "NEWEST"]))
+	_map_sort_dropdown.name = "MapSort"
+	_map_sort_dropdown.tooltip_text = \
+		"Sort map cards alphabetically or by authored addition order."
+	_map_sort_dropdown.item_selected.connect(_on_map_sort_selected)
+	column.add_child(_map_sort_dropdown)
 
 	column.add_child(OneGunUI.make_label("GAME MODE", OneGunUI.TEXT_XS, "muted", true))
 	_mode_dropdown = OneGunUI.make_dropdown(PackedStringArray(["ONE GUN", "ALL GUN", "ONE OF US"]))
@@ -341,10 +356,10 @@ func _build_left_cabinet() -> void:
 	_build_one_of_us_preference_panel(column)
 
 	_bot_settings_button = null
-	_match_settings_button = _make_cabinet_button("SETTINGS")
+	_match_settings_button = _make_cabinet_button("MATCH SETTINGS")
 	_match_settings_button.pressed.connect(_on_match_settings_button_pressed)
 	column.add_child(_match_settings_button)
-	_character_customization_button = _make_cabinet_button("CHARACTER CUSTOMIZATION")
+	_character_customization_button = _make_cabinet_button("LOCKER")
 
 	_character_customization_button.pressed.connect(_on_character_customization_pressed)
 	column.add_child(_character_customization_button)
@@ -652,16 +667,18 @@ func _build_carousel() -> void:
 		_cards_row.add_child(empty_state)
 		empty_state.show_empty.call_deferred("NO MAPS AVAILABLE", "Add a valid map entry to the map registry.")
 	else:
-		for i in MAPS.size():
+		_map_cards.resize(MAPS.size())
+		for map_index in _map_order:
 			var card := OneGunMapCard.new()
 			_cards_row.add_child(card)
-			var thumbnail := MapRegistry.load_thumbnail(i)
+			var thumbnail := MapRegistry.load_thumbnail(map_index)
 			if thumbnail != null:
-				_thumbnails[i] = thumbnail
-			card.set_map(i, str(MAPS[i].get("name", "Unnamed Map")), thumbnail,
-					MAPS[i].get("tint", OneGunUI.color("face")))
+				_thumbnails[map_index] = thumbnail
+			card.set_map(map_index,
+					str(MAPS[map_index].get("name", "Unnamed Map")), thumbnail,
+					MAPS[map_index].get("tint", OneGunUI.color("face")))
 			card.card_selected.connect(_on_map_card_selected)
-			_map_cards.append(card)
+			_map_cards[map_index] = card
 
 	_carousel_next = _make_chevron_button(OneGunIcon.Kind.CHEVRON_RIGHT)
 	_carousel_next.pressed.connect(func(): _step_map(1))
@@ -777,12 +794,14 @@ func _apply_responsive_layout() -> void:
 
 
 func _configure_focus_navigation() -> void:
-	var left_controls: Array = [_map_dropdown, _mode_dropdown, _match_settings_button,
+	var left_controls: Array = [_map_dropdown, _map_sort_dropdown, _mode_dropdown, _match_settings_button,
 			_character_customization_button, _player_settings_button, _back_button]
 	left_controls = left_controls.filter(func(control): return control != null)
 	OneGunUI.chain_focus_vertical(left_controls)
 	var carousel_controls: Array = [_carousel_prev]
-	carousel_controls.append_array(_map_cards)
+	for map_index in _map_order:
+		if _map_cards[map_index] != null:
+			carousel_controls.append(_map_cards[map_index])
 	carousel_controls.append(_carousel_next)
 	for index in carousel_controls.size():
 		var control := carousel_controls[index] as Control
@@ -833,7 +852,7 @@ func _on_map_card_selected(map_index: int) -> void:
 		return
 	map_select_mode = MapSelectMode.SPECIFIC
 	selected_map_index = map_index
-	_map_dropdown.select(map_index)
+	_select_map_dropdown_id(map_index)
 	if _map_preview != null:
 		_map_preview.apply(map_select_mode, selected_map_index)
 	_sync_carousel()
@@ -844,8 +863,48 @@ func _on_map_card_selected(map_index: int) -> void:
 func _step_map(direction: int) -> void:
 	if MAPS.is_empty():
 		return
-	var next := wrapi(selected_map_index + direction, 0, MAPS.size())
-	_on_map_card_selected(next)
+	var current_position := _map_order.find(selected_map_index)
+	if current_position < 0:
+		current_position = 0
+	var next_position := wrapi(current_position + direction, 0, _map_order.size())
+	_on_map_card_selected(_map_order[next_position])
+
+
+func _on_map_sort_selected(index: int) -> void:
+	_map_order = MapRegistry.sorted_indices("newest" if index == 1 else "alphabetical")
+	_rebuild_map_sort_presentation()
+
+
+func _rebuild_map_sort_presentation() -> void:
+	if _map_dropdown != null:
+		_map_dropdown.clear()
+		for map_index in _map_order:
+			_map_dropdown.add_item(
+				str(MAPS[map_index].get("name", "Unnamed Map")), map_index)
+		if MAPS.is_empty():
+			_map_dropdown.add_item("No maps available", -1)
+			_map_dropdown.disabled = true
+		else:
+			_map_dropdown.add_item("Random Map", RANDOM_ITEM_ID)
+			_select_map_dropdown_id(
+				RANDOM_ITEM_ID if map_select_mode == MapSelectMode.RANDOM \
+				else selected_map_index)
+	if _cards_row != null:
+		for display_index in _map_order.size():
+			var map_index := _map_order[display_index]
+			var card: Control = _map_cards[map_index]
+			if card != null:
+				_cards_row.move_child(card, display_index)
+	_sync_carousel()
+	_configure_focus_navigation.call_deferred()
+
+
+func _select_map_dropdown_id(item_id: int) -> void:
+	if _map_dropdown == null:
+		return
+	var item_index := _map_dropdown.get_item_index(item_id)
+	if item_index >= 0:
+		_map_dropdown.select(item_index)
 
 
 func _sync_carousel() -> void:
