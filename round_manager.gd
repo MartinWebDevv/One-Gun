@@ -16,6 +16,7 @@ const ONLINE_BOT_ACTOR_ID_BASE := 10000
 const MELEE_MARKER_REFILL_TIME := 5.0
 const PICKUP_MARKER_REFILL_TIME := 8.0
 const ONLINE_REWARD_ACTIVITY_SAMPLE_SECONDS := 1.0
+const WINNERS_CIRCLE_HANDOFF_SECONDS := 2.75
 
 const DummyScene = preload("res://DummyModel.tscn")
 const GunScene = preload("res://gun.tscn")
@@ -2002,7 +2003,7 @@ func _online_finish_round(winner_id: int, winner_label := "",
 		_broadcast_online_state()
 		if not GameConfig.teams_enabled \
 				and GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
-			await get_tree().create_timer(0.75).timeout
+			await get_tree().create_timer(WINNERS_CIRCLE_HANDOFF_SECONDS).timeout
 			_begin_online_winners_circle(winner_id)
 		else:
 			await get_tree().create_timer(match_end_display_time).timeout
@@ -2108,7 +2109,8 @@ func _finish_online_forfeit(champion_actor_id: int) -> void:
 	online_announcement = "%s WINS BY FORFEIT!" % str(champion.get("name", "Player"))
 	round_state = "match_end"
 	_broadcast_online_state()
-	await get_tree().create_timer(0.75).timeout
+	NetworkManager.broadcast_match_rpc(self, &"_net_play_online_victory", [champion_actor_id])
+	await get_tree().create_timer(WINNERS_CIRCLE_HANDOFF_SECONDS).timeout
 	_begin_online_winners_circle(champion_actor_id)
 
 func _on_online_gun_picked_up(_player_name: String) -> void:
@@ -2637,6 +2639,9 @@ func _begin_online_winners_circle(champion_actor_id: int) -> void:
 		online_actor_state, champion_actor_id, official,
 		_online_reward_match_id, map_id, _online_official_start_humans,
 		_online_departed_actor_state, _online_forfeit_winner_actor_id)
+	print("[REWARDS] Frozen match %s official=%s starters=%d finishers=%d" % [
+		str(result.get("match_id", "")), bool(result.get("official", false)),
+		int(result.get("started_humans", 0)), int(result.get("finisher_humans", 0))])
 	_winners_circle_coordinator.begin_online(result)
 
 
@@ -2682,6 +2687,7 @@ func _show_local_winners_circle(champion) -> void:
 
 
 func get_scoreboard_data() -> Array:
+	var gun_holder_actor_id := _scoreboard_gun_holder_actor_id()
 	if NetworkManager.is_online():
 		var online_data: Array = []
 		for actor_id in online_actor_state:
@@ -2690,6 +2696,9 @@ func get_scoreboard_data() -> Array:
 				"actor_id": int(actor_id),
 				"name": str(entry.get("name", "Player")),
 				"team_id": int(entry.get("team_id", -1)),
+				"is_host": int(entry.get("owner_peer_id", -1)) == 1,
+				"is_bot": int(actor_id) >= ONLINE_BOT_ACTOR_ID_BASE,
+				"has_gun": int(actor_id) == gun_holder_actor_id,
 				"sets": int(entry.get("sets", 0)),
 				"rounds": int(entry.get("rounds", 0)),
 				"kills": int(entry.get("kills", 0)),
@@ -2716,6 +2725,9 @@ func get_scoreboard_data() -> Array:
 			"actor_id": int(p.get("actor_id")),
 			"name":    p.get_display_name(),
 			"team_id": int(p.get("team_id")),
+			"is_host": false,
+			"is_bot": bool(p.get("is_bot")) if "is_bot" in p else false,
+			"has_gun": int(p.get("actor_id")) == gun_holder_actor_id,
 			"sets":    match_points.get(p, 0),
 			"rounds":  round_wins.get(p, 0),
 			"kills":   stat_kills.get(p, 0),
@@ -2734,6 +2746,17 @@ func get_scoreboard_data() -> Array:
 	)
 	_apply_duplicate_scoreboard_labels(data)
 	return data
+
+
+func _scoreboard_gun_holder_actor_id() -> int:
+	for gun_value in get_tree().get_nodes_in_group("gun"):
+		var gun := gun_value as Node
+		if gun == null:
+			continue
+		var holder = gun.get("player_ref")
+		if holder != null and is_instance_valid(holder) and "actor_id" in holder:
+			return int(holder.get("actor_id"))
+	return -1
 
 
 func _apply_duplicate_scoreboard_labels(data: Array) -> void:
@@ -3946,7 +3969,7 @@ func _end_round(alive, multi_winner_draw := false, winner_label := "",
 				_set_round_label_text(display_name + " WINS THE MATCH!")
 				if not GameConfig.teams_enabled \
 						and GameConfig.game_mode != GameConfig.MODE_ONE_OF_US:
-					await get_tree().create_timer(0.75).timeout
+					await get_tree().create_timer(WINNERS_CIRCLE_HANDOFF_SECONDS).timeout
 					_show_local_winners_circle(winner)
 				else:
 					await get_tree().create_timer(match_end_display_time).timeout

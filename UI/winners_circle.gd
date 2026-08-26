@@ -12,11 +12,10 @@ const StageBlockoutScene = preload("res://UI/winners_circle_stage_blockout.tscn"
 const TwinkleBackdrop = preload("res://UI/winners_circle_twinkle_backdrop.gd")
 
 const MINIMUM_VIEW_TIME := 10.0
-const AUTO_RETURN_TIME := 25.0
 const GUN_MODEL_PATH := "res://models/weaponModels/water_gun.glb"
 const TROPHY_MODEL_PATH := "res://models/rewards/winners_circle_trophy.glb"
 const PERFORMER_PRE_ROLL := 0.18
-const INTRO_FADE_DURATION := 0.45
+const INTRO_FADE_DURATION := 1.35
 const RESULTS_FADE_DURATION := 0.34
 
 signal ready_changed(ready: bool)
@@ -36,7 +35,7 @@ var _stage_viewport: SubViewport
 var _ready_button: OneGunButton
 var _host_return_button: OneGunButton
 var _ready_count_label: Label
-var _auto_return_label: Label
+var _return_status_label: Label
 var _standing_ready_labels: Dictionary = {}
 var _reward_labels: Dictionary = {}
 var _local_ready_buttons: Dictionary = {}
@@ -164,18 +163,15 @@ func _process(_delta: float) -> void:
 			button.disabled = not controls_unlocked
 	if _return_deadline_msec >= 0:
 		var remaining := maxf(float(_return_deadline_msec - now) / 1000.0, 0.0)
-		if _auto_return_label != null:
-			_auto_return_label.text = "RETURNING TO LOBBY IN %d" % maxi(ceili(remaining), 0)
+		if _return_status_label != null:
+			_return_status_label.text = "RETURNING TO LOBBY IN %d" % maxi(ceili(remaining), 0)
 		if not _online and remaining <= 0.0 and not _return_signal_sent:
 			_return_signal_sent = true
 			local_return_requested.emit()
 		return
-	var auto_remaining := maxf(AUTO_RETURN_TIME - elapsed, 0.0)
-	if _auto_return_label != null:
-		_auto_return_label.text = "AUTO RETURN IN %d" % maxi(ceili(auto_remaining), 0)
-	if not _online and auto_remaining <= 0.0 and not _return_signal_sent:
-		_return_signal_sent = true
-		local_return_requested.emit()
+	if _return_status_label != null:
+		_return_status_label.text = "READY UP WHEN FINISHED" if controls_unlocked \
+			else "CEREMONY IN PROGRESS"
 
 
 func _build_interface() -> void:
@@ -638,9 +634,10 @@ func _build_controls(parent: VBoxContainer) -> void:
 	_ready_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_ready_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(_ready_count_label)
-	_auto_return_label = OneGunUI.make_label("AUTO RETURN IN 25", 16, "muted", true)
-	_auto_return_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(_auto_return_label)
+	_return_status_label = OneGunUI.make_label("CEREMONY IN PROGRESS", 16, "muted", true)
+	_return_status_label.name = "ReturnStatusLabel"
+	_return_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_return_status_label)
 
 	if _online:
 		var local_peer_id := int(_result.get("local_peer_id", -1))

@@ -39,10 +39,13 @@
 	  "Twinkling background lights and redesigned result panels make the final standings easier to read without covering the podium scene.",
 	  "A separate Ceremony Volume slider now controls Winners Circle music. Previewing a ceremony theme pauses the menu music so the tracks do not overlap.",
 	  "Low, Medium, High, and Ultra settings now scale menus, map previews, gameplay effects, and the Winners Circle more consistently.",
-      "Original One Gun, Original Melee Finish, Hip Hop, Swing Dance, and Ceremony March now appear as permanently owned starter choices in the Locker."
+      "Original One Gun, Original Melee Finish, Hip Hop, Swing Dance, and Ceremony March now appear as permanently owned starter choices in the Locker.",
+	  "Winners Circle results now stay open until every connected player is Ready or the host returns everyone to the lobby.",
+	  "Holding Tab during a match now opens the Arena Matchboard, with clearer placement, round progress, kills, disarms, player status, match details, and markers for you, the host, and the current One Gun holder. The top five always stay visible, while the final row shows your true placement when you are 6th–10th."
 	],
 	"Fixed": [
 	  "Signed-in accounts without a loaded name now display CLOUD PROFILE instead of Signed In Null.",
+	  "Official Tailscale matches now correctly award XP and Gun Tokens to finishers and a Trophy to the champion.",
 	  "Players who leave an Official match are marked DNF and receive no rewards. Players who stay can still finish and receive their full rewards.",
 	  "When only one player remains in an Official match, that player now wins immediately by forfeit and receives their earned XP, 250 Gun Tokens, and one Trophy.",
 	  "Typing in chat no longer moves your character or spectator camera.",

@@ -116,6 +116,13 @@ static func mode_display_name(mode: String) -> String:
 			return "ONE OF US"
 	return "ONE GUN"
 
+static func confirmation_payload(result: Dictionary) -> Dictionary:
+	# Presentation-only values vary per client and must never participate in the
+	# shared Supabase result hash used to settle an Official match.
+	var payload := result.duplicate(true)
+	payload.erase("local_peer_id")
+	return payload
+
 
 static func _entry_from_state(state: Dictionary, actor_id: int) -> Dictionary:
 	return {

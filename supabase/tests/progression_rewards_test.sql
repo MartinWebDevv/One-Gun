@@ -113,23 +113,25 @@ insert into reward_test_payload values (jsonb_build_object(
     )
 ));
 
+-- Each caller deliberately supplies a different presentation-only viewer ID.
+-- The public RPC must remove it before hashing the shared match result.
 select set_config('request.jwt.claim.sub',
     '10000000-0000-0000-0000-000000000001', false);
 select public.confirm_official_beta_match(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1, '111111111111111111111111111111111111111111111111',
-    (select result from reward_test_payload));
+    (select result || jsonb_build_object('local_peer_id', 1) from reward_test_payload));
 
 select set_config('request.jwt.claim.sub',
     '10000000-0000-0000-0000-000000000002', false);
 select public.confirm_official_beta_match(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 2, '222222222222222222222222222222222222222222222222',
-    (select result from reward_test_payload));
+    (select result || jsonb_build_object('local_peer_id', 2) from reward_test_payload));
 
 select set_config('request.jwt.claim.sub',
     '10000000-0000-0000-0000-000000000003', false);
 select public.confirm_official_beta_match(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 3, '333333333333333333333333333333333333333333333333',
-    (select result from reward_test_payload));
+    (select result || jsonb_build_object('local_peer_id', 3) from reward_test_payload));
 
 do $$
 declare
@@ -210,7 +212,7 @@ select set_config('request.jwt.claim.sub',
     '10000000-0000-0000-0000-000000000001', false);
 select public.confirm_official_beta_match(
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1, '111111111111111111111111111111111111111111111111',
-    (select result from reward_test_payload));
+    (select result || jsonb_build_object('local_peer_id', 1) from reward_test_payload));
 do $$
 declare v_count integer; v_tokens bigint;
 begin

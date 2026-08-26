@@ -140,6 +140,7 @@ supabase/migrations/20260826_victory_moves_catalog.sql
 supabase/migrations/20260827_unified_victory_dances_and_loadout_controls.sql
 supabase/migrations/20260828_economy_forfeit_progression.sql
 supabase/migrations/20260829_season_career_daily_victory.sql
+supabase/migrations/20260830_reward_payload_canonicalization.sql
 ```
 
 The progression migration adds taxonomy/rotations/popularity, favorites/usage,
@@ -159,6 +160,11 @@ base match XP, gradual `150 + 2 * (level - 1)` Season requirements, and flat 400
 Career levels. A unique `(player_id, UTC date)` database receipt grants the first Official
 Classic victory 25 extra Season XP plus 100 Gun Tokens atomically; clients have read-only
 access to their own grant history and cannot choose the date or award themselves.
+The reward-payload canonicalization migration removes Winners Circle's
+per-client `local_peer_id` presentation field before the Official result is
+hashed. The client removes it as well. This guarantees every finisher confirms
+the same shared evidence while preserving local row highlighting and Ready UI.
+
 
 The original victory-move migration added fourteen priced products with stable IDs.
 The follow-up unified-dance migration preserves every purchase while moving all animated
@@ -203,8 +209,8 @@ plain-PostgreSQL copy of the linked public schema. They assert majority settleme
 exact reward totals, daily-grant uniqueness, separate Season/Career XP, idempotency, milestone unlocks, outfit proration/grants/equip,
 favorites, progression/profile reads, all fourteen unified dance IDs, dual-slot assignment, baseline ownership, UNEQUIP,
 outfit removal, model/color-preserving reset, permanent purchases, and token deductions. On 2026-08-24 the chronological
-suite covers migrations through `20260829`, including progression, forfeit settlement,
-placement Tokens, daily victory rewards, the new XP curves, and unified-dance/loadout tests; the linked CLI and a publishable-key REST read
+suite covers migrations through `20260830`, including progression, forfeit settlement,
+placement Tokens, daily victory rewards, payload canonicalization, the new XP curves, and unified-dance/loadout tests; the linked CLI and a publishable-key REST read
 verify the live catalog after each push.
 
 

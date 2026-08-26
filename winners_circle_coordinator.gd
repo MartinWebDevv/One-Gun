@@ -3,13 +3,13 @@ extends Node
 
 const WinnersCircle = preload("res://UI/winners_circle.gd")
 const RewardCalculator = preload("res://match_reward_calculator.gd")
+const WinnersResult = preload("res://winners_circle_match_result.gd")
 
 signal local_return_requested
 
 var _overlay: CanvasLayer = null
 var _result: Dictionary = {}
 var _ready_peers: Dictionary = {}
-var _session_generation := 0
 var _returning := false
 var _presentation_started_msec := 0
 
@@ -27,11 +27,8 @@ func begin_online(result: Dictionary) -> void:
 	_ready_peers.clear()
 	_presentation_started_msec = Time.get_ticks_msec()
 	_returning = false
-	_session_generation += 1
-	var generation := _session_generation
 	NetworkManager.broadcast_match_rpc(self, &"_net_show", [_result])
 	_publish_ready_state()
-	_auto_return(generation)
 
 
 func show_local(result: Dictionary, viewer_actor_ids: Array) -> void:
@@ -51,8 +48,8 @@ func _net_show(result: Dictionary) -> void:
 		return
 	if _overlay != null and is_instance_valid(_overlay):
 		_overlay.queue_free()
-	var local_result := result.duplicate(true)
-	local_result["local_peer_id"] = NetworkManager.local_id()
+	var presentation_result := result.duplicate(true)
+	presentation_result["local_peer_id"] = NetworkManager.local_id()
 	var viewer_actor_ids: Array[int] = []
 	if NetworkManager.local_match_role == "participant":
 		var actor_id := NetworkManager.actor_id_for_peer(NetworkManager.local_id())
@@ -62,24 +59,32 @@ func _net_show(result: Dictionary) -> void:
 	get_tree().current_scene.add_child(_overlay)
 	_overlay.ready_changed.connect(_on_ready_changed)
 	_overlay.force_return_requested.connect(_on_force_return)
-	_overlay.present(local_result, viewer_actor_ids, true, NetworkManager.is_host())
-	_submit_local_reward.call_deferred(local_result, viewer_actor_ids)
+	_overlay.present(presentation_result, viewer_actor_ids, true, NetworkManager.is_host())
+	_submit_local_reward.call_deferred(result.duplicate(true), viewer_actor_ids)
 
 
-func _submit_local_reward(local_result: Dictionary,
+func _submit_local_reward(match_result: Dictionary,
 		viewer_actor_ids: Array[int]) -> void:
-	if not bool(local_result.get("official", false)) or viewer_actor_ids.is_empty():
+	if not bool(match_result.get("official", false)) or viewer_actor_ids.is_empty():
 		return
 	var actor_id := int(viewer_actor_ids[0])
+	var preview := RewardCalculator.preview_for_actor(match_result, actor_id)
 	var secret := RewardIdentityManager.local_claim_secret()
 	if secret == "":
+		preview["state"] = "error"
+		preview["message"] = "The private match reward claim was not ready."
+		push_warning("[REWARDS] Match confirmation skipped: local claim secret is unavailable.")
+		if _overlay != null and _overlay.has_method("set_actor_reward"):
+			_overlay.call("set_actor_reward", actor_id, preview)
 		return
-	var preview := RewardCalculator.preview_for_actor(local_result, actor_id)
 	preview["state"] = "verifying"
 	if _overlay != null and _overlay.has_method("set_actor_reward"):
 		_overlay.call("set_actor_reward", actor_id, preview)
 	var receipt: Dictionary = await ProgressionManager.confirm_official_match(
-		local_result, actor_id, secret)
+		WinnersResult.confirmation_payload(match_result), actor_id, secret)
+	print("[REWARDS] Match %s actor %d confirmation state=%s persisted=%s" % [
+		str(match_result.get("match_id", "")), actor_id,
+		str(receipt.get("state", "unknown")), bool(receipt.get("persisted", false))])
 	if _overlay != null and _overlay.has_method("set_actor_reward"):
 		_overlay.call("set_actor_reward", actor_id, receipt)
 
@@ -108,6 +113,13 @@ func _host_set_ready(peer_id: int, is_ready: bool) -> void:
 	else:
 		_ready_peers.erase(peer_id)
 	_publish_ready_state()
+	_try_return_when_everyone_ready()
+
+
+func _try_return_when_everyone_ready() -> void:
+	if not NetworkManager.is_host() or _returning:
+		return
+	var required := _required_peer_ids()
 	if not required.is_empty() and required.all(func(id):
 		return _ready_peers.has(int(id))):
 		_schedule_return(_minimum_safe_delay(3.0))
@@ -172,14 +184,7 @@ func _net_start_return(seconds: float) -> void:
 		_overlay.start_return_countdown(seconds)
 
 
-func _auto_return(generation: int) -> void:
-	await get_tree().create_timer(WinnersCircle.AUTO_RETURN_TIME, true).timeout
-	if not is_inside_tree() or not NetworkManager.is_host() \
-			or generation != _session_generation or _returning:
-		return
-	_schedule_return(0.75)
-
-
 func _on_lobby_changed() -> void:
 	if NetworkManager.is_host() and not _result.is_empty() and not _returning:
 		_publish_ready_state()
+		_try_return_when_everyone_ready()

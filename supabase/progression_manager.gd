@@ -2,6 +2,7 @@ extends Node
 
 const Catalog = preload("res://supabase/one_gun_catalog.gd")
 const RewardCalculator = preload("res://match_reward_calculator.gd")
+const WinnersResult = preload("res://winners_circle_match_result.gd")
 
 # Owns One Gun's seasonal progression/catalog extensions while SupabaseManager
 # remains the authentication, wallet, inventory, and base loadout boundary.
@@ -285,7 +286,9 @@ func reset_loadout() -> bool:
 
 func confirm_official_match(result: Dictionary, actor_id: int,
 		claim_secret: String) -> Dictionary:
-	last_match_reward = RewardCalculator.preview_for_actor(result, actor_id)
+	var confirmation_result := WinnersResult.confirmation_payload(result)
+	last_match_reward = RewardCalculator.preview_for_actor(
+		confirmation_result, actor_id)
 	last_match_reward["state"] = "verifying"
 	match_reward_updated.emit(last_match_reward.duplicate(true))
 	if not is_ready():
@@ -293,7 +296,7 @@ func confirm_official_match(result: Dictionary, actor_id: int,
 		last_match_reward["message"] = "Sign in to bank official rewards."
 		match_reward_updated.emit(last_match_reward.duplicate(true))
 		return last_match_reward
-	if not bool(result.get("official", false)):
+	if not bool(confirmation_result.get("official", false)):
 		last_match_reward["state"] = "not_official"
 		last_match_reward["message"] = "This match did not use the Official Beta rules."
 		match_reward_updated.emit(last_match_reward.duplicate(true))
@@ -301,21 +304,22 @@ func confirm_official_match(result: Dictionary, actor_id: int,
 	var response: Dictionary = await _backend._authenticated_request(
 		"/rest/v1/rpc/confirm_official_beta_match", HTTPClient.METHOD_POST,
 		{
-			"p_match_id": str(result.get("match_id", "")),
+			"p_match_id": str(confirmation_result.get("match_id", "")),
 			"p_actor_id": actor_id,
 			"p_claim_secret": claim_secret,
-			"p_result": result,
+			"p_result": confirmation_result,
 		})
 	if not bool(response.get("ok", false)):
 		last_match_reward["state"] = "error"
 		last_match_reward["message"] = _message(response, "Reward verification failed.")
+		_fail("match_reward", str(last_match_reward["message"]))
 		match_reward_updated.emit(last_match_reward.duplicate(true))
 		return last_match_reward
 	var receipt := _response_object(response)
 	last_match_reward = RewardCalculator.merge_receipt(last_match_reward, receipt)
 	match_reward_updated.emit(last_match_reward.duplicate(true))
 	if str(last_match_reward.get("state", "")) != "settled":
-		await _poll_match_reward(str(result.get("match_id", "")), actor_id)
+		await _poll_match_reward(str(confirmation_result.get("match_id", "")), actor_id)
 	else:
 		await _refresh_after_reward()
 	return last_match_reward

@@ -89,6 +89,16 @@ func _run() -> void:
 		"round finishes outrank kills for runner-up placement")
 	_check(bool(result["trophy_awarded"]),
 		"an Official Classic result marks the champion Trophy presentation")
+	var peer_one_result := result.duplicate(true)
+	peer_one_result["local_peer_id"] = 1
+	var peer_two_result := result.duplicate(true)
+	peer_two_result["local_peer_id"] = 2
+	var peer_one_confirmation: Dictionary = result_builder.confirmation_payload(peer_one_result)
+	var peer_two_confirmation: Dictionary = result_builder.confirmation_payload(peer_two_result)
+	_check(peer_one_confirmation == peer_two_confirmation
+			and not peer_one_confirmation.has("local_peer_id"),
+		"per-client presentation identity cannot change the shared reward result")
+
 	var champion_reward: Dictionary = reward_preview.for_actor(result, 1)
 	_check(int(champion_reward["trophy_delta"]) == 1
 			and int(champion_reward["xp_delta"]) == 85
@@ -167,6 +177,10 @@ func _run() -> void:
 		"an online participant receives a Ready button")
 	_check(circle.find_child("HostReturnButton", true, false) != null,
 		"the host receives the synchronized return control")
+	var return_status := circle.find_child("ReturnStatusLabel", true, false) as Label
+	_check(return_status != null and "AUTO" not in return_status.text,
+		"results wait for Ready or the host without an automatic return timer")
+
 	circle.set_ready_peers([1, 3], [1, 2, 3])
 	var personal_results: Node = circle.find_child("PersonalResults", true, false)
 	_check(personal_results != null, "the local player receives a personalized result card")

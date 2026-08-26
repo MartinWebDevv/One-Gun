@@ -12,16 +12,8 @@ extends Control
 
 @export var is_second_screen := false
 
-# Column widths — shared between header and data rows to guarantee alignment.
-# Total: 170+58+70+58+66+74+74+60 = 630px, fits inside -330 to 330 (660px panel).
-const COL_PLAYER  = 170
-const COL_SETS    = 58
-const COL_ROUNDS  = 70
-const COL_KILLS   = 58
-const COL_DEATHS  = 66
-const COL_DISARMS = 74
-const COL_PICKUPS = 74
-const COL_MELEE   = 60
+const ArenaMatchboard = preload("res://UI/arena_matchboard.gd")
+const MapRegistryData = preload("res://map_registry.gd")
 
 var _round_label: Label
 var _set_label: Label
@@ -31,11 +23,11 @@ var _timer_label: Label
 var _fire_warning_panel: PanelContainer
 var _fire_warning_label: Label
 var _fire_warning_active := false
-var _scoreboard_overlay: Control
-var _scoreboard_content: VBoxContainer
+var _scoreboard_overlay
 var _pulse_tween: Tween = null
 var _notification_tween: Tween = null
 var _tab_open := false
+var _scoreboard_refresh_elapsed := 0.0
 
 func _ready():
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -188,120 +180,27 @@ func update_fire_warning(state: Dictionary) -> void:
 	_fire_warning_active = active
 
 func _build_scoreboard_overlay():
-	_scoreboard_overlay = Control.new()
-	_scoreboard_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_scoreboard_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_scoreboard_overlay.visible = false
+	_scoreboard_overlay = ArenaMatchboard.new()
+	_scoreboard_overlay.name = "ArenaMatchboardOverlay"
 	add_child(_scoreboard_overlay)
 
-	# Kit panel background (rounded, gold border)
-	var bg = Panel.new()
-	bg.anchor_left   = 0.5
-	bg.anchor_right  = 0.5
-	bg.anchor_top    = 0.5
-	bg.anchor_bottom = 0.5
-	bg.offset_left   = -340
-	bg.offset_right  = 340
-	bg.offset_top    = -260
-	bg.offset_bottom = 260
-	bg.add_theme_stylebox_override("panel",
-		ThemeManager.panel(Color(0.04, 0.05, 0.09, 0.92), ThemeManager.ACCENT_GOLD, 14, 2))
-	_scoreboard_overlay.add_child(bg)
 
-	# Title
-	var title = ThemeManager.heading("SCOREBOARD", 20)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.anchor_left   = 0.5
-	title.anchor_right  = 0.5
-	title.anchor_top    = 0.5
-	title.anchor_bottom = 0.5
-	title.offset_left   = -320
-	title.offset_right  = 320
-	title.offset_top    = -248
-	title.offset_bottom = -210
-	_scoreboard_overlay.add_child(title)
-
-	# Column headers — anchored to match bg panel left edge
-	var headers = HBoxContainer.new()
-	headers.anchor_left   = 0.5
-	headers.anchor_right  = 0.5
-	headers.anchor_top    = 0.5
-	headers.anchor_bottom = 0.5
-	headers.offset_left   = -330
-	headers.offset_right  = 330
-	headers.offset_top    = -210
-	headers.offset_bottom = -184
-	headers.add_theme_constant_override("separation", 0)
-	_scoreboard_overlay.add_child(headers)
-	_add_header_cell(headers, "PLAYER",  COL_PLAYER)
-	_add_header_cell(headers, "SETS",    COL_SETS)
-	_add_header_cell(headers, "ROUNDS",  COL_ROUNDS)
-	_add_header_cell(headers, "KILLS",   COL_KILLS)
-	_add_header_cell(headers, "DEATHS",  COL_DEATHS)
-	_add_header_cell(headers, "DISARMS", COL_DISARMS)
-	_add_header_cell(headers, "PICKUPS", COL_PICKUPS)
-	_add_header_cell(headers, "MELEE",   COL_MELEE)
-
-	# Separator
-	var sep = HSeparator.new()
-	sep.anchor_left   = 0.5
-	sep.anchor_right  = 0.5
-	sep.anchor_top    = 0.5
-	sep.anchor_bottom = 0.5
-	sep.offset_left   = -330
-	sep.offset_right  = 330
-	sep.offset_top    = -184
-	sep.offset_bottom = -178
-	_scoreboard_overlay.add_child(sep)
-
-	# Content rows
-	_scoreboard_content = VBoxContainer.new()
-	_scoreboard_content.anchor_left   = 0.5
-	_scoreboard_content.anchor_right  = 0.5
-	_scoreboard_content.anchor_top    = 0.5
-	_scoreboard_content.anchor_bottom = 0.5
-	_scoreboard_content.offset_left   = -330
-	_scoreboard_content.offset_right  = 330
-	_scoreboard_content.offset_top    = -178
-	_scoreboard_content.offset_bottom = 240
-	_scoreboard_content.add_theme_constant_override("separation", 4)
-	_scoreboard_overlay.add_child(_scoreboard_content)
-
-	# Tab hint at bottom
-	var hint = Label.new()
-	hint.text = "[TAB] Close"
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.anchor_left   = 0.5
-	hint.anchor_right  = 0.5
-	hint.anchor_top    = 0.5
-	hint.anchor_bottom = 0.5
-	hint.offset_left   = -320
-	hint.offset_right  = 320
-	hint.offset_top    = 240
-	hint.offset_bottom = 260
-	hint.add_theme_font_size_override("font_size", 11)
-	hint.modulate = Color(0.5, 0.5, 0.5)
-	_scoreboard_overlay.add_child(hint)
-
-func _add_header_cell(parent: HBoxContainer, text: String, width: int):
-	var label = Label.new()
-	label.text = text
-	label.custom_minimum_size = Vector2(width, 0)
-	label.add_theme_font_size_override("font_size", 11)
-	label.add_theme_color_override("font_color", ThemeManager.ACCENT_GOLD)
-	ThemeManager.embolden(label)
-	parent.add_child(label)
-
-func _process(_delta):
+func _process(delta):
 	# Hold Tab to show scoreboard, release to hide.
 	var tab_held = Input.is_key_pressed(KEY_TAB) or Input.is_action_pressed("ui_focus_next")
 	if tab_held and not _tab_open:
 		_tab_open = true
+		_scoreboard_refresh_elapsed = 0.0
 		_refresh_scoreboard()
-		_scoreboard_overlay.visible = true
+	elif tab_held:
+		_scoreboard_refresh_elapsed += delta
+		if _scoreboard_refresh_elapsed >= 0.25:
+			_scoreboard_refresh_elapsed = 0.0
+			_refresh_scoreboard()
 	elif not tab_held and _tab_open:
 		_tab_open = false
-		_scoreboard_overlay.visible = false
+		_scoreboard_refresh_elapsed = 0.0
+		_scoreboard_overlay.dismiss()
 
 func _input(event):
 	# Consume Tab input so it doesn't trigger other UI actions.
@@ -309,76 +208,72 @@ func _input(event):
 		get_viewport().set_input_as_handled()
 
 func _refresh_scoreboard():
-	for child in _scoreboard_content.get_children():
-		child.queue_free()
-
 	var round_manager = get_node_or_null("../../RoundManager")
 	if round_manager == null or not round_manager.has_method("get_scoreboard_data"):
 		return
 
-	# Online: highlight the row belonging to this machine's player.
-	var local_actor_id := -1
+	var data: Array = round_manager.get_scoreboard_data()
+	_scoreboard_overlay.present(
+		data, _local_scoreboard_actor_id(round_manager),
+		_scoreboard_context(round_manager))
+
+
+func _local_scoreboard_actor_id(round_manager: Node) -> int:
 	if NetworkManager.is_online():
 		var lp = NetworkManager.find_net_player(NetworkManager.local_id())
 		if lp != null:
-			local_actor_id = int(lp.get("actor_id"))
+			return int(lp.get("actor_id"))
+	var humans: Array = []
+	for actor in round_manager.get("players"):
+		if actor == null or not is_instance_valid(actor):
+			continue
+		if "is_bot" in actor and bool(actor.get("is_bot")):
+			continue
+		humans.append(actor)
+	var local_index := 1 if is_second_screen else 0
+	if local_index < humans.size():
+		return int(humans[local_index].get("actor_id"))
+	return -1
 
-	var data = round_manager.get_scoreboard_data()
-	var current_team := -999
-	for i in data.size():
-		var entry = data[i]
-		var team_id := int(entry.get("team_id", -1))
-		if GameConfig.teams_enabled and team_id != current_team:
-			current_team = team_id
-			var team_heading := Label.new()
-			team_heading.text = "TEAM %d   •   %d SETS   •   %d ROUNDS" % [
-				team_id + 1, int(entry.get("sets", 0)), int(entry.get("rounds", 0))]
-			team_heading.add_theme_font_size_override("font_size", 15)
-			team_heading.add_theme_color_override("font_color", [Color(0.25, 0.7, 1.0), Color(1.0, 0.3, 0.3), Color(0.35, 0.9, 0.45), Color(1.0, 0.75, 0.2)][clampi(team_id, 0, 3)])
-			_scoreboard_content.add_child(team_heading)
-		var row = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 0)
 
-		var is_alive = entry["alive"]
-		var row_color = Color.WHITE if is_alive else Color(0.5, 0.5, 0.5)
-		var rank_colors = [Color(1.0, 0.84, 0.0), Color(0.75, 0.75, 0.75), Color(0.8, 0.5, 0.2)]
-		if i < rank_colors.size():
-			row_color = rank_colors[i] if is_alive else Color(0.4, 0.4, 0.4)
+func _scoreboard_context(round_manager: Node) -> Dictionary:
+	var official := false
+	if NetworkManager.is_online():
+		official = bool(round_manager.get("_online_official_started"))
+	return {
+		"official": official,
+		"match_kind": "OFFICIAL BETA" if official else (
+			"CUSTOM MATCH" if NetworkManager.is_online() else "LOCAL MATCH"),
+		"mode_name": _scoreboard_mode_name(),
+		"map_name": _scoreboard_map_name(),
+		"round_number": int(round_manager.get("round_number")),
+		"rounds_to_win": int(GameConfig.rounds_per_set),
+		"teams_enabled": bool(GameConfig.teams_enabled),
+		"timer": _timer_label.text if _timer_label != null else "",
+	}
 
-		_add_row_cell(row, entry["name"],          COL_PLAYER,  row_color, true)
-		_add_row_cell(row, str(entry["sets"]),     COL_SETS,    row_color)
-		_add_row_cell(row, str(entry["rounds"]),   COL_ROUNDS,  row_color)
-		_add_row_cell(row, str(entry["kills"]),    COL_KILLS,   row_color)
-		_add_row_cell(row, str(entry["deaths"]),   COL_DEATHS,  row_color)
-		_add_row_cell(row, str(entry["disarms"]),  COL_DISARMS, row_color)
-		_add_row_cell(row, str(entry["pickups"]),  COL_PICKUPS, row_color)
-		_add_row_cell(row, str(entry["melee"]),    COL_MELEE,   row_color)
 
-		# Zebra striping + gold left edge on your own row.
-		var row_panel = PanelContainer.new()
-		var is_you: bool = local_actor_id >= 0 and int(entry.get("actor_id", -1)) == local_actor_id
-		var zebra_bg := Color(1, 1, 1, 0.04) if i % 2 == 0 else Color(0, 0, 0, 0.0)
-		var row_style = ThemeManager.panel(zebra_bg, Color.TRANSPARENT, 4, 0)
-		row_style.shadow_size = 0
-		row_style.content_margin_left = 6
-		row_style.content_margin_right = 6
-		row_style.content_margin_top = 2
-		row_style.content_margin_bottom = 2
-		if is_you:
-			row_style.border_width_left = 3
-			row_style.border_color = ThemeManager.ACCENT_GOLD
-			row_style.bg_color = Color(1.0, 0.718, 0.0, 0.08)
-		row_panel.add_theme_stylebox_override("panel", row_style)
-		row_panel.add_child(row)
-		_scoreboard_content.add_child(row_panel)
+func _scoreboard_mode_name() -> String:
+	match GameConfig.game_mode:
+		GameConfig.MODE_ONE_GUN:
+			return "CLASSIC ONE GUN"
+		GameConfig.MODE_ALL_GUN:
+			return "ALL GUN"
+		GameConfig.MODE_ONE_OF_US:
+			return "ONE OF US"
+	return "ONE GUN"
 
-func _add_row_cell(parent: HBoxContainer, text: String, width: int, color: Color, bold: bool = false):
-	var label = Label.new()
-	label.text = text
-	label.custom_minimum_size = Vector2(width, 0)
-	label.add_theme_font_size_override("font_size", 13 if bold else 12)
-	label.modulate = color
-	parent.add_child(label)
+
+func _scoreboard_map_name() -> String:
+	var scene_path := NetworkManager.pending_map_path
+	if scene_path.is_empty() and get_tree().current_scene != null:
+		scene_path = get_tree().current_scene.scene_file_path
+	var map_index := MapRegistryData.find_index_by_path(scene_path)
+	if map_index >= 0:
+		return str(MapRegistryData.get_map(map_index).get("name", "UNKNOWN ARENA"))
+	if scene_path.is_empty():
+		return "UNKNOWN ARENA"
+	return scene_path.get_file().get_basename().capitalize()
 
 func update_match_state(round_num: int, set_num: int, alive: int, _total: int, _score_data: Array = []):
 	if _round_label == null or _remaining_label == null:
