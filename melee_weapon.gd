@@ -697,13 +697,16 @@ func _update_pickup_label():
 	label.visible = online_active and not is_held and not is_in_flight and not pickup_locked
 	if not label.visible or weapon_data == null:
 		return
-	# Build display text: weapon name + effect (if not normal) + button prompt.
-	# Button prompt is determined by whichever player is nearby.
-	# P2 is always gamepad; P1 is always keyboard (until input selection is added).
+	# Build display text: weapon name + effect (if not normal) + the nearby
+	# player's current, remappable Interact prompt.
 	var nearby_player = _get_nearby_player()
 	var uses_gamepad = nearby_player != null and "use_gamepad_look" in nearby_player and nearby_player.use_gamepad_look
-	var button_prompt = "[Y]" if uses_gamepad else "[F]"
-	var hold_prompt = "[Hold Y]" if uses_gamepad else "[Hold F]"
+	var prefix := (str(nearby_player.input_prefix)
+		if nearby_player != null and "input_prefix" in nearby_player else "p1")
+	var group := "gamepad" if uses_gamepad else "keyboard_mouse"
+	var interact_prompt := PlayerPrefs.action_prompt(prefix + "_interact", group)
+	var button_prompt := "[%s]" % interact_prompt
+	var hold_prompt := "[HOLD %s]" % interact_prompt
 
 	# The gun is never tap-swapped away (see pick_up()) — a gun holder needs
 	# to know that pressing the pickup button here won't do anything until

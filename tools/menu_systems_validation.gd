@@ -23,14 +23,18 @@ const TARGETS := [
 	"res://menu_map_cycler.gd",
 	"res://maps/test/title_bg_map.tscn",
 	"res://main_menu.gd",
+	"res://UI/components/one_gun_roster_row.gd",
 	"res://pause_menu.gd",
 	"res://UI/accessibility_manager.gd",
 	"res://UI/crosshair_renderer.gd",
 	"res://crosshair.gd",
 	"res://hit_marker.gd",
 	"res://character_body_3d.gd",
+	"res://gun.gd",
 	"res://bullet.gd",
 	"res://melee_weapon.gd",
+	"res://match_hud.gd",
+	"res://spectator_controller.gd",
 ]
 
 class ReloadGunStub extends Node:
@@ -58,10 +62,35 @@ func _validate() -> void:
 		root.add_child(settings_screen)
 		await process_frame
 		await process_frame
+		var settings_focus := root.gui_get_focus_owner()
+		if settings_focus == null or not settings_screen.is_ancestor_of(settings_focus):
+			push_error("Menu validation: Player Settings did not claim controller focus")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Player Settings claims controller focus")
 		for category in ["Audio", "Gameplay", "Video", "Controls", "Accessibility"]:
 			settings_screen.call("_select_category", category)
 			await process_frame
 		print("MENU RUNTIME OK: Player Settings categories")
+		settings_screen.call("_select_category", "Controls")
+		await process_frame
+		var input_device_selector_found := false
+		for dropdown in settings_screen.find_children("*", "OptionButton", true, false):
+			var has_mouse_keyboard := false
+			var has_controller := false
+			for item_index in dropdown.item_count:
+				has_mouse_keyboard = (has_mouse_keyboard
+					or dropdown.get_item_text(item_index) == "MOUSE & KEYBOARD")
+				has_controller = (has_controller
+					or dropdown.get_item_text(item_index) == "CONTROLLER")
+			if has_mouse_keyboard and has_controller:
+				input_device_selector_found = true
+				break
+		if not input_device_selector_found:
+			push_error("Menu validation: Controls did not expose the input-device selector")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Controls exposes Mouse & Keyboard / Controller")
 		settings_screen.call("_select_category", "Audio")
 		await process_frame
 		var ceremony_slider_found := false

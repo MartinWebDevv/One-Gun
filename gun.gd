@@ -375,12 +375,17 @@ func _update_pickup_label():
 	if not label.visible:
 		return
 	var bodies = $Area3D.get_overlapping_bodies()
-	var uses_gamepad = false
+	var nearby_player = null
 	for body in bodies:
 		if body.is_in_group("player") and "use_gamepad_look" in body:
-			uses_gamepad = body.use_gamepad_look
+			nearby_player = body
 			break
-	var button_prompt = "[⏹️]" if uses_gamepad else "[F]"
+	var uses_gamepad = nearby_player != null and nearby_player.use_gamepad_look
+	var prefix := (str(nearby_player.input_prefix)
+		if nearby_player != null and "input_prefix" in nearby_player else "p1")
+	var group := "gamepad" if uses_gamepad else "keyboard_mouse"
+	var button_prompt := "[%s]" % PlayerPrefs.action_prompt(
+		prefix + "_interact", group)
 	label.text = button_prompt + "  Gun"
 
 func pick_up(p = null) -> bool:

@@ -9,8 +9,9 @@ signal setting_changed(key: String, value)
 const SAVE_PATH := "user://player_prefs.json"
 const BACKUP_PATH := "user://player_prefs.backup.json"
 const TEMP_PATH := "user://player_prefs.pending.json"
-const SETTINGS_VERSION := 7
+const SETTINGS_VERSION := 8
 const SETTINGS_APPLIER = preload("res://UI/player_settings_applier.gd")
+const UNASSIGNED_JOYPAD_DEVICE := 4095
 
 const DEFAULT_SETTINGS := {
 	"player_name": "Player 1",
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS := {
 	"music_volume": 1.0,
 	"sfx_volume": 1.0,
 	"ceremony_volume": 0.8,
+	"input_device": "keyboard_mouse",
 	"mouse_sensitivity": 1.0,
 	"gamepad_sensitivity": 6.0,
 	"ads_sensitivity_multiplier": 0.5,
@@ -103,6 +105,8 @@ var _project_default_bindings: Dictionary = {}
 func _ready() -> void:
 	_capture_project_default_bindings()
 	load_from_disk()
+	if not Input.joy_connection_changed.is_connected(_on_joy_connection_changed):
+		Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	apply_input_overrides()
 	SETTINGS_APPLIER.apply_video(settings, get_tree())
 
@@ -192,30 +196,92 @@ func reset_input_overrides() -> void:
 
 
 func apply_input_overrides() -> void:
-	apply_input_binding_map(get_setting("input_overrides"))
+	apply_input_binding_map(get_setting("input_overrides"), str(get_setting("input_device")))
 
 
-func apply_input_binding_map(overrides) -> void:
+func apply_input_binding_map(overrides, input_device := "") -> void:
 	# Rebuild from project defaults each time so saved commits and the settings
 	# screen's reversible live preview use exactly the same application path.
 	InputMap.load_from_project_settings()
-	if not overrides is Dictionary:
-		return
-	for action_key in overrides:
-		var action := str(action_key)
-		if not InputMap.has_action(action) or not overrides[action_key] is Dictionary:
-			continue
-		for group in ["keyboard_mouse", "gamepad"]:
-			if not overrides[action_key].has(group):
+	if overrides is Dictionary:
+		for action_key in overrides:
+			var action := str(action_key)
+			if not InputMap.has_action(action) or not overrides[action_key] is Dictionary:
 				continue
-			_erase_group_events(action, group)
-			var descriptors = overrides[action_key][group]
-			if descriptors is Array:
-				for descriptor in descriptors:
-					if descriptor is Dictionary:
-						var event := descriptor_to_event(descriptor)
-						if event != null:
-							InputMap.action_add_event(action, event)
+			for group in ["keyboard_mouse", "gamepad"]:
+				if not overrides[action_key].has(group):
+					continue
+				_erase_group_events(action, group)
+				var descriptors = overrides[action_key][group]
+				if descriptors is Array:
+					for descriptor in descriptors:
+						if descriptor is Dictionary:
+							var event := descriptor_to_event(descriptor)
+							if event != null:
+								InputMap.action_add_event(action, event)
+	var selected_device := (input_device if input_device != ""
+		else str(get_setting("input_device")))
+	_apply_input_device_selection(selected_device)
+
+
+func refresh_input_devices() -> void:
+	apply_input_overrides()
+
+
+func input_device_for_prefix(prefix: String) -> String:
+	return "controller" if prefix == "p2" else str(get_setting("input_device"))
+
+
+func is_using_controller(prefix := "p1") -> bool:
+	return input_device_for_prefix(prefix) == "controller"
+
+
+func _apply_input_device_selection(input_device: String) -> void:
+	var primary_group := "gamepad" if input_device == "controller" else "keyboard_mouse"
+	for action_name in InputMap.get_actions():
+		var action := str(action_name)
+		if action.begins_with("p1_"):
+			_erase_group_events(action,
+				"keyboard_mouse" if primary_group == "gamepad" else "gamepad")
+		elif action.begins_with("p2_"):
+			# The second local slot owns a separate controller. A shared mouse
+			# cannot provide an independent splitscreen camera.
+			_erase_group_events(action, "keyboard_mouse")
+	_route_gamepad_devices(primary_group)
+
+
+func _route_gamepad_devices(primary_group: String) -> void:
+	var joypads := Input.get_connected_joypads()
+	joypads.sort()
+	var player1_device := -1
+	var player2_device := -1
+	if GameConfig.split_screen_enabled:
+		if primary_group == "gamepad":
+			player1_device = int(joypads[0]) if joypads.size() >= 1 else -1
+			player2_device = (int(joypads[1]) if joypads.size() >= 2
+				else UNASSIGNED_JOYPAD_DEVICE)
+		else:
+			player2_device = int(joypads[0]) if joypads.size() >= 1 else -1
+	elif primary_group == "gamepad":
+		player1_device = int(joypads[0]) if joypads.size() >= 1 else -1
+	_set_gamepad_device("p1_", player1_device)
+	_set_gamepad_device("p2_", player2_device)
+
+
+func _set_gamepad_device(prefix: String, device: int) -> void:
+	for action_name in InputMap.get_actions():
+		var action := str(action_name)
+		if not action.begins_with(prefix):
+			continue
+		for event in InputMap.action_get_events(action):
+			if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+				event.device = device
+
+
+func _on_joy_connection_changed(_device: int, _connected: bool) -> void:
+	# Re-route on the next idle step after Godot finishes updating its device
+	# list. This also makes hot-plugging a second splitscreen pad deterministic.
+	apply_input_overrides.call_deferred()
 
 
 func event_to_descriptor(event: InputEvent) -> Dictionary:
@@ -259,6 +325,37 @@ func descriptor_label(descriptor: Dictionary) -> String:
 	if event == null:
 		return "UNBOUND"
 	return event.as_text().replace(" (Physical)", "").to_upper()
+
+
+func descriptor_short_label(descriptor: Dictionary) -> String:
+	match str(descriptor.get("type", "")):
+		"joy_button":
+			var button_labels := [
+				"A / CROSS", "B / CIRCLE", "X / SQUARE", "Y / TRIANGLE",
+				"BACK / VIEW", "GUIDE", "START / MENU", "LEFT STICK",
+				"RIGHT STICK", "LB / L1", "RB / R1", "DPAD UP",
+				"DPAD DOWN", "DPAD LEFT", "DPAD RIGHT",
+			]
+			var button := int(descriptor.get("button", -1))
+			return (button_labels[button]
+				if button >= 0 and button < button_labels.size()
+				else descriptor_label(descriptor))
+		"joy_axis":
+			var axis := int(descriptor.get("axis", -1))
+			var direction := int(descriptor.get("direction", 1))
+			match axis:
+				JOY_AXIS_LEFT_X: return "LEFT STICK RIGHT" if direction > 0 else "LEFT STICK LEFT"
+				JOY_AXIS_LEFT_Y: return "LEFT STICK DOWN" if direction > 0 else "LEFT STICK UP"
+				JOY_AXIS_RIGHT_X: return "RIGHT STICK RIGHT" if direction > 0 else "RIGHT STICK LEFT"
+				JOY_AXIS_RIGHT_Y: return "RIGHT STICK DOWN" if direction > 0 else "RIGHT STICK UP"
+				JOY_AXIS_TRIGGER_LEFT: return "LT / L2"
+				JOY_AXIS_TRIGGER_RIGHT: return "RT / R2"
+	return descriptor_label(descriptor)
+
+
+func action_prompt(action: String, device_group: String) -> String:
+	var bindings := get_binding_descriptors(action, device_group)
+	return descriptor_short_label(bindings[0]) if not bindings.is_empty() else "UNBOUND"
 
 
 func _events_to_descriptors(events: Array, group: String) -> Array:
@@ -318,6 +415,8 @@ func _normalize(values: Dictionary) -> Dictionary:
 	if str(normalized["player_name"]).to_lower() in ["null", "<null>"]:
 		normalized["player_name"] = ""
 	if normalized["player_name"] == "": normalized["player_name"] = "Player 1"
+	if str(normalized["input_device"]) not in ["keyboard_mouse", "controller"]:
+		normalized["input_device"] = "keyboard_mouse"
 	normalized["character_skin_id"] = PlayerSkinRegistry.sanitize_skin_id(
 		str(normalized["character_skin_id"]))
 	normalized["character_model_id"] = PlayerSkinRegistry.sanitize_model_id(

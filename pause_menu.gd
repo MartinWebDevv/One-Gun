@@ -7,6 +7,8 @@ extends Control
 var settings_overlay: Control = null
 var _armed_button: OneGunConfirmButton = null
 var _capture_role := ""
+var _default_focus_button: Control = null
+var _settings_focus_button: Control = null
 
 
 func _ready() -> void:
@@ -41,6 +43,8 @@ func _is_playpen_view() -> bool:
 
 
 func _build_ui() -> void:
+	_default_focus_button = null
+	_settings_focus_button = null
 	for child in get_children():
 		child.queue_free()
 	var veil := ColorRect.new()
@@ -135,6 +139,15 @@ func _add_action(parent: VBoxContainer, label_text: String, callback: Callable, 
 	button.custom_minimum_size = Vector2(0, 48)
 	button.pressed.connect(callback)
 	parent.add_child(button)
+	if action_id == "resume":
+		_default_focus_button = button
+	elif action_id == "player_settings":
+		_settings_focus_button = button
+
+
+func focus_default() -> void:
+	if _default_focus_button != null and is_instance_valid(_default_focus_button):
+		_default_focus_button.grab_focus()
 
 
 func _add_destructive(parent: VBoxContainer, label_text: String, confirm_text: String, target: String) -> void:
@@ -181,6 +194,8 @@ func _close_settings_overlay() -> void:
 	settings_overlay.queue_free()
 	settings_overlay = null
 	PauseManager.clear_escape_override()
+	if _settings_focus_button != null and is_instance_valid(_settings_focus_button):
+		_settings_focus_button.grab_focus.call_deferred()
 
 
 

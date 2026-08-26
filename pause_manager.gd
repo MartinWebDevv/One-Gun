@@ -31,7 +31,9 @@ func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _unhandled_input(event):
-	if event.is_action_pressed("ui_cancel"):
+	var pause_pressed: bool = event.is_action_pressed("pause")
+	var menu_cancel_pressed: bool = _pause_open and event.is_action_pressed("ui_cancel")
+	if pause_pressed or menu_cancel_pressed:
 		if escape_override.is_valid():
 			escape_override.call()
 			get_viewport().set_input_as_handled()
@@ -73,6 +75,8 @@ func pause():
 		get_tree().paused = true
 	pause_menu.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if pause_menu.has_method("focus_default"):
+		pause_menu.focus_default.call_deferred()
 	pause_state_changed.emit(true)
 
 func resume():
@@ -81,7 +85,8 @@ func resume():
 		get_tree().paused = false
 	if pause_menu != null:
 		pause_menu.visible = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	Input.mouse_mode = (Input.MOUSE_MODE_HIDDEN
+		if PlayerPrefs.is_using_controller("p1") else Input.MOUSE_MODE_CAPTURED)
 	pause_state_changed.emit(false)
 
 func is_pause_open() -> bool:

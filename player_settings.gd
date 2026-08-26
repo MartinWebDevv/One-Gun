@@ -16,6 +16,10 @@ const REBIND_ACTIONS := [
 	["MOVEMENT", "Move Back", "move_back"],
 	["MOVEMENT", "Move Left", "move_left"],
 	["MOVEMENT", "Move Right", "move_right"],
+	["LOOK", "Look Left", "look_left", "gamepad"],
+	["LOOK", "Look Right", "look_right", "gamepad"],
+	["LOOK", "Look Up", "look_up", "gamepad"],
+	["LOOK", "Look Down", "look_down", "gamepad"],
 	["MOVEMENT", "Jump", "jump"],
 	["MOVEMENT", "Sprint", "sprint"],
 	["MOVEMENT", "Dash", "dash"],
@@ -53,6 +57,8 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_opening = PlayerPrefs.snapshot()
 	_pending = _opening.duplicate(true)
+	_controls_group = "gamepad" if str(_pending.get("input_device",
+		"keyboard_mouse")) == "controller" else "keyboard_mouse"
 	var capture_scale := OS.get_environment("ONEGUN_UI_CAPTURE_SCALE")
 	if capture_scale.is_valid_float():
 		_pending["ui_scale"] = clampf(capture_scale.to_float(), 0.8, 1.25)
@@ -123,6 +129,7 @@ func _build_shell() -> void:
 		button.pressed.connect(_select_category.bind(str(category)))
 		_category_buttons[category] = button
 		nav.add_child(button)
+	OneGunUI.chain_focus_vertical(_category_buttons.values())
 
 	var page_well := OneGunCabinet.new()
 	page_well.variant = OneGunCabinet.Variant.WELL
@@ -163,6 +170,17 @@ func _build_shell() -> void:
 	_display_recovery_timer.timeout.connect(_recover_display_preview)
 	add_child(_display_recovery_timer)
 	_rebuild_page()
+	_focus_settings_navigation.call_deferred()
+
+
+func _focus_settings_navigation() -> void:
+	if not is_inside_tree():
+		return
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if focus_owner == null or not is_ancestor_of(focus_owner):
+		var button = _category_buttons.get(_category)
+		if button is Control:
+			(button as Control).grab_focus()
 
 
 func _select_category(category: String) -> void:
@@ -250,10 +268,38 @@ func _build_video_page() -> void:
 
 
 func _build_controls_page() -> void:
-	var column := _page_column("Choose a slot, then press a key, mouse input, gamepad button, or gamepad axis. Escape cancels capture.")
+	var column := _page_column("Choose the primary player's device, then customize either binding set. Player 2 uses a separate controller in splitscreen. Escape or Start / Menu cancels binding capture.")
+	_add_section(column, "ACTIVE INPUT DEVICE")
+	_add_dropdown(column, "Primary Player", "input_device",
+		["keyboard_mouse", "controller"], ["MOUSE & KEYBOARD", "CONTROLLER"])
+	var connected := Input.get_connected_joypads()
+	var primary_uses_controller := str(_pending.get("input_device", "keyboard_mouse")) == "controller"
+	var required_controllers := 0
+	if GameConfig.split_screen_enabled:
+		required_controllers = 2 if primary_uses_controller else 1
+	elif primary_uses_controller:
+		required_controllers = 1
+	var device_text := "MOUSE & KEYBOARD READY — a controller can be connected at any time."
+	var device_role := "muted"
+	if connected.size() < required_controllers:
+		device_text = "%d CONTROLLER%s REQUIRED — %d detected." % [
+			required_controllers, "" if required_controllers == 1 else "S", connected.size()]
+		device_role = "red"
+	elif not connected.is_empty():
+		var names: Array[String] = []
+		for device_id in connected:
+			names.append(Input.get_joy_name(int(device_id)))
+		device_text = "%d controller%s connected: %s" % [
+			connected.size(), "" if connected.size() == 1 else "s", ", ".join(names)]
+		device_role = "cyan"
+	column.add_child(OneGunUI.make_label(device_text, OneGunUI.TEXT_XS, device_role, true))
+	column.add_child(OneGunUI.make_label(
+		"START / MENU pauses. BACK / VIEW opens the scoreboard. Controller prompts use Xbox / PlayStation names.",
+		OneGunUI.TEXT_XS, "muted"))
+	_add_section(column, "BINDINGS")
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", OneGunUI.SPACE_S)
-	for data in [["KEYBOARD & MOUSE", "keyboard_mouse"], ["GAMEPAD", "gamepad"]]:
+	for data in [["KEYBOARD & MOUSE", "keyboard_mouse"], ["CONTROLLER", "gamepad"]]:
 		var tab := OneGunButton.new()
 		tab.text = data[0]
 		tab.variant = "purple" if _controls_group == data[1] else "navy"
@@ -269,10 +315,15 @@ func _build_controls_page() -> void:
 		columns.add_child(column_label)
 	if not _pending_conflict.is_empty():
 		_build_conflict_confirmation(column)
-	for prefix_data in [["PLAYER 1", "p1"], ["PLAYER 2 (SPLITSCREEN)", "p2"]]:
+	var player_sets := [["PLAYER 1", "p1"]]
+	if _controls_group == "gamepad":
+		player_sets.append(["PLAYER 2 (SPLITSCREEN CONTROLLER)", "p2"])
+	for prefix_data in player_sets:
 		_add_section(column, prefix_data[0])
 		var current_group := ""
 		for entry in REBIND_ACTIONS:
+			if entry.size() >= 4 and str(entry[3]) != _controls_group:
+				continue
 			if entry[0] != current_group:
 				current_group = entry[0]
 				column.add_child(OneGunUI.make_label(current_group, OneGunUI.TEXT_XS, "cyan", true))
@@ -524,6 +575,12 @@ func _on_dropdown_changed(index: int, key: String, values: Array,
 		_rebuild_page()
 	elif key == "fps_limit":
 		APPLIER.apply_video(_pending, get_tree(), false)
+	elif key == "input_device":
+		_controls_group = ("gamepad"
+			if str(_pending[key]) == "controller" else "keyboard_mouse")
+		PlayerPrefs.apply_input_binding_map(_pending["input_overrides"],
+			str(_pending["input_device"]))
+		_rebuild_page()
 	elif display_preview:
 		_preview_display()
 	elif _is_accessibility_key(key):
@@ -617,7 +674,7 @@ func _store_bindings(action: String, group: String, bindings: Array) -> void:
 	per_action[group] = bindings.duplicate(true)
 	overrides[action] = per_action
 	_pending["input_overrides"] = overrides
-	PlayerPrefs.apply_input_binding_map(overrides)
+	PlayerPrefs.apply_input_binding_map(overrides, str(_pending["input_device"]))
 
 
 func _add_binding_row(parent: VBoxContainer, label_text: String, action: String) -> void:
@@ -626,7 +683,7 @@ func _add_binding_row(parent: VBoxContainer, label_text: String, action: String)
 	for slot in 2:
 		var button := OneGunButton.new()
 		button.variant = "navy"
-		button.text = PlayerPrefs.descriptor_label(bindings[slot]) if slot < bindings.size() else "UNBOUND"
+		button.text = PlayerPrefs.descriptor_short_label(bindings[slot]) if slot < bindings.size() else "UNBOUND"
 		button.tooltip_text = "Primary binding" if slot == 0 else "Secondary binding"
 		button.custom_minimum_size = Vector2(190, 42)
 		button.pressed.connect(_start_capture.bind(action, slot, button))
@@ -646,7 +703,8 @@ func _start_capture(action: String, slot: int, button: OneGunButton) -> void:
 	_capture_button = button
 	button.variant = "purple"
 	button.text = "PRESS INPUT…"
-	_status_label.text = "Listening for %s input. Escape cancels." % ("gamepad" if _controls_group == "gamepad" else "keyboard / mouse")
+	_status_label.text = "Listening for %s input. Escape or Start / Menu cancels." % (
+		"controller" if _controls_group == "gamepad" else "keyboard / mouse")
 
 
 func _cancel_capture() -> void:
@@ -664,6 +722,16 @@ func _input(event: InputEvent) -> void:
 		_cancel_capture()
 		get_viewport().set_input_as_handled()
 		return
+	if (_controls_group == "gamepad"
+			and event is InputEventJoypadButton and event.pressed):
+		if event.button_index == JOY_BUTTON_START:
+			_cancel_capture()
+			get_viewport().set_input_as_handled()
+			return
+		if event.button_index == JOY_BUTTON_BACK:
+			_status_label.text = "BACK / VIEW is reserved for the scoreboard. Press another input."
+			get_viewport().set_input_as_handled()
+			return
 	var accepted := false
 	if _controls_group == "keyboard_mouse":
 		accepted = (event is InputEventKey and event.pressed and not event.echo) or (event is InputEventMouseButton and event.pressed)
@@ -690,8 +758,12 @@ func _input(event: InputEvent) -> void:
 
 func _find_conflict(target_action: String, descriptor: Dictionary) -> String:
 	var needle := JSON.stringify(descriptor)
-	for prefix in ["p1", "p2"]:
+	var target_prefix := target_action.get_slice("_", 0)
+	var prefixes := [target_prefix] if _controls_group == "gamepad" else ["p1", "p2"]
+	for prefix in prefixes:
 		for entry in REBIND_ACTIONS:
+			if entry.size() >= 4 and str(entry[3]) != _controls_group:
+				continue
 			var action := "%s_%s" % [prefix, entry[2]]
 			if action == target_action: continue
 			for existing in _effective_bindings(action, _controls_group):
@@ -767,8 +839,11 @@ func _defaults_for_category() -> void:
 			GraphicsQualityManager.apply_effects_quality(str(_pending["effects_quality"]))
 			_display_recovery_timer.start()
 		"Controls":
+			_pending["input_device"] = PlayerPrefs.get_default("input_device")
 			_pending["input_overrides"] = {}
-			PlayerPrefs.apply_input_binding_map(_pending["input_overrides"])
+			_controls_group = "keyboard_mouse"
+			PlayerPrefs.apply_input_binding_map(_pending["input_overrides"],
+				str(_pending["input_device"]))
 		"Accessibility":
 			for key in PlayerPrefs.DEFAULT_SETTINGS:
 				if _is_accessibility_key(str(key)): _pending[key] = PlayerPrefs.get_default(str(key))

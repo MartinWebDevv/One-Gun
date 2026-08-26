@@ -217,9 +217,8 @@ func _on_name_label_gui_input(event: InputEvent) -> void:
 		return
 	var clicked: bool = (event is InputEventMouseButton
 			and event.button_index == MOUSE_BUTTON_LEFT and event.pressed)
-	var keyboard_activated: bool = (event is InputEventKey and event.pressed
-			and not event.echo and event.is_action("ui_accept"))
-	if not clicked and not keyboard_activated:
+	var accept_activated: bool = event.is_action_pressed("ui_accept")
+	if not clicked and not accept_activated:
 		return
 	_name_label.accept_event()
 	_name_edit_callback.call()

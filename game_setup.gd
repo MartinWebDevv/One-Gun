@@ -1953,7 +1953,10 @@ func _launch_match():
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if _player_settings_overlay != null:
-			_close_player_settings_immediately()
+			# Route keyboard Escape and controller B/Circle through the same
+			# transactional Cancel path so live device/binding previews restore.
+			_player_settings_overlay.request_cancel_close()
+			get_viewport().set_input_as_handled()
 			return
 
 		get_viewport().set_input_as_handled()

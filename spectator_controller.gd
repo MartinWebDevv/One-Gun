@@ -46,7 +46,7 @@ func _ready() -> void:
 func setup_pure_online() -> void:
 	_player = null
 	_input_prefix = "p1"
-	_use_gamepad = false
+	_use_gamepad = PlayerPrefs.is_using_controller(_input_prefix)
 	_build_free_cam()
 	_build_ui()
 	_refresh_follow_targets()
@@ -248,6 +248,8 @@ func _update_control_hint() -> void:
 		var target = get_follow_target()
 		var target_name: String = str(target.get_display_name()) if target != null and target.has_method("get_display_name") else ""
 		_mode_label.text = "SPECTATING: %s   [SPACE/A] Free Cam   [LMB/RMB or LB/RB] Switch" % target_name
+	elif _use_gamepad:
+		_mode_label.text = "FREE CAM   [A / CROSS] Follow   [LEFT STICK] Fly   [RT / LT] Up/Down   [L3] Fast"
 	else:
 		_mode_label.text = "FREE CAM   [SPACE/A] Follow   [WASD] Fly   [SHIFT/CTRL] Up/Down   [F] Fast"
 

@@ -222,8 +222,10 @@ func _ready():
 		if _is_local_online:
 			_build_online_crosshair()
 		_build_online_name_tag()
-	if not use_gamepad_look and _is_local_online:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if input_prefix == "p1" and _is_local_online:
+		# The lobby may have changed splitscreen mode after PlayerPrefs started.
+		# Rebuild once at player startup so controller device routing is current.
+		PlayerPrefs.refresh_input_devices()
 	if is_player2 and not GameConfig.split_screen_enabled:
 		remove_from_group("player")
 		visible = false
@@ -267,6 +269,7 @@ func _apply_match_settings():
 	max_dash_charges = GameConfig.max_dash_charges
 
 func _apply_player_prefs():
+	use_gamepad_look = PlayerPrefs.is_using_controller(input_prefix)
 	mouse_look_sensitivity = PlayerPrefs.get_setting("mouse_sensitivity")
 	look_sensitivity = PlayerPrefs.get_setting("gamepad_sensitivity")
 	ads_look_sensitivity_multiplier = PlayerPrefs.get_setting("ads_sensitivity_multiplier")
@@ -276,6 +279,17 @@ func _apply_player_prefs():
 	invert_look_y = PlayerPrefs.get_setting("invert_look_y")
 	default_camera_fov = PlayerPrefs.get_setting("field_of_view")
 	$AimPivot/SpringArm3D/Camera3D.fov = default_camera_fov
+	_apply_gameplay_mouse_mode()
+
+
+func _apply_gameplay_mouse_mode() -> void:
+	if not _is_local_online or input_prefix != "p1":
+		return
+	if PauseManager.is_pause_open():
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	else:
+		Input.mouse_mode = (Input.MOUSE_MODE_HIDDEN if use_gamepad_look
+			else Input.MOUSE_MODE_CAPTURED)
 
 
 func _initial_character_skin_id() -> String:

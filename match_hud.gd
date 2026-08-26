@@ -187,7 +187,7 @@ func _build_scoreboard_overlay():
 
 func _process(delta):
 	# Hold Tab to show scoreboard, release to hide.
-	var tab_held = Input.is_key_pressed(KEY_TAB) or Input.is_action_pressed("ui_focus_next")
+	var tab_held = Input.is_action_pressed("scoreboard")
 	if tab_held and not _tab_open:
 		_tab_open = true
 		_scoreboard_refresh_elapsed = 0.0
@@ -203,8 +203,9 @@ func _process(delta):
 		_scoreboard_overlay.dismiss()
 
 func _input(event):
-	# Consume Tab input so it doesn't trigger other UI actions.
-	if event is InputEventKey and event.keycode == KEY_TAB:
+	# Consume the dedicated keyboard/controller scoreboard action so it does
+	# not leak into focused UI while the overlay is held.
+	if event.is_action("scoreboard"):
 		get_viewport().set_input_as_handled()
 
 func _refresh_scoreboard():

@@ -2472,7 +2472,7 @@ func _on_version_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		_open_release_notes()
 		_version_label.accept_event()
-	elif event is InputEventKey and event.pressed and event.is_action("ui_accept"):
+	elif event.is_action_pressed("ui_accept"):
 		_open_release_notes()
 
 
