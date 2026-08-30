@@ -112,6 +112,17 @@ func _validate_movement_and_flash_presentation() -> void:
 	_check(is_equal_approx(overlay.color.a, 0.5),
 		"Flash Camera does not fade over the post-white duration")
 	overlay.free()
+	player._clear_spring_launch_state()
+	player._clear_steam_boost()
+	player.velocity.y = 99.0
+	player._sanitize_unexpected_vertical_velocity()
+	_check(is_equal_approx(player.velocity.y, 12.0),
+		"human unexpected combat launch is not capped")
+	player._spring_air_active = true
+	player.velocity.y = 13.0
+	player._sanitize_unexpected_vertical_velocity()
+	_check(is_equal_approx(player.velocity.y, 13.0),
+		"human spring launch was incorrectly capped")
 	player.free()
 
 	var bot = DummyScript.new()
@@ -136,6 +147,12 @@ func _validate_movement_and_flash_presentation() -> void:
 	bot.apply_flash_blind(3.0)
 	_check(is_equal_approx(bot._flash_blind_total, 3.0),
 		"bot spectator flash HUD does not retain the full flash duration")
+	bot._clear_spring_launch_state()
+	bot._clear_steam_boost()
+	bot.velocity.y = 99.0
+	bot._sanitize_unexpected_vertical_velocity()
+	_check(is_equal_approx(bot.velocity.y, 12.0),
+		"bot unexpected combat launch is not capped")
 	bot.free()
 
 	var player_source := FileAccess.get_file_as_string("res://character_body_3d.gd")
@@ -153,11 +170,11 @@ func _validate_movement_and_flash_presentation() -> void:
 	var melee = (load("res://melee_weapon.tscn") as PackedScene).instantiate()
 	var shape_node: CollisionShape3D = melee.get_node("HitBox/CollisionShape3D")
 	melee._apply_powerup_reach(true)
-	var powered_depth := (shape_node.shape as BoxShape3D).size.z
-	var powered_axis := shape_node.transform.basis.z.normalized()
-	var powered_center := absf(shape_node.position.dot(powered_axis))
-	_check(is_equal_approx(powered_depth, MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE)
-			and is_equal_approx(powered_center, MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE * 0.5),
+	var powered_shape := shape_node.shape as CapsuleShape3D
+	_check(powered_shape != null
+			and is_equal_approx(powered_shape.height, MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE)
+			and is_equal_approx(shape_node.position.y,
+				MeleeScript.POWERUP_MELEE_MAX_HIT_DISTANCE * 0.5),
 		"Reach does not stretch the physical melee hitbox to its powered distance")
 	melee.free()
 
@@ -178,6 +195,20 @@ func _validate_items() -> void:
 	_check(is_equal_approx(spring.horizontal_boost, 4.0), "spring horizontal boost is not 4m/s")
 	_check(is_equal_approx(spring.direction_window, 1.0), "spring direction window is not one second")
 	spring.free()
+	var held_trap = (load("res://bear_trap.tscn") as PackedScene).instantiate()
+	var held_trap_shape := held_trap.get_node("CollisionShape3D").shape as SphereShape3D
+	var held_trap_pickup := held_trap.get_node("Area3D/@CollisionShape3D@3").shape as SphereShape3D
+	_check(is_equal_approx(held_trap.HELD_SCALE, 0.481)
+		and is_equal_approx(held_trap_shape.radius, 0.39)
+		and is_equal_approx(held_trap_pickup.radius, 2.08),
+		"held/world bear trap is not exactly 30 percent larger")
+	held_trap.free()
+	var deployed_trap = (load("res://bear_trap_deployed.tscn") as PackedScene).instantiate()
+	var deployed_shape := deployed_trap.get_node("@CollisionShape3D@7").shape as CylinderShape3D
+	_check(is_equal_approx(deployed_shape.radius, 0.715)
+		and is_equal_approx(deployed_shape.height, 0.65),
+		"deployed bear-trap trigger is not exactly 30 percent larger")
+	deployed_trap.free()
 	var launch_origin := Vector3(2.0, 0.0, 3.0)
 	var launch_target := Vector3(2.0, 1.71, 2.0)
 	var expected_jet_direction := (launch_target - launch_origin).normalized()
@@ -220,8 +251,9 @@ func _validate_reach_and_spawn_pools() -> void:
 	for field in ["powerups_enabled", "powerup_registry", "melee_weapon_registry"]:
 		_check(field in GameConfig.PRESET_FIELDS,
 			"spawn-pool field %s is missing from presets/network snapshots" % field)
-	_check(GameConfig.POWERUP_TYPES.size() == 6,
-		"collectible powerup registry does not cover all six powerups")
+	_check(GameConfig.POWERUP_TYPES.size() == 7
+		and "fast_hands" in GameConfig.POWERUP_TYPES,
+		"collectible powerup registry does not cover all seven powerups")
 	_check("vampire_touch" not in GameConfig.POWERUP_TYPES
 			and not GameConfig.powerup_registry.has("vampire_touch"),
 		"removed Vampire Touch is still registered")
@@ -244,10 +276,11 @@ func _validate_reach_and_spawn_pools() -> void:
 			"Spawns tab is missing the %s dropdown section" % section_id)
 	var settings = LobbySettingsScript.new()
 	settings.panel_kind = LobbySettingsScript.Kind.MATCH
-	add_child(settings)
-	settings._selected_tab = 2
+	settings.initial_tab = LobbySettingsScript.MATCH_TABS.find("SPAWNS")
 	for section_id in settings._expanded_spawn_sections:
 		settings._expanded_spawn_sections[section_id] = true
+	add_child(settings)
+	settings._selected_tab = LobbySettingsScript.MATCH_TABS.find("SPAWNS")
 	settings._rebuild_body()
 	for section_id in ["items", "powerups", "melee"]:
 		_check(settings.find_child("SpawnPool_%s" % section_id, true, false) != null,

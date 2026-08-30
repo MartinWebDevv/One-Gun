@@ -1,0 +1,623 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: eye_wizard is available in the public character selector
+PASS: eye_wizard preserves its authored material
+PASS: eye_wizard declares a headwear socket profile
+PASS: eye_wizard has a customization and roster portrait
+PASS: eye_wizard visual wrapper loads
+PASS: eye_wizard wrapper keeps its normalized gameplay scale
+PASS: eye_wizard authored mesh faces gameplay forward
+PASS: eye_wizard exposes its skinned skeleton
+PASS: eye_wizard required bone exists: mixamorig_Hips
+PASS: eye_wizard required bone exists: mixamorig_Head
+PASS: eye_wizard required bone exists: mixamorig_RightHand
+PASS: eye_wizard required bone exists: mixamorig_LeftFoot
+PASS: eye_wizard required bone exists: mixamorig_RightFoot
+PASS: eye_wizard animated socket is valid: GunHoldPoint
+PASS: eye_wizard animated socket is valid: MeleeHoldPoint
+PASS: eye_wizard animated socket is valid: ItemHoldPoint
+PASS: eye_wizard animated socket is valid: LeftFootSocket
+PASS: eye_wizard animated socket is valid: RightFootSocket
+PASS: eye_wizard animated socket is valid: HeadwearSocket
+PASS: eye_wizard skinned mesh is present
+PASS: eye_wizard cat-color changes cannot overwrite its authored look
+PASS: eye_wizard runtime animation player is available
+PASS: eye_wizard animation retargeted: idle
+PASS: eye_wizard animation has a complete body track set: idle
+PASS: eye_wizard animation pose remains finite: idle
+PASS: eye_wizard animation retargeted: idle_pistol
+PASS: eye_wizard animation has a complete body track set: idle_pistol
+PASS: eye_wizard animation pose remains finite: idle_pistol
+PASS: eye_wizard animation retargeted: long_idle
+PASS: eye_wizard animation has a complete body track set: long_idle
+PASS: eye_wizard animation pose remains finite: long_idle
+PASS: eye_wizard animation retargeted: standard_run
+PASS: eye_wizard animation has a complete body track set: standard_run
+PASS: eye_wizard animation pose remains finite: standard_run
+PASS: eye_wizard animation retargeted: run
+PASS: eye_wizard animation has a complete body track set: run
+PASS: eye_wizard animation pose remains finite: run
+PASS: eye_wizard animation retargeted: jump
+PASS: eye_wizard animation has a complete body track set: jump
+PASS: eye_wizard animation pose remains finite: jump
+PASS: eye_wizard animation retargeted: running_jump
+PASS: eye_wizard animation has a complete body track set: running_jump
+PASS: eye_wizard animation pose remains finite: running_jump
+PASS: eye_wizard animation retargeted: fall
+PASS: eye_wizard animation has a complete body track set: fall
+PASS: eye_wizard animation pose remains finite: fall
+PASS: eye_wizard animation retargeted: pistol_jump
+PASS: eye_wizard animation has a complete body track set: pistol_jump
+PASS: eye_wizard animation pose remains finite: pistol_jump
+PASS: eye_wizard animation retargeted: pistol_run
+PASS: eye_wizard animation has a complete body track set: pistol_run
+PASS: eye_wizard animation pose remains finite: pistol_run
+PASS: eye_wizard animation retargeted: pistol_backward
+PASS: eye_wizard animation has a complete body track set: pistol_backward
+PASS: eye_wizard animation pose remains finite: pistol_backward
+PASS: eye_wizard animation retargeted: pistol_strafe_left
+PASS: eye_wizard animation has a complete body track set: pistol_strafe_left
+PASS: eye_wizard animation pose remains finite: pistol_strafe_left
+PASS: eye_wizard animation retargeted: pistol_strafe_right
+PASS: eye_wizard animation has a complete body track set: pistol_strafe_right
+PASS: eye_wizard animation pose remains finite: pistol_strafe_right
+PASS: eye_wizard animation retargeted: run_with_sword
+PASS: eye_wizard animation has a complete body track set: run_with_sword
+PASS: eye_wizard animation pose remains finite: run_with_sword
+PASS: eye_wizard animation retargeted: melee
+PASS: eye_wizard animation has a complete body track set: melee
+PASS: eye_wizard animation pose remains finite: melee
+PASS: eye_wizard animation retargeted: throw_object
+PASS: eye_wizard animation has a complete body track set: throw_object
+PASS: eye_wizard animation pose remains finite: throw_object
+PASS: eye_wizard animation retargeted: hit
+PASS: eye_wizard animation has a complete body track set: hit
+PASS: eye_wizard animation pose remains finite: hit
+PASS: eye_wizard animation retargeted: hip_hop_dance
+PASS: eye_wizard animation has a complete body track set: hip_hop_dance
+PASS: eye_wizard animation pose remains finite: hip_hop_dance
+PASS: eye_wizard animation retargeted: swing_dance
+PASS: eye_wizard animation has a complete body track set: swing_dance
+PASS: eye_wizard animation pose remains finite: swing_dance
+PASS: eye_wizard animation retargeted: podium_backbeat_bounce
+PASS: eye_wizard animation has a complete body track set: podium_backbeat_bounce
+PASS: eye_wizard animation pose remains finite: podium_backbeat_bounce
+PASS: eye_wizard animation retargeted: podium_champion_canter
+PASS: eye_wizard animation has a complete body track set: podium_champion_canter
+PASS: eye_wizard animation pose remains finite: podium_champion_canter
+PASS: eye_wizard animation retargeted: podium_fresh_footwork
+PASS: eye_wizard animation has a complete body track set: podium_fresh_footwork
+PASS: eye_wizard animation pose remains finite: podium_fresh_footwork
+PASS: eye_wizard animation retargeted: podium_house_party_heat
+PASS: eye_wizard animation has a complete body track set: podium_house_party_heat
+PASS: eye_wizard animation pose remains finite: podium_house_party_heat
+PASS: eye_wizard animation retargeted: podium_serpent_flow
+PASS: eye_wizard animation has a complete body track set: podium_serpent_flow
+PASS: eye_wizard animation pose remains finite: podium_serpent_flow
+PASS: eye_wizard animation retargeted: podium_midnight_monster
+PASS: eye_wizard animation has a complete body track set: podium_midnight_monster
+PASS: eye_wizard animation pose remains finite: podium_midnight_monster
+PASS: eye_wizard animation retargeted: podium_victory_wave
+PASS: eye_wizard animation has a complete body track set: podium_victory_wave
+PASS: eye_wizard animation pose remains finite: podium_victory_wave
+PASS: eye_wizard animation retargeted: round_breakspin_finale
+PASS: eye_wizard animation has a complete body track set: round_breakspin_finale
+PASS: eye_wizard animation pose remains finite: round_breakspin_finale
+PASS: eye_wizard animation retargeted: round_floorwork_finish
+PASS: eye_wizard animation has a complete body track set: round_floorwork_finish
+PASS: eye_wizard animation pose remains finite: round_floorwork_finish
+PASS: eye_wizard animation retargeted: round_birdie_boogie
+PASS: eye_wizard animation has a complete body track set: round_birdie_boogie
+PASS: eye_wizard animation pose remains finite: round_birdie_boogie
+PASS: eye_wizard animation retargeted: round_arena_clapline
+PASS: eye_wizard animation has a complete body track set: round_arena_clapline
+PASS: eye_wizard animation pose remains finite: round_arena_clapline
+PASS: eye_wizard animation retargeted: round_soul_cyclone
+PASS: eye_wizard animation has a complete body track set: round_soul_cyclone
+PASS: eye_wizard animation pose remains finite: round_soul_cyclone
+PASS: eye_wizard animation retargeted: round_quickstep_shuffle
+PASS: eye_wizard animation has a complete body track set: round_quickstep_shuffle
+PASS: eye_wizard animation pose remains finite: round_quickstep_shuffle
+PASS: eye_wizard animation retargeted: round_victory_swing
+PASS: eye_wizard animation has a complete body track set: round_victory_swing
+PASS: eye_wizard animation pose remains finite: round_victory_swing
+PASS: eye_wizard equipped hat is attached beneath its animated head socket
+PASS: mr_mushroom is available in the public character selector
+PASS: mr_mushroom preserves its authored material
+PASS: mr_mushroom declares a headwear socket profile
+PASS: mr_mushroom has a customization and roster portrait
+PASS: mr_mushroom visual wrapper loads
+PASS: mr_mushroom wrapper keeps its normalized gameplay scale
+PASS: mr_mushroom authored mesh faces gameplay forward
+PASS: mr_mushroom exposes its skinned skeleton
+PASS: mr_mushroom required bone exists: mixamorig_Hips
+PASS: mr_mushroom required bone exists: mixamorig_Head
+PASS: mr_mushroom required bone exists: mixamorig_RightHand
+PASS: mr_mushroom required bone exists: mixamorig_LeftFoot
+PASS: mr_mushroom required bone exists: mixamorig_RightFoot
+PASS: mr_mushroom animated socket is valid: GunHoldPoint
+PASS: mr_mushroom animated socket is valid: MeleeHoldPoint
+PASS: mr_mushroom animated socket is valid: ItemHoldPoint
+PASS: mr_mushroom animated socket is valid: LeftFootSocket
+PASS: mr_mushroom animated socket is valid: RightFootSocket
+PASS: mr_mushroom animated socket is valid: HeadwearSocket
+PASS: mr_mushroom skinned mesh is present
+PASS: mr_mushroom cat-color changes cannot overwrite its authored look
+PASS: mr_mushroom runtime animation player is available
+PASS: mr_mushroom animation retargeted: idle
+PASS: mr_mushroom animation has a complete body track set: idle
+PASS: mr_mushroom animation pose remains finite: idle
+PASS: mr_mushroom animation retargeted: idle_pistol
+PASS: mr_mushroom animation has a complete body track set: idle_pistol
+PASS: mr_mushroom animation pose remains finite: idle_pistol
+PASS: mr_mushroom animation retargeted: long_idle
+PASS: mr_mushroom animation has a complete body track set: long_idle
+PASS: mr_mushroom animation pose remains finite: long_idle
+PASS: mr_mushroom animation retargeted: standard_run
+PASS: mr_mushroom animation has a complete body track set: standard_run
+PASS: mr_mushroom animation pose remains finite: standard_run
+PASS: mr_mushroom animation retargeted: run
+PASS: mr_mushroom animation has a complete body track set: run
+PASS: mr_mushroom animation pose remains finite: run
+PASS: mr_mushroom animation retargeted: jump
+PASS: mr_mushroom animation has a complete body track set: jump
+PASS: mr_mushroom animation pose remains finite: jump
+PASS: mr_mushroom animation retargeted: running_jump
+PASS: mr_mushroom animation has a complete body track set: running_jump
+PASS: mr_mushroom animation pose remains finite: running_jump
+PASS: mr_mushroom animation retargeted: fall
+PASS: mr_mushroom animation has a complete body track set: fall
+PASS: mr_mushroom animation pose remains finite: fall
+PASS: mr_mushroom animation retargeted: pistol_jump
+PASS: mr_mushroom animation has a complete body track set: pistol_jump
+PASS: mr_mushroom animation pose remains finite: pistol_jump
+PASS: mr_mushroom animation retargeted: pistol_run
+PASS: mr_mushroom animation has a complete body track set: pistol_run
+PASS: mr_mushroom animation pose remains finite: pistol_run
+PASS: mr_mushroom animation retargeted: pistol_backward
+PASS: mr_mushroom animation has a complete body track set: pistol_backward
+PASS: mr_mushroom animation pose remains finite: pistol_backward
+PASS: mr_mushroom animation retargeted: pistol_strafe_left
+PASS: mr_mushroom animation has a complete body track set: pistol_strafe_left
+PASS: mr_mushroom animation pose remains finite: pistol_strafe_left
+PASS: mr_mushroom animation retargeted: pistol_strafe_right
+PASS: mr_mushroom animation has a complete body track set: pistol_strafe_right
+PASS: mr_mushroom animation pose remains finite: pistol_strafe_right
+PASS: mr_mushroom animation retargeted: run_with_sword
+PASS: mr_mushroom animation has a complete body track set: run_with_sword
+PASS: mr_mushroom animation pose remains finite: run_with_sword
+PASS: mr_mushroom animation retargeted: melee
+PASS: mr_mushroom animation has a complete body track set: melee
+PASS: mr_mushroom animation pose remains finite: melee
+PASS: mr_mushroom animation retargeted: throw_object
+PASS: mr_mushroom animation has a complete body track set: throw_object
+PASS: mr_mushroom animation pose remains finite: throw_object
+PASS: mr_mushroom animation retargeted: hit
+PASS: mr_mushroom animation has a complete body track set: hit
+PASS: mr_mushroom animation pose remains finite: hit
+PASS: mr_mushroom animation retargeted: hip_hop_dance
+PASS: mr_mushroom animation has a complete body track set: hip_hop_dance
+PASS: mr_mushroom animation pose remains finite: hip_hop_dance
+PASS: mr_mushroom animation retargeted: swing_dance
+PASS: mr_mushroom animation has a complete body track set: swing_dance
+PASS: mr_mushroom animation pose remains finite: swing_dance
+PASS: mr_mushroom animation retargeted: podium_backbeat_bounce
+PASS: mr_mushroom animation has a complete body track set: podium_backbeat_bounce
+PASS: mr_mushroom animation pose remains finite: podium_backbeat_bounce
+PASS: mr_mushroom animation retargeted: podium_champion_canter
+PASS: mr_mushroom animation has a complete body track set: podium_champion_canter
+PASS: mr_mushroom animation pose remains finite: podium_champion_canter
+PASS: mr_mushroom animation retargeted: podium_fresh_footwork
+PASS: mr_mushroom animation has a complete body track set: podium_fresh_footwork
+PASS: mr_mushroom animation pose remains finite: podium_fresh_footwork
+PASS: mr_mushroom animation retargeted: podium_house_party_heat
+PASS: mr_mushroom animation has a complete body track set: podium_house_party_heat
+PASS: mr_mushroom animation pose remains finite: podium_house_party_heat
+PASS: mr_mushroom animation retargeted: podium_serpent_flow
+PASS: mr_mushroom animation has a complete body track set: podium_serpent_flow
+PASS: mr_mushroom animation pose remains finite: podium_serpent_flow
+PASS: mr_mushroom animation retargeted: podium_midnight_monster
+PASS: mr_mushroom animation has a complete body track set: podium_midnight_monster
+PASS: mr_mushroom animation pose remains finite: podium_midnight_monster
+PASS: mr_mushroom animation retargeted: podium_victory_wave
+PASS: mr_mushroom animation has a complete body track set: podium_victory_wave
+PASS: mr_mushroom animation pose remains finite: podium_victory_wave
+PASS: mr_mushroom animation retargeted: round_breakspin_finale
+PASS: mr_mushroom animation has a complete body track set: round_breakspin_finale
+PASS: mr_mushroom animation pose remains finite: round_breakspin_finale
+PASS: mr_mushroom animation retargeted: round_floorwork_finish
+PASS: mr_mushroom animation has a complete body track set: round_floorwork_finish
+PASS: mr_mushroom animation pose remains finite: round_floorwork_finish
+PASS: mr_mushroom animation retargeted: round_birdie_boogie
+PASS: mr_mushroom animation has a complete body track set: round_birdie_boogie
+PASS: mr_mushroom animation pose remains finite: round_birdie_boogie
+PASS: mr_mushroom animation retargeted: round_arena_clapline
+PASS: mr_mushroom animation has a complete body track set: round_arena_clapline
+PASS: mr_mushroom animation pose remains finite: round_arena_clapline
+PASS: mr_mushroom animation retargeted: round_soul_cyclone
+PASS: mr_mushroom animation has a complete body track set: round_soul_cyclone
+PASS: mr_mushroom animation pose remains finite: round_soul_cyclone
+PASS: mr_mushroom animation retargeted: round_quickstep_shuffle
+PASS: mr_mushroom animation has a complete body track set: round_quickstep_shuffle
+PASS: mr_mushroom animation pose remains finite: round_quickstep_shuffle
+PASS: mr_mushroom animation retargeted: round_victory_swing
+PASS: mr_mushroom animation has a complete body track set: round_victory_swing
+PASS: mr_mushroom animation pose remains finite: round_victory_swing
+PASS: mr_mushroom equipped hat is attached beneath its animated head socket
+PASS: mr_poop is available in the public character selector
+PASS: mr_poop preserves its authored material
+PASS: mr_poop declares a headwear socket profile
+PASS: mr_poop has a customization and roster portrait
+PASS: mr_poop visual wrapper loads
+PASS: mr_poop wrapper keeps its normalized gameplay scale
+PASS: mr_poop authored mesh faces gameplay forward
+PASS: mr_poop exposes its skinned skeleton
+PASS: mr_poop required bone exists: mixamorig_Hips
+PASS: mr_poop required bone exists: mixamorig_Head
+PASS: mr_poop required bone exists: mixamorig_RightHand
+PASS: mr_poop required bone exists: mixamorig_LeftFoot
+PASS: mr_poop required bone exists: mixamorig_RightFoot
+PASS: mr_poop animated socket is valid: GunHoldPoint
+PASS: mr_poop animated socket is valid: MeleeHoldPoint
+PASS: mr_poop animated socket is valid: ItemHoldPoint
+PASS: mr_poop animated socket is valid: LeftFootSocket
+PASS: mr_poop animated socket is valid: RightFootSocket
+PASS: mr_poop animated socket is valid: HeadwearSocket
+PASS: mr_poop skinned mesh is present
+PASS: mr_poop cat-color changes cannot overwrite its authored look
+PASS: mr_poop runtime animation player is available
+PASS: mr_poop animation retargeted: idle
+PASS: mr_poop animation has a complete body track set: idle
+PASS: mr_poop animation pose remains finite: idle
+PASS: mr_poop animation retargeted: idle_pistol
+PASS: mr_poop animation has a complete body track set: idle_pistol
+PASS: mr_poop animation pose remains finite: idle_pistol
+PASS: mr_poop animation retargeted: long_idle
+PASS: mr_poop animation has a complete body track set: long_idle
+PASS: mr_poop animation pose remains finite: long_idle
+PASS: mr_poop animation retargeted: standard_run
+PASS: mr_poop animation has a complete body track set: standard_run
+PASS: mr_poop animation pose remains finite: standard_run
+PASS: mr_poop animation retargeted: run
+PASS: mr_poop animation has a complete body track set: run
+PASS: mr_poop animation pose remains finite: run
+PASS: mr_poop animation retargeted: jump
+PASS: mr_poop animation has a complete body track set: jump
+PASS: mr_poop animation pose remains finite: jump
+PASS: mr_poop animation retargeted: running_jump
+PASS: mr_poop animation has a complete body track set: running_jump
+PASS: mr_poop animation pose remains finite: running_jump
+PASS: mr_poop animation retargeted: fall
+PASS: mr_poop animation has a complete body track set: fall
+PASS: mr_poop animation pose remains finite: fall
+PASS: mr_poop animation retargeted: pistol_jump
+PASS: mr_poop animation has a complete body track set: pistol_jump
+PASS: mr_poop animation pose remains finite: pistol_jump
+PASS: mr_poop animation retargeted: pistol_run
+PASS: mr_poop animation has a complete body track set: pistol_run
+PASS: mr_poop animation pose remains finite: pistol_run
+PASS: mr_poop animation retargeted: pistol_backward
+PASS: mr_poop animation has a complete body track set: pistol_backward
+PASS: mr_poop animation pose remains finite: pistol_backward
+PASS: mr_poop animation retargeted: pistol_strafe_left
+PASS: mr_poop animation has a complete body track set: pistol_strafe_left
+PASS: mr_poop animation pose remains finite: pistol_strafe_left
+PASS: mr_poop animation retargeted: pistol_strafe_right
+PASS: mr_poop animation has a complete body track set: pistol_strafe_right
+PASS: mr_poop animation pose remains finite: pistol_strafe_right
+PASS: mr_poop animation retargeted: run_with_sword
+PASS: mr_poop animation has a complete body track set: run_with_sword
+PASS: mr_poop animation pose remains finite: run_with_sword
+PASS: mr_poop animation retargeted: melee
+PASS: mr_poop animation has a complete body track set: melee
+PASS: mr_poop animation pose remains finite: melee
+PASS: mr_poop animation retargeted: throw_object
+PASS: mr_poop animation has a complete body track set: throw_object
+PASS: mr_poop animation pose remains finite: throw_object
+PASS: mr_poop animation retargeted: hit
+PASS: mr_poop animation has a complete body track set: hit
+PASS: mr_poop animation pose remains finite: hit
+PASS: mr_poop animation retargeted: hip_hop_dance
+PASS: mr_poop animation has a complete body track set: hip_hop_dance
+PASS: mr_poop animation pose remains finite: hip_hop_dance
+PASS: mr_poop animation retargeted: swing_dance
+PASS: mr_poop animation has a complete body track set: swing_dance
+PASS: mr_poop animation pose remains finite: swing_dance
+PASS: mr_poop animation retargeted: podium_backbeat_bounce
+PASS: mr_poop animation has a complete body track set: podium_backbeat_bounce
+PASS: mr_poop animation pose remains finite: podium_backbeat_bounce
+PASS: mr_poop animation retargeted: podium_champion_canter
+PASS: mr_poop animation has a complete body track set: podium_champion_canter
+PASS: mr_poop animation pose remains finite: podium_champion_canter
+PASS: mr_poop animation retargeted: podium_fresh_footwork
+PASS: mr_poop animation has a complete body track set: podium_fresh_footwork
+PASS: mr_poop animation pose remains finite: podium_fresh_footwork
+PASS: mr_poop animation retargeted: podium_house_party_heat
+PASS: mr_poop animation has a complete body track set: podium_house_party_heat
+PASS: mr_poop animation pose remains finite: podium_house_party_heat
+PASS: mr_poop animation retargeted: podium_serpent_flow
+PASS: mr_poop animation has a complete body track set: podium_serpent_flow
+PASS: mr_poop animation pose remains finite: podium_serpent_flow
+PASS: mr_poop animation retargeted: podium_midnight_monster
+PASS: mr_poop animation has a complete body track set: podium_midnight_monster
+PASS: mr_poop animation pose remains finite: podium_midnight_monster
+PASS: mr_poop animation retargeted: podium_victory_wave
+PASS: mr_poop animation has a complete body track set: podium_victory_wave
+PASS: mr_poop animation pose remains finite: podium_victory_wave
+PASS: mr_poop animation retargeted: round_breakspin_finale
+PASS: mr_poop animation has a complete body track set: round_breakspin_finale
+PASS: mr_poop animation pose remains finite: round_breakspin_finale
+PASS: mr_poop animation retargeted: round_floorwork_finish
+PASS: mr_poop animation has a complete body track set: round_floorwork_finish
+PASS: mr_poop animation pose remains finite: round_floorwork_finish
+PASS: mr_poop animation retargeted: round_birdie_boogie
+PASS: mr_poop animation has a complete body track set: round_birdie_boogie
+PASS: mr_poop animation pose remains finite: round_birdie_boogie
+PASS: mr_poop animation retargeted: round_arena_clapline
+PASS: mr_poop animation has a complete body track set: round_arena_clapline
+PASS: mr_poop animation pose remains finite: round_arena_clapline
+PASS: mr_poop animation retargeted: round_soul_cyclone
+PASS: mr_poop animation has a complete body track set: round_soul_cyclone
+PASS: mr_poop animation pose remains finite: round_soul_cyclone
+PASS: mr_poop animation retargeted: round_quickstep_shuffle
+PASS: mr_poop animation has a complete body track set: round_quickstep_shuffle
+PASS: mr_poop animation pose remains finite: round_quickstep_shuffle
+PASS: mr_poop animation retargeted: round_victory_swing
+PASS: mr_poop animation has a complete body track set: round_victory_swing
+PASS: mr_poop animation pose remains finite: round_victory_swing
+PASS: mr_poop equipped hat is attached beneath its animated head socket
+PASS: mr_salt is available in the public character selector
+PASS: mr_salt preserves its authored material
+PASS: mr_salt declares a headwear socket profile
+PASS: mr_salt has a customization and roster portrait
+PASS: mr_salt visual wrapper loads
+PASS: mr_salt wrapper keeps its normalized gameplay scale
+PASS: mr_salt authored mesh faces gameplay forward
+PASS: mr_salt exposes its skinned skeleton
+PASS: mr_salt required bone exists: mixamorig_Hips
+PASS: mr_salt required bone exists: mixamorig_Head
+PASS: mr_salt required bone exists: mixamorig_RightHand
+PASS: mr_salt required bone exists: mixamorig_LeftFoot
+PASS: mr_salt required bone exists: mixamorig_RightFoot
+PASS: mr_salt animated socket is valid: GunHoldPoint
+PASS: mr_salt animated socket is valid: MeleeHoldPoint
+PASS: mr_salt animated socket is valid: ItemHoldPoint
+PASS: mr_salt animated socket is valid: LeftFootSocket
+PASS: mr_salt animated socket is valid: RightFootSocket
+PASS: mr_salt animated socket is valid: HeadwearSocket
+PASS: mr_salt skinned mesh is present
+PASS: mr_salt cat-color changes cannot overwrite its authored look
+PASS: mr_salt runtime animation player is available
+PASS: mr_salt animation retargeted: idle
+PASS: mr_salt animation has a complete body track set: idle
+PASS: mr_salt animation pose remains finite: idle
+PASS: mr_salt animation retargeted: idle_pistol
+PASS: mr_salt animation has a complete body track set: idle_pistol
+PASS: mr_salt animation pose remains finite: idle_pistol
+PASS: mr_salt animation retargeted: long_idle
+PASS: mr_salt animation has a complete body track set: long_idle
+PASS: mr_salt animation pose remains finite: long_idle
+PASS: mr_salt animation retargeted: standard_run
+PASS: mr_salt animation has a complete body track set: standard_run
+PASS: mr_salt animation pose remains finite: standard_run
+PASS: mr_salt animation retargeted: run
+PASS: mr_salt animation has a complete body track set: run
+PASS: mr_salt animation pose remains finite: run
+PASS: mr_salt animation retargeted: jump
+PASS: mr_salt animation has a complete body track set: jump
+PASS: mr_salt animation pose remains finite: jump
+PASS: mr_salt animation retargeted: running_jump
+PASS: mr_salt animation has a complete body track set: running_jump
+PASS: mr_salt animation pose remains finite: running_jump
+PASS: mr_salt animation retargeted: fall
+PASS: mr_salt animation has a complete body track set: fall
+PASS: mr_salt animation pose remains finite: fall
+PASS: mr_salt animation retargeted: pistol_jump
+PASS: mr_salt animation has a complete body track set: pistol_jump
+PASS: mr_salt animation pose remains finite: pistol_jump
+PASS: mr_salt animation retargeted: pistol_run
+PASS: mr_salt animation has a complete body track set: pistol_run
+PASS: mr_salt animation pose remains finite: pistol_run
+PASS: mr_salt animation retargeted: pistol_backward
+PASS: mr_salt animation has a complete body track set: pistol_backward
+PASS: mr_salt animation pose remains finite: pistol_backward
+PASS: mr_salt animation retargeted: pistol_strafe_left
+PASS: mr_salt animation has a complete body track set: pistol_strafe_left
+PASS: mr_salt animation pose remains finite: pistol_strafe_left
+PASS: mr_salt animation retargeted: pistol_strafe_right
+PASS: mr_salt animation has a complete body track set: pistol_strafe_right
+PASS: mr_salt animation pose remains finite: pistol_strafe_right
+PASS: mr_salt animation retargeted: run_with_sword
+PASS: mr_salt animation has a complete body track set: run_with_sword
+PASS: mr_salt animation pose remains finite: run_with_sword
+PASS: mr_salt animation retargeted: melee
+PASS: mr_salt animation has a complete body track set: melee
+PASS: mr_salt animation pose remains finite: melee
+PASS: mr_salt animation retargeted: throw_object
+PASS: mr_salt animation has a complete body track set: throw_object
+PASS: mr_salt animation pose remains finite: throw_object
+PASS: mr_salt animation retargeted: hit
+PASS: mr_salt animation has a complete body track set: hit
+PASS: mr_salt animation pose remains finite: hit
+PASS: mr_salt animation retargeted: hip_hop_dance
+PASS: mr_salt animation has a complete body track set: hip_hop_dance
+PASS: mr_salt animation pose remains finite: hip_hop_dance
+PASS: mr_salt animation retargeted: swing_dance
+PASS: mr_salt animation has a complete body track set: swing_dance
+PASS: mr_salt animation pose remains finite: swing_dance
+PASS: mr_salt animation retargeted: podium_backbeat_bounce
+PASS: mr_salt animation has a complete body track set: podium_backbeat_bounce
+PASS: mr_salt animation pose remains finite: podium_backbeat_bounce
+PASS: mr_salt animation retargeted: podium_champion_canter
+PASS: mr_salt animation has a complete body track set: podium_champion_canter
+PASS: mr_salt animation pose remains finite: podium_champion_canter
+PASS: mr_salt animation retargeted: podium_fresh_footwork
+PASS: mr_salt animation has a complete body track set: podium_fresh_footwork
+PASS: mr_salt animation pose remains finite: podium_fresh_footwork
+PASS: mr_salt animation retargeted: podium_house_party_heat
+PASS: mr_salt animation has a complete body track set: podium_house_party_heat
+PASS: mr_salt animation pose remains finite: podium_house_party_heat
+PASS: mr_salt animation retargeted: podium_serpent_flow
+PASS: mr_salt animation has a complete body track set: podium_serpent_flow
+PASS: mr_salt animation pose remains finite: podium_serpent_flow
+PASS: mr_salt animation retargeted: podium_midnight_monster
+PASS: mr_salt animation has a complete body track set: podium_midnight_monster
+PASS: mr_salt animation pose remains finite: podium_midnight_monster
+PASS: mr_salt animation retargeted: podium_victory_wave
+PASS: mr_salt animation has a complete body track set: podium_victory_wave
+PASS: mr_salt animation pose remains finite: podium_victory_wave
+PASS: mr_salt animation retargeted: round_breakspin_finale
+PASS: mr_salt animation has a complete body track set: round_breakspin_finale
+PASS: mr_salt animation pose remains finite: round_breakspin_finale
+PASS: mr_salt animation retargeted: round_floorwork_finish
+PASS: mr_salt animation has a complete body track set: round_floorwork_finish
+PASS: mr_salt animation pose remains finite: round_floorwork_finish
+PASS: mr_salt animation retargeted: round_birdie_boogie
+PASS: mr_salt animation has a complete body track set: round_birdie_boogie
+PASS: mr_salt animation pose remains finite: round_birdie_boogie
+PASS: mr_salt animation retargeted: round_arena_clapline
+PASS: mr_salt animation has a complete body track set: round_arena_clapline
+PASS: mr_salt animation pose remains finite: round_arena_clapline
+PASS: mr_salt animation retargeted: round_soul_cyclone
+PASS: mr_salt animation has a complete body track set: round_soul_cyclone
+PASS: mr_salt animation pose remains finite: round_soul_cyclone
+PASS: mr_salt animation retargeted: round_quickstep_shuffle
+PASS: mr_salt animation has a complete body track set: round_quickstep_shuffle
+PASS: mr_salt animation pose remains finite: round_quickstep_shuffle
+PASS: mr_salt animation retargeted: round_victory_swing
+PASS: mr_salt animation has a complete body track set: round_victory_swing
+PASS: mr_salt animation pose remains finite: round_victory_swing
+PASS: mr_salt equipped hat is attached beneath its animated head socket
+PASS: spooky_witch is available in the public character selector
+PASS: spooky_witch preserves its authored material
+PASS: spooky_witch declares a headwear socket profile
+PASS: spooky_witch has a customization and roster portrait
+PASS: spooky_witch visual wrapper loads
+PASS: spooky_witch wrapper keeps its normalized gameplay scale
+PASS: spooky_witch authored mesh faces gameplay forward
+PASS: spooky_witch exposes its skinned skeleton
+PASS: spooky_witch required bone exists: mixamorig_Hips
+PASS: spooky_witch required bone exists: mixamorig_Head
+PASS: spooky_witch required bone exists: mixamorig_RightHand
+PASS: spooky_witch required bone exists: mixamorig_LeftFoot
+PASS: spooky_witch required bone exists: mixamorig_RightFoot
+PASS: spooky_witch animated socket is valid: GunHoldPoint
+PASS: spooky_witch animated socket is valid: MeleeHoldPoint
+PASS: spooky_witch animated socket is valid: ItemHoldPoint
+PASS: spooky_witch animated socket is valid: LeftFootSocket
+PASS: spooky_witch animated socket is valid: RightFootSocket
+PASS: spooky_witch animated socket is valid: HeadwearSocket
+PASS: spooky_witch skinned mesh is present
+PASS: spooky_witch cat-color changes cannot overwrite its authored look
+PASS: spooky_witch runtime animation player is available
+PASS: spooky_witch animation retargeted: idle
+PASS: spooky_witch animation has a complete body track set: idle
+PASS: spooky_witch animation pose remains finite: idle
+PASS: spooky_witch animation retargeted: idle_pistol
+PASS: spooky_witch animation has a complete body track set: idle_pistol
+PASS: spooky_witch animation pose remains finite: idle_pistol
+PASS: spooky_witch animation retargeted: long_idle
+PASS: spooky_witch animation has a complete body track set: long_idle
+PASS: spooky_witch animation pose remains finite: long_idle
+PASS: spooky_witch animation retargeted: standard_run
+PASS: spooky_witch animation has a complete body track set: standard_run
+PASS: spooky_witch animation pose remains finite: standard_run
+PASS: spooky_witch animation retargeted: run
+PASS: spooky_witch animation has a complete body track set: run
+PASS: spooky_witch animation pose remains finite: run
+PASS: spooky_witch animation retargeted: jump
+PASS: spooky_witch animation has a complete body track set: jump
+PASS: spooky_witch animation pose remains finite: jump
+PASS: spooky_witch animation retargeted: running_jump
+PASS: spooky_witch animation has a complete body track set: running_jump
+PASS: spooky_witch animation pose remains finite: running_jump
+PASS: spooky_witch animation retargeted: fall
+PASS: spooky_witch animation has a complete body track set: fall
+PASS: spooky_witch animation pose remains finite: fall
+PASS: spooky_witch animation retargeted: pistol_jump
+PASS: spooky_witch animation has a complete body track set: pistol_jump
+PASS: spooky_witch animation pose remains finite: pistol_jump
+PASS: spooky_witch animation retargeted: pistol_run
+PASS: spooky_witch animation has a complete body track set: pistol_run
+PASS: spooky_witch animation pose remains finite: pistol_run
+PASS: spooky_witch animation retargeted: pistol_backward
+PASS: spooky_witch animation has a complete body track set: pistol_backward
+PASS: spooky_witch animation pose remains finite: pistol_backward
+PASS: spooky_witch animation retargeted: pistol_strafe_left
+PASS: spooky_witch animation has a complete body track set: pistol_strafe_left
+PASS: spooky_witch animation pose remains finite: pistol_strafe_left
+PASS: spooky_witch animation retargeted: pistol_strafe_right
+PASS: spooky_witch animation has a complete body track set: pistol_strafe_right
+PASS: spooky_witch animation pose remains finite: pistol_strafe_right
+PASS: spooky_witch animation retargeted: run_with_sword
+PASS: spooky_witch animation has a complete body track set: run_with_sword
+PASS: spooky_witch animation pose remains finite: run_with_sword
+PASS: spooky_witch animation retargeted: melee
+PASS: spooky_witch animation has a complete body track set: melee
+PASS: spooky_witch animation pose remains finite: melee
+PASS: spooky_witch animation retargeted: throw_object
+PASS: spooky_witch animation has a complete body track set: throw_object
+PASS: spooky_witch animation pose remains finite: throw_object
+PASS: spooky_witch animation retargeted: hit
+PASS: spooky_witch animation has a complete body track set: hit
+PASS: spooky_witch animation pose remains finite: hit
+PASS: spooky_witch animation retargeted: hip_hop_dance
+PASS: spooky_witch animation has a complete body track set: hip_hop_dance
+PASS: spooky_witch animation pose remains finite: hip_hop_dance
+PASS: spooky_witch animation retargeted: swing_dance
+PASS: spooky_witch animation has a complete body track set: swing_dance
+PASS: spooky_witch animation pose remains finite: swing_dance
+PASS: spooky_witch animation retargeted: podium_backbeat_bounce
+PASS: spooky_witch animation has a complete body track set: podium_backbeat_bounce
+PASS: spooky_witch animation pose remains finite: podium_backbeat_bounce
+PASS: spooky_witch animation retargeted: podium_champion_canter
+PASS: spooky_witch animation has a complete body track set: podium_champion_canter
+PASS: spooky_witch animation pose remains finite: podium_champion_canter
+PASS: spooky_witch animation retargeted: podium_fresh_footwork
+PASS: spooky_witch animation has a complete body track set: podium_fresh_footwork
+PASS: spooky_witch animation pose remains finite: podium_fresh_footwork
+PASS: spooky_witch animation retargeted: podium_house_party_heat
+PASS: spooky_witch animation has a complete body track set: podium_house_party_heat
+PASS: spooky_witch animation pose remains finite: podium_house_party_heat
+PASS: spooky_witch animation retargeted: podium_serpent_flow
+PASS: spooky_witch animation has a complete body track set: podium_serpent_flow
+PASS: spooky_witch animation pose remains finite: podium_serpent_flow
+PASS: spooky_witch animation retargeted: podium_midnight_monster
+PASS: spooky_witch animation has a complete body track set: podium_midnight_monster
+PASS: spooky_witch animation pose remains finite: podium_midnight_monster
+PASS: spooky_witch animation retargeted: podium_victory_wave
+PASS: spooky_witch animation has a complete body track set: podium_victory_wave
+PASS: spooky_witch animation pose remains finite: podium_victory_wave
+PASS: spooky_witch animation retargeted: round_breakspin_finale
+PASS: spooky_witch animation has a complete body track set: round_breakspin_finale
+PASS: spooky_witch animation pose remains finite: round_breakspin_finale
+PASS: spooky_witch animation retargeted: round_floorwork_finish
+PASS: spooky_witch animation has a complete body track set: round_floorwork_finish
+PASS: spooky_witch animation pose remains finite: round_floorwork_finish
+PASS: spooky_witch animation retargeted: round_birdie_boogie
+PASS: spooky_witch animation has a complete body track set: round_birdie_boogie
+PASS: spooky_witch animation pose remains finite: round_birdie_boogie
+PASS: spooky_witch animation retargeted: round_arena_clapline
+PASS: spooky_witch animation has a complete body track set: round_arena_clapline
+PASS: spooky_witch animation pose remains finite: round_arena_clapline
+PASS: spooky_witch animation retargeted: round_soul_cyclone
+PASS: spooky_witch animation has a complete body track set: round_soul_cyclone
+PASS: spooky_witch animation pose remains finite: round_soul_cyclone
+PASS: spooky_witch animation retargeted: round_quickstep_shuffle
+PASS: spooky_witch animation has a complete body track set: round_quickstep_shuffle
+PASS: spooky_witch animation pose remains finite: round_quickstep_shuffle
+PASS: spooky_witch animation retargeted: round_victory_swing
+PASS: spooky_witch animation has a complete body track set: round_victory_swing
+PASS: spooky_witch animation pose remains finite: round_victory_swing
+PASS: spooky_witch equipped hat is attached beneath its animated head socket
+PASS: gameplay actor spawns with eye_wizard
+PASS: gameplay actor retains eye_wizard cosmetics
+PASS: gameplay actor spawns with mr_mushroom
+PASS: gameplay actor retains mr_mushroom cosmetics
+PASS: gameplay actor spawns with mr_poop
+PASS: gameplay actor retains mr_poop cosmetics
+PASS: gameplay actor spawns with mr_salt
+PASS: gameplay actor retains mr_salt cosmetics
+PASS: gameplay actor spawns with spooky_witch
+PASS: gameplay actor retains spooky_witch cosmetics
+NEW CHARACTER INTEGRATION VALIDATION PASSED models=5 animations=33

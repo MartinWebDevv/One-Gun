@@ -37,9 +37,12 @@ func show_local(result: Dictionary, viewer_actor_ids: Array) -> void:
 	_result = result.duplicate(true)
 	_overlay = WinnersCircle.new()
 	get_tree().current_scene.add_child(_overlay)
-	_overlay.local_return_requested.connect(func() -> void:
-		local_return_requested.emit())
+	_overlay.local_return_requested.connect(_on_local_overlay_return_requested)
 	_overlay.present(_result, viewer_actor_ids, false, true)
+
+
+func _on_local_overlay_return_requested() -> void:
+	local_return_requested.emit()
 
 
 @rpc("authority", "reliable", "call_local")

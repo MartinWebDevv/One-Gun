@@ -21,6 +21,12 @@ const MAPS = preload("res://map_registry.gd").MAPS
 const MatchLimitsData = preload("res://match_limits.gd")
 const LOBBY_SETTINGS_SLIDEOUT = preload("res://UI/lobby_settings_slideout.gd")
 const CONFIRM_BUTTON = preload("res://UI/components/one_gun_confirm_button.gd")
+const LOBBY_PLAYER_HUB = preload("res://UI/lobby_player_hub_overlay.gd")
+const PRIZE_COUNTER_OVERLAY = preload("res://UI/player_hub_overlay.gd")
+const PROGRESSION_OVERLAY = preload("res://UI/progression_road_overlay.gd")
+const SOCIAL_OVERLAY = preload("res://UI/social_overlay.gd")
+const FRIENDS_ORB = preload("res://UI/components/friends_quick_access_orb.gd")
+const INVITE_NOTIFICATION = preload("res://UI/components/lobby_invite_notification.gd")
 
 # Order matters: lobby_map_preview.MODE_SPECIFIC assumes SPECIFIC == 1.
 enum MapSelectMode { VOTE, SPECIFIC, RANDOM }
@@ -54,6 +60,7 @@ var _banner_name: Label
 var _banner_desc: Label
 var _info_labels := {}          # stat key -> value Label
 var _roster_title: Label
+var _roster_viewport: MarginContainer
 var _roster_list: VBoxContainer
 var _map_cards: Array = []      # OneGunMapCard per map
 var _map_order: Array[int] = []
@@ -65,6 +72,13 @@ var _match_settings_popup: PopupPanel # legacy builder retained only for old sav
 var _settings_layer: CanvasLayer
 var _character_customization_overlay: Control
 var _player_settings_overlay: Control
+var _lobby_player_hub_overlay: Control
+var _prize_counter_overlay: Control
+var _progression_overlay: Control
+var _social_overlay: Control
+var _friends_orb: FriendsQuickAccessOrb
+var _invite_notification: LobbyInviteNotification
+var _return_to_player_hub := false
 var _settings_target_position := Vector2.ZERO
 var _settings_tween: Tween
 var _left_cabinet: OneGunCabinet
@@ -82,9 +96,9 @@ const LAYOUT_GAP := 20.0
 const COMPACT_MARGIN := 16.0
 const COMPACT_GAP := 12.0
 const LEFT_WIDTH := 360.0
-const RIGHT_WIDTH := 440.0
+const RIGHT_WIDTH := 380.0
 const COMPACT_LEFT_WIDTH := 310.0
-const COMPACT_RIGHT_WIDTH := 380.0
+const COMPACT_RIGHT_WIDTH := 350.0
 const TOP_STRIP_HEIGHT := 190.0
 const CAROUSEL_HEIGHT := 148.0
 const PLAY_HEIGHT := 84.0
@@ -110,6 +124,16 @@ func _ready():
 	var capture_name := capture_state if capture_state in ["bot_settings", "match_settings",
 		"lobby_host", "lobby_guest", "lobby_customization", "lobby_one_of_us"] else "local_lobby"
 	UICapture.maybe_capture(self, capture_name, 2.5)
+
+
+func _exit_tree() -> void:
+	if not _is_net():
+		return
+	SocialManager.set_foreground_ui_active(false)
+	if SocialManager.social_updated.is_connected(_on_lobby_social_updated):
+		SocialManager.social_updated.disconnect(_on_lobby_social_updated)
+	if SocialManager.invite_received.is_connected(_on_lobby_invite_received):
+		SocialManager.invite_received.disconnect(_on_lobby_invite_received)
 
 
 # ============================================================
@@ -284,6 +308,8 @@ func _build_lobby_ui() -> void:
 	_settings_layer.name = "SettingsSlideoutLayer"
 	_settings_layer.layer = containing_canvas_layer + 20
 	add_child(_settings_layer)
+	if _is_net():
+		_build_lobby_friends_quick_access()
 
 
 func _build_left_cabinet() -> void:
@@ -359,9 +385,14 @@ func _build_left_cabinet() -> void:
 	_match_settings_button = _make_cabinet_button("MATCH SETTINGS")
 	_match_settings_button.pressed.connect(_on_match_settings_button_pressed)
 	column.add_child(_match_settings_button)
-	_character_customization_button = _make_cabinet_button("LOCKER")
-
-	_character_customization_button.pressed.connect(_on_character_customization_pressed)
+	_character_customization_button = _make_cabinet_button(
+		"PLAYER HUB" if _is_net() else "LOCKER")
+	if _is_net():
+		_character_customization_button.tooltip_text = \
+			"Open Locker, Prize Counter, or Progression without leaving the lobby."
+		_character_customization_button.pressed.connect(_on_player_hub_pressed)
+	else:
+		_character_customization_button.pressed.connect(_on_character_customization_pressed)
 	column.add_child(_character_customization_button)
 
 	_player_settings_button = _make_cabinet_button("PLAYER SETTINGS")
@@ -598,7 +629,7 @@ func _build_roster_panel() -> void:
 	_roster_cabinet = OneGunCabinet.new()
 	_roster_cabinet.name = "RosterCabinet"
 	_roster_cabinet.variant = OneGunCabinet.Variant.CABINET
-	_roster_cabinet.content_padding = OneGunUI.SPACE_M
+	_roster_cabinet.content_padding = 10
 	_roster_cabinet.clip_contents = true
 	_roster_cabinet.anchor_left = 1.0
 	_roster_cabinet.anchor_top = 0.0
@@ -607,23 +638,26 @@ func _build_roster_panel() -> void:
 	add_child(_roster_cabinet)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	column.add_theme_constant_override("separation", 6)
 	_roster_cabinet.get_content().add_child(column)
 
 	_roster_title = OneGunUI.make_heading("LOCAL ROSTER", OneGunUI.TEXT_M)
 	_roster_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_roster_title)
 
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.follow_focus = true
-	column.add_child(scroll)
+	# This lobby always renders exactly ten slots. A non-scrolling holder lets
+	# the VBox receive the full remaining cabinet height, then divide it evenly
+	# among all ten rows instead of packing fixed-height cards at the top.
+	_roster_viewport = MarginContainer.new()
+	_roster_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_roster_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(_roster_viewport)
 
 	_roster_list = VBoxContainer.new()
-	_roster_list.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_roster_list.add_theme_constant_override("separation", 2)
 	_roster_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_roster_list)
+	_roster_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_roster_viewport.add_child(_roster_list)
 
 
 func _build_carousel() -> void:
@@ -767,7 +801,16 @@ func _apply_responsive_layout() -> void:
 	_info_card.custom_minimum_size.x = 208.0 if compact else 230.0
 
 	_roster_cabinet.offset_left = -(layout_size.x - (right_edge - right_width))
-	_roster_cabinet.offset_top = margin
+	var friends_reserve := 0.0
+	if _friends_orb != null:
+		var orb_size := 104.0 if compact else 112.0
+		var safe_right_offset := -(layout_size.x - right_edge)
+		_friends_orb.offset_left = safe_right_offset - orb_size
+		_friends_orb.offset_top = margin
+		_friends_orb.offset_right = safe_right_offset
+		_friends_orb.offset_bottom = margin + orb_size
+		friends_reserve = orb_size + gap
+	_roster_cabinet.offset_top = margin + friends_reserve
 	_roster_cabinet.offset_right = -(layout_size.x - right_edge)
 	_roster_cabinet.offset_bottom = -(margin + PLAY_HEIGHT + gap)
 
@@ -813,6 +856,11 @@ func _configure_focus_navigation() -> void:
 		control.focus_neighbor_bottom = control.get_path_to(_play_button)
 	_play_button.focus_neighbor_left = _play_button.get_path_to(_carousel_next)
 	_play_button.focus_neighbor_top = _play_button.get_path_to(_carousel_next)
+	if _friends_orb != null:
+		_play_button.focus_neighbor_right = _play_button.get_path_to(_friends_orb)
+		_friends_orb.focus_neighbor_left = _friends_orb.get_path_to(_play_button)
+		_friends_orb.focus_neighbor_bottom = _friends_orb.get_path_to(_play_button)
+		_friends_orb.focus_neighbor_top = _friends_orb.get_path_to(_map_dropdown)
 	_back_button.focus_neighbor_right = _back_button.get_path_to(_carousel_prev)
 	for control in left_controls:
 		if not control.disabled:
@@ -1222,13 +1270,190 @@ func _on_match_settings_button_pressed() -> void:
 	_open_settings_slideout(LOBBY_SETTINGS_SLIDEOUT.Kind.MATCH)
 
 
+func _on_player_hub_pressed() -> void:
+	if not _is_net() or _lobby_player_hub_overlay != null \
+			or _prize_counter_overlay != null or _progression_overlay != null \
+			or _social_overlay != null:
+		return
+	if _settings_slideout != null and is_instance_valid(_settings_slideout):
+		_discard_settings_slideout_immediately()
+	_lobby_player_hub_overlay = LOBBY_PLAYER_HUB.new()
+	_lobby_player_hub_overlay.closed.connect(_on_player_hub_closed)
+	_lobby_player_hub_overlay.destination_requested.connect(
+		_on_player_hub_destination_requested)
+	_settings_layer.add_child(_lobby_player_hub_overlay)
+
+
+func _build_lobby_friends_quick_access() -> void:
+	_friends_orb = FRIENDS_ORB.new()
+	_friends_orb.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_friends_orb.offset_left = -154.0
+	_friends_orb.offset_top = 26.0
+	_friends_orb.offset_right = -28.0
+	_friends_orb.offset_bottom = 152.0
+	_friends_orb.pressed.connect(_on_lobby_friends_pressed)
+	_settings_layer.add_child(_friends_orb)
+
+	_invite_notification = INVITE_NOTIFICATION.new()
+	_invite_notification.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_invite_notification.offset_left = -520.0
+	_invite_notification.offset_top = 168.0
+	_invite_notification.offset_right = -28.0
+	_invite_notification.offset_bottom = 336.0
+	_invite_notification.join_requested.connect(_on_social_join_requested)
+	_settings_layer.add_child(_invite_notification)
+	if not SocialManager.social_updated.is_connected(_on_lobby_social_updated):
+		SocialManager.social_updated.connect(_on_lobby_social_updated)
+	if not SocialManager.invite_received.is_connected(_on_lobby_invite_received):
+		SocialManager.invite_received.connect(_on_lobby_invite_received)
+	SocialManager.set_foreground_ui_active(true)
+	_on_lobby_social_updated({})
+	var existing_invites := SocialManager.invites()
+	if not existing_invites.is_empty() and existing_invites[-1] is Dictionary:
+		_invite_notification.present(existing_invites[-1])
+
+
+func _on_lobby_friends_pressed() -> void:
+	if _social_overlay != null or _lobby_player_hub_overlay != null \
+			or _prize_counter_overlay != null or _progression_overlay != null \
+			or _character_customization_overlay != null \
+			or _player_settings_overlay != null or _settings_slideout != null:
+		return
+	_return_to_player_hub = false
+	_social_overlay = SOCIAL_OVERLAY.new()
+	_social_overlay.closed.connect(_on_social_overlay_closed)
+	_social_overlay.join_requested.connect(_on_social_join_requested)
+	_settings_layer.add_child(_social_overlay)
+
+
+func _on_lobby_social_updated(_snapshot: Dictionary) -> void:
+	if _friends_orb != null:
+		_friends_orb.refresh_counts()
+
+
+func _on_lobby_invite_received(invite: Dictionary) -> void:
+	if _invite_notification != null:
+		_invite_notification.present(invite)
+
+
+func _on_player_hub_closed() -> void:
+	_lobby_player_hub_overlay = null
+	_return_to_player_hub = false
+	_configure_focus_navigation.call_deferred()
+
+
+func _on_player_hub_destination_requested(destination: String) -> void:
+	if _lobby_player_hub_overlay != null:
+		_lobby_player_hub_overlay.queue_free()
+		_lobby_player_hub_overlay = null
+	_return_to_player_hub = true
+	match destination:
+		"locker":
+			_on_character_customization_pressed()
+		"prize_counter":
+			_prize_counter_overlay = PRIZE_COUNTER_OVERLAY.new()
+			_prize_counter_overlay.configure("prize_counter")
+			_prize_counter_overlay.closed.connect(_on_prize_counter_closed)
+			_settings_layer.add_child(_prize_counter_overlay)
+		"progression":
+			_progression_overlay = PROGRESSION_OVERLAY.new()
+			_progression_overlay.closed.connect(_on_progression_overlay_closed)
+			_settings_layer.add_child(_progression_overlay)
+		"friends":
+			_social_overlay = SOCIAL_OVERLAY.new()
+			_social_overlay.closed.connect(_on_social_overlay_closed)
+			_social_overlay.join_requested.connect(_on_social_join_requested)
+			_settings_layer.add_child(_social_overlay)
+		_:
+			_return_to_player_hub = false
+			_on_player_hub_pressed.call_deferred()
+
+
+func _on_prize_counter_closed() -> void:
+	_prize_counter_overlay = null
+	_return_from_player_hub_destination()
+
+
+func _on_progression_overlay_closed() -> void:
+	_progression_overlay = null
+	_return_from_player_hub_destination()
+
+
+func _on_social_overlay_closed() -> void:
+	_social_overlay = null
+	_return_from_player_hub_destination()
+
+
+func _on_social_join_requested(lobby: Dictionary) -> void:
+	var address := str(lobby.get("address", ""))
+	var port := int(lobby.get("port", 0))
+	if not SocialManager.is_valid_join_endpoint(address, port):
+		return
+	var current := NetworkManager.social_lobby_endpoint()
+	if str(current.get("address", "")) == address \
+			and int(current.get("port", 0)) == port:
+		if _social_overlay != null:
+			_social_overlay.call("_set_status", "YOU ARE ALREADY IN THIS LOBBY", false)
+		return
+	_return_to_player_hub = false
+	if _social_overlay != null:
+		_social_overlay.queue_free()
+		_social_overlay = null
+	if not NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
+		NetworkManager.connection_succeeded.connect(_on_social_join_ok, CONNECT_ONE_SHOT)
+	if not NetworkManager.connection_failed.is_connected(_on_social_join_failed):
+		NetworkManager.connection_failed.connect(_on_social_join_failed, CONNECT_ONE_SHOT)
+	if not NetworkManager.join_game(address, port):
+		_on_social_join_failed()
+		return
+	NetworkManager.lobby_name = str(lobby.get("name", "Friend Lobby"))
+	if _lobby_notice_label != null:
+		_lobby_notice_label.text = "JOINING %s…" % NetworkManager.lobby_name.to_upper()
+
+
+func _on_social_join_ok() -> void:
+	if NetworkManager.connection_failed.is_connected(_on_social_join_failed):
+		NetworkManager.connection_failed.disconnect(_on_social_join_failed)
+	_refresh_roster()
+	_configure_focus_navigation.call_deferred()
+
+
+func _on_social_join_failed() -> void:
+	if NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
+		NetworkManager.connection_succeeded.disconnect(_on_social_join_ok)
+	NetworkManager.disconnect_net()
+	get_tree().change_scene_to_file("res://main_menu.tscn")
+
+
+func _return_from_player_hub_destination() -> void:
+	var reopen := _return_to_player_hub and _is_net() \
+		and not NetworkManager._prelaunch_active
+	_return_to_player_hub = false
+	if reopen:
+		_on_player_hub_pressed.call_deferred()
+	else:
+		_configure_focus_navigation.call_deferred()
+
+
+func _close_player_hub_overlays_immediately() -> void:
+	_return_to_player_hub = false
+	for overlay in [_lobby_player_hub_overlay, _prize_counter_overlay,
+			_progression_overlay, _social_overlay]:
+		if overlay != null and is_instance_valid(overlay):
+			overlay.queue_free()
+	_lobby_player_hub_overlay = null
+	_prize_counter_overlay = null
+	_progression_overlay = null
+	_social_overlay = null
+
+
 func _on_character_customization_pressed() -> void:
 	if _character_customization_overlay != null:
 		return
 	if _settings_slideout != null and is_instance_valid(_settings_slideout):
 		_discard_settings_slideout_immediately()
 	_character_customization_overlay = preload(
-		"res://UI/character_customization_overlay.gd").new()
+		"res://UI/themed_locker_overlay.gd").new()
 	_character_customization_overlay.configure(_is_net(), _local_human_count())
 	_character_customization_overlay.closed.connect(_on_character_customization_closed)
 	_character_customization_overlay.skin_changed.connect(
@@ -1239,12 +1464,13 @@ func _on_character_customization_pressed() -> void:
 func _on_character_customization_closed() -> void:
 	_character_customization_overlay = null
 	_refresh_roster()
-	_configure_focus_navigation.call_deferred()
+	_return_from_player_hub_destination()
 
 
 func _on_player_settings_pressed() -> void:
 	if _player_settings_overlay != null:
 		return
+	_close_player_hub_overlays_immediately()
 	if _character_customization_overlay != null:
 		_character_customization_overlay.queue_free()
 		_character_customization_overlay = null
@@ -1808,7 +2034,7 @@ func _update_playpen_availability() -> void:
 	if not NetworkManager.is_playpen_supported():
 		_playpen_button.disabled = true
 		_playpen_button.text = "THE PLAYPEN — LISTEN HOSTS ONLY"
-		_playpen_button.tooltip_text = "Dedicated-server Playpen support is intentionally deferred."
+		_playpen_button.tooltip_text = "The Playpen is unavailable in dedicated-server lobbies."
 		return
 	_playpen_button.disabled = NetworkManager._prelaunch_active
 	_playpen_button.text = "ENTER THE PLAYPEN"
@@ -1826,8 +2052,13 @@ func _on_back_button_pressed():
 	if _player_settings_overlay != null:
 		_close_player_settings_immediately()
 		return
+	if _lobby_player_hub_overlay != null or _prize_counter_overlay != null \
+			or _progression_overlay != null or _social_overlay != null:
+		_close_player_hub_overlays_immediately()
+		return
 
 	if _character_customization_overlay != null:
+		_return_to_player_hub = false
 		_character_customization_overlay.queue_free()
 		_character_customization_overlay = null
 		return
@@ -1892,7 +2123,9 @@ func _update_lobby_action() -> void:
 func _on_prelaunch_countdown_changed(active: bool, seconds: int) -> void:
 	if active:
 		_close_player_settings_immediately()
+		_close_player_hub_overlays_immediately()
 	if active and _character_customization_overlay != null:
+		_return_to_player_hub = false
 		_character_customization_overlay.queue_free()
 		_character_customization_overlay = null
 	var controls: Array = [_map_dropdown, _mode_dropdown, _match_settings_button,
@@ -1960,7 +2193,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		get_viewport().set_input_as_handled()
-		if _character_customization_overlay != null:
+		if _lobby_player_hub_overlay != null or _prize_counter_overlay != null \
+				or _progression_overlay != null or _social_overlay != null:
+			_close_player_hub_overlays_immediately()
+		elif _character_customization_overlay != null:
+			_return_to_player_hub = false
 			_character_customization_overlay.queue_free()
 			_character_customization_overlay = null
 		elif _settings_slideout != null and is_instance_valid(_settings_slideout):

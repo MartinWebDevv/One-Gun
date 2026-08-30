@@ -211,6 +211,12 @@ func _mesh_bounds(root_node: Node3D) -> AABB:
 
 
 func _capture(file_name: String) -> void:
+	# The dummy renderer used by `--headless` never emits frame_post_draw. The
+	# geometry/reference assertions above still run; image capture remains
+	# available when this scene is opened with a real display driver.
+	if DisplayServer.get_name() == "headless":
+		print("CITY_ASSET_REPLACEMENT_CAPTURE_SKIPPED_HEADLESS ", file_name)
+		return
 	await RenderingServer.frame_post_draw
 	var output_dir := OS.get_environment("ONEGUN_CITY_ASSET_OUTPUT")
 	if output_dir.is_empty():

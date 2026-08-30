@@ -4,6 +4,18 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+function Test-ActionableGodotError([string]$Text) {
+    if ($Text -match "(?m)^SCRIPT ERROR:") { return $true }
+    foreach ($line in ($Text -split "`r?`n")) {
+        if ($line -notmatch "^ERROR:") { continue }
+        if ($line -match "RID allocations of type" -or $line -match "resources still in use at exit") {
+            continue
+        }
+        return $true
+    }
+    return $false
+}
 $project = Split-Path -Parent $PSScriptRoot
 $godot = Join-Path $project "Godot_v4.7.1-stable_win64.exe"
 if (-not (Test-Path -LiteralPath $godot)) {
@@ -49,5 +61,6 @@ foreach ($role in @("host", "client", "spectator")) {
 }
 foreach ($role in @("host", "client", "spectator")) {
     if ($combined[$role] -notmatch "ONLINE_LATE_SPECTATOR_PASS $role") { exit 1 }
+    if (Test-ActionableGodotError $combined[$role]) { exit 1 }
 }
 exit 0

@@ -102,12 +102,15 @@ Autoload order is significant and should be preserved.
 |---|---|---|
 | Selectable | `maps/test/ForestMap.tscn` | Whispering Woods |
 | Selectable | `maps/test/WesternV2Map.tscn` | Western Town |
-| Selectable | `maps/test/CityMap.tscn` | Maple & 3rd |
+| Selectable | `maps/test/CityMap.tscn` | Gun Square |
+| Selectable | `maps/test/catTower.tscn` | Cat Tower |
+| Selectable | `maps/test/SpaceStationPrototype.tscn` | Neon Circuit |
+| Selectable | `maps/test/TrippyMountainsMap.tscn` | Trippy Mountains |
 | Legacy/not selectable | `node_3d.tscn` | Former Coliseum/prototype |
 | Legacy/not selectable | `maps/test/NukeTownMap.tscn` | Former Explosion Town/NukeTown prototype |
 | Menu only | `maps/test/title_bg_map.tscn` | No gameplay selection |
 
-All current selectable map scenes contain local gameplay scaffolding: baked human instances, local HUD/splitscreen nodes, `RoundManager`, the gun, authored melee instances, spawn markers, item markers, and powerup markers. Online play reuses these scenes and removes/replaces local-only scaffolding at runtime.
+All current selectable map scenes contain local gameplay scaffolding: baked human instances, local HUD/splitscreen nodes, `RoundManager`, exactly one gun, player/gun/melee/item/powerup spawn markers, and baked bot navigation. Online play reuses these scenes and removes/replaces local-only scaffolding at runtime.
 
 ### Map subscenes and effects
 

@@ -33,11 +33,15 @@ func _ready() -> void:
 			"Neon Circuit thumbnail does not import as a texture")
 
 	var arena := packed.instantiate() as Node3D
-	arena.process_mode = Node.PROCESS_MODE_DISABLED
+	# Keep the scene tree active so NavigationRegion3D registers its polygons.
+	# Gameplay managers and actors are disabled individually below.
+	arena.process_mode = Node.PROCESS_MODE_ALWAYS
 	for node_name in ["RoundManager", "CanvasLayer", "SplitScreenLayer"]:
 		var scripted := arena.get_node_or_null(node_name)
 		if scripted != null:
 			scripted.set_script(null)
+	for actor in arena.find_children("*", "CharacterBody3D", true, false):
+		(actor as CharacterBody3D).process_mode = Node.PROCESS_MODE_DISABLED
 	add_child(arena)
 
 	_check(get_tree().get_nodes_in_group("spawn_point").size() == 10,
@@ -103,7 +107,6 @@ func _ready() -> void:
 	_check(nav != null and nav.navigation_mesh != null
 			and nav.navigation_mesh.get_polygon_count() > 0,
 			"prototype navigation bake is non-empty")
-
 	var spawn_markers := get_tree().get_nodes_in_group("spawn_point")
 	var navigation_map := nav.get_navigation_map() if nav != null else RID()
 	for frame in 10:
@@ -114,7 +117,7 @@ func _ready() -> void:
 			and Time.get_ticks_msec() < navigation_deadline:
 		await get_tree().physics_frame
 	var navigation_ready := navigation_map.is_valid() \
-		and NavigationServer3D.map_get_iteration_id(navigation_map) > 0
+			and NavigationServer3D.map_get_iteration_id(navigation_map) > 0
 	_check(navigation_ready, "Neon Circuit navigation map synchronizes")
 	if navigation_ready and not spawn_markers.is_empty():
 		var start_nav := NavigationServer3D.map_get_closest_point(
@@ -172,6 +175,11 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
+	if DisplayServer.get_name() == "headless":
+		print("NEON_CIRCUIT_CAPTURE_SKIPPED_HEADLESS")
+		print("NEON_CIRCUIT_PROTOTYPE_VALIDATION failures=%d" % _failures)
+		get_tree().quit(_failures)
+		return
 	var absolute_path := ProjectSettings.globalize_path(OUTPUT_PATH)
 	DirAccess.make_dir_recursive_absolute(absolute_path.get_base_dir())
 	var save_error := get_viewport().get_texture().get_image().save_png(absolute_path)

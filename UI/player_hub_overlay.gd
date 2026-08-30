@@ -17,12 +17,13 @@ const ProgressionCaptureFixture = preload("res://UI/progression_capture_fixture.
 const SkinRegistry = preload("res://player_skin_registry.gd")
 
 const STORE_CATEGORIES := Catalog.PRIMARY_CATEGORIES
+const PRIZE_ROTATION_NOTICE := \
+	"Only the current public rotation appears here. Owned prizes remain permanently in your Locker."
 
 var _canvas: Control
 var _backdrop: Control
 var _screen_title: Label
-var _screen_kicker: Label
-var _screen_subtitle: Label
+var _back_button: OneGunButton
 var _profile_portrait: CharacterPortrait
 var _profile_display_label: Label
 var _profile_handle_label: Label
@@ -48,14 +49,18 @@ var _store_detail_art: Label
 var _store_move_preview_container: SubViewportContainer
 var _store_move_preview_viewport: SubViewport
 var _store_move_preview_pivot: Node3D
+var _store_move_preview_camera: Camera3D
 var _store_move_preview_visual: Node3D
 var _store_move_preview_player: AnimationPlayer
 var _store_move_preview_animation := ""
 var _store_move_preview_replay_delay := 0.0
+var _store_hat_preview_active := false
+var _store_hat_preview_dragging := false
 var _store_detail_preview: OneGunButton
 var _store_detail_action: OneGunButton
 var _store_detail_favorite: OneGunButton
 var _store_rotation_label: Label
+var _store_footer_note: Label
 var _store_inspect_chip: Control
 var _store_carousel_controls: HBoxContainer
 var _store_carousel_page_label: Label
@@ -98,9 +103,9 @@ func _seed_capture_fixture(capture_backend: Node) -> void:
 	ProgressionCaptureFixture.seed_backend(capture_backend)
 	PlayerPrefs.settings["player_name"] = "Maverick"
 	var capture_shop_items: Array[Dictionary] = [
-		{"id": "cowboy_hat", "display_name": "Cowboy Hat", "item_type": "hat",
-			"description": "A classic arena hat with a playful frontier silhouette.",
-			"price": 500, "rarity": "uncommon", "purchasable": true,
+		{"id": "hat_top", "display_name": "Top Hat", "item_type": "hat",
+			"description": "Formal headwear for competitors with serious podium plans.",
+			"price": 1650, "rarity": "rare", "purchasable": true,
 			"shop_visible": true, "active": true},
 		{"id": "golden_gun_skin", "display_name": "Golden Gun", "item_type": "gun_skin",
 			"description": "A brilliant champion finish for the one and only gun.",
@@ -141,18 +146,18 @@ func _seed_capture_fixture(capture_backend: Node) -> void:
 	]
 	capture_backend.shop_items = capture_shop_items
 	var capture_inventory: Array[Dictionary] = [
-		{"item_id": "cowboy_hat", "source": "purchase"},
+		{"item_id": "hat_top", "source": "purchase"},
 		{"item_id": "wc_theme_deep_orbit", "source": "purchase"},
 		{"item_id": "wc_theme_ceremony_march", "source": "starter_unlock"},
 	]
 	capture_backend.inventory = capture_inventory
 	capture_backend.set("_owned_item_ids", {
-		"cowboy_hat": true,
+		"hat_top": true,
 		"wc_theme_deep_orbit": true,
 		"wc_theme_ceremony_march": true,
 	})
 	capture_backend.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
-		"hat": "cowboy_hat",
+		"hat": "hat_top",
 		"ceremony_theme": "wc_theme_deep_orbit",
 	})
 	ProgressionManager.catalog_items.clear()
@@ -161,11 +166,11 @@ func _seed_capture_fixture(capture_backend: Node) -> void:
 		catalog_item["rotation_scope"] = "seasonal_starter" \
 			if str(catalog_item.get("item_type", "")) == "ceremony_theme" \
 			else ("daily" if str(catalog_item.get("id", "")) in [
-				"cowboy_hat", "victory_pose_spotlight"] else "monthly")
+				"hat_top", "victory_pose_spotlight"] else "monthly")
 		ProgressionManager.catalog_items.append(catalog_item)
 	ProgressionManager.favorites = {"wc_theme_deep_orbit": true}
 	ProgressionManager.usage = {
-		"cowboy_hat": {"equip_count": 11},
+		"hat_top": {"equip_count": 11},
 		"wc_theme_deep_orbit": {"equip_count": 7},
 	}
 	ProgressionManager.progression = ProgressionCaptureFixture.snapshot()
@@ -206,8 +211,8 @@ func _build_ui() -> void:
 
 	var feedback_panel := PanelContainer.new()
 	feedback_panel.name = "PlayerHubFeedback"
-	feedback_panel.position = Vector2(64.0, 814.0)
-	feedback_panel.size = Vector2(1472.0, 54.0)
+	feedback_panel.position = Vector2(304.0, 814.0)
+	feedback_panel.size = Vector2(1232.0, 54.0)
 	feedback_panel.add_theme_stylebox_override("panel", _glass_style(
 		Color(0.008, 0.014, 0.035, 0.92), Color(1.0, 0.67, 0.17, 0.28), 12, 1, 8))
 	_canvas.add_child(feedback_panel)
@@ -215,10 +220,26 @@ func _build_ui() -> void:
 	feedback_margin.add_theme_constant_override("margin_left", 18)
 	feedback_margin.add_theme_constant_override("margin_right", 18)
 	feedback_panel.add_child(feedback_margin)
+	var feedback_row := HBoxContainer.new()
+	feedback_row.add_theme_constant_override("separation", 16)
+	feedback_margin.add_child(feedback_row)
+	_store_footer_note = OneGunUI.make_label(
+		PRIZE_ROTATION_NOTICE, OneGunUI.TEXT_S, "muted", true)
+	_store_footer_note.name = "PrizeCounterRotationNotice"
+	_store_footer_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_store_footer_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_store_footer_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	feedback_row.add_child(_store_footer_note)
 	_feedback_label = OneGunUI.make_label("", OneGunUI.TEXT_S, "muted", true)
+	_feedback_label.custom_minimum_size.x = 420.0
+	_feedback_label.visible = false
+	_feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_feedback_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	feedback_margin.add_child(_feedback_label)
+	feedback_row.add_child(_feedback_label)
+	# Pages are constructed after the shared footer Back button. Keep Back at the
+	# top of the Canvas stack so no future content panel can intercept its clicks.
+	_canvas.move_child(_back_button, _canvas.get_child_count() - 1)
 
 	_show_page(_active_page_index)
 	_apply_responsive_layout()
@@ -227,29 +248,17 @@ func _build_ui() -> void:
 
 
 func _build_screen_header() -> void:
-	_screen_kicker = OneGunUI.make_label("ONE GUN  //  ARENA SERVICES",
-		OneGunUI.TEXT_S, "cyan", true)
-	_screen_kicker.position = Vector2(64.0, 22.0)
-	_screen_kicker.size = Vector2(800.0, 24.0)
-	_canvas.add_child(_screen_kicker)
-
 	_screen_title = OneGunUI.make_heading("COMPETITOR PROFILE", 42, "text_bright")
-	_screen_title.position = Vector2(64.0, 44.0)
+	_screen_title.position = Vector2(64.0, 42.0)
 	_screen_title.size = Vector2(900.0, 52.0)
 	_canvas.add_child(_screen_title)
 
-	_screen_subtitle = OneGunUI.make_label("YOUR IDENTITY, SEASON, AND CAREER RECORD",
-		OneGunUI.TEXT_M, "muted", true)
-	_screen_subtitle.position = Vector2(66.0, 96.0)
-	_screen_subtitle.size = Vector2(1000.0, 24.0)
-	_canvas.add_child(_screen_subtitle)
-
-	var close_button := _make_button("BACK TO HOME", "red")
-	close_button.name = "ClosePlayerHub"
-	close_button.position = Vector2(1342.0, 42.0)
-	close_button.size = Vector2(194.0, 54.0)
-	close_button.pressed.connect(_close)
-	_canvas.add_child(close_button)
+	_back_button = _make_button("BACK", "navy")
+	_back_button.name = "ClosePlayerHub"
+	_back_button.position = Vector2(64.0, 808.0)
+	_back_button.size = Vector2(220.0, 60.0)
+	_back_button.pressed.connect(_close)
+	_canvas.add_child(_back_button)
 
 	var rule := ColorRect.new()
 	rule.position = Vector2(64.0, 126.0)
@@ -664,7 +673,8 @@ func _build_store_page() -> Control:
 	_refresh_button.pressed.connect(_on_refresh)
 	currency_row.add_child(_refresh_button)
 
-	var category_panel := _make_panel(Vector2(224.0, 574.0), "gold")
+	var category_panel := _make_panel(Vector2(224.0, 0.0), "gold")
+	category_panel.name = "PrizeBrowseCounterPanel"
 	category_panel.position = Vector2(0.0, 80.0)
 	root.add_child(category_panel)
 	var category_column := _panel_column(category_panel, 16)
@@ -715,6 +725,7 @@ func _build_store_page() -> Control:
 		_rebuild_store())
 	quick_filters.add_child(favorites)
 	var affordable := _make_button("AFFORDABLE", "navy")
+	affordable.name = "PrizeAffordableFilter"
 	affordable.toggle_mode = true
 	affordable.custom_minimum_size.y = 32.0
 	affordable.toggled.connect(func(value: bool) -> void:
@@ -723,11 +734,6 @@ func _build_store_page() -> Control:
 		_rebuild_store())
 	quick_filters.add_child(affordable)
 	_rebuild_store_subcategories()
-	var category_note := OneGunUI.make_label(
-		"Only the current public rotation appears here. Owned prizes remain permanently in your Locker.",
-		OneGunUI.TEXT_S, "muted")
-	category_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	category_column.add_child(category_note)
 
 	var shelf_panel := _make_panel(Vector2(790.0, 574.0), "gold")
 	shelf_panel.position = Vector2(242.0, 80.0)
@@ -795,6 +801,7 @@ func _build_store_page() -> Control:
 	_store_move_preview_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_store_move_preview_container.stretch = true
 	_store_move_preview_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_store_move_preview_container.gui_input.connect(_on_store_hat_preview_gui_input)
 	_store_move_preview_container.visible = false
 	art_stack.add_child(_store_move_preview_container)
 	_build_store_move_preview_world()
@@ -889,14 +896,80 @@ func _build_store_move_preview_world() -> void:
 	rim.shadow_enabled = false
 	world.add_child(rim)
 
-	var camera := Camera3D.new()
-	camera.name = "PrizeMoveCamera"
-	camera.fov = 36.0
-	world.add_child(camera)
-	camera.look_at_from_position(
+	_store_move_preview_camera = Camera3D.new()
+	_store_move_preview_camera.name = "PrizeMoveCamera"
+	_store_move_preview_camera.fov = 36.0
+	world.add_child(_store_move_preview_camera)
+	_store_move_preview_camera.look_at_from_position(
 		Vector3(0.0, 1.56, 5.95), Vector3(0.0, 1.20, 0.0), Vector3.UP)
-	camera.current = true
+	_store_move_preview_camera.current = true
 	GraphicsQualityManager.apply_subtree(_store_move_preview_viewport)
+
+
+func _frame_store_full_body_preview() -> void:
+	if _store_move_preview_camera == null:
+		return
+	_store_move_preview_camera.fov = 36.0
+	_store_move_preview_camera.look_at_from_position(
+		Vector3(0.0, 1.56, 5.95), Vector3(0.0, 1.20, 0.0), Vector3.UP)
+
+
+func _frame_store_hat_preview() -> void:
+	if _store_move_preview_camera == null or _store_move_preview_visual == null:
+		return
+	var socket := _store_move_preview_visual.call("get_headwear_socket") as Marker3D
+	if socket == null:
+		return
+	# Crop at the shoulders, then derive the camera distance from this hat's
+	# actual rendered height. A witch hat receives more room than a fedora while
+	# both retain a deliberate safety margin above the crown/brim.
+	var frame_bottom := socket.global_position.y - 0.90
+	var frame_top := socket.global_position.y + 0.72
+	var rotation_radius := 0.0
+	var hat := socket.find_child("HatVisual", false, false) as Node3D
+	if hat != null:
+		for node in hat.find_children("*", "MeshInstance3D", true, false):
+			var mesh_instance := node as MeshInstance3D
+			if mesh_instance == null or mesh_instance.mesh == null \
+					or not mesh_instance.is_visible_in_tree():
+				continue
+			var world_bounds := mesh_instance.global_transform \
+				* mesh_instance.mesh.get_aabb()
+			frame_top = maxf(frame_top,
+				world_bounds.position.y + world_bounds.size.y)
+			for corner_index in 8:
+				var corner := world_bounds.position + Vector3(
+					world_bounds.size.x if (corner_index & 1) != 0 else 0.0,
+					world_bounds.size.y if (corner_index & 2) != 0 else 0.0,
+					world_bounds.size.z if (corner_index & 4) != 0 else 0.0)
+				var radial := Vector2(
+					corner.x - _store_move_preview_pivot.global_position.x,
+					corner.z - _store_move_preview_pivot.global_position.z).length()
+				rotation_radius = maxf(rotation_radius, radial)
+	frame_bottom -= 0.06
+	frame_top += 0.18
+	var frame_center := (frame_bottom + frame_top) * 0.5
+	var half_height := maxf((frame_top - frame_bottom) * 0.5, 0.68)
+	_store_move_preview_camera.fov = 36.0
+	# Include the largest X/Z radius in the distance. A wide/deep hat can rotate
+	# toward the camera after framing; height-only framing let that nearer edge
+	# grow into the top of the viewport even though the front pose looked safe.
+	var distance := clampf(
+		half_height / tan(deg_to_rad(_store_move_preview_camera.fov * 0.5)) * 1.18
+			+ rotation_radius,
+		2.60, 6.20)
+	# The preview world is a fixed display set. Only the character pivot rotates;
+	# following the animated socket on X/Z made the first frame appear offset and
+	# made the stationary background seem to orbit while the player dragged.
+	_store_move_preview_camera.look_at_from_position(
+		Vector3(0.0, frame_center, distance),
+		Vector3(0.0, frame_center, 0.0), Vector3.UP)
+
+
+func _rotate_store_hat_preview(angle: float) -> void:
+	if _store_move_preview_pivot == null or is_zero_approx(angle):
+		return
+	_store_move_preview_pivot.rotate_y(angle)
 
 
 func _ensure_store_move_preview_visual() -> bool:
@@ -935,6 +1008,14 @@ func _show_store_move_preview(item_id: String, slot: String) -> bool:
 	if animation_name == "" or not _ensure_store_move_preview_visual():
 		_hide_store_move_preview()
 		return false
+	_store_hat_preview_active = false
+	_store_hat_preview_dragging = false
+	_store_move_preview_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_frame_store_full_body_preview()
+	_store_move_preview_visual.position.x = 0.0
+	_store_move_preview_visual.position.z = 0.0
+	if _store_move_preview_visual.has_method("set_hat_cosmetic"):
+		_store_move_preview_visual.call("set_hat_cosmetic", "")
 	_store_move_preview_player = _store_move_preview_visual.call(
 		"ensure_animations", [animation_name]) as AnimationPlayer
 	if _store_move_preview_player == null \
@@ -952,20 +1033,78 @@ func _show_store_move_preview(item_id: String, slot: String) -> bool:
 	return true
 
 
+func _show_store_hat_preview(item_id: String) -> bool:
+	if not SupabaseCosmeticRegistry.has_local_visual(item_id, "hat") \
+			or not _ensure_store_move_preview_visual() \
+			or not _store_move_preview_visual.has_method("set_hat_cosmetic"):
+		_hide_store_move_preview()
+		return false
+	_store_move_preview_animation = "idle"
+	_store_move_preview_replay_delay = 0.0
+	_store_move_preview_player = _store_move_preview_visual.call(
+		"ensure_animations", ["idle"]) as AnimationPlayer
+	if _store_move_preview_player != null \
+			and _store_move_preview_player.has_animation("idle"):
+		_store_move_preview_player.play("idle", 0.0)
+		_store_move_preview_player.advance(0.0)
+	else:
+		_store_move_preview_animation = ""
+	if not is_zero_approx(_store_move_preview_pivot.rotation.y):
+		_rotate_store_hat_preview(-_store_move_preview_pivot.rotation.y)
+	else:
+		_store_move_preview_pivot.rotation = Vector3.ZERO
+	_store_move_preview_visual.call("set_hat_cosmetic", item_id)
+	_store_detail_art.visible = false
+	_store_move_preview_container.visible = true
+	_store_move_preview_container.mouse_filter = Control.MOUSE_FILTER_STOP
+	_store_hat_preview_active = true
+	_store_hat_preview_dragging = false
+	_frame_store_hat_preview()
+	_frame_store_hat_preview.call_deferred()
+	# Hats follow the living character's shared idle instead of freezing in a
+	# mannequin pose. The one reusable quality-scaled viewport is disabled again
+	# as soon as inspection closes or another non-3D item is selected.
+	_store_move_preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	return true
+
+
 func _hide_store_move_preview() -> void:
 	_store_move_preview_animation = ""
 	_store_move_preview_replay_delay = 0.0
+	_store_hat_preview_active = false
+	_store_hat_preview_dragging = false
 	if _store_move_preview_player != null:
 		_store_move_preview_player.stop()
+	if _store_move_preview_visual != null \
+			and _store_move_preview_visual.has_method("set_hat_cosmetic"):
+		_store_move_preview_visual.call("set_hat_cosmetic", "")
 	if _store_move_preview_container != null:
 		_store_move_preview_container.visible = false
+		_store_move_preview_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _store_move_preview_viewport != null:
 		_store_move_preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	if _store_detail_art != null:
 		_store_detail_art.visible = true
 
 
+func _on_store_hat_preview_gui_input(event: InputEvent) -> void:
+	if not _store_hat_preview_active or _store_move_preview_pivot == null:
+		return
+	if event is InputEventMouseButton \
+			and event.button_index == MOUSE_BUTTON_LEFT:
+		_store_hat_preview_dragging = event.pressed
+		accept_event()
+	elif event is InputEventMouseMotion and _store_hat_preview_dragging:
+		_rotate_store_hat_preview(event.relative.x * 0.012)
+		accept_event()
+
+
 func _process(delta: float) -> void:
+	if _store_hat_preview_active and _store_move_preview_container.visible \
+			and _store_move_preview_pivot != null:
+		var look_axis := Input.get_axis("p1_look_left", "p1_look_right")
+		if absf(look_axis) > 0.18:
+			_rotate_store_hat_preview(look_axis * 1.9 * delta)
 	if _store_move_preview_animation == "" \
 			or _store_move_preview_player == null \
 			or not _store_move_preview_container.visible:
@@ -987,6 +1126,7 @@ func _build_inventory_page() -> Control:
 
 
 func _rebuild_store() -> void:
+	_configure_store_controller_focus.call_deferred()
 	var seasonal_starter := _active_store_category == "FEATURED" \
 		and _store_subcategory == "SEASONAL STARTER"
 	_store_carousel_controls.visible = seasonal_starter
@@ -1075,6 +1215,77 @@ func _rebuild_store() -> void:
 			index += 1
 	_refresh_store_selection_styles()
 	_refresh_store_detail()
+
+
+func _configure_store_controller_focus() -> void:
+	if not is_inside_tree() or _store_page == null:
+		return
+	var browse_controls: Array = []
+	for control in _store_category_buttons:
+		browse_controls.append(control)
+	for control in [_store_subcategory_option, _store_cosmetic_option,
+			_store_sort_option, find_child("PrizeFavoritesFilter", true, false),
+			find_child("PrizeAffordableFilter", true, false), _refresh_button]:
+		if control is Control and (control as Control).is_visible_in_tree():
+			browse_controls.append(control)
+	if not browse_controls.is_empty():
+		OneGunUI.chain_focus_vertical(browse_controls)
+	var cards: Array = []
+	for item_id in _store_card_buttons:
+		var card := _store_card_buttons[item_id] as Control
+		if card != null and card.is_visible_in_tree():
+			cards.append(card)
+	if not cards.is_empty():
+		OneGunUI.chain_focus_vertical(cards)
+		if not browse_controls.is_empty():
+			var browse := browse_controls[0] as Control
+			var first_card := cards[0] as Control
+			browse.focus_neighbor_right = browse.get_path_to(first_card)
+			first_card.focus_neighbor_left = first_card.get_path_to(browse)
+	var detail_controls: Array = [_store_detail_favorite,
+		_store_detail_preview, _store_detail_action]
+	detail_controls = detail_controls.filter(func(control):
+		return control != null and not (control as BaseButton).disabled)
+	if detail_controls.size() >= 2:
+		for index in detail_controls.size():
+			var control := detail_controls[index] as Control
+			var previous := detail_controls[wrapi(index - 1, 0,
+				detail_controls.size())] as Control
+			var next := detail_controls[wrapi(index + 1, 0,
+				detail_controls.size())] as Control
+			control.focus_neighbor_left = control.get_path_to(previous)
+			control.focus_neighbor_right = control.get_path_to(next)
+	if _back_button != null:
+		for control_value in cards + detail_controls:
+			var control := control_value as Control
+			control.focus_neighbor_bottom = control.get_path_to(_back_button)
+		var back_target := browse_controls[0] as Control if not browse_controls.is_empty() \
+			else (cards[0] as Control if not cards.is_empty() else null)
+		if back_target != null:
+			_back_button.focus_neighbor_top = _back_button.get_path_to(back_target)
+	if _store_page.is_visible_in_tree():
+		var owner := get_viewport().gui_get_focus_owner()
+		if owner == null or not is_ancestor_of(owner):
+			if not browse_controls.is_empty():
+				(browse_controls[0] as Control).grab_focus()
+
+
+func _configure_profile_controller_focus() -> void:
+	if _account_page == null or not _account_page.is_visible_in_tree():
+		return
+	var controls: Array = []
+	for node in _account_page.find_children("*", "Control", true, false):
+		var control := node as Control
+		if control == null or not control.is_visible_in_tree() \
+				or control.focus_mode == Control.FOCUS_NONE:
+			continue
+		if control is BaseButton and (control as BaseButton).disabled:
+			continue
+		controls.append(control)
+	if _back_button != null:
+		controls.append(_back_button)
+	if not controls.is_empty():
+		OneGunUI.chain_focus_vertical(controls)
 
 
 func _make_seasonal_store_card(item: Dictionary) -> Control:
@@ -1242,11 +1453,16 @@ func _refresh_store_detail() -> void:
 	var slot := SupabaseCosmeticRegistry.item_slot(item)
 	var rarity := str(item.get("rarity", "standard"))
 	_store_detail_art.text = _store_art_monogram(slot)
-	_show_store_move_preview(item_id, slot)
+	if slot == "hat":
+		_show_store_hat_preview(item_id)
+	else:
+		_show_store_move_preview(item_id, slot)
 	_store_detail_art.add_theme_color_override("font_color", _rarity_color(rarity))
 	_store_detail_title.text = str(item.get("display_name",
 		SupabaseCosmeticRegistry.display_name_fallback(item_id))).to_upper()
 	_store_detail_meta.text = "%s  •  %s" % [rarity.to_upper(), _locker_style_slot_name(slot)]
+	if slot == "hat":
+		_store_detail_meta.text += "  •  DRAG / RIGHT STICK TO ROTATE"
 	_store_detail_meta.add_theme_color_override("font_color", _rarity_color(rarity))
 	_store_detail_description.text = str(item.get("description", "A prize from the current rotation."))
 	var display_price := _store_item_price(item)
@@ -1386,10 +1602,12 @@ func _show_page(index: int) -> void:
 		_inventory_page.visible = false
 	if _screen_title != null:
 		_screen_title.text = "PRIZE COUNTER" if _active_page_index == 1 else "COMPETITOR PROFILE"
-		_screen_kicker.text = "ONE GUN  //  ARENA REWARDS" if _active_page_index == 1 \
-			else "ONE GUN  //  ARENA SERVICES"
-		_screen_subtitle.text = "THE LIVE ROTATION — BUY IT HERE, EQUIP IT IN THE LOCKER" \
-			if _active_page_index == 1 else "YOUR IDENTITY, SEASON, AND CAREER RECORD"
+	if _store_footer_note != null:
+		_store_footer_note.visible = _active_page_index == 1
+	if _active_page_index == 0:
+		_configure_profile_controller_focus.call_deferred()
+	else:
+		_configure_store_controller_focus.call_deferred()
 	_replace_backdrop(_active_page_index)
 
 
@@ -1412,6 +1630,12 @@ func _refresh_currency() -> void:
 	_refresh_profile_progression()
 	if _profile_token_label != null:
 		_profile_token_label.text = "%d GUN TOKENS" % int(_backend.gun_tokens)
+
+
+func _set_feedback(message: String, is_error: bool) -> void:
+	super._set_feedback(message, is_error)
+	if _feedback_label != null:
+		_feedback_label.visible = not message.strip_edges().is_empty()
 
 
 func _on_purchase_succeeded(item_id: String) -> void:
@@ -1633,10 +1857,10 @@ func _refresh_profile_progression() -> void:
 	var career_level := int(career.get(
 		"career_level", int(career.get("levels_earned", 0)) + 1))
 	_set_profile_value("SEASON LEVEL", str(season_level))
-	_set_profile_value("SEASON PRESTIGE", str((season_level - 1) / 100))
-	_set_profile_value("CLASSIC TROPHIES", str(progress.get("trophies", 0)))
+	_set_profile_value("SEASON PRESTIGE", str(int((season_level - 1) / 100)))
+	_set_profile_value("CLASSIC TROPHIES", str(int(progress.get("trophies", 0))))
 	_set_profile_value("CAREER LEVEL", str(career_level))
-	_set_profile_value("CAREER PRESTIGE", str((career_level - 1) / 100))
+	_set_profile_value("CAREER PRESTIGE", str(int((career_level - 1) / 100)))
 	if _profile_trophy_label != null:
 		_profile_trophy_label.text = "%d TROPHIES" % int(progress.get("trophies", 0))
 	if _trophy_label != null:
@@ -1650,14 +1874,14 @@ func _refresh_profile_progression() -> void:
 			"kills": progress.get("kills", 0),
 			"disarms": progress.get("disarms", 0),
 		}
-	_set_profile_value("CAREER WINS", str(mode_stats.get("wins", 0)))
-	_set_profile_value("MATCHES", str(mode_stats.get("matches", 0)))
+	_set_profile_value("CAREER WINS", str(int(mode_stats.get("wins", 0))))
+	_set_profile_value("MATCHES", str(int(mode_stats.get("matches", 0))))
 	var best_finish = mode_stats.get("best_finish", null)
 	_set_profile_value("BEST FINISH", "—" if best_finish == null \
 		else _ordinal(int(best_finish)))
-	_set_profile_value("KILLS", str(mode_stats.get("kills", 0)))
-	_set_profile_value("DISARMS", str(mode_stats.get("disarms", 0)))
-	_set_profile_value("ROUND WINS", str(mode_stats.get("round_wins", 0)))
+	_set_profile_value("KILLS", str(int(mode_stats.get("kills", 0))))
+	_set_profile_value("DISARMS", str(int(mode_stats.get("disarms", 0))))
+	_set_profile_value("ROUND WINS", str(int(mode_stats.get("round_wins", 0))))
 	_rebuild_legacy_records()
 	_rebuild_match_history_records()
 

@@ -209,6 +209,9 @@ glow_intensity = 0.08
 [node name="Game Area" type="Node3D" parent="." unique_id=1734289296]
 transform = Transform3D(7, 0, 0, 0, 7, 0, 0, 0, 7, -84.40553, 0.15357208, -133.23567)
 
+[node name="RoundIntroCameraPoint" type="Marker3D" parent="." groups=["round_intro_camera_point"]]
+position = Vector3(-102.5, 35, -175)
+
 [node name="bottom house" type="CSGCombiner3D" parent="Game Area" unique_id=716678474]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
 use_collision = true

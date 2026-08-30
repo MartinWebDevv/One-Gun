@@ -127,7 +127,9 @@ Whenever map selection/loading changes, verify:
 
 Map switching must not create large temporary RAM/VRAM spikes. A major transition architecture change requires evidence and discussion; small lifetime fixes can be made immediately.
 
-The tracked build/.gdignore prevents generated build trees from being imported as a second copy of the project. Client/server export presets also exclude build staging, art sources, and developer tools.
+The tracked build/.gdignore prevents generated build trees from being imported as a second copy of the project. Client/server export presets also exclude build staging, art sources, developer tools, and the backend-only `services/` coordinator (including its Node dependencies).
+
+The startup cinematic requests its configured handoff scene on Godot's background loader after the six actors are prepared. The main menu no longer synchronously loads its first full live-map preview before drawing the cabinet: it draws the UI first, requests that preview on the resource thread, and fades the completed map in behind the interface. Keep this non-blocking first-frame contract when changing the title background.
 
 ## 10. Multiplayer
 
@@ -167,6 +169,35 @@ The Prize Counter reuses one shadow-free 512×256 move viewport and does not cre
 a character until a locally mapped Victory item is selected. The viewport and its
 animation player stop when inspecting ordinary items or leaving the page. Keep this
 single-preview/lazy-load behavior when adding future poses or move types.
+
+**Controller/social/gameplay checkpoint — 2026-08-26:** the complete batch passed
+Forward+ rendered checks on an NVIDIA RTX 4060 Ti across Player V2 animation/action
+captures, City environment/buildings, Neon Circuit, Winners Circle, settings UI,
+notifications, accessibility motion blur, and all 28 Victory Move frames. Headless and
+multi-process suites also cover the new controller routing, Playpen recovery, OT supply,
+Fast Hands, animation replication, lobby Player Hub, and social client contract. This is
+functional/render coverage, not a substitute for measured frame-time data on Low.
+
+The added runtime work stays bounded: Fast Hands reuses one cached 64px placeholder,
+social presence/snapshot refreshes are low-frequency and inactive while signed out, and
+Playpen recovery uses a 0.25s authority-only scan rather than a per-player network poll.
+No extra gameplay viewport or continuous social animation loop was introduced. Retest
+the full lobby → Playpen → match → Winners Circle loop at 1080p Low on the weaker laptop,
+including repeated transitions and a physical controller, before the next public build.
+
+The 2026-08-26 title-menu consolidation replaces five always-visible destination buttons
+with one Player Hub entry. Its shared home/lobby portal is Canvas UI created only while
+open, reuses the existing destination overlays, and adds no viewport, scene world, or
+continuous process loop. Keep that lightweight contract when polishing the portal.
+
+**Hat/social/controller checkpoint — 2026-08-29:** all twelve Hat cosmetics use optimized runtime GLBs and one animated head attachment per visible character. The original Rice Hat look is restored, including its rope, in a 5,482-triangle / approximately 164 KB runtime GLB; the original Crown gems and gold adornments are restored in a 13,911-triangle / approximately 325 KB runtime GLB. Pimp Hat and White Fedora preserve their original colors/materials at 13,231 and 3,858 triangles respectively, with textures reduced to 1024² where needed. Prize Counter and Locker reuse their existing quality-scaled preview viewport and render one selected Hat at a time. Both play only the shared idle while a Hat is visible; the Prize Counter viewport returns to `UPDATE_DISABLED` immediately after inspection closes or a non-3D item is selected. Rotation changes only the character pivot, so the camera, background, lights, and podium do not rotate or distort. Progression creates at most one 512×384 quality-scaled reward-preview viewport while its modal is open; its shared idle animation runs only while that modal exists, and the viewport is freed on close. None of these preview paths adds a gameplay viewport. The Friends orb and invitation toast are ordinary Canvas UI with no continuous 3D work. Structural and Forward+ front/overhead render checks discover all registered models and now cover 12 hats × 8 character models (96 combinations); key-pose Forward+ sheets additionally cover six gameplay/presentation animations on each of the five added fixed-look models. Their source GLBs are each below 1 MB, share the lazy per-model animation cache, and add no per-frame model-specific script. Live Locker and Prize Counter screen-space checks cover every hat/model pair at 0°, 90°, 180°, and 270° with safe top/side margins. The registry/fallback change adds no process loop, viewport, material, or network state. Retest repeated character switching, Hat browsing, two-controller menu navigation, a six-character match, and the Playpen → match → Winners Circle loop at 1080p Low on the weaker laptop before the public build.
+
+**Gameplay shoulder-camera checkpoint — 2026-08-28:** the Hat-safe non-ADS sight line changes only the existing spring-arm and camera transforms. It preserves the same 4.0m boom, player-configured FOV, collision mask/margin, and single gameplay camera; it adds no viewport, physics query, material pass, visibility scan, or per-frame allocation. A 1600×900 matrix discovers the registered character list and currently covers 12 Hats × 3 models × non-ADS/ADS across animated samples, while the existing collision, controller, cosmetic, menu, and Forward+ capture suites remain clean. Confirm feel and frame pacing at 1080p Low on the weaker laptop.
+
+**Skeleton-bound cosmetic checkpoint — 2026-08-29:** current Hats and future rigid wearables use engine-owned `BoneAttachment3D` transforms instead of adding another cosmetic `_process()` loop. Skinned shirts/pants reuse the visible actor's existing `Skeleton3D`; they do not instantiate a second animated character rig, physics body, viewport, or network object. Only equipped local meshes are instantiated, and model swaps free the old visual before applying the same stable-ID loadout to the replacement. Keep garment triangle/texture budgets within the normal character/prop guidance and test maximum visible equipped actors plus repeated Locker/match transitions at 1080p Low on the weaker laptop when the first clothing art is added.
+
+**Character normalization checkpoint — 2026-08-29:** all six developer-gift wrappers are normalized once in their visual scenes and retain the existing shared `player.tscn` capsule; there is no added physics body, collision query, viewport, animation process, or per-frame model-specific work. Prevalidated idle actor-space envelopes keep home/preview framing accurate without runtime CPU skinning or vertex scans. Forward+ key-pose sheets cover six gameplay/presentation animations on all six gift models. Retest a six-character match, repeated model/Hat switching, and the Playpen → match → Winners Circle loop at 1080p Low on the weaker laptop before the public build.
+
 ## 12. Decision rule for discovered problems
 
 A small, safe, clearly beneficial fix may be included in current work.
@@ -190,4 +221,3 @@ These are profiling targets, not authorization for blind rewrites:
 - Long WAV source files are imported with Godot compression mode 2 and loaded on demand; source size alone is not evidence of equivalent runtime RAM. Profile decoded/imported memory before converting formats.
 - Main-menu High/Ultra still deliberately preloads the next live map while displaying the current one. Measure peak RAM/VRAM on the laptop before redesigning that approved visual presentation.
 - Synchronous gameplay scene changes warrant repeated-switch memory and stutter profiling before a transition-system refactor.
-

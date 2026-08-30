@@ -46,6 +46,15 @@ static func normalize_item(value: Dictionary) -> Dictionary:
 	item["rarity"] = str(item.get("rarity", "standard")).to_lower()
 	item["rotation_scope"] = str(item.get("rotation_scope",
 		item.get("rotation_type", "none"))).to_lower()
+	# PostgREST preserves SQL NULL for open-ended rotation timestamps. Normalize
+	# those values to empty strings so they mean "no boundary" instead of the
+	# literal text "<null>", which would hide otherwise-live catalog rows.
+	for timestamp_key in ["rotation_starts_at", "rotation_ends_at"]:
+		var timestamp_value = item.get(timestamp_key, null)
+		if timestamp_value == null:
+			item[timestamp_key] = ""
+		else:
+			item[timestamp_key] = str(timestamp_value).strip_edges()
 	item["purchase_count"] = maxi(int(item.get("purchase_count", 0)), 0)
 	item["sort_order"] = int(item.get("sort_order", 0))
 	return item
@@ -56,7 +65,7 @@ static func category(item: Dictionary) -> String:
 	if explicit in PRIMARY_CATEGORIES:
 		return explicit
 	match str(item.get("item_type", "")).to_lower():
-		"character_skin", "hat", "shirt", "pants", "shoes", "accessory", "profile_badge", "outfit_bundle":
+		"character_skin", "character_model", "hat", "shirt", "pants", "shoes", "accessory", "profile_badge", "outfit_bundle":
 			return "CHARACTER"
 		"gun_skin", "melee_skin":
 			return "WEAPONS"
@@ -81,6 +90,7 @@ static func subcategory(item: Dictionary) -> String:
 		return explicit
 	match str(item.get("item_type", "")).to_lower():
 		"character_skin": return "colors"
+		"character_model": return "skins"
 		"hat": return "hats"
 		"shirt": return "shirts"
 		"pants": return "pants"
@@ -190,6 +200,8 @@ static func is_in_live_rotation(item: Dictionary) -> bool:
 	if rotation_scope(item) not in ["daily", "monthly", "seasonal_starter", "seasonal"]:
 		return false
 	var now_iso := Time.get_datetime_string_from_system(true)
-	var starts_at := str(item.get("rotation_starts_at", ""))
-	var ends_at := str(item.get("rotation_ends_at", ""))
+	var starts_value = item.get("rotation_starts_at", null)
+	var ends_value = item.get("rotation_ends_at", null)
+	var starts_at := "" if starts_value == null else str(starts_value).strip_edges()
+	var ends_at := "" if ends_value == null else str(ends_value).strip_edges()
 	return (starts_at == "" or starts_at <= now_iso) and (ends_at == "" or ends_at > now_iso)

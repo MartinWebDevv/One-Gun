@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://6ki6tkb31lw5"
+path="res://.godot/imported/fungus yellow small.obj-1ac1e501c90ce3d087394c86b07948df.mesh"
+
+[deps]
+
+files=["res://.godot/imported/fungus yellow small.obj-1ac1e501c90ce3d087394c86b07948df.mesh"]
+
+source_file="res://maps/trippy_mountains/assets/grass/mushy/fungus yellow small.obj"
+dest_files=["res://.godot/imported/fungus yellow small.obj-1ac1e501c90ce3d087394c86b07948df.mesh", "res://.godot/imported/fungus yellow small.obj-1ac1e501c90ce3d087394c86b07948df.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

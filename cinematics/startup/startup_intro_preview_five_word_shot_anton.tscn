@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://cinematics/startup/startup_intro_preview_five_word_shot.gd" id="1_preview"]
+[ext_resource type="FontFile" path="res://fonts/cinematic/anton/Anton-Regular.ttf" id="2_font"]
+
+[node name="StartupIntroPreviewFiveWordShotAnton" type="Node"]
+script = ExtResource("1_preview")
+caption_font = ExtResource("2_font")
+caption_font_size = 86
+caption_word_spacing = 18
+

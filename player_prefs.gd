@@ -9,7 +9,7 @@ signal setting_changed(key: String, value)
 const SAVE_PATH := "user://player_prefs.json"
 const BACKUP_PATH := "user://player_prefs.backup.json"
 const TEMP_PATH := "user://player_prefs.pending.json"
-const SETTINGS_VERSION := 8
+const SETTINGS_VERSION := 11
 const SETTINGS_APPLIER = preload("res://UI/player_settings_applier.gd")
 const UNASSIGNED_JOYPAD_DEVICE := 4095
 
@@ -17,15 +17,18 @@ const DEFAULT_SETTINGS := {
 	"player_name": "Player 1",
 	"character_skin_id": "blue",
 	"character_model_id": "male",
+	"character_base_model_id": "male",
 	"master_volume": 1.0,
 	"music_volume": 1.0,
 	"sfx_volume": 1.0,
 	"ceremony_volume": 0.8,
 	"input_device": "keyboard_mouse",
 	"mouse_sensitivity": 1.0,
-	"gamepad_sensitivity": 6.0,
+	"gamepad_sensitivity_x": 6.0,
+	"gamepad_sensitivity_y": 6.0,
 	"ads_sensitivity_multiplier": 0.5,
-	"gamepad_response_curve_exponent": 2.0,
+	"gamepad_response_curve_exponent": 1.35,
+	"gamepad_deadzone": 0.15,
 	"gamepad_sprint_is_toggle": true,
 	"mouse_keyboard_sprint_is_toggle": false,
 	"field_of_view": 75.0,
@@ -219,9 +222,22 @@ func apply_input_binding_map(overrides, input_device := "") -> void:
 							var event := descriptor_to_event(descriptor)
 							if event != null:
 								InputMap.action_add_event(action, event)
+	_apply_gamepad_deadzones(float(get_setting("gamepad_deadzone")))
 	var selected_device := (input_device if input_device != ""
 		else str(get_setting("input_device")))
 	_apply_input_device_selection(selected_device)
+
+
+func _apply_gamepad_deadzones(deadzone: float) -> void:
+	deadzone = clampf(deadzone, 0.05, 0.40)
+	for action_name in InputMap.get_actions():
+		var action := str(action_name)
+		if not action.begins_with("p1_") and not action.begins_with("p2_"):
+			continue
+		for event in InputMap.action_get_events(action):
+			if event is InputEventJoypadMotion:
+				InputMap.action_set_deadzone(action, deadzone)
+				break
 
 
 func refresh_input_devices() -> void:
@@ -421,12 +437,19 @@ func _normalize(values: Dictionary) -> Dictionary:
 		str(normalized["character_skin_id"]))
 	normalized["character_model_id"] = PlayerSkinRegistry.sanitize_model_id(
 		str(normalized["character_model_id"]))
+	normalized["character_base_model_id"] = \
+		PlayerSkinRegistry.sanitize_public_model_id(
+			str(normalized["character_base_model_id"]))
 	for key in ["master_volume", "music_volume", "sfx_volume", "ceremony_volume"]:
 		normalized[key] = clampf(float(normalized[key]), 0.0, 1.0)
 	normalized["mouse_sensitivity"] = clampf(float(normalized["mouse_sensitivity"]), 0.1, 5.0)
-	normalized["gamepad_sensitivity"] = clampf(float(normalized["gamepad_sensitivity"]), 1.0, 15.0)
+	normalized["gamepad_sensitivity_x"] = clampf(
+		float(normalized["gamepad_sensitivity_x"]), 1.0, 15.0)
+	normalized["gamepad_sensitivity_y"] = clampf(
+		float(normalized["gamepad_sensitivity_y"]), 1.0, 15.0)
 	normalized["ads_sensitivity_multiplier"] = clampf(float(normalized["ads_sensitivity_multiplier"]), 0.05, 1.0)
 	normalized["gamepad_response_curve_exponent"] = clampf(float(normalized["gamepad_response_curve_exponent"]), 0.5, 4.0)
+	normalized["gamepad_deadzone"] = clampf(float(normalized["gamepad_deadzone"]), 0.05, 0.40)
 	normalized["field_of_view"] = clampf(float(normalized["field_of_view"]), 60.0, 110.0)
 	normalized["render_scale"] = clampf(float(normalized["render_scale"]), 0.5, 1.5)
 	normalized["ui_scale"] = clampf(float(normalized["ui_scale"]), 0.8, 1.25)
@@ -535,6 +558,30 @@ func _migrate(raw: Dictionary) -> Dictionary:
 	var migrated: Dictionary = raw.get("settings", raw).duplicate(true)
 	if version < 2:
 		migrated["input_overrides"] = _migrate_legacy_bindings(migrated.get("input_overrides", {}))
+	if version < 9:
+		# Preserve deliberate custom curves, but replace the old sluggish default.
+		if not migrated.has("gamepad_response_curve_exponent") \
+				or is_equal_approx(float(migrated["gamepad_response_curve_exponent"]), 2.0):
+			migrated["gamepad_response_curve_exponent"] = 1.35
+		if not migrated.has("gamepad_deadzone"):
+			migrated["gamepad_deadzone"] = 0.15
+	if version < 10:
+		# Version 9 exposed one gamepad-look speed. Copy it into both axes so
+		# existing players keep exactly the same feel until they deliberately
+		# separate horizontal and vertical sensitivity.
+		var legacy_sensitivity := float(migrated.get("gamepad_sensitivity", 6.0))
+		if not migrated.has("gamepad_sensitivity_x"):
+			migrated["gamepad_sensitivity_x"] = legacy_sensitivity
+		if not migrated.has("gamepad_sensitivity_y"):
+			migrated["gamepad_sensitivity_y"] = legacy_sensitivity
+		migrated.erase("gamepad_sensitivity")
+	if version < 11:
+		# Remember the existing public cat choice before a gift-only model can
+		# temporarily replace it. Unequipping the gift restores this exact choice.
+		var prior_model := str(migrated.get(
+			"character_model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID))
+		migrated["character_base_model_id"] = \
+			PlayerSkinRegistry.sanitize_public_model_id(prior_model)
 	return migrated
 
 

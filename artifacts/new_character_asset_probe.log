@@ -1,0 +1,12 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+NEW_CHARACTER_ASSET model=eye_wizard file_bytes=748592 bones=65 binds=65 meshes=1 skinned=1 surfaces=1 missing=[] bounds_pos=(-1.766745, -4.425032, 0.002445) bounds_size=(2.70891, 8.851833, 6.158728) head_rest=(-0.075565, -0.000885, -4.261315) hips_rest=(0.003084, -0.000885, -2.588705) animations=["mixamo_com", "mixamo_com_001", "mixamo_com_002"]
+NEW_CHARACTER_ASSET model=mr_mushroom file_bytes=705212 bones=49 binds=49 meshes=1 skinned=1 surfaces=1 missing=[] bounds_pos=(-1.580435, -2.404073, -0.000615) bounds_size=(3.146927, 4.816346, 5.684583) head_rest=(-0.00258, -0.0041, -3.564188) hips_rest=(-0.060729, -0.0041, -2.017789) animations=["mixamo_com", "mixamo_com_001", "mixamo_com_002", "mixamo_com_003"]
+NEW_CHARACTER_ASSET model=mr_poop file_bytes=336552 bones=57 binds=57 meshes=1 skinned=1 surfaces=1 missing=[] bounds_pos=(-1.503539, -3.532977, -0.000289) bounds_size=(2.754654, 7.066066, 4.37255) head_rest=(-0.0878, -0.000056, -3.31585) hips_rest=(0.066247, -0.000056, -1.877508) animations=["mixamo_com"]
+NEW_CHARACTER_ASSET model=mr_salt file_bytes=789456 bones=65 binds=65 meshes=1 skinned=1 surfaces=1 missing=[] bounds_pos=(-0.460404, -1.998261, -0.000018) bounds_size=(0.878729, 3.996098, 3.183187) head_rest=(-0.029512, 0.000212, -2.812184) hips_rest=(-0.012778, 0.000212, -1.546124) animations=["mixamo_com", "mixamo_com_001"]
+WARNING: 'res://models/player_v2/characterSkins/Spooky_Witch.glb': In external resource #0, invalid UID: 'uid://doigerwc2d17y' - using text path instead: 'res://models/player_v2/characterSkins/Spooky_Witch_100Avatars_039_Witch.png'.
+   at: open (core/io/resource_format_binary.cpp:1025)
+   GDScript backtrace (most recent call first):
+       [0] _run (res://tools/new_character_asset_probe.gd:25)
+NEW_CHARACTER_ASSET model=spooky_witch file_bytes=722500 bones=49 binds=49 meshes=1 skinned=1 surfaces=1 missing=[] bounds_pos=(-1.153614, -2.48055, -0.003597) bounds_size=(2.172989, 4.963321, 4.979284) head_rest=(-0.17257, -0.001111, -3.374101) hips_rest=(-0.028994, -0.001111, -2.031447) animations=["mixamo_com", "mixamo_com_001", "mixamo_com_002", "mixamo_com_003", "mixamo_com_004"]
+NEW_CHARACTER_ASSET_PROBE: PASS

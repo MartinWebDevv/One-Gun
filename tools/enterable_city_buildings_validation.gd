@@ -123,9 +123,13 @@ func _validate_asset_structure() -> void:
 		_check(structure != null,
 			"Building %s has no static structure" % str(spec["id"]).to_upper())
 		if structure != null:
-			_check(structure.get_child_count() == int(spec["collider_count"]),
+			var collider_count := 0
+			for structure_child in structure.get_children():
+				if structure_child is CollisionShape3D:
+					collider_count += 1
+			_check(collider_count == int(spec["collider_count"]),
 				"Building %s collider count is %d instead of %d" % [
-					str(spec["id"]).to_upper(), structure.get_child_count(),
+					str(spec["id"]).to_upper(), collider_count,
 					int(spec["collider_count"])])
 			for child in structure.get_children():
 				if child is CollisionShape3D:
@@ -279,6 +283,9 @@ func _capture_views() -> void:
 func _set_camera_and_capture(position: Vector3, target: Vector3,
 		file_name: String) -> void:
 	camera.look_at_from_position(position, target, Vector3.UP)
+	if DisplayServer.get_name() == "headless":
+		print("ENTERABLE_BUILDING_CAPTURE_SKIPPED_HEADLESS ", file_name)
+		return
 	await _wait_frames(4)
 	await RenderingServer.frame_post_draw
 	var output_dir := OS.get_environment("ONEGUN_ENTERABLE_BUILDINGS_OUTPUT")

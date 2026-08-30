@@ -149,17 +149,10 @@ func _clear_page() -> void:
 	_matchmaking_cancel_button = null
 
 
-func _build_header(title: String, badge: String, show_back := false) -> void:
+func _build_header(title: String, badge: String) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	_page_root.add_child(row)
-	if show_back:
-		var back := OneGunButton.new()
-		back.variant = "navy"
-		back.text = "BACK"
-		back.font_size = OneGunUI.TEXT_S
-		back.pressed.connect(_request_back)
-		row.add_child(back)
 	var title_label := OneGunUI.make_heading(title, OneGunUI.TEXT_TITLE, "gold")
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(title_label)
@@ -173,12 +166,6 @@ func _build_header(title: String, badge: String, show_back := false) -> void:
 	badge_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	badge_panel.add_child(OneGunUI.make_label(badge, OneGunUI.TEXT_XS, "cyan", true))
 	row.add_child(badge_panel)
-	var close := OneGunButton.new()
-	close.variant = "navy"
-	close.text = "CLOSE"
-	close.font_size = OneGunUI.TEXT_S
-	close.pressed.connect(_request_close)
-	row.add_child(close)
 
 
 func _request_back() -> void:
@@ -216,9 +203,9 @@ func _show_browser(refresh := true) -> void:
 	var code := _make_button("JOIN BY CODE", "purple", _show_code)
 	code.tooltip_text = "Find a public or private host using its share code"
 	actions.add_child(code)
-	var matchmake := _make_button("FIND DEV MATCH", "green", _show_matchmaking)
+	var matchmake := _make_button("FIND MATCH", "green", _show_matchmaking)
 	matchmake.disabled = _matchmaking == null or not _matchmaking.is_configured()
-	matchmake.tooltip_text = "This build has no development coordinator URL configured" if matchmake.disabled else "Queue for a dynamically assigned Edgegap server"
+	matchmake.tooltip_text = "Matchmaking is not available right now" if matchmake.disabled else "Find a dedicated online match"
 	actions.add_child(matchmake)
 	var action_spacer := Control.new()
 	action_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -279,6 +266,7 @@ func _show_browser(refresh := true) -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	_page_root.add_child(footer)
+	footer.add_child(_make_back_button(_request_close))
 	_selection_label = OneGunUI.make_label("SELECT A LOBBY TO SEE ITS SUMMARY", OneGunUI.TEXT_S, "muted")
 	_selection_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(_selection_label)
@@ -429,7 +417,7 @@ func _show_host() -> void:
 	_page = Page.HOST
 	_busy = false
 	_clear_page()
-	_build_header("HOST LOBBY", "ONE GUN", true)
+	_build_header("HOST LOBBY", "ONE GUN")
 	_add_form_heading("LOBBY IDENTITY", "Your player name seeds a useful default; edit it freely for this session.")
 	_host_name = _make_line_edit("Lobby name", 32)
 	_host_name.name = "HostLobbyName"
@@ -448,7 +436,7 @@ func _show_host() -> void:
 		privacy_button.variant = "navy"
 		privacy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		privacy_button.disabled = option[0] == "friends"
-		privacy_button.tooltip_text = "Unavailable until One Gun has a friend identity service." if privacy_button.disabled else "Set lobby privacy to %s" % option[1]
+		privacy_button.tooltip_text = "Friends Only privacy is not available yet." if privacy_button.disabled else "Set lobby privacy to %s" % option[1]
 		privacy_button.pressed.connect(_set_host_privacy.bind(option[0]))
 		privacy_row.add_child(privacy_button)
 		_privacy_buttons[option[0]] = privacy_button
@@ -492,7 +480,7 @@ func _show_host() -> void:
 	code_row.add_child(_host_code)
 	var generate := _make_button("GENERATE", "navy", func() -> void: _host_code.text = _random_code())
 	code_row.add_child(generate)
-	var code_help := OneGunUI.make_label("This gates discovery inside your tailnet. Trusted direct-IP fallback remains available.", OneGunUI.TEXT_XS, "muted")
+	var code_help := OneGunUI.make_label("Only players on your Tailscale network can use this private lobby code.", OneGunUI.TEXT_XS, "muted")
 	code_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_private_code_section.add_child(code_help)
 
@@ -502,7 +490,7 @@ func _show_host() -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	_page_root.add_child(footer)
-	var cancel := _make_button("CANCEL", "navy", func() -> void: _show_browser(false))
+	var cancel := _make_back_button(func() -> void: _show_browser(false))
 	footer.add_child(cancel)
 	var footer_spacer := Control.new()
 	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -563,7 +551,7 @@ func _show_code() -> void:
 	_page = Page.CODE
 	_busy = false
 	_clear_page()
-	_build_header("JOIN BY CODE", "PRIVATE ENTRY", true)
+	_build_header("JOIN BY CODE", "PRIVATE ENTRY")
 	_add_form_heading("LOBBY CODE", "Paste a private code, direct Tailscale address, or server hostname with its public port.")
 	_code_field = _make_line_edit("LOBBY CODE OR SERVER:PORT", 128)
 	_code_field.name = "JoinByCode"
@@ -586,14 +574,14 @@ func _show_code() -> void:
 	summary_column.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	summary.get_content().add_child(summary_column)
 	summary_column.add_child(OneGunUI.make_heading("SECURE DISCOVERY", OneGunUI.TEXT_L, "purple"))
-	var explanation := OneGunUI.make_label("The code is sent only in direct probes to peers already inside your Tailscale network. It is not published as a lobby row.", OneGunUI.TEXT_S, "muted")
+	var explanation := OneGunUI.make_label("Only players on your Tailscale network can use this private lobby code.", OneGunUI.TEXT_S, "muted")
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	explanation.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	summary_column.add_child(explanation)
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	_page_root.add_child(footer)
-	footer.add_child(_make_button("BACK", "navy", func() -> void: _show_browser(false)))
+	footer.add_child(_make_back_button(func() -> void: _show_browser(false)))
 	var footer_spacer := Control.new()
 	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(footer_spacer)
@@ -606,27 +594,20 @@ func _show_matchmaking() -> void:
 	_page = Page.MATCHMAKING
 	_busy = true
 	_clear_page()
-	_build_header("DEVELOPMENT MATCH", "DYNAMIC EDGEGAP", true)
-	var explanation := OneGunUI.make_label(
-		"This development queue pairs two current-build players, starts a fresh server, and connects each player using a one-time ticket.",
-		OneGunUI.TEXT_S, "muted")
-	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_page_root.add_child(explanation)
+	_build_header("ONLINE MATCH", "MATCHMAKING")
 	_matchmaking_state = OneGunStatusPanel.new()
 	_matchmaking_state.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_matchmaking_state.retry_requested.connect(_retry_matchmaking)
-	_matchmaking_state.show_loading("JOINING THE DEVELOPMENT QUEUE...")
+	_matchmaking_state.show_loading("SEARCHING FOR A MATCH...")
 	_page_root.add_child(_matchmaking_state)
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	_page_root.add_child(footer)
-	footer.add_child(OneGunUI.make_label(
-		"The coordinator receives no Edgegap credential from this game.", OneGunUI.TEXT_XS, "muted"))
+	_matchmaking_cancel_button = _make_back_button(_cancel_matchmaking)
+	footer.add_child(_matchmaking_cancel_button)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(spacer)
-	_matchmaking_cancel_button = _make_button("CANCEL QUEUE", "navy", _cancel_matchmaking)
-	footer.add_child(_matchmaking_cancel_button)
 	_matchmaking_cancel_button.grab_focus.call_deferred()
 	if _matchmaking == null or not _matchmaking.start_queue():
 		_busy = false
@@ -636,7 +617,7 @@ func _retry_matchmaking() -> void:
 	if _matchmaking_state == null:
 		return
 	_busy = true
-	_matchmaking_state.show_loading("REJOINING THE DEVELOPMENT QUEUE...")
+	_matchmaking_state.show_loading("SEARCHING FOR A MATCH...")
 	if not _matchmaking.start_queue():
 		_busy = false
 
@@ -773,6 +754,13 @@ func _add_form_heading(title: String, description: String) -> void:
 	var label := OneGunUI.make_label(description, OneGunUI.TEXT_S, "muted")
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_page_root.add_child(label)
+
+
+func _make_back_button(callback: Callable) -> OneGunButton:
+	var button := _make_button("BACK", "navy", callback)
+	button.name = "OnlineBackButton"
+	button.custom_minimum_size = Vector2(220.0, 60.0)
+	return button
 
 
 func _make_button(text: String, variant: String, callback: Callable) -> OneGunButton:

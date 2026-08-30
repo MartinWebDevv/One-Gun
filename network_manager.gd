@@ -92,6 +92,8 @@ var server_build: Dictionary = {}
 var _discovery_responder: PacketPeerUDP = null
 var _discovery_attempt := 0
 var _host_port := DEFAULT_PORT
+var _connected_host_address := ""
+var _connected_host_port := DEFAULT_PORT
 var local_one_of_us_volunteer := false
 var match_server_mode := false
 var match_server_id := ""
@@ -175,6 +177,10 @@ func host_game(port: int = DEFAULT_PORT, requested_lobby_name: String = "",
 	_online = true
 	_joining = false
 	_host_port = port
+	_connected_host_address = get_tailscale_ip()
+	if _connected_host_address == "" and OS.is_debug_build():
+		_connected_host_address = "127.0.0.1"
+	_connected_host_port = port
 	peers.clear()
 	peers[1] = {
 		"name": local_name(),
@@ -589,6 +595,8 @@ func join_game(ip: String, port: int = DEFAULT_PORT, match_ticket_id := "") -> b
 	multiplayer.multiplayer_peer = peer
 	_online = true
 	_joining = true
+	_connected_host_address = ip.strip_edges()
+	_connected_host_port = port
 	_connection_attempt += 1
 	var attempt := _connection_attempt
 	_net_log("joining %s:%d (attempt %d)" % [ip, port, attempt])
@@ -737,6 +745,8 @@ func _reset_session(emit_change: bool) -> void:
 	_local_match_ticket_id = ""
 	_last_chat_message_msec.clear()
 	_host_port = DEFAULT_PORT
+	_connected_host_address = ""
+	_connected_host_port = DEFAULT_PORT
 	if _discovery_responder != null:
 		_discovery_responder.close()
 		_discovery_responder = null
@@ -961,6 +971,8 @@ func set_local_appearance(requested_skin_id: String,
 	var next_preferences := PlayerPrefs.snapshot()
 	next_preferences["character_skin_id"] = safe_skin_id
 	next_preferences["character_model_id"] = safe_model_id
+	if PlayerSkinRegistry.is_public_model_id(safe_model_id):
+		next_preferences["character_base_model_id"] = safe_model_id
 	if not PlayerPrefs.apply_transaction(next_preferences):
 		return false
 	if not is_online():
@@ -1479,6 +1491,27 @@ func get_tailscale_ip() -> String:
 			if second >= 64 and second <= 127:
 				return addr
 	return ""
+
+
+# Friend presence never owns transport. It receives only the already-active
+# lobby endpoint, and only while this player is in a pre-match lobby/Playpen
+# that can accept an invitation.
+func social_lobby_endpoint() -> Dictionary:
+	if not is_online() or lobby_name == "" or lobby_in_progress \
+			or _prelaunch_active or peers.size() >= lobby_max_players:
+		return {}
+	if local_match_role not in ["lobby", "playpen", "playpen_hosting"]:
+		return {}
+	var address := get_tailscale_ip() if is_host() else _connected_host_address
+	if address == "" and is_host() and OS.is_debug_build():
+		address = "127.0.0.1"
+	if not (_is_tailscale_ipv4(address) or address.begins_with("127.")):
+		return {}
+	return {
+		"name": lobby_name,
+		"address": address,
+		"port": _host_port if is_host() else _connected_host_port,
+	}
 
 # ------------------------------------------------------------
 # Roster (name exchange)

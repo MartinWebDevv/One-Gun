@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dj5ptl67h7bqa"]
+
+[ext_resource type="Script" uid="uid://cqatoqs8rqcu2" path="res://cinematics/startup/startup_intro_preview_smooth_shot.gd" id="1_preview"]
+
+[node name="StartupIntroPreviewSmoothShot" type="Node" unique_id=1024057607]
+script = ExtResource("1_preview")

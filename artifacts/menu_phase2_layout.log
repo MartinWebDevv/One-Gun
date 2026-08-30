@@ -1,0 +1,67 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: shared registry exposes all five playable maps
+PASS: every registered map scene is available
+PASS: local roster renders exactly ten slots
+PASS: Play is enabled for a valid selected map
+PASS: selected map resolves to a playable scene
+PASS: controller/keyboard focus starts on the map selector
+PASS: Cat Tower headless preview resolves the expected map (expected=3 actual=3)
+PASS: roster cabinet stays inside the 1920x1080 frame
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: Friends orb does not overlap roster at 1280x720
+PASS: all ten roster slots remain built at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: roster row stays vertically visible at 1280x720
+PASS: Friends orb does not overlap roster at 1600x900
+PASS: all ten roster slots remain built at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: roster row stays vertically visible at 1600x900
+PASS: Friends orb does not overlap roster at 1920x1080
+PASS: all ten roster slots remain built at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: roster row stays vertically visible at 1920x1080
+PASS: Random Map selects random rotation
+PASS: Random Map hides the live map preview
+PASS: Random Map explains that the battlefield is hidden
+PASS: rapid carousel input keeps the latest selection
+PASS: rapid carousel input and live preview remain synchronized
+PASS: Maple & 3rd headless preview resolves the expected map (expected=2 actual=2)
+PASS: live preview switches within the fade window
+PASS: Western Town headless preview resolves the expected map (expected=1 actual=1)
+PASS: splitscreen clamps bots to the eight-slot capacity
+PASS: splitscreen plus bots still renders ten total roster slots
+PHASE 2 MENU SMOKE: PASS

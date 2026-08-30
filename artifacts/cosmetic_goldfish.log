@@ -1,0 +1,124 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: Gold Fish is a supported model
+PASS: Gold Fish is absent from the public M/F model selector
+PASS: gift item resolves only to the installed character-model slot
+PASS: Gold Fish visual wrapper loads
+PASS: authored Gold Fish mesh is rotated 180 degrees to face gameplay forward
+PASS: authored 65-bone Mixamo skeleton is preserved
+PASS: required gameplay bone exists: mixamorig_Hips
+PASS: required gameplay bone exists: mixamorig_Head
+PASS: required gameplay bone exists: mixamorig_RightHand
+PASS: required gameplay bone exists: mixamorig_LeftFoot
+PASS: required gameplay bone exists: mixamorig_RightFoot
+PASS: runtime animation player is available
+PASS: animation retargeted: idle
+PASS: animation has a complete body track set: idle
+PASS: animation pose remains finite: idle
+PASS: animation retargeted: idle_pistol
+PASS: animation has a complete body track set: idle_pistol
+PASS: animation pose remains finite: idle_pistol
+PASS: animation retargeted: long_idle
+PASS: animation has a complete body track set: long_idle
+PASS: animation pose remains finite: long_idle
+PASS: animation retargeted: standard_run
+PASS: animation has a complete body track set: standard_run
+PASS: animation pose remains finite: standard_run
+PASS: animation retargeted: run
+PASS: animation has a complete body track set: run
+PASS: animation pose remains finite: run
+PASS: animation retargeted: jump
+PASS: animation has a complete body track set: jump
+PASS: animation pose remains finite: jump
+PASS: animation retargeted: running_jump
+PASS: animation has a complete body track set: running_jump
+PASS: animation pose remains finite: running_jump
+PASS: animation retargeted: fall
+PASS: animation has a complete body track set: fall
+PASS: animation pose remains finite: fall
+PASS: animation retargeted: pistol_jump
+PASS: animation has a complete body track set: pistol_jump
+PASS: animation pose remains finite: pistol_jump
+PASS: animation retargeted: pistol_run
+PASS: animation has a complete body track set: pistol_run
+PASS: animation pose remains finite: pistol_run
+PASS: animation retargeted: pistol_backward
+PASS: animation has a complete body track set: pistol_backward
+PASS: animation pose remains finite: pistol_backward
+PASS: animation retargeted: pistol_strafe_left
+PASS: animation has a complete body track set: pistol_strafe_left
+PASS: animation pose remains finite: pistol_strafe_left
+PASS: animation retargeted: pistol_strafe_right
+PASS: animation has a complete body track set: pistol_strafe_right
+PASS: animation pose remains finite: pistol_strafe_right
+PASS: animation retargeted: run_with_sword
+PASS: animation has a complete body track set: run_with_sword
+PASS: animation pose remains finite: run_with_sword
+PASS: animation retargeted: melee
+PASS: animation has a complete body track set: melee
+PASS: animation pose remains finite: melee
+PASS: animation retargeted: throw_object
+PASS: animation has a complete body track set: throw_object
+PASS: animation pose remains finite: throw_object
+PASS: animation retargeted: hit
+PASS: animation has a complete body track set: hit
+PASS: animation pose remains finite: hit
+PASS: animation retargeted: hip_hop_dance
+PASS: animation has a complete body track set: hip_hop_dance
+PASS: animation pose remains finite: hip_hop_dance
+PASS: animation retargeted: swing_dance
+PASS: animation has a complete body track set: swing_dance
+PASS: animation pose remains finite: swing_dance
+PASS: animation retargeted: podium_backbeat_bounce
+PASS: animation has a complete body track set: podium_backbeat_bounce
+PASS: animation pose remains finite: podium_backbeat_bounce
+PASS: animation retargeted: podium_champion_canter
+PASS: animation has a complete body track set: podium_champion_canter
+PASS: animation pose remains finite: podium_champion_canter
+PASS: animation retargeted: podium_fresh_footwork
+PASS: animation has a complete body track set: podium_fresh_footwork
+PASS: animation pose remains finite: podium_fresh_footwork
+PASS: animation retargeted: podium_house_party_heat
+PASS: animation has a complete body track set: podium_house_party_heat
+PASS: animation pose remains finite: podium_house_party_heat
+PASS: animation retargeted: podium_serpent_flow
+PASS: animation has a complete body track set: podium_serpent_flow
+PASS: animation pose remains finite: podium_serpent_flow
+PASS: animation retargeted: podium_midnight_monster
+PASS: animation has a complete body track set: podium_midnight_monster
+PASS: animation pose remains finite: podium_midnight_monster
+PASS: animation retargeted: podium_victory_wave
+PASS: animation has a complete body track set: podium_victory_wave
+PASS: animation pose remains finite: podium_victory_wave
+PASS: animation retargeted: round_breakspin_finale
+PASS: animation has a complete body track set: round_breakspin_finale
+PASS: animation pose remains finite: round_breakspin_finale
+PASS: animation retargeted: round_floorwork_finish
+PASS: animation has a complete body track set: round_floorwork_finish
+PASS: animation pose remains finite: round_floorwork_finish
+PASS: animation retargeted: round_birdie_boogie
+PASS: animation has a complete body track set: round_birdie_boogie
+PASS: animation pose remains finite: round_birdie_boogie
+PASS: animation retargeted: round_arena_clapline
+PASS: animation has a complete body track set: round_arena_clapline
+PASS: animation pose remains finite: round_arena_clapline
+PASS: animation retargeted: round_soul_cyclone
+PASS: animation has a complete body track set: round_soul_cyclone
+PASS: animation pose remains finite: round_soul_cyclone
+PASS: animation retargeted: round_quickstep_shuffle
+PASS: animation has a complete body track set: round_quickstep_shuffle
+PASS: animation pose remains finite: round_quickstep_shuffle
+PASS: animation retargeted: round_victory_swing
+PASS: animation has a complete body track set: round_victory_swing
+PASS: animation pose remains finite: round_victory_swing
+PASS: Gold Fish skinned mesh is present
+PASS: cat color changes cannot overwrite the authored Gold Fish texture
+PASS: runtime socket exists: GunHoldPoint
+PASS: runtime socket exists: MeleeHoldPoint
+PASS: runtime socket exists: ItemHoldPoint
+PASS: runtime socket exists: LeftFootSocket
+PASS: runtime socket exists: RightFootSocket
+PASS: runtime socket exists: HeadwearSocket
+PASS: equipped hat attaches to the animated Gold Fish head socket
+PASS: presentation character retains the complete sanitized cosmetic loadout
+GOLD FISH BAG MAN VALIDATION PASSED

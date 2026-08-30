@@ -6,7 +6,7 @@
 [ext_resource type="Script" uid="uid://ct5jegqyfnx5h" path="res://local_match_ui.gd" id="4_local_ui"]
 [ext_resource type="Script" uid="uid://cd1gvr838772b" path="res://splitscreen_manager.gd" id="5_split"]
 [ext_resource type="Script" uid="uid://ci4gr5d8y5mxs" path="res://void_kill_zone.gd" id="6_void"]
-[ext_resource type="NavigationMesh" uid="uid://dqsxih7lq2goc" path="res://navigation/SpaceStationPrototypeNavigation.tres" id="7_nav"]
+[ext_resource type="NavigationMesh" path="res://navigation/SpaceStationPrototypeNavigation.tres" id="7_nav"]
 [ext_resource type="PackedScene" uid="uid://u8ril0wcf6ds" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_DarkPlates.gltf" id="8_floor_dark"]
 [ext_resource type="PackedScene" uid="uid://bmd2iiqp6cx1o" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Platforms/Platform_Metal2.gltf" id="9_floor_metal"]
 [ext_resource type="PackedScene" uid="uid://1jhk6uuk3575" path="res://models/neonCircuitAssets/modularSciFiMegaKit/glTF/Walls/WallBand_Straight.gltf" id="10_wall_band"]
@@ -1964,92 +1964,6 @@ light_specular = 0.2
 spot_range = 11.0
 spot_angle = 42.0
 
-[node name="ZoneLabels" type="Node3D" parent="." unique_id=1432315779]
-
-[node name="ObservationLabel" type="Label3D" parent="ZoneLabels" unique_id=848786265]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, -16.65)
-modulate = Color(0.25, 0.8, 1, 1)
-text = "BLUE CIRCUIT"
-font_size = 48
-outline_size = 10
-
-[node name="ResearchLabel" type="Label3D" parent="ZoneLabels" unique_id=538954920]
-transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -18.65, 3.8, 0)
-modulate = Color(0.2, 1, 0.55, 1)
-text = "GREEN CIRCUIT"
-font_size = 48
-outline_size = 10
-
-[node name="ZeroGLabel" type="Label3D" parent="ZoneLabels" unique_id=1025213224]
-transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 18.65, 3.8, 0)
-modulate = Color(0.72, 0.35, 1, 1)
-text = "VIOLET CIRCUIT"
-font_size = 48
-outline_size = 10
-
-[node name="EngineLabel" type="Label3D" parent="ZoneLabels" unique_id=358456317]
-transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 3.8, 16.65)
-modulate = Color(1, 0.3, 0.12, 1)
-text = "RED CIRCUIT"
-font_size = 48
-outline_size = 10
-
-[node name="DeckHeaderLabel" type="Label3D" parent="ZoneLabels" unique_id=1523842260]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.12, -9.34)
-pixel_size = 0.004
-billboard = 1
-modulate = Color(0.3, 0.88, 1, 1)
-text = "NEON CIRCUIT // ORBITAL TAG ARENA"
-font_size = 36
-outline_size = 10
-
-[node name="ResearchPortalLabel" type="Label3D" parent="ZoneLabels" unique_id=573092882]
-transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -10.24, 4.12, 0)
-text = "GATE 02 // GREEN"
-
-[node name="ArenaMottoLabel" type="Label3D" parent="ZoneLabels" unique_id=1604068982]
-transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 2.35, 16.54)
-modulate = Color(0.78, 0.86, 1, 1)
-text = "TAG // DASH // DISARM // SURVIVE"
-font_size = 30
-outline_size = 10
-
-[node name="ArenaCapacityLabel" type="Label3D" parent="ZoneLabels" unique_id=1543700322]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.55, -16.54)
-pixel_size = 0.004
-billboard = 1
-modulate = Color(0.25, 1, 0.58, 1)
-text = "NEON CIRCUIT // 10 PLAYERS // SYSTEM LIVE"
-font_size = 34
-outline_size = 10
-
-[node name="ZeroGPortalLabel" type="Label3D" parent="ZoneLabels" unique_id=101224140]
-transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 10.24, 4.12, 0)
-pixel_size = 0.004
-billboard = 1
-modulate = Color(0.78, 0.42, 1, 1)
-text = "GATE 03 // VIOLET"
-font_size = 34
-outline_size = 10
-
-[node name="EnginePortalLabel" type="Label3D" parent="ZoneLabels" unique_id=17342120]
-transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 4.12, 9.44)
-pixel_size = 0.004
-billboard = 1
-modulate = Color(1, 0.38, 0.16, 1)
-text = "GATE 04 // RED"
-font_size = 34
-outline_size = 10
-
-[node name="CoreStatusLabel" type="Label3D" parent="ZoneLabels" unique_id=1677759439]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.35, 0)
-pixel_size = 0.0038
-billboard = 1
-modulate = Color(1, 0.68, 0.12, 1)
-text = "ONE GUN // LIVE VAULT"
-font_size = 30
-outline_size = 9
-
 [node name="SpawnPoints" type="Node3D" parent="." unique_id=1183274632]
 
 [node name="SpawnPoint1" type="Marker3D" parent="SpawnPoints" unique_id=1426777756 groups=["spawn_point"]]
@@ -2145,6 +2059,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0.6, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13, 20)
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1565743705]
+top_level = true
 visible = false
 navigation_mesh = ExtResource("7_nav")
 

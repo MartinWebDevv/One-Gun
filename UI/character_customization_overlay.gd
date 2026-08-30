@@ -18,6 +18,9 @@ var _canvas: Control
 var _backend
 var _preview_pivot: Node3D
 var _preview_visual: Node3D
+var _preview_camera: Camera3D
+var _preview_animation_player: AnimationPlayer
+var _active_preview_hat_id := ""
 var _player_name_label: Label
 var _selected_color_label: Label
 var _player_tabs: Array[OneGunButton] = []
@@ -37,6 +40,9 @@ var _reset_loadout_armed := false
 var _reset_loadout_generation := 0
 var _character_content: Control
 var _color_content: Control
+var _color_heading: Control
+var _color_heading_label: Label
+var _color_grid: VBoxContainer
 var _owned_content: Control
 var _owned_list: VBoxContainer
 var _locker_feedback: Label
@@ -66,7 +72,19 @@ func _ready() -> void:
 	_connect_locker_backend()
 	_apply_responsive_layout()
 	resized.connect(_apply_responsive_layout)
-	set_process(false)
+	# The model remains still by default. Processing is only used for deliberate
+	# right-stick rotation, matching mouse drag behavior.
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if _preview_pivot == null or _preview_visual == null \
+			or not is_visible_in_tree():
+		return
+	var prefix := "p%d" % (_active_slot + 1)
+	var look_axis := Input.get_axis(prefix + "_look_left", prefix + "_look_right")
+	if absf(look_axis) > 0.18:
+		_rotate_locker_preview(look_axis * 1.9 * delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -164,17 +182,6 @@ func _build_header() -> void:
 			title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			title_row.add_child(title)
 
-	var subtitle := OneGunUI.make_label(
-		"EQUIP WHAT YOU OWN  •  CHARACTER  •  WEAPONS  •  MOVES  •  MUSIC",
-		17, "muted")
-	subtitle.name = "CustomizationSubtitle"
-	subtitle.position = Vector2(250.0, 72.0)
-	subtitle.size = Vector2(1100.0, 28.0)
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_canvas.add_child(subtitle)
-
-
 func _build_player_tabs() -> void:
 	if local_player_count < 2:
 		return
@@ -233,7 +240,7 @@ func _build_preview_panel() -> void:
 
 	var viewport_container := SubViewportContainer.new()
 	viewport_container.name = "CharacterPreview"
-	viewport_container.custom_minimum_size = Vector2(0.0, 440.0)
+	viewport_container.custom_minimum_size = Vector2(0.0, 400.0)
 	viewport_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	viewport_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	viewport_container.stretch = true
@@ -242,27 +249,43 @@ func _build_preview_panel() -> void:
 	column.add_child(viewport_container)
 	_build_preview_world(viewport_container)
 
-	var model_row := HBoxContainer.new()
+	var model_center := CenterContainer.new()
+	model_center.name = "ModelButtonCenter"
+	column.add_child(model_center)
+	var model_row := GridContainer.new()
 	model_row.name = "ModelButtons"
-	model_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	model_row.add_theme_constant_override("separation", 12)
-	column.add_child(model_row)
-	for model_id in SkinRegistry.MODEL_IDS:
+	model_row.columns = 4
+	model_row.add_theme_constant_override("h_separation", 8)
+	model_row.add_theme_constant_override("v_separation", 6)
+	model_center.add_child(model_row)
+	var ordered_model_buttons: Array[OneGunButton] = []
+	for model_id in SkinRegistry.PUBLIC_MODEL_IDS:
 		var model_button := OneGunButton.new()
-		model_button.name = ("%sModel" % SkinRegistry.model_display_name(model_id))
-		model_button.text = "M" if model_id == "male" else "F"
-		model_button.font_size = OneGunUI.TEXT_M
-		model_button.custom_minimum_size = Vector2(76.0, 38.0)
+		model_button.name = ("%sModel" % SkinRegistry.model_display_name(model_id)) \
+			.replace(" ", "").replace(".", "")
+		model_button.text = SkinRegistry.model_button_label(model_id)
+		model_button.font_size = 13
+		model_button.custom_minimum_size = Vector2(120.0, 34.0)
 		model_button.tooltip_text = "Use the %s character model" % \
 			SkinRegistry.model_display_name(model_id)
 		model_button.pressed.connect(_select_model.bind(model_id))
 		model_row.add_child(model_button)
 		_model_buttons[model_id] = model_button
-	var male_button: Control = _model_buttons.get("male")
-	var female_button: Control = _model_buttons.get("female")
-	if male_button != null and female_button != null:
-		male_button.focus_neighbor_right = male_button.get_path_to(female_button)
-		female_button.focus_neighbor_left = female_button.get_path_to(male_button)
+		ordered_model_buttons.append(model_button)
+	for index in ordered_model_buttons.size():
+		var button := ordered_model_buttons[index]
+		if index > 0:
+			button.focus_neighbor_left = button.get_path_to(
+				ordered_model_buttons[index - 1])
+		if index + 1 < ordered_model_buttons.size():
+			button.focus_neighbor_right = button.get_path_to(
+				ordered_model_buttons[index + 1])
+		if index >= model_row.columns:
+			button.focus_neighbor_top = button.get_path_to(
+				ordered_model_buttons[index - model_row.columns])
+		if index + model_row.columns < ordered_model_buttons.size():
+			button.focus_neighbor_bottom = button.get_path_to(
+				ordered_model_buttons[index + model_row.columns])
 
 	var rotate_hint := OneGunUI.make_label(
 		"↶  DRAG OR USE THE RIGHT STICK TO ROTATE  ↷", 14, "muted", true)
@@ -322,13 +345,67 @@ func _build_preview_world(container: SubViewportContainer) -> void:
 	pedestal_light.omni_range = 2.8
 	world.add_child(pedestal_light)
 
-	var camera := Camera3D.new()
-	camera.name = "PreviewCamera"
-	camera.fov = 38.0
-	camera.look_at_from_position(
-		Vector3(-2.65, 1.78, 4.95), Vector3(0.0, 1.27, 0.0), Vector3.UP)
-	world.add_child(camera)
-	camera.current = true
+	_preview_camera = Camera3D.new()
+	_preview_camera.name = "PreviewCamera"
+	_preview_camera.fov = 38.0
+	_preview_camera.look_at_from_position(
+		Vector3(-3.05, 1.88, 5.70), Vector3(0.0, 1.27, 0.0), Vector3.UP)
+	world.add_child(_preview_camera)
+	_preview_camera.current = true
+	_frame_locker_preview()
+
+
+func _frame_locker_preview() -> void:
+	if _preview_camera == null:
+		return
+	_preview_camera.fov = 38.0
+	if _preview_visual == null or _active_preview_hat_id == "":
+		_preview_camera.look_at_from_position(
+			Vector3(-3.05, 1.88, 5.70),
+			Vector3(0.0, 1.27, 0.0), Vector3.UP)
+		return
+	# Preserve a full-body view while recentering around the real top of the
+	# equipped/previewed hat. This keeps tall hats away from the window edge.
+	var frame_top := _preview_pivot.global_position.y + 2.80
+	var rotation_radius := 0.0
+	for node in _preview_visual.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance == null or mesh_instance.mesh == null \
+				or not mesh_instance.is_visible_in_tree():
+			continue
+		var world_bounds := mesh_instance.global_transform \
+			* mesh_instance.mesh.get_aabb()
+		frame_top = maxf(frame_top,
+			world_bounds.position.y + world_bounds.size.y)
+		for corner_index in 8:
+			var corner := world_bounds.position + Vector3(
+				world_bounds.size.x if (corner_index & 1) != 0 else 0.0,
+				world_bounds.size.y if (corner_index & 2) != 0 else 0.0,
+				world_bounds.size.z if (corner_index & 4) != 0 else 0.0)
+			rotation_radius = maxf(rotation_radius, Vector2(
+				corner.x - _preview_pivot.global_position.x,
+				corner.z - _preview_pivot.global_position.z).length())
+	var frame_bottom := _preview_pivot.global_position.y - 0.10
+	# Idle head motion needs more than a one-frame geometric margin.
+	frame_top += 0.30
+	var frame_center := (frame_bottom + frame_top) * 0.5
+	var half_height := maxf((frame_top - frame_bottom) * 0.5, 1.55)
+	var base_direction := Vector3(-3.05, 0.0, 5.70).normalized()
+	var distance := maxf(6.46,
+		half_height / tan(deg_to_rad(_preview_camera.fov * 0.5)) * 1.18
+			+ rotation_radius * 0.22)
+	# Keep the display set fixed. Hat selection may choose a safe vertical frame,
+	# but manual rotation never moves the camera, lights, podium, or background.
+	_preview_camera.look_at_from_position(
+		Vector3(base_direction.x * distance, frame_center,
+			base_direction.z * distance),
+		Vector3(0.0, frame_center, 0.0), Vector3.UP)
+
+
+func _rotate_locker_preview(angle: float) -> void:
+	if _preview_pivot == null or is_zero_approx(angle):
+		return
+	_preview_pivot.rotate_y(angle)
 
 
 func _replace_preview_visual(model_id: String) -> void:
@@ -351,11 +428,19 @@ func _replace_preview_visual(model_id: String) -> void:
 		_preview_visual.free()
 	_preview_visual = replacement
 	_preview_pivot.add_child(_preview_visual)
-	var animation_player := _preview_visual.call(
+	_apply_preview_hat()
+	_play_preview_idle()
+
+
+func _play_preview_idle() -> void:
+	if _preview_visual == null or not _preview_visual.has_method("ensure_animations"):
+		return
+	_preview_animation_player = _preview_visual.call(
 		"ensure_animations", ["idle"]) as AnimationPlayer
-	if animation_player != null and animation_player.has_animation("idle"):
-		animation_player.play("idle", 0.0)
-		animation_player.advance(0.0)
+	if _preview_animation_player != null \
+			and _preview_animation_player.has_animation("idle"):
+		_preview_animation_player.play("idle", 0.10)
+		_preview_animation_player.advance(0.0)
 
 
 func _build_preview_podium(world: Node3D) -> void:
@@ -426,18 +511,23 @@ func _build_selection_panel() -> void:
 	_color_content = VBoxContainer.new()
 	(_color_content as VBoxContainer).add_theme_constant_override("separation", 6)
 	_character_content.add_child(_color_content)
-	_color_content.add_child(_make_divider_heading("★   CHOOSE A COLOR   ★"))
-	var grid := VBoxContainer.new()
-	grid.name = "ColorGrid"
-	grid.add_theme_constant_override("separation", 10)
-	_color_content.add_child(grid)
+	_color_heading = _make_divider_heading("★   CHOOSE A COLOR   ★")
+	_color_content.add_child(_color_heading)
+	var color_heading_labels := _color_heading.find_children(
+		"*", "Label", true, false)
+	_color_heading_label = color_heading_labels[0] as Label \
+		if not color_heading_labels.is_empty() else null
+	_color_grid = VBoxContainer.new()
+	_color_grid.name = "ColorGrid"
+	_color_grid.add_theme_constant_override("separation", 10)
+	_color_content.add_child(_color_grid)
 	var index := 0
 	for row_index in 3:
 		var row := HBoxContainer.new()
 		row.name = "ColorRow%d" % (row_index + 1)
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 12)
-		grid.add_child(row)
+		_color_grid.add_child(row)
 		var count := 5 if row_index < 2 else 3
 		for _column_index in count:
 			var skin_id := SkinRegistry.skin_id_at(index)
@@ -621,16 +711,23 @@ func _locker_usage_counts() -> Dictionary:
 
 
 func _rebuild_owned_locker() -> void:
+	_refresh_owned_controller_focus.call_deferred()
 	for child in _owned_list.get_children():
 		child.queue_free()
+	var shows_default_cat := _locker_category == "character" \
+		and _character_locker_section == "skins"
+	if shows_default_cat:
+		_owned_list.add_child(_make_default_cat_locker_tile())
 	if local_player_count > 1 and _active_slot == 1:
 		_locker_feedback.text = \
-			"Cloud-owned items belong to Player 1. Player 2 can still choose a base character and color."
-		_owned_list.add_child(_locker_empty_label("SELECT PLAYER 1 TO EQUIP OWNED ITEMS"))
+			"Default cats are available to Player 2. Cloud-owned items belong to Player 1."
+		_owned_list.add_child(_locker_empty_label(
+			"SELECT PLAYER 1 TO VIEW GIFTED AND OWNED ITEMS"))
 		return
 	if not _backend.is_authenticated():
-		_locker_feedback.text = "Sign in through Profile to load cloud-owned items."
-		_owned_list.add_child(_locker_empty_label("PROFILE SIGN-IN REQUIRED"))
+		_locker_feedback.text = "Default cats are always available. Sign in through Profile to load cloud-owned items."
+		_owned_list.add_child(_locker_empty_label(
+			"SIGN IN TO VIEW GIFTED AND OWNED ITEMS"))
 		return
 	_locker_feedback.text = _locker_category_description()
 	var matching: Array[Dictionary] = []
@@ -652,17 +749,38 @@ func _rebuild_owned_locker() -> void:
 	matching = Catalog.sorted_items(
 		matching, _locker_sort_id, _locker_usage_counts())
 	if matching.is_empty():
-		_owned_list.add_child(_locker_empty_label(
-			"NO OWNED %s ITEMS YET" % _locker_category.to_upper()))
+		if not shows_default_cat:
+			_owned_list.add_child(_locker_empty_label(
+				"NO OWNED %s ITEMS YET" % _locker_category.to_upper()))
 		return
 	for entry in matching:
 		_owned_list.add_child(_make_owned_locker_row(entry))
 
 
+func _refresh_owned_controller_focus() -> void:
+	if not is_inside_tree() or _owned_list == null:
+		return
+	var controls: Array = [
+		_locker_subcategory_option, _locker_cosmetic_option, _locker_sort_option]
+	var favorites := find_child("LockerFavoritesFilter", true, false) as Control
+	if favorites != null:
+		controls.append(favorites)
+	for node in _owned_list.find_children("*", "Control", true, false):
+		var control := node as Control
+		if control != null and control.is_visible_in_tree() \
+				and control.focus_mode != Control.FOCUS_NONE \
+				and not (control is BaseButton and (control as BaseButton).disabled):
+			controls.append(control)
+	controls = controls.filter(func(control):
+		return control != null and (control as Control).is_visible_in_tree())
+	if not controls.is_empty():
+		OneGunUI.chain_focus_vertical(controls)
+
+
 func _locker_slot_matches(slot: String) -> bool:
 	match _locker_category:
 		"character":
-			return slot in ["character_skin", "hat", "shirt", "pants", "shoes", "accessory", "outfit_bundle"]
+			return slot in ["character_skin", "character_model", "hat", "shirt", "pants", "shoes", "accessory", "outfit_bundle"]
 		"weapons":
 			return slot in ["gun_skin", "melee_skin"]
 		"victory":
@@ -679,6 +797,154 @@ func _locker_category_description() -> String:
 		"victory": return "OWNED POSES AND DANCES • ASSIGN ANY DANCE TO EITHER CELEBRATION"
 		"audio": return "OWNED WINNERS CIRCLE THEMES • PREVIEW USES CEREMONY VOLUME"
 	return "OWNED ITEMS"
+
+
+func _make_default_cat_locker_tile() -> Control:
+	var model_id := SkinRegistry.DEFAULT_MODEL_ID
+	var skin_id := SkinRegistry.DEFAULT_SKIN_ID
+	var row := PanelContainer.new()
+	row.name = "DefaultCatTile"
+	row.custom_minimum_size.y = 102.0
+	row.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		Color(0.012, 0.026, 0.065, 0.96), Color(OneGunUI.color("cyan"), 0.30),
+		12, 1, 3, 12.0))
+	var horizontal := HBoxContainer.new()
+	horizontal.add_theme_constant_override("separation", 10)
+	row.add_child(horizontal)
+	horizontal.add_child(_make_character_model_portrait(
+		model_id, "DefaultCatPortrait", skin_id))
+
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	horizontal.add_child(copy)
+	copy.add_child(OneGunUI.make_heading(
+		"DEFAULT CAT", OneGunUI.TEXT_M, "text_bright"))
+	copy.add_child(OneGunUI.make_label(
+		"ALWAYS AVAILABLE  •  MALE  •  BLUE",
+		OneGunUI.TEXT_S, "muted", true))
+
+	var preview := OneGunButton.new()
+	preview.name = "DefaultCatPreview"
+	preview.text = "PREVIEW"
+	preview.variant = "blue"
+	preview.custom_minimum_size = Vector2(104.0, 46.0)
+	preview.pressed.connect(_preview_default_cat)
+	horizontal.add_child(preview)
+
+	var cloud_model_item := str(_backend.loadout.get("character_model", "")) \
+		if _backend != null else ""
+	var cloud_skin_item := str(_backend.loadout.get("character_skin", "")) \
+		if _backend != null else ""
+	var active_model := _stored_model_for_slot(_active_slot)
+	var active_skin := _stored_skin_for_slot(_active_slot)
+	var equipped := cloud_model_item == "" and cloud_skin_item == "" \
+		and active_model == model_id and active_skin == skin_id
+	var equip := OneGunButton.new()
+	equip.name = "DefaultCatEquip"
+	equip.text = "EQUIPPED" if equipped else "EQUIP"
+	equip.variant = "green" if equipped else "gold"
+	equip.custom_minimum_size = Vector2(132.0, 46.0)
+	equip.disabled = equipped
+	if not equip.disabled:
+		equip.pressed.connect(_equip_default_cat)
+	horizontal.add_child(equip)
+	return row
+
+
+func _make_character_model_portrait(model_id: String, portrait_name: String,
+		skin_id := "") -> Control:
+	var safe_model := SkinRegistry.sanitize_model_id(model_id)
+	var safe_skin := SkinRegistry.sanitize_skin_id(
+		skin_id if skin_id != "" else _pending_skin_for_slot(_active_slot))
+	var portrait_frame := PanelContainer.new()
+	portrait_frame.name = "%sFrame" % portrait_name
+	portrait_frame.custom_minimum_size = Vector2(64.0, 68.0)
+	portrait_frame.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		Color(0.01, 0.04, 0.10), Color(OneGunUI.color("gold"), 0.48),
+		10, 1, 0, 3))
+	var portrait := TextureRect.new()
+	portrait.name = portrait_name
+	portrait.texture = SkinRegistry.load_portrait(safe_skin, safe_model)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait_frame.add_child(portrait)
+	return portrait_frame
+
+
+func _preview_default_cat() -> void:
+	_pending_model_ids[_active_slot] = SkinRegistry.DEFAULT_MODEL_ID
+	_pending_skin_ids[_active_slot] = SkinRegistry.DEFAULT_SKIN_ID
+	_refresh_active_player()
+	_play_preview_idle()
+	_frame_locker_preview()
+	_locker_feedback.text = "PREVIEWING DEFAULT MALE BLUE CAT"
+	_locker_feedback.add_theme_color_override(
+		"font_color", OneGunUI.color("green"))
+
+
+func _equip_default_cat() -> void:
+	var model_id := SkinRegistry.DEFAULT_MODEL_ID
+	var skin_id := SkinRegistry.DEFAULT_SKIN_ID
+	_pending_model_ids[_active_slot] = model_id
+	_pending_skin_ids[_active_slot] = skin_id
+	_refresh_active_player()
+	if _active_slot == 1:
+		_locker_feedback.text = "DEFAULT CAT SELECTED — SAVE & CLOSE TO APPLY"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("green"))
+		return
+
+	var baseline_preferences := PlayerPrefs.snapshot()
+	baseline_preferences["character_base_model_id"] = model_id
+	baseline_preferences["character_skin_id"] = skin_id
+	if not PlayerPrefs.apply_transaction(baseline_preferences):
+		_locker_feedback.text = "DEFAULT CAT COULD NOT BE EQUIPPED"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("red"))
+		return
+
+	var cloud_slots_to_clear := _default_cat_cloud_slots()
+	for cloud_slot in cloud_slots_to_clear:
+		_locker_feedback.text = "EQUIPPING DEFAULT CAT…"
+		if not await _backend.unequip_cosmetic(cloud_slot):
+			return
+
+	var applied := true
+	if online_mode:
+		applied = NetworkManager.set_local_appearance(skin_id, model_id)
+	else:
+		var final_preferences := PlayerPrefs.snapshot()
+		final_preferences["character_skin_id"] = skin_id
+		final_preferences["character_model_id"] = model_id
+		final_preferences["character_base_model_id"] = model_id
+		applied = PlayerPrefs.apply_transaction(final_preferences)
+	if not applied:
+		_locker_feedback.text = "DEFAULT CAT COULD NOT BE EQUIPPED"
+		_locker_feedback.add_theme_color_override(
+			"font_color", OneGunUI.color("red"))
+		return
+	_confirmed_model_ids[0] = model_id
+	_pending_model_ids[0] = model_id
+	_confirmed_skin_ids[0] = skin_id
+	_pending_skin_ids[0] = skin_id
+	_locker_feedback.text = "DEFAULT MALE BLUE CAT EQUIPPED"
+	_locker_feedback.add_theme_color_override(
+		"font_color", OneGunUI.color("green"))
+	_refresh_active_player()
+	_rebuild_owned_locker()
+
+
+func _default_cat_cloud_slots() -> Array[String]:
+	var slots: Array[String] = []
+	if _backend == null or not _backend.is_authenticated():
+		return slots
+	if str(_backend.loadout.get("character_skin", "")) != "":
+		slots.append("character_skin")
+	if str(_backend.loadout.get("character_model", "")) != "":
+		slots.append("character_model")
+	return slots
 
 
 func _make_owned_locker_row(entry: Dictionary) -> Control:
@@ -699,6 +965,13 @@ func _make_owned_locker_row(entry: Dictionary) -> Control:
 	var horizontal := HBoxContainer.new()
 	horizontal.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	row.add_child(horizontal)
+	if slot == "character_model":
+		var character_model_id := \
+			SupabaseCosmeticRegistry.local_character_model_id(item_id)
+		if character_model_id != "":
+			horizontal.add_child(_make_character_model_portrait(
+				character_model_id,
+				"CharacterModelPortrait_%s" % item_id))
 	var copy := VBoxContainer.new()
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	horizontal.add_child(copy)
@@ -722,6 +995,20 @@ func _make_owned_locker_row(entry: Dictionary) -> Control:
 		preview.variant = "blue"
 		preview.custom_minimum_size = Vector2(116.0, 46.0)
 		preview.pressed.connect(_preview_locker_move.bind(item_id))
+		horizontal.add_child(preview)
+	elif slot == "hat":
+		var preview := OneGunButton.new()
+		preview.text = "PREVIEW"
+		preview.variant = "blue"
+		preview.custom_minimum_size = Vector2(116.0, 46.0)
+		preview.pressed.connect(_preview_locker_hat.bind(item_id))
+		horizontal.add_child(preview)
+	elif slot == "character_model":
+		var preview := OneGunButton.new()
+		preview.text = "PREVIEW"
+		preview.variant = "blue"
+		preview.custom_minimum_size = Vector2(116.0, 46.0)
+		preview.pressed.connect(_preview_locker_character_model.bind(item_id))
 		horizontal.add_child(preview)
 	if is_dance:
 		horizontal.add_child(_make_locker_slot_button(
@@ -896,8 +1183,10 @@ func _update_locker_action_bar() -> void:
 		return
 	var colors_visible := _locker_category == "character" \
 		and _color_content != null and _color_content.visible
-	_randomize_button.visible = colors_visible
-	_default_button.visible = colors_visible
+	var colors_editable := colors_visible \
+		and not SkinRegistry.uses_fixed_texture(_pending_model_for_slot(_active_slot))
+	_randomize_button.visible = colors_editable
+	_default_button.visible = colors_editable
 	_reset_loadout_button.visible = not colors_visible
 	_reset_loadout_button.disabled = not _backend.is_authenticated()
 	if colors_visible:
@@ -928,10 +1217,18 @@ func _refresh_active_player() -> void:
 	_player_name_label.text = _player_name(_active_slot).to_upper()
 	var skin_id := _pending_skin_for_slot(_active_slot)
 	var model_id := _pending_model_for_slot(_active_slot)
-	_selected_color_label.text = SkinRegistry.display_name(skin_id).to_upper()
+	var fixed_look := SkinRegistry.uses_fixed_texture(model_id)
+	_selected_color_label.text = SkinRegistry.model_display_name(model_id).to_upper() \
+		if fixed_look else SkinRegistry.display_name(skin_id).to_upper()
+	if _color_heading_label != null:
+		_color_heading_label.text = "★   AUTHORED CHARACTER LOOK   ★" \
+			if fixed_look else "★   CHOOSE A COLOR   ★"
+	if _color_grid != null:
+		_color_grid.visible = not fixed_look
 	_replace_preview_visual(model_id)
 	if _preview_visual != null and _preview_visual.has_method("set_skin"):
 		_preview_visual.call("set_skin", skin_id)
+	_apply_preview_hat()
 	for card in _color_cards:
 		card.set_model(model_id)
 		card.set_selected(card.skin_id == skin_id)
@@ -940,12 +1237,15 @@ func _refresh_active_player() -> void:
 		button.variant = "gold" if button_model_id == model_id else "navy"
 	for slot in _player_tabs.size():
 		_player_tabs[slot].variant = "gold" if slot == _active_slot else "navy"
+	_update_locker_action_bar()
 	var card = _card_for_skin(skin_id)
-	if card != null:
+	if card != null and not fixed_look:
 		card.grab_focus.call_deferred()
 
 
 func _select_skin(skin_id: String) -> void:
+	if SkinRegistry.uses_fixed_texture(_pending_model_for_slot(_active_slot)):
+		return
 	_pending_skin_ids[_active_slot] = SkinRegistry.sanitize_skin_id(skin_id)
 	_refresh_active_player()
 
@@ -956,11 +1256,15 @@ func _select_model(model_id: String) -> void:
 
 
 func _cycle_skin(direction: int) -> void:
+	if SkinRegistry.uses_fixed_texture(_pending_model_for_slot(_active_slot)):
+		return
 	var current := _pending_skin_for_slot(_active_slot)
 	_select_skin(SkinRegistry.skin_id_at(SkinRegistry.skin_index(current) + direction))
 
 
 func _randomize_active_skin() -> void:
+	if SkinRegistry.uses_fixed_texture(_pending_model_for_slot(_active_slot)):
+		return
 	var choices: Array[String] = []
 	var current := _pending_skin_for_slot(_active_slot)
 	for skin in SkinRegistry.SKINS:
@@ -972,6 +1276,8 @@ func _randomize_active_skin() -> void:
 
 
 func _default_active_skin() -> void:
+	if SkinRegistry.uses_fixed_texture(_pending_model_for_slot(_active_slot)):
+		return
 	_select_skin(SkinRegistry.DEFAULT_SKIN_ID)
 
 
@@ -989,6 +1295,8 @@ func _confirm() -> void:
 			var next_preferences := PlayerPrefs.snapshot()
 			next_preferences["character_skin_id"] = skin_id
 			next_preferences["character_model_id"] = model_id
+			if SkinRegistry.is_public_model_id(model_id):
+				next_preferences["character_base_model_id"] = model_id
 			if not PlayerPrefs.apply_transaction(next_preferences):
 				return
 		_confirmed_skin_ids[slot] = skin_id
@@ -1041,6 +1349,48 @@ func _preview_locker_move(item_id: String) -> void:
 	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
 
 
+func _preview_locker_hat(item_id: String) -> void:
+	if _preview_visual == null or not _preview_visual.has_method("set_hat_cosmetic") \
+			or not SupabaseCosmeticRegistry.has_local_visual(item_id, "hat"):
+		_locker_feedback.text = "THIS HAT IS NOT INSTALLED"
+		_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
+		return
+	_active_preview_hat_id = item_id
+	_preview_visual.call("set_hat_cosmetic", item_id)
+	_play_preview_idle()
+	_frame_locker_preview()
+	_locker_feedback.text = "PREVIEWING %s" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+
+
+func _preview_locker_character_model(item_id: String) -> void:
+	var model_id := SupabaseCosmeticRegistry.local_character_model_id(item_id)
+	if model_id == "":
+		_locker_feedback.text = "THIS CHARACTER MODEL IS NOT INSTALLED"
+		_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("red"))
+		return
+	_pending_model_ids[_active_slot] = model_id
+	_refresh_active_player()
+	_play_preview_idle()
+	_frame_locker_preview()
+	_locker_feedback.text = "PREVIEWING %s" % \
+		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
+	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+
+
+func _apply_preview_hat() -> void:
+	if _preview_visual == null or not _preview_visual.has_method("set_hat_cosmetic"):
+		return
+	var item_id := ""
+	if _backend != null and _backend.is_authenticated():
+		item_id = str(_backend.loadout.get("hat", ""))
+	_active_preview_hat_id = item_id
+	_preview_visual.call("set_hat_cosmetic", item_id)
+	_play_preview_idle()
+	_frame_locker_preview()
+
+
 func _equip_locker_item(slot: String, item_id: String) -> void:
 	_locker_feedback.text = "EQUIPPING %s…" % \
 		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
@@ -1081,10 +1431,15 @@ func _on_locker_data_updated(_value = null, _extra = null) -> void:
 		_rebuild_owned_locker()
 
 
-func _on_locker_equip_succeeded(_slot: String, item_id: String) -> void:
+func _on_locker_equip_succeeded(slot: String, item_id: String) -> void:
 	_locker_feedback.text = "EQUIPPED %s" % \
 		SupabaseCosmeticRegistry.display_name_fallback(item_id).to_upper()
 	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+	_apply_preview_hat()
+	if slot == "character_model":
+		_pending_model_ids[0] = SkinRegistry.sanitize_model_id(str(
+			PlayerPrefs.get_setting("character_model_id")))
+		_refresh_active_player()
 	_rebuild_owned_locker()
 
 
@@ -1098,13 +1453,18 @@ func _on_preview_gui_input(event: InputEvent) -> void:
 		_dragging_preview = event.pressed
 		accept_event()
 	elif event is InputEventMouseMotion and _dragging_preview:
-		_preview_pivot.rotate_y(event.relative.x * 0.012)
+		_rotate_locker_preview(event.relative.x * 0.012)
 		accept_event()
 
 func _on_locker_unequip_succeeded(slot: String) -> void:
 	_locker_feedback.text = "%s RETURNED TO ITS BASE SETTING" % \
 		_locker_slot_display_name(slot)
 	_locker_feedback.add_theme_color_override("font_color", OneGunUI.color("green"))
+	_apply_preview_hat()
+	if slot == "character_model":
+		_pending_model_ids[0] = SkinRegistry.sanitize_model_id(str(
+			PlayerPrefs.get_setting("character_model_id")))
+		_refresh_active_player()
 	_rebuild_owned_locker()
 
 

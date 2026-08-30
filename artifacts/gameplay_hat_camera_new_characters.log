@@ -1,0 +1,80 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+GAMEPLAY_HAT_CAMERA_MATRIX: checked=192 hats=12 models=8 modes=2
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/non_ads_wide_shoulder_male_crown.png
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/non_ads_wide_shoulder_female_witch.png
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/ads_shoulder_male_crown.png
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/non_ads_wide_shoulder_goldfish_top_hat.png
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (210.5675, 413.0394), S: (578.2939, 412.1472)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (210.3943, 413.0619), S: (578.4427, 412.5857)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (210.2252, 413.0841), S: (578.588, 413.0146)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (210.0558, 413.1064), S: (578.7335, 413.4434)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (262.8474, 173.7437), S: (548.8073, 338.4227)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (262.4669, 173.6163), S: (549.1775, 338.4446)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (262.1459, 173.527), S: (549.4999, 338.4477)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (261.8244, 173.4385), S: (549.8229, 338.4502)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-72.8528, 237.0697), S: (875.3032, 294.0047)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-72.71976, 237.1494), S: (875.1367, 293.9257)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-72.58663, 237.2293), S: (874.9698, 293.8464)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: mr_mushroom/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-72.4534, 237.3089), S: (874.8033, 293.7676)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:153)

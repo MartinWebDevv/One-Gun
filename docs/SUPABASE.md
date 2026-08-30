@@ -1,6 +1,6 @@
 # Supabase integration
 
-One Gun uses Supabase only for persistent identity and cosmetic progression.
+One Gun uses Supabase only for persistent identity, cosmetic progression, and the authenticated friends/presence layer.
 Godot/ENet remains responsible for lobbies, Tailscale discovery, gameplay,
 authority, and match replication. itch.io and GitHub remain distribution paths.
 
@@ -34,14 +34,16 @@ OS account and its `user://` directory as the session security boundary.
 ## Runtime architecture
 
 `SupabaseManager` is loaded after `PlayerPrefs`; `ProgressionManager` follows it.
-`RewardIdentityManager` loads immediately after `NetworkManager`. Responsibilities:
+`SocialManager` and `RewardIdentityManager` load after the transport/session autoloads. Responsibilities:
 
 - `SupabaseManager`: Auth/session refresh, Account Name, Gun Tokens, owned inventory,
-  base public catalog, and the 12-slot loadout (character, clothing/accessory,
+  base public catalog, and the 13-slot loadout (character color/model, clothing/accessory,
   weapon skins, two independent celebration slots, ceremony theme, and profile badge).
 - `ProgressionManager`: taxonomy/rotations, outfit components, favorites, usage,
   season/career/profile snapshots, roads/history/Legacy Hall, purchases/equips,
   and match-reward confirmation/polling.
+- `SocialManager`: friend requests/responses/removal, accepted-friend snapshots,
+  low-frequency presence heartbeats, short-lived named-lobby invitations, and invite responses.
 - `RewardIdentityManager`: one random private confirmation secret per signed-in app
   session. Only its SHA-256 claim hash crosses ENet before a match.
 
@@ -59,7 +61,8 @@ every component, and record original price, discount, paid price, and balance.
 
 ## UI and local cosmetic mapping
 
-The home screen has separate **Profile**, **Prize Counter**, and **Locker** routes.
+The home screen's **Player Hub** groups Profile, Prize Counter, Locker, Progression,
+and Friends behind one route while Play, Settings, and Quit remain on the title rail.
 Profile owns email/password account creation, sign-in, sign-out, account rename,
 and the freely editable in-game Display Name. Create Account requires a unique
 3–20-character Account Name. Account Name is cloud identity and can be renamed
@@ -75,6 +78,10 @@ rotation scopes; unassigned/placeholder rows never silently become live. Beta's
 Starter Pool is the six purchasable Winners Circle themes, paged three at a time.
 The Locker uses the same taxonomy but lists owned items only; base colors remain free.
 Hidden gifts and road prizes remain browsable there forever.
+Gift-only character models appear as owned Locker rows with Preview/Equip controls,
+but never enter the public model selector or Prize Counter rotation. The Locker resolves
+trusted packaged gift metadata from the owned inventory ID even if the RLS-gated hidden
+catalog request finishes later, so catalog timing cannot make an owned character disappear.
 Selecting a locally mapped dance in the Prize Counter replaces the generic inspector
 monogram with a compact full-body preview using the player's current character model
 and color. The Locker retains its larger owned-item preview. Every owned animated dance
@@ -87,19 +94,37 @@ item inspector, Locker is a cool-toned armory with the existing live character
 preview, and Progression is the live season-road cabinet. Blender backgrounds are static runtime textures;
 interactions, ownership, filtering, and Supabase state remain native Godot UI.
 
+The home screen and online lobby expose Friends through the separate upper-right mascot
+orb, while Player Hub groups Profile/Locker/Prize Counter/Progression at home and
+Locker/Prize Counter/Progression in the lobby. The Friends
+panel accepts an exact Account Name for outgoing requests, presents incoming Accept/Deny
+actions and outgoing status, lists accepted friends with online/activity state, and
+offers Invite while the local player is in a joinable named Tailscale lobby. Accepting
+an invitation from either the panel or controller-ready toast passes its sanitized address/port to the existing `NetworkManager.join_game()`
+path; social code never implements a second gameplay transport.
+
 `res://supabase/supabase_cosmetic_registry.gd` is the boundary between stable
 database item IDs and local assets. Server values are sanitized identifiers;
 they are never interpreted as resource paths. Existing character color IDs map
 through `PlayerSkinRegistry`. The `emote` and `round_victory_move` loadout columns remain independent presentation
 slots, but every animated catalog row now has the shared `victory_dance` type. All
 fourteen production IDs plus Hip Hop and Swing resolve through one fixed local library,
-can be assigned to either column, and are lazy-loaded only when selected or previewed. Unknown moves safely fall back without exposing a bind pose. Hat,
-accessory, gun-skin, melee-skin, shirt/pants/shoes/profile-badge, outfit-component,
-and general in-match emote attachment/render systems do not exist yet, so their IDs
-remain safe data-only loadout entries. The Winners Circle keeps the default gun
+can be assigned to either column, and are lazy-loaded only when selected or previewed. Unknown moves safely fall back without exposing a bind pose. The hidden
+Gold Fish Bag Man, Eye Wizard, Mr. Mushroom, Mr. Poop, Mr. Salt, and Spooky Witch
+entitlements map only to their packaged local scenes. They keep their authored textures,
+use the shared animation/socket contract across gameplay, home, Locker, and Winners Circle,
+and never appear in the public model selector or Prize Counter. The wearable registry and character
+skeleton binder now provide one trusted local renderer for Hat, shirt, pants, shoes,
+and accessory slots. Rigid art such as Hats or glasses follows a semantic animated
+bone socket; deforming shirts/pants require a per-model skinned scene with named binds
+compatible with the live character skeleton. Hats are the only wearable art mapped
+today, so the other slot IDs remain safe data-only entries until compatible local assets
+are registered. Gun-skin, melee-skin, profile-badge, outfit-component, and general
+in-match emote renderers remain art/system pending. The Winners Circle keeps the default gun
 model when an equipped gun skin has no renderer. The store UI labels other missing
 mappings **ART PENDING**, and actors log one warning per missing mapping instead of
-crashing. Add future visuals in this registry and their purpose-built local renderer.
+crashing. Add future wearable visuals only in `wearable_cosmetic_registry.gd`; backend
+strings never become resource paths.
 
 The `ceremony_theme` slot maps only the seven approved stable IDs to packaged
 audio keys. Ceremony March is the permanent starter/default. Neon Victory,
@@ -127,6 +152,13 @@ locally. Reward claim hashes are the only extra reward identity data exchanged;
 private secrets go only to Supabase over HTTPS. Access/refresh tokens, Supabase user
 IDs, currency, inventory, and claim secrets never enter roster/spawn/result payloads.
 Supabase is not used for movement, combat, lobby, or gameplay synchronization.
+Friend presence is an authenticated, expiring cloud snapshot rather than a gameplay
+heartbeat. The three social tables have all direct table privileges revoked. Each
+security-definer RPC binds its operation to `auth.uid()`: only request recipients can answer,
+only accepted friends can see one another's live presence or send lobby invites, and only
+the invite recipient can accept/deny an invite. Lobby endpoints are therefore hidden from
+anonymous users and non-friends even though accepted friends can see a joinable friend's
+current named-lobby endpoint.
 
 ## Backend migrations and CLI workflow
 
@@ -141,6 +173,8 @@ supabase/migrations/20260827_unified_victory_dances_and_loadout_controls.sql
 supabase/migrations/20260828_economy_forfeit_progression.sql
 supabase/migrations/20260829_season_career_daily_victory.sql
 supabase/migrations/20260830_reward_payload_canonicalization.sql
+supabase/migrations/20260831_friends_presence_invites.sql
+supabase/migrations/20260901_hat_catalog_and_road_rebalance.sql
 ```
 
 The progression migration adds taxonomy/rotations/popularity, favorites/usage,
@@ -164,6 +198,34 @@ The reward-payload canonicalization migration removes Winners Circle's
 per-client `local_peer_id` presentation field before the Official result is
 hashed. The client removes it as well. This guarantees every finisher confirms
 the same shared evidence while preserving local row highlighting and Ready UI.
+
+The friends/presence migration adds one normalized unordered friendship row per account
+pair, expiring self-owned presence, and short-lived lobby invitations. It revokes direct
+table access and exposes only authenticated requester-bound RPCs for send/respond/remove,
+presence set/clear, social snapshot, and invite send/respond. The migration is fully
+covered by the disposable PostgreSQL social-graph suite. On 2026-08-26 the explicitly
+authorized linked `db push` applied `20260831` successfully; the follow-up migration
+ledger reports matching local and remote `20260831` entries, so the social backend is live.
+
+Migration `20260901` adds ten purchasable Prize Counter hats, renames the two stable road IDs to Rice Hat and Pimp Hat, moves Rice Hat from Level 30 to Level 10, and moves Pimp Hat from Trophy 20 to Trophy 5. Existing ownership is never revoked, and accounts already beyond the new thresholds are backfilled idempotently into inventory and the unlock ledger. On 2026-08-27 it passed PostgreSQL parsing plus a disposable clone of the linked public schema with synthetic pre-migration player state; first-run and repeat-run tests both report `HAT_CATALOG_REWARD_TESTS_OK`. The explicitly authorized linked `db push` then applied `20260901` successfully. The local/remote migration ledger matches, and a publishable-key REST verification confirms all ten public purchasable hats, Level 10 Rice Hat, Trophy 5 Pimp Hat, and removal of the old Level 30/Trophy 20 rows.
+
+Migration `20260902` applies the rarity-stepped Hat price pass without touching the two non-purchasable road rewards: Common hats are 850 Gun Tokens, Uncommon 1,250, Rare 1,650, and Epic 2,200. On 2026-08-27 a schema-only disposable clone of the linked public database passed the `20260901` + `20260902` migrations and all Hat catalog/reward/price assertions twice, including the idempotent rerun. A linked dry run identified only `20260902`, the linked push succeeded, local and remote migration ledgers match through it, and a publishable-key REST verification returned exactly ten purchasable Hat rows at the requested prices.
+
+Migration `20260903` adds the nullable `character_model` loadout slot and the active but
+non-purchasable/non-visible `character_goldfish_bag_man` catalog record. Ownership can
+only be granted by a trusted manual inventory insert; the authenticated equip/unequip RPCs
+still enforce ownership. The client falls back to the player's last public Male/Female
+choice when the gift is unequipped. On 2026-08-28 the explicitly authorized linked push
+applied `20260903`; the local/remote migration ledger matches through it and a follow-up
+linked dry run reports the remote database fully up to date.
+
+Migration `20260904` adds active catalog records for `character_eye_wizard`,
+`character_mr_mushroom`, `character_mr_poop`, `character_mr_salt`, and
+`character_spooky_witch`. Every record is price zero, non-purchasable, non-visible,
+non-featured, and outside every rotation. The client exposes each model in Locker Skins
+only when its trusted inventory entitlement is owned. On 2026-08-29 the explicitly
+authorized linked push applied `20260904`; the local/remote migration ledger matches
+through it and the follow-up linked dry run reports the remote database fully up to date.
 
 
 The original victory-move migration added fourteen priced products with stable IDs.
@@ -196,6 +258,7 @@ Focused local validations (they do not create accounts or mutate the backend):
 & "D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe" --headless --path "D:\Godot Projects\one-gun" --script res://tools/supabase_ui_validation.gd
 & "D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe" --headless --path "D:\Godot Projects\one-gun" --script res://tools/progression_catalog_validation.gd
 & "D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe" --headless --path "D:\Godot Projects\one-gun" --script res://tools/victory_move_integration_validation.gd
+& "D:\Godot Projects\one-gun\Godot_v4.7.1-stable_win64.exe" --headless --path "D:\Godot Projects\one-gun" --script res://tools/social_system_validation.gd
 ```
 
 `tools/supabase_cosmetic_network_validation.gd` is a two-process loopback test
@@ -203,15 +266,19 @@ for cosmetic roster synchronization and private-state non-disclosure. The
 existing `tools/lobby_network_validation.gd` remains the broader lobby
 regression.
 `supabase/tests/local_supabase_bootstrap.sql` plus
-`supabase/tests/progression_rewards_test.sql` and
-`supabase/tests/victory_moves_catalog_test.sql` run the migrations against a disposable
+`supabase/tests/progression_rewards_test.sql`,
+`supabase/tests/victory_moves_catalog_test.sql`, and
+`supabase/tests/social_graph_test.sql` run the migrations against a disposable
 plain-PostgreSQL copy of the linked public schema. They assert majority settlement,
 exact reward totals, daily-grant uniqueness, separate Season/Career XP, idempotency, milestone unlocks, outfit proration/grants/equip,
 favorites, progression/profile reads, all fourteen unified dance IDs, dual-slot assignment, baseline ownership, UNEQUIP,
-outfit removal, model/color-preserving reset, permanent purchases, and token deductions. On 2026-08-24 the chronological
-suite covers migrations through `20260830`, including progression, forfeit settlement,
-placement Tokens, daily victory rewards, payload canonicalization, the new XP curves, and unified-dance/loadout tests; the linked CLI and a publishable-key REST read
+outfit removal, model/color-preserving reset, permanent purchases, token deductions,
+friend-request transitions, relationship privacy, presence expiry, accepted-friend endpoint visibility, and invite authorization. On 2026-08-26 the chronological
+suite covers local and linked migrations through `20260901`, including progression, forfeit settlement,
+placement Tokens, daily victory rewards, payload canonicalization, the new XP curves, unified-dance/loadout tests, and the social graph; the linked CLI and a publishable-key REST read
 verify the live catalog after each push.
+
+`supabase/tests/hat_catalog_rewards_seed.sql` and `supabase/tests/hat_catalog_rewards_test.sql` specifically cover the Hat catalog and road rebalance. The seed creates disposable pre-migration road/catalog/player state; the test asserts the Level 10 Rice Hat and Trophy 5 Pimp Hat, retired old milestones, exactly ten live Prize Counter hats, the rarity-stepped prices, preservation of replaced milestone ownership, eligible-player backfills, unlock-ledger updates, and migration idempotency.
 
 
 A real test account is still required for end-to-end Auth/RLS/RPC verification:

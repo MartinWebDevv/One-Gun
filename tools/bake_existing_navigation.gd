@@ -31,10 +31,30 @@ const TARGETS := {
 		"cell_size": 0.25,
 		"cell_height": 0.25,
 	},
+	"trippy_mountains": {
+		"scene": "res://maps/test/TrippyMountainsMap.tscn",
+		"output": "res://navigation/TrippyMountainsNavigation.tres",
+		"world_space_source_node": "Environment",
+		# The partner scene has a very large decorative ground plane. Restrict the
+		# bake to the inside faces of the four PlayArea barriers after the playable
+		# wrapper scales the environment 2.3x around the arena center. The merged
+		# PlayAreaAssetCollisions child is parsed with the same world transform.
+		"filter_baking_aabb": AABB(
+			Vector3(21.00, -5.0, -163.64),
+			Vector3(94.42, 30.0, 90.53)),
+		"radius": 0.55,
+		"height": 2.5,
+		"climb": 0.7,
+		"cell_size": 0.25,
+		"cell_height": 0.25,
+	},
 	"space_station_prototype": {
 		"scene": "res://maps/test/SpaceStationPrototype.tscn",
 		"output": "res://navigation/SpaceStationPrototypeNavigation.tres",
-		"source_node": "Graybox",
+		# The map root is scaled 2x. NavigationServer does not support a scaled
+		# NavigationRegion, so bake the Graybox through its world-space parent and
+		# run the region top-level with already-scaled vertices.
+		"world_space_source_node": "Graybox",
 		"radius": 0.55,
 		"height": 2.5,
 		"climb": 0.7,
@@ -51,7 +71,7 @@ func _initialize() -> void:
 func _bake_target() -> void:
 	var target_name := OS.get_environment("ONEGUN_NAV_BAKE_TARGET").to_lower()
 	if not TARGETS.has(target_name):
-		push_error("Set ONEGUN_NAV_BAKE_TARGET to city, forest, western, cat_tower, or space_station_prototype")
+		push_error("Set ONEGUN_NAV_BAKE_TARGET to city, forest, western, cat_tower, trippy_mountains, or space_station_prototype")
 		quit(1)
 		return
 	var target: Dictionary = TARGETS[target_name]
@@ -76,6 +96,9 @@ func _bake_target() -> void:
 	nav_mesh.agent_max_slope = 48.0
 	nav_mesh.cell_size = float(target.get("cell_size", 0.25))
 	nav_mesh.cell_height = float(target.get("cell_height", 0.25))
+	var filter_baking_aabb: AABB = target.get("filter_baking_aabb", AABB())
+	if filter_baking_aabb.size != Vector3.ZERO:
+		nav_mesh.filter_baking_aabb = filter_baking_aabb
 	nav_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	var source := NavigationMeshSourceGeometryData3D.new()
 	var source_root: Node = map
@@ -86,6 +109,19 @@ func _bake_target() -> void:
 			push_error("Navigation source node does not exist: %s" % source_node_path)
 			quit(1)
 			return
+	var world_space_source_path := str(target.get("world_space_source_node", ""))
+	if world_space_source_path != "":
+		var world_space_node := map.get_node_or_null(world_space_source_path)
+		if world_space_node == null:
+			push_error("World-space navigation source node does not exist: %s" % world_space_source_path)
+			quit(1)
+			return
+		# Parsing from the scene-tree root retains the scaled map transform. Limit
+		# geometry to the requested branch so visual dressing never enters the bake.
+		nav_mesh.geometry_source_group_name = "onegun_navigation_bake_source"
+		nav_mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
+		world_space_node.add_to_group("onegun_navigation_bake_source")
+		source_root = root
 	NavigationServer3D.parse_source_geometry_data(nav_mesh, source, source_root)
 	NavigationServer3D.bake_from_source_geometry_data(nav_mesh, source)
 	var polygons := nav_mesh.get_polygon_count()

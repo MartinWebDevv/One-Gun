@@ -25,9 +25,10 @@ func _ready() -> void:
 	Input.warp_mouse(Vector2(18.0, 18.0))
 
 
-func _process(_delta: float) -> void:
-	# The preview is intentionally still unless the player click-drags it.
-	return
+func _process(delta: float) -> void:
+	# Retain the still-by-default presentation while allowing intentional
+	# right-stick rotation supplied by the shared Locker behavior.
+	super._process(delta)
 
 
 func _build_backdrop() -> void:
@@ -55,12 +56,6 @@ func _build_backdrop() -> void:
 
 
 func _build_header() -> void:
-	var kicker := OneGunUI.make_label("ONE GUN  //  LOADOUT BAY",
-		OneGunUI.TEXT_S, "cyan", true)
-	kicker.position = Vector2(64.0, 18.0)
-	kicker.size = Vector2(500.0, 24.0)
-	_canvas.add_child(kicker)
-
 	var title_row := HBoxContainer.new()
 	title_row.name = "CustomizationTitleRow"
 	title_row.position = Vector2(430.0, 20.0)
@@ -76,15 +71,6 @@ func _build_header() -> void:
 	title_row.add_child(title)
 	var right_star := OneGunUI.make_heading("✦", 30, "cyan")
 	title_row.add_child(right_star)
-
-	var subtitle := OneGunUI.make_label(
-		"BUILD YOUR ARENA IDENTITY  •  OWN IT  •  EQUIP IT  •  SHOW IT OFF",
-		17, "muted", true)
-	subtitle.name = "CustomizationSubtitle"
-	subtitle.position = Vector2(250.0, 76.0)
-	subtitle.size = Vector2(1100.0, 26.0)
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_canvas.add_child(subtitle)
 
 	var rule := ColorRect.new()
 	rule.position = Vector2(64.0, 112.0)
@@ -189,16 +175,23 @@ func _make_owned_locker_row(entry: Dictionary) -> Control:
 	horizontal.add_theme_constant_override("separation", 10)
 	row.add_child(horizontal)
 
-	var icon_panel := PanelContainer.new()
-	icon_panel.custom_minimum_size = Vector2(64.0, 68.0)
-	icon_panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		Color(0.01, 0.04, 0.10), Color(OneGunUI.color("gold"), 0.48), 10, 1))
-	horizontal.add_child(icon_panel)
-	var icon := OneGunUI.make_heading(_locker_icon_for_slot(visual_slot), 29,
-		"cyan" if slot == "ceremony_theme" else "gold")
-	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon_panel.add_child(icon)
+	var character_model_id := SupabaseCosmeticRegistry.local_character_model_id(
+		item_id) if slot == "character_model" else ""
+	if character_model_id != "":
+		horizontal.add_child(_make_character_model_portrait(
+			character_model_id,
+			"CharacterModelPortrait_%s" % item_id))
+	else:
+		var icon_panel := PanelContainer.new()
+		icon_panel.custom_minimum_size = Vector2(64.0, 68.0)
+		icon_panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
+			Color(0.01, 0.04, 0.10), Color(OneGunUI.color("gold"), 0.48), 10, 1))
+		horizontal.add_child(icon_panel)
+		var icon := OneGunUI.make_heading(_locker_icon_for_slot(visual_slot), 29,
+			"cyan" if slot == "ceremony_theme" else "gold")
+		icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon_panel.add_child(icon)
 
 	var copy := VBoxContainer.new()
 	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -231,6 +224,20 @@ func _make_owned_locker_row(entry: Dictionary) -> Control:
 		preview.variant = "blue"
 		preview.custom_minimum_size = Vector2(104.0, 46.0)
 		preview.pressed.connect(_preview_locker_move.bind(item_id))
+		horizontal.add_child(preview)
+	elif slot == "hat":
+		var preview := OneGunButton.new()
+		preview.text = "PREVIEW"
+		preview.variant = "blue"
+		preview.custom_minimum_size = Vector2(104.0, 46.0)
+		preview.pressed.connect(_preview_locker_hat.bind(item_id))
+		horizontal.add_child(preview)
+	elif slot == "character_model":
+		var preview := OneGunButton.new()
+		preview.text = "PREVIEW"
+		preview.variant = "blue"
+		preview.custom_minimum_size = Vector2(104.0, 46.0)
+		preview.pressed.connect(_preview_locker_character_model.bind(item_id))
 		horizontal.add_child(preview)
 	if is_dance:
 		var podium_button := _make_locker_slot_button(

@@ -96,12 +96,9 @@ func _build_ui() -> void:
 	var title := OneGunUI.make_heading("PLAYER HUB", OneGunUI.TEXT_TITLE, "gold")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
-	var close_button := _make_button("CLOSE", "red")
-	close_button.pressed.connect(_close)
-	header.add_child(close_button)
 
 	var subtitle := OneGunUI.make_label(
-		"Manage your public player identity or browse the rotating Prize Counter. Gameplay networking remains on Godot/ENet.",
+		"Manage your player identity or browse the rotating Prize Counter.",
 		OneGunUI.TEXT_S, "muted")
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(subtitle)
@@ -126,6 +123,17 @@ func _build_ui() -> void:
 	_feedback_label.custom_minimum_size.y = 24.0
 	_feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_feedback_label)
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	column.add_child(footer)
+	var back_button := _make_button("BACK", "navy")
+	back_button.name = "SupabaseBackButton"
+	back_button.custom_minimum_size = Vector2(220.0, 52.0)
+	back_button.pressed.connect(_close)
+	footer.add_child(back_button)
+	var footer_spacer := Control.new()
+	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.add_child(footer_spacer)
 	_show_page(_main_tabs.selected)
 
 
@@ -215,7 +223,7 @@ func _build_account_page() -> Control:
 	overview.add_child(OneGunUI.make_heading(
 		"CURRENT SEASON — BETA SEASON", OneGunUI.TEXT_L, "gold"))
 	var season_copy := OneGunUI.make_label(
-		"Level, XP, Prestige, and Classic Trophies will appear here when the server-authoritative progression and reward migration is activated.",
+		"View your current Level, XP, Prestige, and Classic Trophies.",
 		OneGunUI.TEXT_M, "muted")
 	season_copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	overview.add_child(season_copy)
@@ -261,7 +269,7 @@ func _build_account_page() -> Control:
 		"Completed seasons will archive final Level, Prestige, Trophies, mode wins, and reward-road milestones here."))
 	_profile_pages.append(_make_profile_placeholder(
 		"MATCH HISTORY",
-		"Recent official match placements, combat stats, XP, Gun Tokens, and Trophy results will appear after persistent match rewards are enabled."))
+		"Review official match placements, combat stats, XP, Gun Tokens, and Trophy results."))
 	for page_index in range(1, _profile_pages.size()):
 		_signed_in_content.add_child(_profile_pages[page_index])
 	_show_auth_mode(0)
@@ -302,7 +310,7 @@ func _build_inventory_page() -> Control:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
 	var explanation := OneGunUI.make_label(
-		"Owned cosmetics include grants that are intentionally hidden from the public store. Art-pending items can still be equipped and persisted by the backend; One Gun will keep running with their visual omitted.",
+		"Owned cosmetics include gifts and rewards that may not appear in the public store.",
 		OneGunUI.TEXT_S, "muted")
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(explanation)

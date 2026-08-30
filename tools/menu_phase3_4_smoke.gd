@@ -40,10 +40,18 @@ func _run() -> void:
 		"Bot controls open inside the unified connected Settings slide-out")
 	_check(bot_panel._selected_tab == 4 and bot_panel._nav_buttons.size() == 7,
 		"unified Settings opens directly to Bots and exposes every approved page")
-	_check(lobby._bot_settings_button == null and lobby._match_settings_button.text == "SETTINGS",
+	_check(lobby._bot_settings_button == null and lobby._match_settings_button.text == "MATCH SETTINGS",
 		"lobby exposes one Settings entry instead of separate Bot and Match buttons")
 	_check(bot_panel._apply_button.get_global_rect().end.y <= lobby.get_viewport_rect().end.y,
 		"settings transaction footer remains visible inside the safe viewport")
+	var settings_back := bot_panel.find_child("CloseSettings", true, false) as Button
+	_check(settings_back != null and settings_back.text == "BACK"
+			and str(settings_back.get("variant")) == "navy"
+			and settings_back.get_global_rect().get_center().x
+				< bot_panel.get_global_rect().get_center().x
+			and settings_back.get_global_rect().get_center().y
+				> bot_panel.get_global_rect().get_center().y,
+		"Match Settings uses the blue bottom-left Back control")
 	get_tree().root.size = Vector2i(1280, 720)
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -83,7 +91,7 @@ func _run() -> void:
 	match_panel._pending["chaos_overtime_enabled"] = true
 	match_panel._pending["item_registry"]["boomerang"]["enabled"] = false
 	match_panel._on_reset_pressed()
-	_check(float(match_panel._pending["round_time_limit"]) == 300.0,
+	_check(float(match_panel._pending["round_time_limit"]) == 180.0,
 		"Reset restores round time inside the pending transaction")
 	_check(not bool(match_panel._pending["chaos_overtime_enabled"]),
 		"Reset restores standard one-gun overtime")
@@ -116,6 +124,14 @@ func _run() -> void:
 	await get_tree().process_frame
 	_check(overlay._page == overlay.Page.CODE and overlay._code_field != null,
 		"Join by Code stays inside the same cabinet")
+	var online_back := overlay.find_child("OnlineBackButton", true, false) as Button
+	_check(online_back != null and online_back.text == "BACK"
+			and str(online_back.get("variant")) == "navy"
+			and online_back.get_global_rect().get_center().x
+				< overlay.get_global_rect().get_center().x
+			and online_back.get_global_rect().get_center().y
+				> overlay.get_global_rect().get_center().y,
+		"Online Play uses the blue bottom-left Back control")
 	var edgegap_endpoint: Dictionary = NetworkManager.parse_direct_endpoint(
 		"abc123.pr.edgegap.net:31504")
 	_check(edgegap_endpoint.get("host", "") == "abc123.pr.edgegap.net"

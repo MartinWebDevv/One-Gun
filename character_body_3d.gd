@@ -35,13 +35,15 @@ var _flash_blind_total := 0.0
 @export var team_id := -1
 @export var use_gamepad_look := false
 @export var mouse_look_sensitivity := 1.0
-@export var look_sensitivity := 6.0
+@export var gamepad_look_sensitivity_x := 6.0
+@export var gamepad_look_sensitivity_y := 6.0
 @export var ads_look_sensitivity_multiplier := 0.5
 @export var dash_recharge_time := 3.0
 @export_category("Jump Tuning")
 @export_range(0.0, 20.0, 0.1) var jump_velocity: float = 7
 
-var gamepad_response_curve_exponent := 2.0
+var gamepad_response_curve_exponent := 1.35
+var gamepad_deadzone := 0.15
 var gamepad_sprint_is_toggle := true
 var mouse_keyboard_sprint_is_toggle := false
 var max_dash_charges := 3
@@ -60,8 +62,12 @@ const DASH_RECHARGE_TIME = 2.0
 const MAX_DASH_CHARGES_HARD_CEILING = 6
 const KNOCKBACK_DURATION = 0.2
 const ADS_TRANSITION_TIME = .2
-const ADS_SPRING_LENGTH = 0.3
-const ADS_FOV_MULTIPLIER = 0.9
+const NON_ADS_SPRING_POSITION_OFFSET := Vector3(1.02, 0.23, 0.06)
+const NON_ADS_CAMERA_POSITION_OFFSET := Vector3(0.0, 0.03, 0.0)
+const ADS_SPRING_LENGTH := 2.40
+const ADS_SPRING_POSITION_OFFSET := Vector3(0.75, 0.38, 0.10)
+const ADS_CAMERA_POSITION_OFFSET := Vector3(0.0, 0.05, 0.0)
+const ADS_FOV_MULTIPLIER := 0.86
 const MOUSE_LOOK_BASE = 0.005
 const INTERACT_HOLD_DROP_TIME = 0.5
 const BASE_GRAVITY := 9.8
@@ -174,6 +180,10 @@ const ANIM_DANCE           = "hip_hop_dance"
 
 var model_anim_player: AnimationPlayer = null
 var _current_anim: String = ""
+var _network_animation_name := ANIM_IDLE
+var _network_animation_speed := 1.0
+var _network_animation_sequence := 1
+var _last_puppet_animation_sequence := -1
 var _anim_rotation_offset: float = 0.0
 var _action_animation_time := 0.0
 var _idle_animation_time := 0.0
@@ -233,6 +243,11 @@ func _ready():
 	_apply_character_model(_initial_character_model_id())
 	_apply_character_skin(_initial_character_skin_id())
 	set_cosmetic_loadout(_initial_cosmetic_loadout())
+	if not is_online and not is_player2 \
+			and not SupabaseManager.loadout_updated.is_connected(
+				_on_persistent_cosmetic_loadout_updated):
+		SupabaseManager.loadout_updated.connect(
+			_on_persistent_cosmetic_loadout_updated)
 	model_anim_player = $CharacterModel.find_child("AnimationPlayer", true, false)
 	if model_anim_player != null:
 		_merge_animations()
@@ -271,9 +286,11 @@ func _apply_match_settings():
 func _apply_player_prefs():
 	use_gamepad_look = PlayerPrefs.is_using_controller(input_prefix)
 	mouse_look_sensitivity = PlayerPrefs.get_setting("mouse_sensitivity")
-	look_sensitivity = PlayerPrefs.get_setting("gamepad_sensitivity")
+	gamepad_look_sensitivity_x = PlayerPrefs.get_setting("gamepad_sensitivity_x")
+	gamepad_look_sensitivity_y = PlayerPrefs.get_setting("gamepad_sensitivity_y")
 	ads_look_sensitivity_multiplier = PlayerPrefs.get_setting("ads_sensitivity_multiplier")
 	gamepad_response_curve_exponent = PlayerPrefs.get_setting("gamepad_response_curve_exponent")
+	gamepad_deadzone = PlayerPrefs.get_setting("gamepad_deadzone")
 	gamepad_sprint_is_toggle = PlayerPrefs.get_setting("gamepad_sprint_is_toggle")
 	mouse_keyboard_sprint_is_toggle = PlayerPrefs.get_setting("mouse_keyboard_sprint_is_toggle")
 	invert_look_y = PlayerPrefs.get_setting("invert_look_y")
@@ -323,12 +340,29 @@ func set_character_appearance(requested_model_id: String,
 		requested_skin_id: String) -> void:
 	_apply_character_model(requested_model_id)
 	_apply_character_skin(requested_skin_id)
+
+
+func set_hat_cosmetic(item_id: String) -> void:
+	set_wearable_cosmetic("hat", item_id)
+
+
+func set_wearable_cosmetic(slot: String, item_id: String) -> void:
+	var visual := get_node_or_null("CharacterModel") as Node3D
+	if visual != null and visual.has_method("set_wearable_cosmetic"):
+		visual.call("set_wearable_cosmetic", slot, item_id)
+	elif slot == "hat" and visual != null and visual.has_method("set_hat_cosmetic"):
+		visual.call("set_hat_cosmetic", item_id)
+
+
 func _initial_cosmetic_loadout() -> Dictionary:
 	if is_online or is_player2:
 		return cosmetic_loadout
-	if SupabaseManager.is_authenticated():
-		return SupabaseManager.equipped_cosmetics()
-	return cosmetic_loadout
+	return SupabaseManager.equipped_cosmetics()
+
+
+func _on_persistent_cosmetic_loadout_updated(next_loadout: Dictionary) -> void:
+	if not is_online and not is_player2:
+		set_cosmetic_loadout(next_loadout)
 
 
 
@@ -391,6 +425,8 @@ func _apply_character_model(requested_id: String) -> void:
 			if is_instance_valid(child):
 				child.reparent(next_socket, true)
 	character_model_id = safe_id
+	if next_visual.has_method("set_cosmetic_loadout"):
+		next_visual.call("set_cosmetic_loadout", cosmetic_loadout)
 	if model_anim_player != null:
 		model_anim_player = next_visual.find_child(
 			"AnimationPlayer", true, false) as AnimationPlayer
@@ -536,6 +572,7 @@ func _physics_process(delta):
 
 	if _steam_boost_active and is_on_floor():
 		_clear_steam_boost()
+	_sanitize_unexpected_vertical_velocity()
 	_update_accessible_camera_motion(delta)
 
 	if slow_timer > 0.0:
@@ -989,7 +1026,10 @@ func _build_net_sync() -> void:
 	sync.add_visibility_filter(Callable(NetworkManager,
 		"is_gameplay_replication_visible_to_peer"))
 	var cfg := SceneReplicationConfig.new()
-	for prop in [".:position", ".:rotation", "AimPivot:rotation", "AimPivot/SpringArm3D:rotation", ".:velocity", ".:stamina"]:
+	for prop in [".:position", ".:rotation", "AimPivot:rotation",
+			"AimPivot/SpringArm3D:rotation", ".:velocity", ".:stamina",
+			".:_network_animation_name", ".:_network_animation_speed",
+			".:_network_animation_sequence"]:
 		cfg.add_property(NodePath(prop))
 	sync.replication_config = cfg
 	sync.set_multiplayer_authority(net_authority_id)
@@ -1165,6 +1205,9 @@ func _play_puppet_idle() -> void:
 # Remote puppet: pick idle/walk/run (and pistol variants) from the synced velocity
 # so it animates while the synchronizer slides it to position; face the synced aim.
 func _update_puppet_visuals(delta: float) -> void:
+	if _apply_replicated_puppet_animation():
+		_update_facing()
+		return
 	if model_anim_player != null and not is_eliminated:
 		var speed := Vector2(velocity.x, velocity.z).length()
 		if speed > 0.6:
@@ -1191,6 +1234,18 @@ func _update_puppet_visuals(delta: float) -> void:
 			_idle_animation_time += delta
 			_play_anim(ANIM_LONG_IDLE if _idle_animation_time >= 8.0 else ANIM_IDLE)
 	_update_facing()
+
+
+func _apply_replicated_puppet_animation() -> bool:
+	if model_anim_player == null or is_eliminated \
+			or _network_animation_name == "" \
+			or not model_anim_player.has_animation(_network_animation_name):
+		return false
+	if _last_puppet_animation_sequence != _network_animation_sequence:
+		_last_puppet_animation_sequence = _network_animation_sequence
+		_current_anim = ""
+		_play_anim(_network_animation_name, true, _network_animation_speed)
+	return true
 
 func _merge_animations():
 	var visual := get_node_or_null("CharacterModel")
@@ -1227,6 +1282,15 @@ func _play_anim(anim_name: String, force := false, custom_speed := 1.0):
 	_current_anim = anim_name
 	_anim_rotation_offset = 0.0
 	model_anim_player.play(anim_name, 0.12, custom_speed)
+	_publish_network_animation(anim_name, custom_speed)
+
+
+func _publish_network_animation(anim_name: String, custom_speed: float) -> void:
+	if not is_online or not _is_local_online:
+		return
+	_network_animation_name = anim_name
+	_network_animation_speed = custom_speed
+	_network_animation_sequence += 1
 
 func _is_grounded_for_anim() -> bool:
 	# Debounced grounded check for animation only — see AIRBORNE_ANIM_GRACE.
@@ -1290,6 +1354,7 @@ func play_victory_dance():
 	_current_anim = animation_name
 	_anim_rotation_offset = 0.0
 	model_anim_player.play(animation_name)
+	_publish_network_animation(animation_name, 1.0)
 
 
 func _set_held_gun_visual_visible(show_gun: bool) -> void:
@@ -1344,10 +1409,17 @@ func _update_aiming(_delta):
 		ads_blend_target = target_blend
 		_start_ads_tween(target_blend)
 
-	var spring_arm = $AimPivot/SpringArm3D
+	var spring_arm: SpringArm3D = $AimPivot/SpringArm3D
+	var camera: Camera3D = $AimPivot/SpringArm3D/Camera3D
 	spring_arm.spring_length = lerp(default_spring_length, ADS_SPRING_LENGTH, ads_blend)
-	spring_arm.position.x = lerp(default_spring_position.x, 0.0, ads_blend)
-	$AimPivot/SpringArm3D/Camera3D.fov = lerp(default_camera_fov, default_camera_fov * ADS_FOV_MULTIPLIER, ads_blend)
+	spring_arm.position = (default_spring_position
+		+ NON_ADS_SPRING_POSITION_OFFSET).lerp(
+		default_spring_position + ADS_SPRING_POSITION_OFFSET, ads_blend)
+	camera.position = (_camera_base_position
+		+ NON_ADS_CAMERA_POSITION_OFFSET).lerp(
+		_camera_base_position + ADS_CAMERA_POSITION_OFFSET, ads_blend)
+	camera.fov = lerp(default_camera_fov,
+		default_camera_fov * ADS_FOV_MULTIPLIER, ads_blend)
 
 func _start_ads_tween(target_blend: float):
 	if ads_tween != null and ads_tween.is_valid():
@@ -1360,20 +1432,34 @@ func _start_ads_tween(target_blend: float):
 	ads_tween.tween_property(self, "ads_blend", target_blend, duration)
 
 func _process_gamepad_look(delta):
-	var look_x = Input.get_action_strength(input_prefix + "_look_right") - Input.get_action_strength(input_prefix + "_look_left")
-	var look_y = Input.get_action_strength(input_prefix + "_look_down") - Input.get_action_strength(input_prefix + "_look_up")
+	var raw_look := Input.get_vector(
+		input_prefix + "_look_left", input_prefix + "_look_right",
+		input_prefix + "_look_up", input_prefix + "_look_down", 0.0)
+	var look := shape_gamepad_look_input(
+		raw_look, gamepad_deadzone, gamepad_response_curve_exponent)
 
-	look_x = sign(look_x) * pow(abs(look_x), gamepad_response_curve_exponent)
-	look_y = sign(look_y) * pow(abs(look_y), gamepad_response_curve_exponent)
-
-	var sens = look_sensitivity
+	var sensitivity_multiplier := 1.0
 	if ads_blend > 0.0:
-		sens *= lerp(1.0, ads_look_sensitivity_multiplier, ads_blend)
+		sensitivity_multiplier = lerp(
+			1.0, ads_look_sensitivity_multiplier, ads_blend)
 
 	var y_sign = -1.0 if invert_look_y else 1.0
-	$AimPivot.rotate_y(-look_x * sens * delta)
-	$AimPivot/SpringArm3D.rotate_x(-look_y * sens * delta * y_sign)
+	$AimPivot.rotate_y(
+		-look.x * gamepad_look_sensitivity_x * sensitivity_multiplier * delta)
+	$AimPivot/SpringArm3D.rotate_x(
+		-look.y * gamepad_look_sensitivity_y * sensitivity_multiplier * delta * y_sign)
 	$AimPivot/SpringArm3D.rotation.x = clamp($AimPivot/SpringArm3D.rotation.x, -1.2, 1.2)
+
+
+static func shape_gamepad_look_input(raw_input: Vector2, deadzone: float,
+		exponent: float) -> Vector2:
+	var magnitude := minf(raw_input.length(), 1.0)
+	deadzone = clampf(deadzone, 0.0, 0.95)
+	if magnitude <= deadzone or magnitude <= 0.0001:
+		return Vector2.ZERO
+	var normalized_magnitude := (magnitude - deadzone) / (1.0 - deadzone)
+	var curved_magnitude := pow(normalized_magnitude, maxf(exponent, 0.1))
+	return raw_input.normalized() * curved_magnitude
 
 func _update_facing():
 	$CharacterModel.rotation.y = $AimPivot.rotation.y + MODEL_FACING_OFFSET + _anim_rotation_offset
@@ -1423,7 +1509,7 @@ func get_camera():
 		return _spectator.get_spectator_camera()
 	return $AimPivot/SpringArm3D/Camera3D
 
-func play_match_intro(authored_start: Vector3, duration := 3.0) -> void:
+func play_match_intro(authored_start: Vector3, duration := 3.0, orbit_angle := PI) -> void:
 	if not is_locally_controlled() or is_eliminated:
 		return
 	if AccessibilityManager.reduced_motion_enabled():
@@ -1446,7 +1532,7 @@ func play_match_intro(authored_start: Vector3, duration := 3.0) -> void:
 	while elapsed < duration and is_instance_valid(_intro_camera):
 		var t := clampf(elapsed / maxf(duration, 0.01), 0.0, 1.0)
 		var eased := t * t * (3.0 - 2.0 * t)
-		var orbit_offset := Basis(Vector3.UP, PI * eased) * start_offset
+		var orbit_offset := Basis(Vector3.UP, orbit_angle * eased) * start_offset
 		var orbit_position := target + orbit_offset
 		var settle := clampf((eased - 0.68) / 0.32, 0.0, 1.0)
 		_intro_camera.global_position = orbit_position.lerp(gameplay_camera.global_position, settle)
@@ -1475,11 +1561,41 @@ func _play_reduced_motion_intro(duration: float) -> void:
 	layer.queue_free()
 
 func apply_knockback(direction: Vector3, distance: float):
-	knockback_velocity = direction * (distance / KNOCKBACK_DURATION)
+	var horizontal_direction := Vector3(direction.x, 0.0, direction.z)
+	if not horizontal_direction.is_zero_approx():
+		horizontal_direction = horizontal_direction.normalized()
+	knockback_velocity = horizontal_direction * (distance / KNOCKBACK_DURATION)
 	knockback_timer = KNOCKBACK_DURATION
 	is_dashing = false
 	is_sprinting = false
 	play_hit_animation()
+
+
+func _sanitize_unexpected_vertical_velocity() -> void:
+	if not is_finite(velocity.y):
+		velocity.y = 0.0
+		return
+	# Spring pads, steam vents, and hydrants own explicit launch state. Outside
+	# those paths, even double-jump footwear stays below 12 m/s; larger upward
+	# speeds are collision/replication faults and must never launch a player away.
+	if not _steam_boost_active and not _spring_air_active \
+			and not _directional_launch_active and velocity.y > 12.0:
+		velocity.y = 12.0
+
+
+func recover_from_invalid_position(safe_position: Vector3, yaw: float) -> void:
+	global_transform = Transform3D(Basis.IDENTITY, safe_position)
+	$AimPivot.rotation = Vector3(0.0, yaw, 0.0)
+	$AimPivot/SpringArm3D.rotation.x = 0.0
+	velocity = Vector3.ZERO
+	knockback_velocity = Vector3.ZERO
+	knockback_timer = 0.0
+	stagger_timer = 0.0
+	is_dashing = false
+	is_sprinting = false
+	_clear_steam_boost()
+	_clear_spring_launch_state()
+	_dash_cancelled_spring_momentum = false
 
 func apply_stagger(duration: float):
 	stagger_timer = duration
@@ -1655,6 +1771,7 @@ var second_wind_ready := false
 var sticky_hands_timer := 0.0
 var sticky_hands_cooldown_timer := 0.0
 var reach_timer := 0.0
+var fast_hands_timer := 0.0
 const REACH_PICKUP_RADIUS := GameConfig.REACH_POWERUP_DISTANCE
 const REACH_SCAN_INTERVAL := 0.10
 
@@ -1671,6 +1788,10 @@ func _canonical_powerup_type(power_type: String) -> String:
 
 func can_collect_powerup(power_type: String) -> bool:
 	match _canonical_powerup_type(power_type):
+		"fast_hands":
+			return GameConfig.game_mode != GameConfig.MODE_ALL_GUN \
+				and (GameConfig.game_mode != GameConfig.MODE_ONE_OF_US \
+					or one_of_us_role == "them")
 		"sticky_hands":
 			return melee_disarm_shields <= 0 \
 				and sticky_hands_cooldown_timer <= 0.0
@@ -1705,6 +1826,9 @@ func apply_powerup(power_type: String, duration: float) -> bool:
 		"reach":
 			reach_timer = _extend_timed_powerup(reach_timer, duration)
 			_ensure_reach_ring()
+		"fast_hands":
+			fast_hands_timer = _extend_timed_powerup(
+				fast_hands_timer, GameConfig.FAST_HANDS_DURATION)
 		_:
 			return false
 	active_powerup_order.erase(power_type)
@@ -1733,12 +1857,17 @@ func get_active_powerups_for_display() -> Array:
 			"reach":
 				if reach_timer > 0.0:
 					result.append({"type": power_type, "timed": true, "time_left": reach_timer})
+			"fast_hands":
+				if fast_hands_timer > 0.0:
+					result.append({"type": power_type, "timed": true, "time_left": fast_hands_timer})
 	active_powerup_order = result.map(func(entry): return entry["type"])
 	return result
 
 func _update_new_powerups(delta: float) -> void:
 	if speed_surge_timer > 0.0:
 		speed_surge_timer = maxf(speed_surge_timer - delta, 0.0)
+	if fast_hands_timer > 0.0:
+		fast_hands_timer = maxf(fast_hands_timer - delta, 0.0)
 	if sticky_hands_cooldown_timer > 0.0:
 		sticky_hands_cooldown_timer = maxf(sticky_hands_cooldown_timer - delta, 0.0)
 	if melee_disarm_shields > 0:
@@ -1835,6 +1964,7 @@ func clear_all_powerups() -> void:
 	speed_surge_timer = 0.0
 	silent_steps_timer = 0.0
 	reach_timer = 0.0
+	fast_hands_timer = 0.0
 	_reach_interactables.clear()
 	_rebuild_interactables()
 	second_wind_ready = false
@@ -1879,6 +2009,11 @@ func consume_extra_life() -> bool:
 
 func has_active_reach() -> bool:
 	return reach_timer > 0.0
+
+
+func melee_swing_speed_multiplier() -> float:
+	return GameConfig.FAST_HANDS_SWING_SPEED_MULTIPLIER \
+		if fast_hands_timer > 0.0 else 1.0
 
 
 func set_local_view_render_layer(render_layer: int) -> void:

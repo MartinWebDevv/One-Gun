@@ -1,0 +1,128 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: requested validation model is registered: eye_wizard
+PASS: eye_wizard is available in the public character selector
+PASS: eye_wizard preserves its authored material
+PASS: eye_wizard declares a headwear socket profile
+PASS: eye_wizard has a customization and roster portrait
+PASS: eye_wizard visual wrapper loads
+PASS: eye_wizard wrapper keeps its normalized gameplay scale
+PASS: eye_wizard authored mesh faces gameplay forward
+PASS: eye_wizard exposes its skinned skeleton
+PASS: eye_wizard required bone exists: mixamorig_Hips
+PASS: eye_wizard required bone exists: mixamorig_Head
+PASS: eye_wizard required bone exists: mixamorig_RightHand
+PASS: eye_wizard required bone exists: mixamorig_LeftFoot
+PASS: eye_wizard required bone exists: mixamorig_RightFoot
+PASS: eye_wizard animated socket is valid: GunHoldPoint
+PASS: eye_wizard animated socket is valid: MeleeHoldPoint
+PASS: eye_wizard animated socket is valid: ItemHoldPoint
+PASS: eye_wizard animated socket is valid: LeftFootSocket
+PASS: eye_wizard animated socket is valid: RightFootSocket
+PASS: eye_wizard animated socket is valid: HeadwearSocket
+PASS: eye_wizard skinned mesh is present
+PASS: eye_wizard cat-color changes cannot overwrite its authored look
+PASS: eye_wizard runtime animation player is available
+PASS: eye_wizard animation retargeted: idle
+PASS: eye_wizard animation has a complete body track set: idle
+PASS: eye_wizard animation pose remains finite: idle
+PASS: eye_wizard animation retargeted: idle_pistol
+PASS: eye_wizard animation has a complete body track set: idle_pistol
+PASS: eye_wizard animation pose remains finite: idle_pistol
+PASS: eye_wizard animation retargeted: long_idle
+PASS: eye_wizard animation has a complete body track set: long_idle
+PASS: eye_wizard animation pose remains finite: long_idle
+PASS: eye_wizard animation retargeted: standard_run
+PASS: eye_wizard animation has a complete body track set: standard_run
+PASS: eye_wizard animation pose remains finite: standard_run
+PASS: eye_wizard animation retargeted: run
+PASS: eye_wizard animation has a complete body track set: run
+PASS: eye_wizard animation pose remains finite: run
+PASS: eye_wizard animation retargeted: jump
+PASS: eye_wizard animation has a complete body track set: jump
+PASS: eye_wizard animation pose remains finite: jump
+PASS: eye_wizard animation retargeted: running_jump
+PASS: eye_wizard animation has a complete body track set: running_jump
+PASS: eye_wizard animation pose remains finite: running_jump
+PASS: eye_wizard animation retargeted: fall
+PASS: eye_wizard animation has a complete body track set: fall
+PASS: eye_wizard animation pose remains finite: fall
+PASS: eye_wizard animation retargeted: pistol_jump
+PASS: eye_wizard animation has a complete body track set: pistol_jump
+PASS: eye_wizard animation pose remains finite: pistol_jump
+PASS: eye_wizard animation retargeted: pistol_run
+PASS: eye_wizard animation has a complete body track set: pistol_run
+PASS: eye_wizard animation pose remains finite: pistol_run
+PASS: eye_wizard animation retargeted: pistol_backward
+PASS: eye_wizard animation has a complete body track set: pistol_backward
+PASS: eye_wizard animation pose remains finite: pistol_backward
+PASS: eye_wizard animation retargeted: pistol_strafe_left
+PASS: eye_wizard animation has a complete body track set: pistol_strafe_left
+PASS: eye_wizard animation pose remains finite: pistol_strafe_left
+PASS: eye_wizard animation retargeted: pistol_strafe_right
+PASS: eye_wizard animation has a complete body track set: pistol_strafe_right
+PASS: eye_wizard animation pose remains finite: pistol_strafe_right
+PASS: eye_wizard animation retargeted: run_with_sword
+PASS: eye_wizard animation has a complete body track set: run_with_sword
+PASS: eye_wizard animation pose remains finite: run_with_sword
+PASS: eye_wizard animation retargeted: melee
+PASS: eye_wizard animation has a complete body track set: melee
+PASS: eye_wizard animation pose remains finite: melee
+PASS: eye_wizard animation retargeted: throw_object
+PASS: eye_wizard animation has a complete body track set: throw_object
+PASS: eye_wizard animation pose remains finite: throw_object
+PASS: eye_wizard animation retargeted: hit
+PASS: eye_wizard animation has a complete body track set: hit
+PASS: eye_wizard animation pose remains finite: hit
+PASS: eye_wizard animation retargeted: hip_hop_dance
+PASS: eye_wizard animation has a complete body track set: hip_hop_dance
+PASS: eye_wizard animation pose remains finite: hip_hop_dance
+PASS: eye_wizard animation retargeted: swing_dance
+PASS: eye_wizard animation has a complete body track set: swing_dance
+PASS: eye_wizard animation pose remains finite: swing_dance
+PASS: eye_wizard animation retargeted: podium_backbeat_bounce
+PASS: eye_wizard animation has a complete body track set: podium_backbeat_bounce
+PASS: eye_wizard animation pose remains finite: podium_backbeat_bounce
+PASS: eye_wizard animation retargeted: podium_champion_canter
+PASS: eye_wizard animation has a complete body track set: podium_champion_canter
+PASS: eye_wizard animation pose remains finite: podium_champion_canter
+PASS: eye_wizard animation retargeted: podium_fresh_footwork
+PASS: eye_wizard animation has a complete body track set: podium_fresh_footwork
+PASS: eye_wizard animation pose remains finite: podium_fresh_footwork
+PASS: eye_wizard animation retargeted: podium_house_party_heat
+PASS: eye_wizard animation has a complete body track set: podium_house_party_heat
+PASS: eye_wizard animation pose remains finite: podium_house_party_heat
+PASS: eye_wizard animation retargeted: podium_serpent_flow
+PASS: eye_wizard animation has a complete body track set: podium_serpent_flow
+PASS: eye_wizard animation pose remains finite: podium_serpent_flow
+PASS: eye_wizard animation retargeted: podium_midnight_monster
+PASS: eye_wizard animation has a complete body track set: podium_midnight_monster
+PASS: eye_wizard animation pose remains finite: podium_midnight_monster
+PASS: eye_wizard animation retargeted: podium_victory_wave
+PASS: eye_wizard animation has a complete body track set: podium_victory_wave
+PASS: eye_wizard animation pose remains finite: podium_victory_wave
+PASS: eye_wizard animation retargeted: round_breakspin_finale
+PASS: eye_wizard animation has a complete body track set: round_breakspin_finale
+PASS: eye_wizard animation pose remains finite: round_breakspin_finale
+PASS: eye_wizard animation retargeted: round_floorwork_finish
+PASS: eye_wizard animation has a complete body track set: round_floorwork_finish
+PASS: eye_wizard animation pose remains finite: round_floorwork_finish
+PASS: eye_wizard animation retargeted: round_birdie_boogie
+PASS: eye_wizard animation has a complete body track set: round_birdie_boogie
+PASS: eye_wizard animation pose remains finite: round_birdie_boogie
+PASS: eye_wizard animation retargeted: round_arena_clapline
+PASS: eye_wizard animation has a complete body track set: round_arena_clapline
+PASS: eye_wizard animation pose remains finite: round_arena_clapline
+PASS: eye_wizard animation retargeted: round_soul_cyclone
+PASS: eye_wizard animation has a complete body track set: round_soul_cyclone
+PASS: eye_wizard animation pose remains finite: round_soul_cyclone
+PASS: eye_wizard animation retargeted: round_quickstep_shuffle
+PASS: eye_wizard animation has a complete body track set: round_quickstep_shuffle
+PASS: eye_wizard animation pose remains finite: round_quickstep_shuffle
+PASS: eye_wizard animation retargeted: round_victory_swing
+PASS: eye_wizard animation has a complete body track set: round_victory_swing
+PASS: eye_wizard animation pose remains finite: round_victory_swing
+PASS: eye_wizard equipped hat is attached beneath its animated head socket
+PASS: gameplay actor spawns with eye_wizard
+PASS: gameplay actor retains eye_wizard cosmetics
+NEW CHARACTER INTEGRATION VALIDATION PASSED models=1 animations=33

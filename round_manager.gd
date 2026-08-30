@@ -1192,7 +1192,8 @@ func _online_start_round() -> void:
 			await get_tree().create_timer(OneOfUsIntroData.TOTAL_TIME + 0.05).timeout
 			skip_countdown = true
 		else:
-			NetworkManager.broadcast_match_rpc(self, &"_net_play_first_round_intro", [_intro_authored_position()])
+			NetworkManager.broadcast_match_rpc(self, &"_net_play_first_round_intro", [
+				_intro_authored_position(), _intro_authored_orbit_angle()])
 			await get_tree().create_timer(3.0).timeout
 			if online_match_over:
 				return
@@ -1754,6 +1755,7 @@ func _online_state_snapshot() -> Dictionary:
 			"sticky_hands_cooldown": maxf(float(actor.get("sticky_hands_cooldown_timer")), 0.0),
 			"bullet_immunity": maxf(float(actor.get("bullet_immune_timer")), 0.0),
 			"lethal_immunity": maxf(float(actor.get("lethal_immunity_timer")), 0.0),
+			"fast_hands_time": maxf(float(actor.get("fast_hands_timer")), 0.0),
 		}
 	return {
 		"phase": round_state,
@@ -1818,12 +1820,16 @@ func _net_apply_online_state(snapshot: Dictionary) -> void:
 		actor.sticky_hands_cooldown_timer = maxf(float(protection.get("sticky_hands_cooldown", 0.0)), 0.0)
 		actor.bullet_immune_timer = maxf(float(protection.get("bullet_immunity", 0.0)), 0.0)
 		actor.lethal_immunity_timer = maxf(float(protection.get("lethal_immunity", 0.0)), 0.0)
+		actor.fast_hands_timer = maxf(float(protection.get("fast_hands_time", 0.0)), 0.0)
 		actor.active_powerup_order.erase("extra_life")
 		actor.active_powerup_order.erase("sticky_hands")
+		actor.active_powerup_order.erase("fast_hands")
 		if actor.second_wind_ready:
 			actor.active_powerup_order.push_back("extra_life")
 		if actor.melee_disarm_shields > 0:
 			actor.active_powerup_order.push_back("sticky_hands")
+		if actor.fast_hands_timer > 0.0:
+			actor.active_powerup_order.push_back("fast_hands")
 	if _online_hud != null and _online_hud.has_method("bind_local_player"):
 		_online_hud.bind_local_player(NetworkManager.find_net_player(NetworkManager.local_id()))
 
@@ -2406,6 +2412,14 @@ func _intro_authored_position() -> Vector3:
 		return marker.global_position
 	return _gun_center_position + Vector3(0.0, 14.0, -24.0)
 
+
+func _intro_authored_orbit_angle() -> float:
+	var marker := get_tree().get_first_node_in_group("round_intro_camera_point") as Node3D
+	if marker == null:
+		return PI
+	return clampf(float(marker.get_meta(
+		"intro_orbit_angle_radians", PI)), 0.0, PI)
+
 func _play_first_round_intro_local() -> void:
 	if round_number != 1 or set_number != 1:
 		return
@@ -2419,14 +2433,14 @@ func _play_first_round_intro_local() -> void:
 	var start := _intro_authored_position()
 	for actor in players:
 		if not ("is_bot" in actor and actor.is_bot) and actor.has_method("play_match_intro"):
-			actor.play_match_intro(start, 3.0)
+			actor.play_match_intro(start, 3.0, _intro_authored_orbit_angle())
 	await get_tree().create_timer(3.0).timeout
 
 @rpc("authority", "reliable", "call_local")
-func _net_play_first_round_intro(start: Vector3) -> void:
+func _net_play_first_round_intro(start: Vector3, orbit_angle: float) -> void:
 	var local_actor = NetworkManager.find_net_player(NetworkManager.local_id())
 	if local_actor != null and local_actor.has_method("play_match_intro"):
-		local_actor.play_match_intro(start, 3.0)
+		local_actor.play_match_intro(start, 3.0, orbit_angle)
 
 @rpc("authority", "reliable", "call_local")
 func _net_play_one_of_us_intro(first_actor_id: int) -> void:
@@ -2541,9 +2555,13 @@ func _setup_winners_circle_coordinator() -> void:
 	_winners_circle_coordinator = WinnersCoordinator.new()
 	_winners_circle_coordinator.name = "WinnersCircleCoordinator"
 	add_child(_winners_circle_coordinator)
-	_winners_circle_coordinator.local_return_requested.connect(func() -> void:
-		if is_inside_tree():
-			_leave_match_to("res://game_setup.tscn"))
+	_winners_circle_coordinator.local_return_requested.connect(
+		_on_local_winners_circle_return_requested)
+
+
+func _on_local_winners_circle_return_requested() -> void:
+	if is_inside_tree():
+		_leave_match_to("res://game_setup.tscn")
 
 
 func _record_online_round_placements(scoring_ids: Array) -> void:
@@ -3154,8 +3172,13 @@ func _start_online_overtime() -> void:
 	_clear_online_overtime_banner()
 
 func _clear_online_overtime_banner() -> void:
+	var banner_epoch := online_round_epoch
+	var banner_text := online_announcement
 	await get_tree().create_timer(1.5).timeout
-	if overtime_active and online_combat_live:
+	# All Gun can resolve a sudden-death hit before this timer expires. Clear the
+	# OT banner by epoch/text identity instead of requiring combat to still be
+	# live, while never erasing a newer round-end announcement.
+	if online_round_epoch == banner_epoch and online_announcement == banner_text:
 		online_announcement = ""
 		_broadcast_online_state()
 
@@ -3227,33 +3250,31 @@ func _disable_overtime_ground_spawns() -> void:
 		elif melee.has_method("disable_for_overtime"):
 			melee.disable_for_overtime()
 
-func _random_overtime_melee_marker():
-	var markers := _arena_markers_in_group("melee_spawn_point")
-	if markers.is_empty():
-		push_warning("RoundManager: overtime has no melee_spawn_point marker.")
-		return null
-	markers.sort_custom(func(a, b): return str(a.get_path()) < str(b.get_path()))
-	return markers[randi() % markers.size()]
+func _overtime_melee_supply_transform() -> Transform3D:
+	# Overtime always exposes the final melee supply at the computed arena
+	# center. A small clearance keeps its rigid body from initially intersecting
+	# the floor without changing the requested X/Z position.
+	var position := Vector3(
+		_overtime_center.x, _overtime_floor_y + 0.25, _overtime_center.z)
+	return Transform3D(Basis.IDENTITY, position)
 
 func _spawn_local_overtime_melee_supply() -> void:
 	if GameConfig.game_mode != GameConfig.MODE_ONE_GUN:
 		return
-	var marker = _random_overtime_melee_marker()
-	if marker != null:
-		_spawn_local_melee_at(marker.global_position, marker.global_rotation, true)
+	var supply_transform := _overtime_melee_supply_transform()
+	_spawn_local_melee_at(
+		supply_transform.origin, supply_transform.basis.get_euler(), true)
 
 func _make_online_overtime_melee_assignment() -> Dictionary:
 	if GameConfig.game_mode != GameConfig.MODE_ONE_GUN:
 		return {}
-	var marker = _random_overtime_melee_marker()
-	if marker == null:
-		return {}
+	var supply_transform := _overtime_melee_supply_transform()
 	var candidate_id := _next_online_melee_candidate_id
 	_next_online_melee_candidate_id += 1
 	return {
 		"candidate_id": candidate_id,
-		"position": marker.global_position,
-		"rotation": marker.global_rotation,
+		"position": supply_transform.origin,
+		"rotation": supply_transform.basis.get_euler(),
 		"identity": MeleeWeaponRegistry.get_random_identity(),
 		"pickup_locked": false,
 		"overtime_supply": true,

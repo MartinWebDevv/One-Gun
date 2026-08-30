@@ -2,12 +2,18 @@ class_name PlayerV2Visual
 extends Node3D
 
 const SkinRegistry = preload("res://player_skin_registry.gd")
+const CosmeticBinder = preload("res://models/cosmetics/character_cosmetic_binder.gd")
 const MASTER_RIG_PATH := "res://models/player_v2/animations/Idle.fbx"
+const IDLE_SOURCE_PATH := MASTER_RIG_PATH
 const RETARGET_STEP := 1.0 / 30.0
 const THROW_SOURCE_RANGE := Vector2(2.75, 3.60)
 const GUN_IDLE_PITCH := deg_to_rad(55.0)
 const GUN_IDLE_POSITION_OFFSET := Vector3(0.0, -0.65, 0.0)
 const GUN_IDLE_BLEND_DURATION := 0.16
+const LOCAL_SPACE_RETARGET_MODELS: Array[String] = [
+	"female", "goldfish_bag_man", "eye_wizard", "mr_mushroom",
+	"mr_poop", "mr_salt", "spooky_witch",
+]
 # The female GLB is one mesh node, but Blender preserved its joined chest as
 # surface 0 with a separate material slot. That surface reuses UV space occupied
 # by the face in the corrected atlas, so it must keep the untouched female atlas.
@@ -91,6 +97,8 @@ var _toe_bone_indices := {"left": -1, "right": -1}
 var _skin_material_bindings: Array = []
 var _hold_points: Dictionary = {}
 var _foot_points: Dictionary = {}
+var _cosmetic_binder: RefCounted = null
+var _wearable_loadout: Dictionary = {}
 var _gun_idle_blend := 0.0
 
 
@@ -105,6 +113,9 @@ func _ready() -> void:
 	set_skin(skin_id)
 	_setup_hold_points()
 	_setup_foot_points()
+	_cosmetic_binder = CosmeticBinder.new()
+	_cosmetic_binder.configure(self, _skeleton, model_id)
+	_cosmetic_binder.set_loadout(_wearable_loadout)
 	if build_animation_library:
 		ensure_animation_library()
 
@@ -145,6 +156,18 @@ func get_character_mesh_instances() -> Array[MeshInstance3D]:
 
 func set_skin(requested_id: String) -> void:
 	skin_id = SkinRegistry.sanitize_skin_id(requested_id)
+	if SkinRegistry.uses_fixed_texture(model_id):
+		# Entitlement characters keep their authored material. Still restore the
+		# per-instance override in case a temporary hit material interrupted it.
+		for binding in _skin_material_bindings:
+			var fixed_material := binding.get("material") as StandardMaterial3D
+			var fixed_mesh := binding.get("mesh") as MeshInstance3D
+			var fixed_surface := int(binding.get("surface", -1))
+			if is_instance_valid(fixed_mesh) and fixed_material != null \
+					and fixed_mesh.mesh != null and fixed_surface >= 0 \
+					and fixed_surface < fixed_mesh.mesh.get_surface_count():
+				fixed_mesh.set_surface_override_material(fixed_surface, fixed_material)
+		return
 	var texture := SkinRegistry.load_texture(skin_id, model_id)
 	if texture == null:
 		push_warning("PlayerV2Visual: texture is unavailable for skin '%s'." % skin_id)
@@ -315,6 +338,38 @@ func _update_foot_points() -> void:
 func get_foot_socket(left_foot: bool) -> Marker3D:
 	return _foot_points.get("left" if left_foot else "right") as Marker3D
 
+
+func set_hat_cosmetic(requested_id: String) -> void:
+	set_wearable_cosmetic("hat", requested_id)
+
+
+func set_wearable_cosmetic(slot: String, requested_id: String) -> void:
+	_wearable_loadout[slot] = requested_id
+	if _cosmetic_binder != null:
+		_cosmetic_binder.set_slot(slot, requested_id)
+
+
+func set_cosmetic_loadout(raw_loadout) -> void:
+	var loadout: Dictionary = raw_loadout if raw_loadout is Dictionary else {}
+	for slot in ["hat", "shirt", "pants", "shoes", "accessory"]:
+		_wearable_loadout[slot] = str(loadout.get(slot, ""))
+	if _cosmetic_binder != null:
+		_cosmetic_binder.set_loadout(_wearable_loadout)
+
+
+func get_headwear_socket() -> Marker3D:
+	return get_cosmetic_socket("headwear")
+
+
+func get_cosmetic_socket(socket_name: String) -> Marker3D:
+	return _cosmetic_binder.get_socket(socket_name) \
+		if _cosmetic_binder != null else null
+
+
+func cosmetic_attachment_mode(item_id: String, slot: String) -> String:
+	return _cosmetic_binder.attachment_mode(item_id, slot) \
+		if _cosmetic_binder != null else ""
+
 func _animation_cache_key(animation_name: String) -> String:
 	return "%s:%s" % [model_id, animation_name]
 
@@ -334,7 +389,10 @@ func _cache_animation(animation_name: String) -> void:
 			_animation_cache[cache_key] = _animation_cache[idle_key]
 		return
 	if animation_name == "idle":
-		var model_scene := load(MASTER_RIG_PATH) as PackedScene
+		# Both model families intentionally use the male master idle motion. The
+		# retargeter preserves each skeleton's proportions, not a separate female
+		# animation source.
+		var model_scene := load(IDLE_SOURCE_PATH) as PackedScene
 		if model_scene == null:
 			return
 		var model_instance := model_scene.instantiate()
@@ -452,7 +510,7 @@ static func _prepare_animation(source: Animation, animation_name: String,
 				if source_parent < 0 else source_globals[source_parent] * source_local
 		for target_index in target_bone_names.size():
 			var source_index := source_indices[target_index]
-			if target_model_id == "female":
+			if target_model_id in LOCAL_SPACE_RETARGET_MODELS:
 				# The female glTF's Skeleton3D node uses a different model-space
 				# axis convention from the Mixamo FBXs. Its imported native clip
 				# supplies the centered reference pose cached in target_rest.
@@ -533,17 +591,36 @@ func _cache_target_profile() -> void:
 		reference_animation = _first_animation(_animation_player)
 		if reference_animation != null:
 			reference_tracks = _animation_bone_tracks(reference_animation)
+	var supported_bones := {}
+	if SkinRegistry.uses_fixed_texture(model_id):
+		var master_scene := load(MASTER_RIG_PATH) as PackedScene
+		if master_scene != null:
+			var master_instance := master_scene.instantiate()
+			var master_skeleton := master_instance.find_child(
+				"Skeleton3D", true, false) as Skeleton3D
+			if master_skeleton != null:
+				for master_index in master_skeleton.get_bone_count():
+					supported_bones[master_skeleton.get_bone_name(master_index)] = true
+			master_instance.free()
+	var profile_index_by_skeleton_index := {}
 	for bone_index in _skeleton.get_bone_count():
-		bone_names.append(_skeleton.get_bone_name(bone_index))
+		var bone_name := _skeleton.get_bone_name(bone_index)
+		if not supported_bones.is_empty() and not supported_bones.has(bone_name):
+			continue
+		profile_index_by_skeleton_index[bone_index] = bone_names.size()
+		bone_names.append(bone_name)
 		var bone_parent := _skeleton.get_bone_parent(bone_index)
-		bone_parents.append(bone_parent)
+		while bone_parent >= 0 and not profile_index_by_skeleton_index.has(bone_parent):
+			bone_parent = _skeleton.get_bone_parent(bone_parent)
+		bone_parents.append(int(profile_index_by_skeleton_index.get(bone_parent, -1)))
 		var local_rest := _skeleton.get_bone_rest(bone_index)
 		if reference_animation != null:
 			local_rest = _sample_source_bone(
 				reference_animation, _skeleton, reference_tracks, bone_index, 0.0)
 		local_rests.append(local_rest)
-		global_rests.append(local_rest if bone_parent < 0 \
-			else global_rests[bone_parent] * local_rest)
+		global_rests.append(_skeleton.get_bone_global_rest(bone_index) \
+			if reference_animation == null else (local_rest if bone_parent < 0 \
+			else global_rests[int(profile_index_by_skeleton_index[bone_parent])] * local_rest))
 	var skeleton_path := "Skeleton3D"
 	if _animation_player != null:
 		var animation_root := _animation_player.get_node_or_null(

@@ -10,6 +10,26 @@ const DEFAULT_CEREMONY_THEME_ID := "wc_theme_ceremony_march"
 const DEFAULT_CEREMONY_AUDIO_KEY := "winners_circle_ceremony"
 const BASE_GUN_SKIN_ID := "base_one_gun"
 const BASE_MELEE_SKIN_ID := "base_arena_melee"
+const GOLDFISH_BAG_MAN_ITEM_ID := "character_goldfish_bag_man"
+const EYE_WIZARD_ITEM_ID := "character_eye_wizard"
+const MR_MUSHROOM_ITEM_ID := "character_mr_mushroom"
+const MR_POOP_ITEM_ID := "character_mr_poop"
+const MR_SALT_ITEM_ID := "character_mr_salt"
+const SPOOKY_WITCH_ITEM_ID := "character_spooky_witch"
+const DEVELOPER_GIFT_CHARACTER_ITEM_IDS: Array[String] = [
+	GOLDFISH_BAG_MAN_ITEM_ID, EYE_WIZARD_ITEM_ID, MR_MUSHROOM_ITEM_ID,
+	MR_POOP_ITEM_ID, MR_SALT_ITEM_ID, SPOOKY_WITCH_ITEM_ID,
+]
+const CHARACTER_MODEL_IDS := {
+	GOLDFISH_BAG_MAN_ITEM_ID: PlayerSkinRegistry.GOLDFISH_BAG_MAN_MODEL_ID,
+	EYE_WIZARD_ITEM_ID: PlayerSkinRegistry.EYE_WIZARD_MODEL_ID,
+	MR_MUSHROOM_ITEM_ID: PlayerSkinRegistry.MR_MUSHROOM_MODEL_ID,
+	MR_POOP_ITEM_ID: PlayerSkinRegistry.MR_POOP_MODEL_ID,
+	MR_SALT_ITEM_ID: PlayerSkinRegistry.MR_SALT_MODEL_ID,
+	SPOOKY_WITCH_ITEM_ID: PlayerSkinRegistry.SPOOKY_WITCH_MODEL_ID,
+}
+const HatRegistry = preload("res://models/cosmetics/hats/hat_cosmetic_registry.gd")
+const WearableRegistry = preload("res://models/cosmetics/wearable_cosmetic_registry.gd")
 
 const LEGACY_LOADOUT_SLOTS: Array[String] = [
 	"character_skin", "hat", "accessory", "gun_skin", "melee_skin", "emote",
@@ -22,6 +42,7 @@ const PRE_PROGRESSION_LOADOUT_SLOTS: Array[String] = [
 
 const LOADOUT_SLOTS: Array[String] = [
 	"character_skin",
+	"character_model",
 	"hat",
 	"shirt",
 	"pants",
@@ -33,6 +54,15 @@ const LOADOUT_SLOTS: Array[String] = [
 	"round_victory_move",
 	"ceremony_theme",
 	"profile_badge",
+]
+
+# Deployed before character-model entitlements existed. SupabaseManager tries
+# this complete schema before falling back to genuinely old seven/six-slot
+# layouts, so one newly-added column never hides modern hats or road rewards.
+const PRE_CHARACTER_MODEL_LOADOUT_SLOTS: Array[String] = [
+	"character_skin", "hat", "shirt", "pants", "shoes", "accessory",
+	"gun_skin", "melee_skin", "emote", "round_victory_move",
+	"ceremony_theme", "profile_badge",
 ]
 
 const KNOWN_ART_PENDING := {
@@ -136,6 +166,8 @@ static func has_local_visual(item_id: String, slot := "") -> bool:
 	var safe_slot := str(slot).strip_edges().to_lower()
 	if safe_slot == "character_skin":
 		return _is_builtin_character_skin(safe_id)
+	if safe_slot == "character_model":
+		return CHARACTER_MODEL_IDS.has(safe_id)
 	if safe_slot in ["victory_dance", "emote", "round_victory_move"]:
 		return local_victory_animation(safe_id) != ""
 	if safe_slot == "ceremony_theme":
@@ -144,6 +176,8 @@ static func has_local_visual(item_id: String, slot := "") -> bool:
 		return safe_id == BASE_GUN_SKIN_ID
 	if safe_slot == "melee_skin":
 		return safe_id == BASE_MELEE_SKIN_ID
+	if safe_slot in WearableRegistry.WEARABLE_SLOTS:
+		return WearableRegistry.has_local_visual(safe_id, safe_slot)
 	return false
 
 
@@ -187,6 +221,11 @@ static func local_character_skin_id(item_id: String) -> String:
 	return safe_id if _is_builtin_character_skin(safe_id) else ""
 
 
+static func local_character_model_id(item_id: String) -> String:
+	var safe_id := sanitize_item_id(item_id)
+	return str(CHARACTER_MODEL_IDS.get(safe_id, ""))
+
+
 static func known_slot_for_id(item_id: String) -> String:
 	var safe_id := sanitize_item_id(item_id)
 	if KNOWN_ART_PENDING.has(safe_id):
@@ -199,24 +238,72 @@ static func known_slot_for_id(item_id: String) -> String:
 		return "gun_skin"
 	if safe_id == BASE_MELEE_SKIN_ID:
 		return "melee_skin"
+	if HatRegistry.has_hat(safe_id):
+		return "hat"
+	var wearable_slot := WearableRegistry.slot_for_id(safe_id)
+	if wearable_slot != "":
+		return wearable_slot
+	if CHARACTER_MODEL_IDS.has(safe_id):
+		return "character_model"
 	return "character_skin" if _is_builtin_character_skin(safe_id) else ""
 
 
 static func display_name_fallback(item_id: String) -> String:
 	var safe_id := sanitize_item_id(item_id)
+	if CHARACTER_MODEL_IDS.has(safe_id):
+		return PlayerSkinRegistry.model_display_name(str(
+			CHARACTER_MODEL_IDS[safe_id]))
 	if CEREMONY_THEME_DISPLAY_NAMES.has(safe_id):
 		return str(CEREMONY_THEME_DISPLAY_NAMES[safe_id])
+	if HatRegistry.has_hat(safe_id):
+		return HatRegistry.display_name(safe_id)
 	return safe_id.replace("_", " ").replace("-", " ").capitalize() \
 		if safe_id != "" else "Unknown Cosmetic"
+
+
+static func local_catalog_item(item_id: String) -> Dictionary:
+	# Hidden owned items can arrive in inventory before their RLS-gated catalog
+	# row finishes loading. Only packaged, trusted IDs receive local metadata;
+	# arbitrary server strings never become assets or visible Locker entries.
+	var safe_id := sanitize_item_id(item_id)
+	if CHARACTER_MODEL_IDS.has(safe_id):
+		return {
+			"id": safe_id,
+			"display_name": PlayerSkinRegistry.model_display_name(str(
+				CHARACTER_MODEL_IDS[safe_id])),
+			"item_type": "character_model",
+			"description": "A special arena competitor granted directly by the One Gun team.",
+			"price": 0,
+			"rarity": "epic",
+			"purchasable": false,
+			"shop_visible": false,
+			"active": true,
+			"category": "character",
+			"subcategory": "skins",
+			"featured": false,
+			"rotation_scope": "none",
+			"sort_order": 9000,
+		}
+	return {}
 
 
 static func apply_to_player(player: Node, raw_loadout) -> void:
 	if player == null:
 		return
 	var loadout := sanitize_loadout(raw_loadout)
+	var character_model := local_character_model_id(
+		str(loadout.get("character_model", "")))
+	if character_model != "" and player.has_method("set_character_model"):
+		player.call("set_character_model", character_model)
 	var character_skin := local_character_skin_id(str(loadout["character_skin"]))
 	if character_skin != "" and player.has_method("set_character_skin"):
 		player.call("set_character_skin", character_skin)
+	if player.has_method("set_wearable_cosmetic"):
+		for wearable_slot in WearableRegistry.WEARABLE_SLOTS:
+			player.call("set_wearable_cosmetic", wearable_slot,
+				str(loadout.get(wearable_slot, "")))
+	elif player.has_method("set_hat_cosmetic"):
+		player.call("set_hat_cosmetic", str(loadout.get("hat", "")))
 	for slot in LOADOUT_SLOTS:
 		var item_id := str(loadout.get(slot, ""))
 		if item_id == "" or has_local_visual(item_id, slot):
@@ -228,10 +315,27 @@ static func apply_to_player(player: Node, raw_loadout) -> void:
 		push_warning(
 			"Supabase cosmetic '%s' is equipped in %s, but its local visual is not mapped yet." \
 			% [item_id, slot])
-	# Hat/accessory/weapon/emote attachment points do not exist yet. Keep the
-	# identifiers on the actor for future local renderers without inventing
-	# unsafe server-controlled resource paths.
+	# Unmapped IDs stay on the actor without ever becoming server-controlled
+	# resource paths. Locally registered wearables use the skeleton binder above.
 	player.set_meta("supabase_cosmetic_loadout", loadout.duplicate(true))
+
+
+static func apply_to_character_visual(visual: Node3D, raw_loadout) -> void:
+	if visual == null:
+		return
+	var loadout := sanitize_loadout(raw_loadout)
+	var character_skin := local_character_skin_id(str(loadout["character_skin"]))
+	if character_skin != "" and visual.has_method("set_skin"):
+		visual.call("set_skin", character_skin)
+	if visual.has_method("set_wearable_cosmetic"):
+		for wearable_slot in WearableRegistry.WEARABLE_SLOTS:
+			visual.call("set_wearable_cosmetic", wearable_slot,
+				str(loadout.get(wearable_slot, "")))
+	elif visual.has_method("set_hat_cosmetic"):
+		visual.call("set_hat_cosmetic", str(loadout.get("hat", "")))
+	# Preserve every sanitized equipped ID on presentation-only characters so
+	# future locally mapped wearables can share this same seam.
+	visual.set_meta("supabase_cosmetic_loadout", loadout.duplicate(true))
 
 
 static func _is_builtin_character_skin(item_id: String) -> bool:

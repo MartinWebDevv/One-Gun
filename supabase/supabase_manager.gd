@@ -81,6 +81,17 @@ func is_authenticated() -> bool:
 		and authenticated_user_id != ""
 
 
+func has_valid_access_token_shape() -> bool:
+	# Social presence starts polling continuously as soon as an account is live.
+	# Reject incomplete/corrupt bearer tokens at that boundary instead of sending
+	# them to PostgREST and triggering a refresh race with unrelated local state.
+	var parts := access_token.split(".")
+	return parts.size() == 3 \
+		and not str(parts[0]).is_empty() \
+		and not str(parts[1]).is_empty() \
+		and not str(parts[2]).is_empty()
+
+
 func current_user_id() -> String:
 	return authenticated_user_id
 
@@ -106,7 +117,7 @@ func catalog_item(item_id: String) -> Dictionary:
 	for item in shop_items:
 		if str(item.get("id", "")) == safe_id:
 			return item.duplicate(true)
-	return {}
+	return SupabaseCosmeticRegistry.local_catalog_item(safe_id)
 
 
 func create_account(email: String, password: String, username: String) -> bool:
@@ -170,6 +181,9 @@ func sign_in(email: String, password: String) -> bool:
 
 
 func sign_out() -> void:
+	var social_manager := get_node_or_null("/root/SocialManager")
+	if social_manager != null and social_manager.has_method("clear_presence"):
+		await social_manager.clear_presence()
 	if is_authenticated() and is_configured():
 		await _request("/auth/v1/logout", HTTPClient.METHOD_POST, {}, true)
 	_clear_runtime_session(true)
@@ -328,6 +342,15 @@ func load_loadout() -> bool:
 	var response := await _authenticated_request(
 		"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
 	var used_legacy_schema := false
+	# The character_model entitlement column was added after the progression
+	# loadout. During a staggered rollout, retry the otherwise-current schema so
+	# hats, outfit pieces, moves, and badges remain available.
+	if not bool(response.get("ok", false)) \
+			and int(response.get("status", 0)) == 400:
+		columns = ",".join(
+			SupabaseCosmeticRegistry.PRE_CHARACTER_MODEL_LOADOUT_SLOTS)
+		response = await _authenticated_request(
+			"/rest/v1/player_loadouts?select=%s&limit=1" % columns)
 	# Keep clients usable across the pre-progression seven-slot schema and the
 	# original six-slot schema while deployments roll forward.
 	if not bool(response.get("ok", false)) \
@@ -348,7 +371,7 @@ func load_loadout() -> bool:
 		rows[0] if rows is Array and not rows.is_empty() else {})
 	if used_legacy_schema or str(loadout.get("ceremony_theme", "")) == "":
 		loadout["ceremony_theme"] = SupabaseCosmeticRegistry.DEFAULT_CEREMONY_THEME_ID
-	_apply_local_character_skin()
+	_apply_local_character_appearance()
 	loadout_updated.emit(loadout.duplicate(true))
 	return true
 
@@ -500,6 +523,12 @@ func reset_cosmetic_loadout() -> bool:
 
 func _restore_session() -> void:
 	if not is_configured() or not FileAccess.file_exists(SESSION_PATH):
+		# Entitlement-only models must never survive as an unauthenticated local
+		# preference. Restore the last public Male/Female selection whenever no
+		# account session is available; cloud cosmetics follow the same policy.
+		loadout = SupabaseCosmeticRegistry.empty_loadout()
+		_apply_local_character_appearance()
+		loadout_updated.emit(loadout.duplicate(true))
 		return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(SESSION_PATH))
 	if not parsed is Dictionary:
@@ -674,6 +703,7 @@ func _clear_runtime_session(remove_saved: bool) -> void:
 	currency_updated.emit(0)
 	inventory_updated.emit([])
 	shop_loaded.emit(shop_items.duplicate(true))
+	_apply_local_character_appearance()
 	loadout_updated.emit(loadout.duplicate(true))
 
 
@@ -696,17 +726,30 @@ func _claim_username_from_auth_metadata() -> bool:
 	return await load_profile()
 
 
-func _apply_local_character_skin() -> void:
+func _apply_local_character_appearance() -> void:
+	var model_id := SupabaseCosmeticRegistry.local_character_model_id(
+		str(loadout.get("character_model", "")))
+	var next_preferences := PlayerPrefs.snapshot()
+	var current_model := PlayerSkinRegistry.sanitize_model_id(str(
+		next_preferences.get("character_model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID)))
+	if PlayerSkinRegistry.is_public_model_id(current_model):
+		next_preferences["character_base_model_id"] = current_model
+	var base_model := PlayerSkinRegistry.sanitize_public_model_id(str(
+		next_preferences.get("character_base_model_id",
+			PlayerSkinRegistry.DEFAULT_MODEL_ID)))
+	var resolved_model := model_id if model_id != "" else base_model
 	var skin_id := SupabaseCosmeticRegistry.local_character_skin_id(
 		str(loadout.get("character_skin", "")))
-	if skin_id == "":
-		return
 	var network_manager := get_node_or_null("/root/NetworkManager")
-	if network_manager != null and network_manager.has_method("set_local_skin_id"):
-		network_manager.call("set_local_skin_id", skin_id)
+	if network_manager != null and network_manager.has_method("set_local_appearance"):
+		network_manager.call("set_local_appearance",
+			skin_id if skin_id != "" else str(next_preferences.get(
+				"character_skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID)),
+			resolved_model)
 		return
-	var next_preferences := PlayerPrefs.snapshot()
-	next_preferences["character_skin_id"] = skin_id
+	if skin_id != "":
+		next_preferences["character_skin_id"] = skin_id
+	next_preferences["character_model_id"] = resolved_model
 	PlayerPrefs.apply_transaction(next_preferences)
 
 

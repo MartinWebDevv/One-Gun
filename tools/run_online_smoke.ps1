@@ -8,6 +8,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Test-ActionableGodotError([string]$Text) {
+    if ($Text -match "(?m)^SCRIPT ERROR:") { return $true }
+    foreach ($line in ($Text -split "`r?`n")) {
+        if ($line -notmatch "^ERROR:") { continue }
+        if ($line -match "RID allocations of type" -or $line -match "resources still in use at exit") {
+            continue
+        }
+        return $true
+    }
+    return $false
+}
+
 $project = Split-Path -Parent $PSScriptRoot
 $godot = Join-Path $project "Godot_v4.7.1-stable_win64.exe"
 if (-not (Test-Path -LiteralPath $godot)) {
@@ -45,6 +57,9 @@ $clientOutput
 
 $passPrefix = if ($Mode -eq "lobby") { "ONLINE_LOBBY_PASS" } elseif ($Mode -eq "named_lobby") { "ONLINE_NAMED_LOBBY_PASS" } elseif ($Mode -eq "exit_flow") { "ONLINE_EXIT_FLOW_PASS" } elseif ($Mode -eq "client_exit") { "ONLINE_CLIENT_EXIT_PASS" } elseif ($Mode -eq "online_bots") { "ONLINE_BOTS_PASS" } elseif ($Mode -eq "overtime") { "ONLINE_OVERTIME_PASS" } elseif ($Mode -eq "one_of_us") { "ONLINE_ONE_OF_US_PASS" } elseif ($Mode -eq "playpen") { "ONLINE_PLAYPEN_PASS" } else { "ONLINE_SMOKE_PASS" }
 if ($hostOutput -notmatch "$passPrefix host" -or $clientOutput -notmatch "$passPrefix client") {
+	exit 1
+}
+if ((Test-ActionableGodotError $hostOutput) -or (Test-ActionableGodotError $clientOutput)) {
 	exit 1
 }
 exit 0

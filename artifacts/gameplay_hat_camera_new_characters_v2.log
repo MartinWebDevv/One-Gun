@@ -1,0 +1,9 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+GAMEPLAY_HAT_CAMERA_MATRIX: checked=192 hats=12 models=8 modes=2
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/non_ads_wide_shoulder_male_crown.png
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/non_ads_wide_shoulder_female_witch.png
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/ads_shoulder_male_crown.png
+GAMEPLAY_HAT_CAMERA_CAPTURE: D:/Godot Projects/one-gun/artifacts/camera_qa/non_ads_wide_shoulder_goldfish_top_hat.png
+GAMEPLAY_HAT_CAMERA_VALIDATION: PASS hats=12 models=8 modes=2 captures=4

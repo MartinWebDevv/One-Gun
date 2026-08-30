@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://cinematics/startup/startup_intro_preview_five_word_shot.gd" id="1_preview"]
+[ext_resource type="FontFile" path="res://fonts/cinematic/barlow_condensed/BarlowCondensed-ExtraBold.ttf" id="2_font"]
+
+[node name="StartupIntroPreviewFiveWordShotBarlowCondensed" type="Node"]
+script = ExtResource("1_preview")
+show_preview_controls = false
+caption_font = ExtResource("2_font")
+caption_font_size = 94
+caption_word_spacing = 16
+apply_caption_font_to_all_labels = true
+handoff_scene_path = "res://main_menu.tscn"
+allow_replay_input = false
+escape_quits_preview = false

@@ -59,6 +59,8 @@ func _run() -> void:
 	# reproduces the signal-time free that Godot 4.7 flags as crash-prone.
 	var slideout := OneGunLobbySettingsSlideout.new()
 	slideout.panel_kind = OneGunLobbySettingsSlideout.Kind.BOT
+	# Bot settings now live on the unified settings cabinet's BOTS tab.
+	slideout.initial_tab = 4
 	add_child(slideout)
 	await get_tree().process_frame
 	await get_tree().process_frame

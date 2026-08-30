@@ -70,6 +70,8 @@ const ALL_GUN_HIT_PROTECTION_TIME := 1.0
 const ALL_GUN_SPAWN_PROTECTION_TIME := 1.0
 const STICKY_HANDS_DURATION := 30.0
 const STICKY_HANDS_REPICKUP_COOLDOWN := 8.0
+const FAST_HANDS_DURATION := 5.0
+const FAST_HANDS_SWING_SPEED_MULTIPLIER := 1.5
 const ONE_OF_US_ROUND_TIME := 180.0
 const ONE_OF_US_THEM_RESPAWN_TIME := 2.0
 const ONE_OF_US_CONVERSION_TIME := 1.5
@@ -134,7 +136,7 @@ const ITEM_SCENES = {
 
 const POWERUP_TYPES := [
 	"extra_dash", "sticky_hands", "speed_surge", "silent_steps",
-	"extra_life", "reach",
+	"extra_life", "reach", "fast_hands",
 ]
 
 # Per-powerup switches are separate from the master switch so a ruleset can
@@ -146,6 +148,7 @@ var powerup_registry := {
 	"silent_steps": {"enabled": true},
 	"extra_life": {"enabled": true},
 	"reach": {"enabled": true},
+	"fast_hands": {"enabled": true},
 }
 
 const MELEE_WEAPON_NAMES := {
@@ -197,6 +200,8 @@ func enabled_powerup_types() -> Array[String]:
 	var enabled: Array[String] = []
 	for power_type in POWERUP_TYPES:
 		if power_type == "extra_life" and game_mode in [MODE_ALL_GUN, MODE_ONE_OF_US]:
+			continue
+		if power_type == "fast_hands" and game_mode == MODE_ALL_GUN:
 			continue
 		if game_mode == MODE_ONE_OF_US and power_type == "sticky_hands":
 			continue
@@ -330,6 +335,7 @@ const DEFAULT_VALUES := {
 		"silent_steps": {"enabled": true},
 		"extra_life": {"enabled": true},
 		"reach": {"enabled": true},
+		"fast_hands": {"enabled": true},
 	},
 	"melee_weapon_registry": {
 		"sword": {"enabled": true},

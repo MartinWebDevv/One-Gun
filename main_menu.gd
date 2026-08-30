@@ -3,7 +3,12 @@ extends Control
 const ONLINE_PLAY_OVERLAY_SCRIPT = preload("res://UI/online_play_overlay.gd")
 const SUPABASE_OVERLAY_SCRIPT = preload("res://UI/player_hub_overlay.gd")
 const PROGRESSION_OVERLAY_SCRIPT = preload("res://UI/progression_road_overlay.gd")
+const SOCIAL_OVERLAY_SCRIPT = preload("res://UI/social_overlay.gd")
+const PLAYER_HUB_OVERLAY_SCRIPT = preload("res://UI/lobby_player_hub_overlay.gd")
+const FRIENDS_ORB_SCRIPT = preload("res://UI/components/friends_quick_access_orb.gd")
+const INVITE_NOTIFICATION_SCRIPT = preload("res://UI/components/lobby_invite_notification.gd")
 const BuildInfo = preload("res://build_info.gd")
+const CosmeticRegistry = preload("res://supabase/supabase_cosmetic_registry.gd")
 
 # Main-menu presentation only. Gameplay, lobby, and networking behavior remains
 # delegated to the existing GameConfig and NetworkManager entry points below.
@@ -129,7 +134,6 @@ const PRESSED_SCALE := 0.975
 const HOVER_RISE := 3.0
 const ICON_HOVER_SCALE := 1.08
 const STAR_HOVER_SCALE := 1.13
-const BUILD_CHANNEL := "PLAYTEST"
 const PEDESTAL_PULSE_HALF_DURATION := 6.0
 
 @onready var _background_layer: Control = $BackgroundLayer
@@ -156,6 +160,7 @@ const CABINET_W := 0.325
 const CABINET_H := 0.954
 const SHOWCASE_SCREEN_X := 0.65   # showcase visual center
 const PEDESTAL_SCREEN_Y := 0.89   # pedestal base line
+const SHOWCASE_ANCHOR_POSITION := Vector3(3.05, -2.40, -6.10)
 
 var _left_panel: PanelContainer
 var _guides: Control
@@ -174,19 +179,20 @@ var _status_dot: Panel
 var _local_profile_portrait = null
 var _version_label: Label
 var _patch_notes_prompt: PanelContainer
-var _build_channel_label: Label
 var _primary_buttons: Array[Button] = []
 var _local_menu_button: Button
 var _online_menu_button: Button
-var _character_customization_button: Button
-var _account_store_button: Button
-var _profile_button: Button
-var _progression_button: Button
+var _player_hub_button: Button
+var _friends_orb: FriendsQuickAccessOrb
+var _invite_notification: LobbyInviteNotification
 
 var _map_cycler: Node
 var _background_viewport: SubViewport
 var _showcase_viewport: SubViewport
+var _showcase_camera: Camera3D
+var _showcase_anchor: Node3D
 var _showcase_animation_player: AnimationPlayer
+var _showcase_frame_generation := 0
 var _pedestal_ring_light: OmniLight3D
 var _pedestal_glow_materials: Array[StandardMaterial3D] = []
 var _pedestal_glow_base_energy: Array[float] = []
@@ -202,6 +208,9 @@ var _player_settings_overlay: Control
 var _character_customization_overlay: Control
 var _supabase_overlay: Control
 var _progression_overlay: Control
+var _social_overlay: Control
+var _main_player_hub_overlay: Control
+var _return_to_player_hub := false
 var _showcase_actor: Node3D
 var _online_status: Label
 var _online_ip_field: LineEdit
@@ -221,6 +230,7 @@ func _ready() -> void:
 	_build_background()
 	_build_main_interface()
 	_build_modal_layer()
+	_build_friends_quick_access()
 	_refresh_ambient_motion()
 	_refresh_connection_status()
 	if not PlayerPrefs.setting_changed.is_connected(_on_player_preference_changed):
@@ -243,10 +253,26 @@ func _ready() -> void:
 		SupabaseManager.currency_updated.connect(_on_supabase_status_changed)
 	if not SupabaseManager.logout_completed.is_connected(_on_supabase_status_changed):
 		SupabaseManager.logout_completed.connect(_on_supabase_status_changed)
+	if not SupabaseManager.loadout_updated.is_connected(_on_showcase_loadout_updated):
+		SupabaseManager.loadout_updated.connect(_on_showcase_loadout_updated)
+	if not SocialManager.social_updated.is_connected(_on_social_menu_updated):
+		SocialManager.social_updated.connect(_on_social_menu_updated)
+	if not SocialManager.invite_received.is_connected(_on_lobby_invite_received):
+		SocialManager.invite_received.connect(_on_lobby_invite_received)
+	SocialManager.set_foreground_ui_active(true)
+	_on_social_menu_updated({})
 	get_viewport().size_changed.connect(_apply_responsive_layout)
 	call_deferred("_finish_layout")
 	AudioManager.play_music("menu")
 	UICapture.maybe_capture(self, _capture_name(), 4.2)
+
+
+func _exit_tree() -> void:
+	SocialManager.set_foreground_ui_active(false)
+	if SocialManager.social_updated.is_connected(_on_social_menu_updated):
+		SocialManager.social_updated.disconnect(_on_social_menu_updated)
+	if SocialManager.invite_received.is_connected(_on_lobby_invite_received):
+		SocialManager.invite_received.disconnect(_on_lobby_invite_received)
 
 
 func _notification(what: int) -> void:
@@ -274,8 +300,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not _modal_layer.visible or not event.is_action_pressed("ui_cancel"):
 		return
-	if _supabase_overlay != null:
+	if _main_player_hub_overlay != null:
+		_main_player_hub_overlay.call("_close")
+	elif _social_overlay != null:
+		_social_overlay.call("_close")
+	elif _supabase_overlay != null:
 		_supabase_overlay.call("_close")
+	elif _progression_overlay != null and _progression_overlay.has_method("_close"):
+		_progression_overlay.call("_close")
 	elif _character_customization_overlay != null:
 		_close_character_customization()
 	elif _online_panel.visible:
@@ -297,6 +329,9 @@ func _finish_layout() -> void:
 			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE") == "profile":
 		_on_profile_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
+			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE") == "player_hub":
+		_on_player_hub_pressed.call_deferred()
+	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
 			and OS.get_environment("ONEGUN_UI_CAPTURE_STATE").begins_with("prize_counter"):
 		_on_account_store_pressed.call_deferred()
 	elif OS.get_environment("ONEGUN_UI_CAPTURE") != "" \
@@ -317,7 +352,8 @@ func _input(event: InputEvent) -> void:
 	if _modal_layer == null:
 		return
 	if event is InputEventMouseMotion:
-		if event.relative.length_squared() > 4.0:
+		if event.relative.length_squared() > 4.0 \
+				and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			_using_pointer = true
 			_clear_primary_focus_for_pointer()
 		return
@@ -599,6 +635,7 @@ func _build_showcase_overlay() -> void:
 	overlay_camera.name = "ShowcaseCamera"
 	overlay_camera.fov = 60.0   # matches the map camera so composition math holds
 	overlay_viewport.add_child(overlay_camera)
+	_showcase_camera = overlay_camera
 
 	_build_showcase_anchors(overlay_camera)
 	# The readability gradient and vignette are authored while the showcase is
@@ -619,8 +656,9 @@ func _build_showcase_anchors(camera: Camera3D) -> void:
 	# was cropping its front plaque at the bottom of the frame. This puts the
 	# pedestal base near the packet's 89% screen-height line with the plaque
 	# fully visible.
-	showcase.position = Vector3(3.05, -2.40, -6.1)
+	showcase.position = SHOWCASE_ANCHOR_POSITION
 	camera.add_child(showcase)
+	_showcase_anchor = showcase
 
 	var pedestal := Node3D.new()
 	pedestal.name = "Pedestal"
@@ -948,6 +986,31 @@ func _is_home_screen_active() -> bool:
 func _update_patch_notes_prompt_visibility() -> void:
 	if _patch_notes_prompt != null:
 		_patch_notes_prompt.visible = _is_home_screen_active()
+	if _friends_orb != null:
+		_friends_orb.visible = _is_home_screen_active()
+
+
+func _build_friends_quick_access() -> void:
+	_friends_orb = FRIENDS_ORB_SCRIPT.new()
+	_friends_orb.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_friends_orb.offset_left = -174.0
+	_friends_orb.offset_top = 28.0
+	_friends_orb.offset_right = -48.0
+	_friends_orb.offset_bottom = 154.0
+	_friends_orb.pressed.connect(_on_friends_pressed)
+	_interface_layer.add_child(_friends_orb)
+
+	_invite_notification = INVITE_NOTIFICATION_SCRIPT.new()
+	_invite_notification.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_invite_notification.offset_left = -526.0
+	_invite_notification.offset_top = 176.0
+	_invite_notification.offset_right = -42.0
+	_invite_notification.offset_bottom = 344.0
+	_invite_notification.join_requested.connect(_on_social_join_requested)
+	_interface_layer.add_child(_invite_notification)
+	var existing_invites := SocialManager.invites()
+	if not existing_invites.is_empty() and existing_invites[-1] is Dictionary:
+		_invite_notification.present(existing_invites[-1])
 
 
 
@@ -1190,24 +1253,13 @@ func _build_brand_navigation() -> void:
 	# Concept-art toy buttons: molded color fill, icon tile, title + subtitle, star.
 	_local_menu_button = _make_menu_button("PLAY", _on_local_menu_pressed, false,
 		"LOCAL • ONLINE • BOTS", MenuIconKind.PLAY, _color("gold"))
-	_character_customization_button = _make_menu_button(
-		"LOCKER", _on_character_customization_pressed, false,
-		"OWNED COSMETICS & LOADOUT", MenuIconKind.SETTINGS, Color(0.08, 0.55, 0.58))
-	_account_store_button = _make_menu_button(
-		"PRIZE COUNTER", _on_account_store_pressed, false,
-		"FEATURED & ROTATING ITEMS", MenuIconKind.NETWORK, Color(0.16, 0.50, 0.38))
-	_progression_button = _make_menu_button(
-		"PROGRESSION", _on_progression_pressed, false,
-		"LEVEL ROAD • TROPHY ROAD", MenuIconKind.PLAY, Color(0.80, 0.48, 0.10))
-	_profile_button = _make_menu_button(
-		"PROFILE", _on_profile_pressed, false,
-		"SIGN IN • STATS • LEGACY HALL", MenuIconKind.NETWORK, Color(0.16, 0.39, 0.82))
+	_player_hub_button = _make_menu_button(
+		"PLAYER HUB", _on_player_hub_pressed, false,
+		"PROFILE • LOCKER • REWARDS", MenuIconKind.NETWORK,
+		Color(0.05, 0.46, 0.61))
 	_primary_buttons = [
 		_local_menu_button,
-		_character_customization_button,
-		_account_store_button,
-		_progression_button,
-		_profile_button,
+		_player_hub_button,
 		_make_menu_button("SETTINGS", _on_player_settings_pressed, false,
 			"AUDIO • VIDEO • CONTROLS", MenuIconKind.SETTINGS, Color(0.46, 0.20, 0.76)),
 	]
@@ -1294,34 +1346,6 @@ func _build_brand_navigation() -> void:
 	_secondary_status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity_column.add_child(_secondary_status_label)
 
-	var divider_margin := MarginContainer.new()
-	divider_margin.add_theme_constant_override("margin_top", 3)
-	divider_margin.add_theme_constant_override("margin_bottom", 3)
-	footer_row.add_child(divider_margin)
-	var footer_divider := ColorRect.new()
-	footer_divider.name = "BuildDivider"
-	footer_divider.custom_minimum_size.x = 1
-	footer_divider.color = Color(_color("border"), 0.72)
-	footer_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	divider_margin.add_child(footer_divider)
-
-	var build_column := VBoxContainer.new()
-	build_column.name = "BuildIdentity"
-	build_column.custom_minimum_size.x = 108
-	build_column.add_theme_constant_override("separation", 2)
-	footer_row.add_child(build_column)
-	_version_label = _make_label(_build_text(), 12, "gold", true)
-	_version_label.name = "BuildVersion"
-	_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_version_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	_version_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_version_label.tooltip_text = "View latest release notes"
-	_version_label.gui_input.connect(_on_version_gui_input)
-	build_column.add_child(_version_label)
-	_build_channel_label = _make_label(BUILD_CHANNEL, 10, "muted", true)
-	_build_channel_label.name = "BuildChannel"
-	_build_channel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	build_column.add_child(_build_channel_label)
 
 
 # One line of the faux-3D logotype: huge bold face with a thick navy outline
@@ -1771,8 +1795,6 @@ func _build_local_panel() -> PanelContainer:
 	margin.add_child(column)
 
 	column.add_child(_make_modal_header("PLAY", "CHOOSE HOW TO PLAY"))
-	var explanation := _make_label("Local and online routes keep their existing lobby and match rules.", 16, "muted")
-	column.add_child(explanation)
 
 	var solo := _make_menu_button("SOLO + BOTS", _on_single_pressed)
 	solo.name = "SoloAndBots"
@@ -1787,8 +1809,6 @@ func _build_local_panel() -> PanelContainer:
 	split.custom_minimum_size.y = 68
 	_set_accessible_text(split, "Two player splitscreen", "Start a local match for two players sharing this screen")
 	column.add_child(split)
-	var split_hint := _make_label("Two local players share the screen. Match rules stay unchanged.", 14, "muted")
-	column.add_child(split_hint)
 
 	var online := _make_menu_button("ONLINE PLAY", _on_online_pressed)
 	online.name = "OnlinePlayChoice"
@@ -1950,6 +1970,57 @@ func _on_local_menu_pressed() -> void:
 	var solo := _local_panel.find_child("SoloAndBots", true, false) as Control
 	if solo:
 		solo.grab_focus.call_deferred()
+
+
+func _on_player_hub_pressed() -> void:
+	if _main_player_hub_overlay != null or _character_customization_overlay != null \
+			or _supabase_overlay != null or _progression_overlay != null \
+			or _social_overlay != null:
+		return
+	AudioManager.play_click()
+	_last_modal_opener = _player_hub_button
+	_main_player_hub_overlay = PLAYER_HUB_OVERLAY_SCRIPT.new()
+	_main_player_hub_overlay.configure("home")
+	_main_player_hub_overlay.closed.connect(_on_main_player_hub_closed)
+	_main_player_hub_overlay.destination_requested.connect(
+		_on_main_player_hub_destination_requested)
+	_modal_layer.add_child(_main_player_hub_overlay)
+	_local_panel.visible = false
+	_online_panel.visible = false
+	_modal_layer.visible = true
+	_update_patch_notes_prompt_visibility()
+	_refresh_ambient_motion()
+
+
+func _on_main_player_hub_closed() -> void:
+	_main_player_hub_overlay = null
+	_return_to_player_hub = false
+	_close_modal()
+
+
+func _on_main_player_hub_destination_requested(destination: String) -> void:
+	if _main_player_hub_overlay != null:
+		_main_player_hub_overlay.queue_free()
+		_main_player_hub_overlay = null
+	_return_to_player_hub = true
+	match destination:
+		"profile": _on_profile_pressed()
+		"locker": _on_character_customization_pressed()
+		"prize_counter": _on_account_store_pressed()
+		"progression": _on_progression_pressed()
+		"friends": _on_friends_pressed()
+		_:
+			_return_to_player_hub = false
+			_on_player_hub_pressed.call_deferred()
+
+
+func _return_from_main_player_hub_destination() -> void:
+	var reopen := _return_to_player_hub and is_inside_tree()
+	_return_to_player_hub = false
+	if reopen:
+		_on_player_hub_pressed.call_deferred()
+	else:
+		_close_modal()
 
 
 func _on_online_pressed() -> void:
@@ -2331,7 +2402,7 @@ func _apply_responsive_layout() -> void:
 
 	var dense_button_base := 48.0 if compact_home_rail else (60.0 if extra_dense_navigation else 72.0)
 	var button_height := clampf(
-		(dense_button_base if dense_navigation else 88.0) * layout_scale, 42.0, 96.0)
+		(dense_button_base if dense_navigation else 104.0) * layout_scale, 46.0, 112.0)
 	var button_title_size := 17 if compact_home_rail else clampi(roundi(23.0 * layout_scale), 18, 24)
 	var button_subtitle_size := clampi(roundi(13.0 * layout_scale), 10, 14)
 	var icon_size := 38.0 if compact_home_rail else clampf(62.0 * layout_scale, 46.0, 66.0)
@@ -2379,9 +2450,6 @@ func _apply_responsive_layout() -> void:
 	if _version_label != null:
 		_version_label.add_theme_font_size_override(
 			"font_size", clampi(roundi(12.0 * layout_scale), 11, 14))
-	if _build_channel_label != null:
-		_build_channel_label.add_theme_font_size_override(
-			"font_size", clampi(roundi(10.0 * layout_scale), 10, 12))
 	if _patch_notes_prompt != null:
 		var prompt_width := clampf(300.0 * layout_scale, 250.0, 330.0)
 		var prompt_height := clampf(42.0 * layout_scale, 36.0, 46.0)
@@ -2448,7 +2516,8 @@ func _capture_name() -> String:
 	var state := OS.get_environment("ONEGUN_UI_CAPTURE_STATE")
 	return state if state.begins_with("online_") or state.begins_with("settings_") \
 		or state.begins_with("crosshair_") or state == "character_customization" \
-		or state == "profile" or state.begins_with("prize_counter") or state == "progression" \
+		or state == "profile" or state == "player_hub" \
+		or state.begins_with("prize_counter") or state == "progression" \
 		else "main_menu"
 
 
@@ -2593,6 +2662,11 @@ func _cloud_profile_summary() -> String:
 
 func _on_supabase_status_changed(_value: Variant = null) -> void:
 	_refresh_connection_status()
+	_apply_showcase_skin()
+
+
+func _on_showcase_loadout_updated(_loadout: Dictionary) -> void:
+	_apply_showcase_skin()
 
 # -----------------------------------------------------------------------------
 # Existing scene and networking callbacks (behavior preserved)
@@ -2635,7 +2709,7 @@ func _on_character_customization_pressed() -> void:
 	AudioManager.play_click()
 	if _character_customization_overlay != null:
 		return
-	_last_modal_opener = _character_customization_button
+	_last_modal_opener = _player_hub_button
 	_character_customization_overlay = preload(
 		"res://UI/themed_locker_overlay.gd").new()
 	_character_customization_overlay.configure(false, 1)
@@ -2650,12 +2724,12 @@ func _on_character_customization_pressed() -> void:
 
 func _on_account_store_pressed() -> void:
 	AudioManager.play_click()
-	_open_supabase_overlay("prize_counter", _account_store_button)
+	_open_supabase_overlay("prize_counter", _player_hub_button)
 
 
 func _on_profile_pressed() -> void:
 	AudioManager.play_click()
-	_open_supabase_overlay("profile", _profile_button)
+	_open_supabase_overlay("profile", _player_hub_button)
 
 
 func _open_supabase_overlay(initial_page: String, opener: Control) -> void:
@@ -2675,7 +2749,7 @@ func _open_supabase_overlay(initial_page: String, opener: Control) -> void:
 
 func _close_supabase_overlay() -> void:
 	_supabase_overlay = null
-	_close_modal()
+	_return_from_main_player_hub_destination()
 
 
 
@@ -2684,7 +2758,7 @@ func _on_progression_pressed() -> void:
 	AudioManager.play_click()
 	if _progression_overlay != null:
 		return
-	_last_modal_opener = _progression_button
+	_last_modal_opener = _player_hub_button
 	_progression_overlay = PROGRESSION_OVERLAY_SCRIPT.new()
 	_progression_overlay.closed.connect(_close_progression_overlay)
 	_modal_layer.add_child(_progression_overlay)
@@ -2697,7 +2771,75 @@ func _on_progression_pressed() -> void:
 
 func _close_progression_overlay() -> void:
 	_progression_overlay = null
-	_close_modal()
+	_return_from_main_player_hub_destination()
+
+
+func _on_friends_pressed() -> void:
+	AudioManager.play_click()
+	if _social_overlay != null:
+		return
+	_last_modal_opener = _friends_orb if _friends_orb != null \
+		and _friends_orb.visible else _player_hub_button
+	_social_overlay = SOCIAL_OVERLAY_SCRIPT.new()
+	_social_overlay.closed.connect(_close_social_overlay)
+	_social_overlay.join_requested.connect(_on_social_join_requested)
+	_modal_layer.add_child(_social_overlay)
+	_local_panel.visible = false
+	_online_panel.visible = false
+	_modal_layer.visible = true
+	_update_patch_notes_prompt_visibility()
+	_refresh_ambient_motion()
+
+
+func _close_social_overlay() -> void:
+	_social_overlay = null
+	_return_from_main_player_hub_destination()
+
+
+func _on_social_menu_updated(_snapshot: Dictionary) -> void:
+	if _friends_orb != null:
+		_friends_orb.refresh_counts()
+
+
+func _on_lobby_invite_received(invite: Dictionary) -> void:
+	if _invite_notification != null:
+		_invite_notification.present(invite)
+
+
+func _on_social_join_requested(lobby: Dictionary) -> void:
+	var address := str(lobby.get("address", ""))
+	var port := int(lobby.get("port", 0))
+	if not SocialManager.is_valid_join_endpoint(address, port):
+		if _social_overlay != null:
+			_social_overlay.call("_set_status", "INVALID OR EXPIRED LOBBY ENDPOINT", true)
+		return
+	if not NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
+		NetworkManager.connection_succeeded.connect(_on_social_join_ok, CONNECT_ONE_SHOT)
+	if not NetworkManager.connection_failed.is_connected(_on_social_join_failed):
+		NetworkManager.connection_failed.connect(_on_social_join_failed, CONNECT_ONE_SHOT)
+	if _social_overlay != null:
+		_social_overlay.call("_set_status", "CONNECTING TO %s…" %
+			str(lobby.get("name", "FRIEND LOBBY")).to_upper(), false)
+	if not NetworkManager.join_game(address, port):
+		_on_social_join_failed()
+		return
+	NetworkManager.lobby_name = str(lobby.get("name", "Friend Lobby"))
+
+
+func _on_social_join_ok() -> void:
+	if NetworkManager.connection_failed.is_connected(_on_social_join_failed):
+		NetworkManager.connection_failed.disconnect(_on_social_join_failed)
+	_prepare_online_lobby_defaults()
+	GameConfig.split_screen_enabled = false
+	get_tree().change_scene_to_file("res://game_setup.tscn")
+
+
+func _on_social_join_failed() -> void:
+	if NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
+		NetworkManager.connection_succeeded.disconnect(_on_social_join_ok)
+	if _social_overlay != null:
+		_social_overlay.call("_set_status",
+			"CONNECTION FAILED — CHECK TAILSCALE AND ASK THE HOST TO KEEP THE LOBBY OPEN", true)
 
 
 
@@ -2706,7 +2848,7 @@ func _close_character_customization() -> void:
 			and is_instance_valid(_character_customization_overlay):
 		_character_customization_overlay.queue_free()
 	_character_customization_overlay = null
-	_close_modal()
+	_return_from_main_player_hub_destination()
 
 
 func _apply_showcase_skin() -> void:
@@ -2734,6 +2876,103 @@ func _apply_showcase_skin() -> void:
 					_setup_mascot_animations(_showcase_actor)
 	if visual != null and visual.has_method("set_skin"):
 		visual.set_skin(str(PlayerPrefs.get_setting("character_skin_id")))
+	if visual != null:
+		CosmeticRegistry.apply_to_character_visual(
+			visual, SupabaseManager.equipped_cosmetics())
+	_queue_showcase_cosmetic_framing()
+
+
+func _queue_showcase_cosmetic_framing() -> void:
+	_showcase_frame_generation += 1
+	if _showcase_anchor != null:
+		_showcase_anchor.position = SHOWCASE_ANCHOR_POSITION
+	_frame_showcase_cosmetics.call_deferred(_showcase_frame_generation)
+
+
+func _frame_showcase_cosmetics(generation: int) -> void:
+	# Give the animated HeadwearSocket two frames to sample the new model/Hat.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if generation != _showcase_frame_generation \
+			or _showcase_actor == null or _showcase_camera == null \
+			or _showcase_anchor == null or _showcase_viewport == null:
+		return
+	var visual := _showcase_actor.get_node_or_null("CharacterModel") as Node3D
+	if visual == null:
+		return
+	var minimum := Vector2(INF, INF)
+	var maximum := Vector2(-INF, -INF)
+	var model_id := PlayerSkinRegistry.sanitize_model_id(str(
+		visual.get("model_id")))
+	var body_bounds := PlayerSkinRegistry.idle_actor_bounds(model_id).grow(0.08)
+	for corner_index in 8:
+		var corner := body_bounds.position + Vector3(
+			body_bounds.size.x if (corner_index & 1) != 0 else 0.0,
+			body_bounds.size.y if (corner_index & 2) != 0 else 0.0,
+			body_bounds.size.z if (corner_index & 4) != 0 else 0.0)
+		var world_corner := _showcase_actor.to_global(corner)
+		if _showcase_camera.is_position_behind(world_corner):
+			continue
+		var screen := _showcase_camera.unproject_position(world_corner)
+		minimum.x = minf(minimum.x, screen.x)
+		minimum.y = minf(minimum.y, screen.y)
+		maximum.x = maxf(maximum.x, screen.x)
+		maximum.y = maxf(maximum.y, screen.y)
+	for node in visual.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance == null or mesh_instance.mesh == null \
+				or not mesh_instance.is_visible_in_tree() \
+				or not _showcase_mesh_is_cosmetic(mesh_instance, visual):
+			continue
+		var bounds := mesh_instance.mesh.get_aabb()
+		for corner_index in 8:
+			var corner := bounds.position + Vector3(
+				bounds.size.x if (corner_index & 1) != 0 else 0.0,
+				bounds.size.y if (corner_index & 2) != 0 else 0.0,
+				bounds.size.z if (corner_index & 4) != 0 else 0.0)
+			var world_corner := mesh_instance.to_global(corner)
+			if _showcase_camera.is_position_behind(world_corner):
+				continue
+			var screen := _showcase_camera.unproject_position(world_corner)
+			minimum.x = minf(minimum.x, screen.x)
+			minimum.y = minf(minimum.y, screen.y)
+			maximum.x = maxf(maximum.x, screen.x)
+			maximum.y = maxf(maximum.y, screen.y)
+	if not is_finite(minimum.x) or not is_finite(minimum.y):
+		return
+	var viewport_size := Vector2(_showcase_viewport.size)
+	var origin_screen := _showcase_camera.unproject_position(
+		_showcase_anchor.global_position)
+	var safe_left := viewport_size.x * 0.38
+	var safe_right := viewport_size.x * 0.96
+	var safe_top := viewport_size.y * 0.045
+	var safe_bottom := viewport_size.y * 0.965
+	var distance_factor := 1.0
+	if minimum.x < safe_left and safe_left < origin_screen.x:
+		distance_factor = maxf(distance_factor,
+			(minimum.x - origin_screen.x) / (safe_left - origin_screen.x))
+	if maximum.x > safe_right and safe_right > origin_screen.x:
+		distance_factor = maxf(distance_factor,
+			(maximum.x - origin_screen.x) / (safe_right - origin_screen.x))
+	if minimum.y < safe_top and safe_top < origin_screen.y:
+		distance_factor = maxf(distance_factor,
+			(minimum.y - origin_screen.y) / (safe_top - origin_screen.y))
+	if maximum.y > safe_bottom and safe_bottom > origin_screen.y:
+		distance_factor = maxf(distance_factor,
+			(maximum.y - origin_screen.y) / (safe_bottom - origin_screen.y))
+	_showcase_anchor.position = SHOWCASE_ANCHOR_POSITION * clampf(
+		distance_factor * 1.035, 1.0, 1.60)
+
+
+func _showcase_mesh_is_cosmetic(mesh_instance: MeshInstance3D,
+		visual: Node3D) -> bool:
+	var current: Node = mesh_instance
+	while current != null and current != visual:
+		if current.has_meta("one_gun_cosmetic_id") \
+				or current.has_meta("supabase_hat_id"):
+			return true
+		current = current.get_parent()
+	return false
 
 
 func _apply_profile_portrait() -> void:

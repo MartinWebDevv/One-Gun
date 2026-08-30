@@ -35,6 +35,8 @@ class MockMeleePlayer:
 	var actor_id := 7101
 	var stamina := 100.0
 	var animation_calls := 0
+	var last_animation_duration := 0.0
+	var swing_speed_multiplier := 1.0
 	var hold_point: Node3D
 
 	func _init() -> void:
@@ -51,8 +53,12 @@ class MockMeleePlayer:
 	func drain_stamina(amount: float) -> void:
 		stamina = maxf(stamina - amount, 0.0)
 
-	func play_melee_animation(_duration := 0.0) -> void:
+	func play_melee_animation(duration := 0.0) -> void:
 		animation_calls += 1
+		last_animation_duration = duration
+
+	func melee_swing_speed_multiplier() -> float:
+		return swing_speed_multiplier
 
 	func has_active_reach() -> bool:
 		return false
@@ -227,6 +233,11 @@ func _test_protections_and_timers() -> void:
 	_check(not player.apply_powerup("sticky_hands", 10.0), "duplicate Sticky Hands was accepted")
 	_check(not player.apply_powerup("extra_life", 10.0), "duplicate Extra Life was accepted")
 	_check(player.apply_powerup("speed_surge", 10.0), "Speed Surge could not be collected")
+	_check(player.apply_powerup("fast_hands", 99.0), "Fast Hands could not be collected")
+	_check(is_equal_approx(player.fast_hands_timer, GameConfig.FAST_HANDS_DURATION),
+		"Fast Hands ignored its fixed five-second duration")
+	_check(is_equal_approx(player.melee_swing_speed_multiplier(), 1.5),
+		"Fast Hands does not expose a 1.5x swing multiplier")
 	player.apply_powerup("speed_surge", 10.0)
 	_check(is_equal_approx(player.speed_surge_timer, 15.0), "timed duplicate did not add half duration")
 	player.apply_powerup("speed_surge", 10.0)
@@ -256,11 +267,15 @@ func _test_protections_and_timers() -> void:
 		player.melee_disarm_shields == 0
 		and player.sticky_hands_timer == 0.0
 		and player.sticky_hands_cooldown_timer == 0.0
+		and player.fast_hands_timer == 0.0
 		and not player.second_wind_ready,
 		"full powerup clear left a protection behind")
 	player.free()
 	var bot = load("res://dummy.gd").new()
 	_check(bot.apply_powerup("sticky_hands", 10.0), "bot could not collect Sticky Hands")
+	_check(bot.apply_powerup("fast_hands", 10.0)
+		and is_equal_approx(bot.melee_swing_speed_multiplier(), 1.5),
+		"bot Fast Hands behavior differs from humans")
 	_check(is_equal_approx(bot.sticky_hands_timer, GameConfig.STICKY_HANDS_DURATION),
 		"bot Sticky Hands duration differs from humans")
 	bot._clear_sticky_hands(true)
@@ -299,6 +314,7 @@ func _test_melee_tuning() -> void:
 	var weapon_names := ["Sword", "Baseball Bat", "Stick", "Crowbar", "Frying Pan"]
 	var original_mode: String = GameConfig.game_mode
 	GameConfig.game_mode = GameConfig.MODE_ONE_GUN
+	var frying_pan_data: WeaponData = MeleeWeaponRegistry.get_weapon_data_by_name("Frying Pan")
 	for weapon_name in weapon_names:
 		var melee = melee_scene.instantiate()
 		get_tree().current_scene.add_child(melee)
@@ -312,6 +328,10 @@ func _test_melee_tuning() -> void:
 			"%s is not normalized to the shared held length" % weapon_name)
 		_check(is_equal_approx(melee.SWING_TIME_MULTIPLIER, 0.85),
 			"%s swing phases are not fifteen percent faster" % weapon_name)
+		_check(is_equal_approx(data.base_windup_time, frying_pan_data.base_windup_time)
+			and is_equal_approx(data.base_active_time, frying_pan_data.base_active_time)
+			and is_equal_approx(data.base_recovery_time, frying_pan_data.base_recovery_time),
+			"%s does not share the frying-pan swing phases" % weapon_name)
 		_check(is_equal_approx(melee.MELEE_HITBOX_RADIUS, 0.45),
 			"%s does not use the shared melee width" % weapon_name)
 		_check(not melee.get_network_identity().has("tier"),
@@ -329,6 +349,10 @@ func _test_melee_tuning() -> void:
 		melee.swing()
 		_check(holder.animation_calls == 1,
 			"%s did not trigger the character melee animation" % weapon_name)
+		var normal_duration: float = (data.base_windup_time + data.base_active_time
+			+ data.base_recovery_time) * melee.SWING_TIME_MULTIPLIER
+		_check(is_equal_approx(holder.last_animation_duration, normal_duration),
+			"%s character animation duration does not match gameplay phases" % weapon_name)
 		_check((melee.rotation - rest_rotation).length() < 0.001,
 			"%s added weapon-root rotation at swing start" % weapon_name)
 		var saw_active_window := false
@@ -353,6 +377,17 @@ func _test_melee_tuning() -> void:
 			"%s did not release cleanly after its swing" % weapon_name)
 		_check(melee._local_pickup(holder),
 			"%s could not be picked back up after dropping" % weapon_name)
+		holder.swing_speed_multiplier = GameConfig.FAST_HANDS_SWING_SPEED_MULTIPLIER
+		var stamina_before_fast_hands: float = holder.stamina
+		melee.swing()
+		_check(is_equal_approx(holder.last_animation_duration,
+			normal_duration / GameConfig.FAST_HANDS_SWING_SPEED_MULTIPLIER),
+			"%s Fast Hands did not shorten every swing phase by 1.5x" % weapon_name)
+		_check(is_equal_approx(stamina_before_fast_hands - holder.stamina,
+			data.base_stamina_cost),
+			"%s Fast Hands changed stamina usage" % weapon_name)
+		while melee.is_swinging:
+			await get_tree().physics_frame
 		melee.begin_throw_preview()
 		var preview: Dictionary = melee.get_throw_preview_data()
 		var preview_velocity: Vector3 = preview.get("velocity", Vector3.ZERO)
@@ -557,16 +592,41 @@ func _test_decoy_deployment_facing() -> void:
 		"decoy incorrectly participates in player scoring")
 	_check(is_equal_approx(decoy.LIFETIME, 10.0) and decoy.manages_deployed_lifetime(),
 		"decoy no longer owns its ten-second lifetime")
-	_check(decoy._bone_indices.size() == 7,
-		"decoy procedural gait did not bind its required bones")
+	_check(decoy._animation_player != null and decoy._animation_player.active
+			and decoy._animation_player.has_animation("idle")
+			and decoy._animation_player.has_animation("standard_run"),
+		"decoy did not bind the shared idle/run animation library")
 	_check(is_zero_approx(decoy._visual_root.position.x)
 		and is_zero_approx(decoy._visual_root.position.z),
 		"decoy visual root is displaced from its physics body")
-	var imported_players: Array[Node] = decoy.find_children(
-		"*", "AnimationPlayer", true, false)
-	for node in imported_players:
-		_check(not (node as AnimationPlayer).active,
-			"an imported animation can still translate the rebuilt decoy")
+	var run_animation: Animation = decoy._animation_player.get_animation("standard_run")
+	var root_motion_safe := run_animation != null
+	if run_animation != null:
+		for track_index in run_animation.get_track_count():
+			if run_animation.track_get_type(track_index) != Animation.TYPE_POSITION_3D:
+				continue
+			var track_path: NodePath = run_animation.track_get_path(track_index)
+			if track_path.get_subname_count() == 0:
+				root_motion_safe = false
+				continue
+			if str(track_path.get_subname(track_path.get_subname_count() - 1)) \
+					!= "mixamorig_Hips" or run_animation.track_get_key_count(track_index) < 2:
+				continue
+			var anchor: Vector3 = run_animation.track_get_key_value(track_index, 0)
+			for key_index in run_animation.track_get_key_count(track_index):
+				var position: Vector3 = run_animation.track_get_key_value(
+					track_index, key_index)
+				if not is_equal_approx(position.x, anchor.x) \
+						or not is_equal_approx(position.z, anchor.z):
+					root_motion_safe = false
+	_check(root_motion_safe,
+		"retargeted decoy run clip can translate the visual horizontally")
+	decoy._visual_motion_speed = decoy.MOVE_SPEED
+	decoy._process(0.1)
+	_check(decoy._current_visual_animation == "standard_run"
+			and is_zero_approx(decoy._visual_root.position.x)
+			and is_zero_approx(decoy._visual_root.position.z),
+		"moving decoy did not enter its root-motion-safe run animation")
 	_check(not decoy.control_active, "decoy control should start released")
 	decoy.toggle_control()
 	_check(decoy.control_active and not decoy.command_target.is_finite(),

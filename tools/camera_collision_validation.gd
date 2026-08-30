@@ -48,6 +48,40 @@ func _ready() -> void:
 		and not is_equal_approx(arm.rotation.x, pitch_before),
 		"player camera no longer responds after pause closes")
 
+	var camera := player.get_node("AimPivot/SpringArm3D/Camera3D") as Camera3D
+	var default_fov := camera.fov
+	player.ads_blend = 0.0
+	player._update_aiming(0.0)
+	_check(is_equal_approx(arm.spring_length, 4.0),
+		"non-ADS shoulder camera changed the established pan-out distance")
+	_check(arm.position.is_equal_approx(
+		player.default_spring_position + Vector3(1.02, 0.23, 0.06)),
+		"non-ADS camera did not apply the readable wide-shoulder framing")
+	_check(camera.position.is_equal_approx(
+		player._camera_base_position + Vector3(0.0, 0.03, 0.0)),
+		"non-ADS camera local lift drifted from its authored framing")
+	_check(is_equal_approx(camera.fov, default_fov),
+		"non-ADS shoulder camera changed the established field of view")
+	player.ads_blend = 1.0
+	player._update_aiming(0.0)
+	_check(is_equal_approx(arm.spring_length, 2.40),
+		"ADS camera did not use the readable over-shoulder distance")
+	_check(arm.position.is_equal_approx(
+		player.default_spring_position + Vector3(0.75, 0.38, 0.10)),
+		"ADS spring arm did not apply the intended shoulder framing")
+	_check(camera.position.is_equal_approx(
+		player._camera_base_position + Vector3(0.0, 0.05, 0.0)),
+		"ADS camera local offset drifted from its authored framing")
+	_check(is_equal_approx(camera.fov, default_fov * 0.86),
+		"ADS field of view no longer matches the readable target")
+	await get_tree().physics_frame
+	var ads_offset: Vector3 = camera.global_position - player.global_position
+	_check(ads_offset.length() > 1.0 and camera.global_position.y > 1.35,
+		"ADS camera is inside the mascot body/capsule: %s" % ads_offset)
+	print("ADS_CAMERA_RUNTIME_OK offset=%s fov=%.2f" % [ads_offset, camera.fov])
+	player.ads_blend = 0.0
+	player._update_aiming(0.0)
+
 	wall.collision_layer = 1
 	wall.global_position = Vector3(0.0, 2.0, 2.0)
 	var spectator = load("res://spectator_controller.gd").new()

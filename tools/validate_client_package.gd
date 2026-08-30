@@ -54,6 +54,7 @@ const REQUIRED_RESOURCES: Array[Dictionary] = [
 	{"path": "res://maps/test/WesternV2Map.tscn", "type": "PackedScene"},
 	{"path": "res://maps/test/CityMap.tscn", "type": "PackedScene"},
 	{"path": "res://maps/test/catTower.tscn", "type": "PackedScene"},
+	{"path": "res://maps/test/TrippyMountainsMap.tscn", "type": "PackedScene"},
 ]
 
 

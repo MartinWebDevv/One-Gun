@@ -40,6 +40,8 @@ var _page_title: Label
 var _category_buttons := {}
 var _status_label: Label
 var _apply_button: OneGunButton
+var _defaults_button: OneGunButton
+var _cancel_button: OneGunButton
 var _quality_dropdown: OptionButton
 var _display_recovery_timer: Timer
 var _controls_group := "keyboard_mouse"
@@ -104,12 +106,6 @@ func _build_shell() -> void:
 	heading_box.add_child(OneGunUI.make_label(
 		"Changes are not saved until applied.", OneGunUI.TEXT_S, "muted"))
 	header.add_child(heading_box)
-	var close := OneGunButton.new()
-	close.variant = "navy"
-	close.text = "CLOSE"
-	close.custom_minimum_size = Vector2(110, 44)
-	close.pressed.connect(_cancel_and_close)
-	header.add_child(close)
 	shell.add_child(header)
 
 	var body := HBoxContainer.new()
@@ -144,19 +140,22 @@ func _build_shell() -> void:
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", OneGunUI.SPACE_M)
+	_cancel_button = OneGunButton.new()
+	_cancel_button.name = "SettingsCancel"
+	_cancel_button.variant = "navy"
+	_cancel_button.text = "BACK"
+	_cancel_button.custom_minimum_size = Vector2(220.0, 60.0)
+	_cancel_button.pressed.connect(_cancel_and_close)
+	footer.add_child(_cancel_button)
 	_status_label = OneGunUI.make_label("", OneGunUI.TEXT_S, "cyan")
 	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(_status_label)
-	var defaults := OneGunButton.new()
-	defaults.variant = "navy"
-	defaults.text = "DEFAULTS"
-	defaults.pressed.connect(_defaults_for_category)
-	footer.add_child(defaults)
-	var cancel := OneGunButton.new()
-	cancel.variant = "navy"
-	cancel.text = "CANCEL"
-	cancel.pressed.connect(_cancel_and_close)
-	footer.add_child(cancel)
+	_defaults_button = OneGunButton.new()
+	_defaults_button.name = "SettingsDefaults"
+	_defaults_button.variant = "navy"
+	_defaults_button.text = "DEFAULTS"
+	_defaults_button.pressed.connect(_defaults_for_category)
+	footer.add_child(_defaults_button)
 	_apply_button = OneGunButton.new()
 	_apply_button.variant = "gold"
 	_apply_button.text = "APPLY"
@@ -203,6 +202,38 @@ func _rebuild_page() -> void:
 		"Video": _build_video_page()
 		"Controls": _build_controls_page()
 		_: _build_accessibility_page()
+	_configure_page_controller_focus.call_deferred()
+
+
+func _configure_page_controller_focus() -> void:
+	if not is_inside_tree() or _page_host == null:
+		return
+	var page_controls: Array = []
+	for node in _page_host.find_children("*", "Control", true, false):
+		var control := node as Control
+		if control == null or not control.is_visible_in_tree() \
+				or control.focus_mode == Control.FOCUS_NONE:
+			continue
+		if control is BaseButton and (control as BaseButton).disabled:
+			continue
+		page_controls.append(control)
+	var sequence := page_controls.duplicate()
+	for footer_control in [_cancel_button, _defaults_button, _apply_button]:
+		if footer_control != null and not footer_control.disabled:
+			sequence.append(footer_control)
+	if not sequence.is_empty():
+		OneGunUI.chain_focus_vertical(sequence)
+	var category_button = _category_buttons.get(_category)
+	if category_button is Control and not page_controls.is_empty():
+		var nav := category_button as Control
+		var first := page_controls[0] as Control
+		nav.focus_neighbor_right = nav.get_path_to(first)
+		first.focus_neighbor_left = first.get_path_to(nav)
+	if _defaults_button != null and _cancel_button != null and _apply_button != null:
+		_cancel_button.focus_neighbor_right = _cancel_button.get_path_to(_defaults_button)
+		_defaults_button.focus_neighbor_left = _defaults_button.get_path_to(_cancel_button)
+		_defaults_button.focus_neighbor_right = _defaults_button.get_path_to(_apply_button)
+		_apply_button.focus_neighbor_left = _apply_button.get_path_to(_defaults_button)
 
 
 func _page_column(intro: String) -> VBoxContainer:
@@ -223,7 +254,7 @@ func _page_column(intro: String) -> VBoxContainer:
 
 
 func _build_audio_page() -> void:
-	var column := _page_column("Four clear mix controls. Changes preview live and restore on Cancel.")
+	var column := _page_column("Changes preview live and restore when you go Back.")
 	_add_section(column, "VOLUME")
 	_add_slider(column, "Master Volume", "master_volume", 0.0, 1.0, 0.01, true, true)
 	_add_slider(column, "Music Volume", "music_volume", 0.0, 1.0, 0.01, true, true)
@@ -235,9 +266,11 @@ func _build_gameplay_page() -> void:
 	var column := _page_column("Personal aiming and sprint behavior. These settings are local and never become lobby rules.")
 	_add_section(column, "LOOK SENSITIVITY")
 	_add_slider(column, "Mouse Sensitivity", "mouse_sensitivity", 0.1, 5.0, 0.05)
-	_add_slider(column, "Gamepad Sensitivity", "gamepad_sensitivity", 1.0, 15.0, 0.1)
+	_add_slider(column, "Gamepad Horizontal Sensitivity", "gamepad_sensitivity_x", 1.0, 15.0, 0.1)
+	_add_slider(column, "Gamepad Vertical Sensitivity", "gamepad_sensitivity_y", 1.0, 15.0, 0.1)
 	_add_slider(column, "ADS Multiplier", "ads_sensitivity_multiplier", 0.05, 1.0, 0.01)
 	_add_slider(column, "Response Curve", "gamepad_response_curve_exponent", 0.5, 4.0, 0.05)
+	_add_slider(column, "Gamepad Deadzone", "gamepad_deadzone", 0.05, 0.40, 0.01)
 	_add_section(column, "BEHAVIOR")
 	_add_toggle(column, "Gamepad Sprint is Toggle", "gamepad_sprint_is_toggle")
 	_add_toggle(column, "Mouse / Keyboard Sprint is Toggle", "mouse_keyboard_sprint_is_toggle")
@@ -336,7 +369,7 @@ func _build_accessibility_page() -> void:
 	if _accessibility_subpage == "crosshair":
 		_build_crosshair_editor()
 		return
-	var column := _page_column("Readability and motion choices preview immediately, remain local, and restore on Cancel.")
+	var column := _page_column("Readability and motion choices preview immediately and restore when you go Back.")
 	_add_section(column, "READABILITY")
 	_add_slider(column, "UI Scale", "ui_scale", 0.8, 1.25, 0.05, true)
 	_add_dropdown(column, "Text Size", "text_size", ["small", "normal", "large", "extra_large"], ["SMALL", "NORMAL", "LARGE", "EXTRA LARGE"])
@@ -827,8 +860,9 @@ func _defaults_for_category() -> void:
 			for key in ["master_volume", "music_volume", "sfx_volume", "ceremony_volume"]: _pending[key] = PlayerPrefs.get_default(key)
 			APPLIER.apply_audio(_pending)
 		"Gameplay":
-			for key in ["mouse_sensitivity", "gamepad_sensitivity", "ads_sensitivity_multiplier",
-					"gamepad_response_curve_exponent", "gamepad_sprint_is_toggle",
+			for key in ["mouse_sensitivity", "gamepad_sensitivity_x", "gamepad_sensitivity_y",
+					"ads_sensitivity_multiplier",
+					"gamepad_response_curve_exponent", "gamepad_deadzone", "gamepad_sprint_is_toggle",
 					"mouse_keyboard_sprint_is_toggle", "invert_look_y"]:
 				_pending[key] = PlayerPrefs.get_default(key)
 		"Video":

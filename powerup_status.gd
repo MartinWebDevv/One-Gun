@@ -19,6 +19,7 @@ const DISPLAY_NAMES = {
 	"silent_steps": "Silent Steps",
 	"extra_life": "Extra Life",
 	"reach": "Reach",
+	"fast_hands": "Fast Hands",
 }
 
 # One-line effect blurbs, shown under the name while the powerup is active.
@@ -29,6 +30,7 @@ const DESCRIPTIONS = {
 	"silent_steps": "your footsteps are silent",
 	"extra_life": "survive one lethal weapon hit",
 	"reach": "8m pickup and melee reach",
+	"fast_hands": "+50% melee swing speed",
 }
 
 var player = null
@@ -80,6 +82,7 @@ const TYPE_COLORS = {
 	"silent_steps": Color(0.55, 0.55, 0.85),
 	"extra_life": Color(1.0, 0.72, 0.18),
 	"reach": Color(0.2, 1.0, 0.42),
+	"fast_hands": Color(1.0, 0.2, 0.68),
 }
 const DESC_SHOW_TIME := 2.0   # description collapses after this to reduce clutter
 
@@ -132,17 +135,27 @@ func _create_entry(power_type: String):
 	ThemeManager.punch(block, 1.12)
 
 	# Collapse the description after a moment so the stack stays compact.
-	get_tree().create_timer(DESC_SHOW_TIME).timeout.connect(func():
-		if is_instance_valid(desc_label):
-			var t2 = desc_label.create_tween()
-			t2.tween_property(desc_label, "modulate:a", 0.0, 0.3)
-			t2.tween_callback(func():
-				if is_instance_valid(desc_label):
-					desc_label.visible = false
-			)
-	)
+	var description_timer := Timer.new()
+	description_timer.name = "DescriptionTimer"
+	description_timer.one_shot = true
+	description_timer.wait_time = DESC_SHOW_TIME
+	block.add_child(description_timer)
+	description_timer.timeout.connect(
+		_collapse_description.bind(desc_label), CONNECT_ONE_SHOT)
+	description_timer.start()
 
 	entry_nodes[power_type] = {"root": block, "name_label": name_label, "value_label": value_label}
+
+func _collapse_description(desc_label) -> void:
+	if not is_instance_valid(desc_label):
+		return
+	var tween: Tween = desc_label.create_tween()
+	tween.tween_property(desc_label, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(_hide_description.bind(desc_label))
+
+func _hide_description(desc_label) -> void:
+	if is_instance_valid(desc_label):
+		desc_label.visible = false
 
 func _update_entry(power_type: String, entry: Dictionary):
 	var nodes = entry_nodes[power_type]

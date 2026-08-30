@@ -3,6 +3,8 @@ extends Node
 const MatchLimitsData = preload("res://match_limits.gd")
 const MatchServerContext = preload("res://match_server_context.gd")
 
+const CLIENT_INTRO_SCENE := \
+	"res://cinematics/startup/startup_intro_preview_five_word_shot_barlow_condensed.tscn"
 const CLIENT_MAIN_SCENE := "res://main_menu.tscn"
 const DEFAULT_SERVER_MAP := "res://maps/test/ForestMap.tscn"
 
@@ -14,7 +16,11 @@ func _ready() -> void:
 func _route_startup() -> void:
 	var arguments := OS.get_cmdline_user_args()
 	if not arguments.has("--server"):
-		get_tree().change_scene_to_file(CLIENT_MAIN_SCENE)
+		var client_scene := CLIENT_INTRO_SCENE
+		if not ResourceLoader.exists(client_scene):
+			push_warning("Startup intro is unavailable; continuing to the main menu.")
+			client_scene = CLIENT_MAIN_SCENE
+		get_tree().change_scene_to_file(client_scene)
 		return
 
 	if NetworkManager.is_dedicated_server() and NetworkManager.is_online():

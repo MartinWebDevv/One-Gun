@@ -81,6 +81,18 @@ func _capture_main_menu() -> void:
 	var menu := MAIN_MENU_SCENE.instantiate()
 	await _replace_content(menu)
 	await _wait_frames(18)
+	# A fresh player profile receives the launch release-notes dialog before
+	# the passive N-key prompt becomes visible. Validate and dismiss that state
+	# first, then continue through the returning-player shortcut flow below.
+	var launch_dialog := menu.get_node_or_null("ReleaseNotesPopup") as AcceptDialog
+	if launch_dialog != null:
+		if launch_dialog.size.x < 720:
+			push_error("PlayerV2RenderValidation: launch release notes were undersized")
+			get_tree().quit(1)
+			return
+		await _capture("main_menu_launch_release_notes.png")
+		launch_dialog.queue_free()
+		await _wait_frames(4)
 	var prompt := menu.get_node_or_null("InterfaceLayer/PatchNotesPrompt") as PanelContainer
 	var prompt_label := prompt.get_node_or_null("PatchNotesPromptLabel") as Label if prompt != null else null
 	if prompt == null or not prompt.visible or prompt_label == null \
@@ -107,7 +119,28 @@ func _capture_main_menu() -> void:
 		push_error("PlayerV2RenderValidation: patch-notes prompt did not return after close")
 		get_tree().quit(1)
 		return
-	menu.call("_on_character_customization_pressed")
+	var button_list := menu.find_child("ButtonList", true, false) as VBoxContainer
+	var expected_buttons := ["Play", "PlayerHub", "Settings", "QuitGame"]
+	var actual_buttons: Array[String] = []
+	if button_list != null:
+		for child in button_list.get_children():
+			if child is Button:
+				actual_buttons.append(child.name)
+	if actual_buttons != expected_buttons:
+		push_error("PlayerV2RenderValidation: title rail is not the approved four-button layout")
+		get_tree().quit(1)
+		return
+	menu.call("_on_player_hub_pressed")
+	await _wait_frames(4)
+	var hub := menu.get("_main_player_hub_overlay") as Control
+	if hub == null or hub.find_child("OpenProfileButton", true, false) == null \
+			or hub.find_child("PlayerHubAccountStrip", true, false) == null:
+		push_error("PlayerV2RenderValidation: polished home Player Hub is incomplete")
+		get_tree().quit(1)
+		return
+	await _capture("main_menu_player_hub.png")
+	var locker_button := hub.find_child("OpenLockerButton", true, false) as Button
+	locker_button.pressed.emit()
 	await _wait_frames(2)
 	if prompt.visible:
 		push_error("PlayerV2RenderValidation: patch-notes prompt leaked over a modal")
@@ -115,6 +148,19 @@ func _capture_main_menu() -> void:
 		return
 	await _wait_frames(10)
 	await _capture("main_menu_customization.png")
+	menu.call("_close_character_customization")
+	await _wait_frames(4)
+	var returned_hub := menu.get("_main_player_hub_overlay") as Control
+	var returned_focus := get_viewport().gui_get_focus_owner()
+	if returned_hub == null:
+		push_error("PlayerV2RenderValidation: closing a home destination did not return to Player Hub")
+		get_tree().quit(1)
+		return
+	if returned_focus == null or not returned_hub.is_ancestor_of(returned_focus):
+		push_error("PlayerV2RenderValidation: returned Player Hub did not restore controller focus")
+		get_tree().quit(1)
+		return
+	await _capture("main_menu_player_hub_return.png")
 
 
 func _capture_lobby_customization() -> void:

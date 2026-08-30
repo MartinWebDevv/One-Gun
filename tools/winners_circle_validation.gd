@@ -11,6 +11,9 @@ const CEREMONY_THEME_PATHS: Array[String] = [
 	"res://audio/ui/winners_circle_themes/champion_groove.wav",
 	"res://audio/ui/winners_circle_themes/deep_orbit.wav",
 ]
+const NEW_CHARACTER_MODELS: Array[String] = [
+	"eye_wizard", "mr_mushroom", "mr_poop", "mr_salt", "spooky_witch",
+]
 
 
 func _initialize() -> void:
@@ -71,7 +74,7 @@ func _run() -> void:
 		"changing an official rule makes the match custom")
 
 	var state := {
-		1: _sample_state(1, "Champion", 3, 4, 2, "red", "male"),
+		1: _sample_state(1, "Champion", 3, 4, 2, "red", "goldfish_bag_man"),
 		2: _sample_state(2, "Runner Up", 1, 5, 3, "blue", "female"),
 		3: _sample_state(3, "Third Place", 1, 2, 5, "green", "male"),
 		4: _sample_state(4, "Fourth", 0, 8, 1, "purple", "female"),
@@ -158,19 +161,28 @@ func _run() -> void:
 		"the camera begins on the third-place reveal track")
 	var active_performers := 0
 	var visible_bind_poses := 0
+	var visible_cosmetic_hats := 0
 	for performer_value in circle.find_children(
 			"VictoryPerformer", "Node3D", true, false):
 		var performer := performer_value as Node3D
 		if not performer.visible:
 			continue
-		var animation_player := performer.find_child(
-			"AnimationPlayer", true, false) as AnimationPlayer
+		# Query the character API directly: some hats contain their own nested
+		# AnimationPlayer and a generic descendant search can select that instead.
+		var animation_player := performer.call(
+			"get_animation_player") as AnimationPlayer
 		if animation_player == null or animation_player.current_animation == "":
 			visible_bind_poses += 1
 		else:
 			active_performers += 1
+		var hat_visual := performer.find_child("HatVisual", true, false)
+		if hat_visual != null and str(hat_visual.get_meta(
+				"supabase_hat_id", "")) != "":
+			visible_cosmetic_hats += 1
 	_check(active_performers == 3 and visible_bind_poses == 0,
 		"all three visible performers start in an active Victory Move or idle")
+	_check(visible_cosmetic_hats == 3,
+		"all equipped performer hats are attached during the ceremony")
 	_check(circle.find_child("FinalStandingsCabinet", true, false) != null,
 		"the shared standings panel builds")
 	_check(circle.find_child("ReadyButton", true, false) != null,
@@ -190,6 +202,28 @@ func _run() -> void:
 		"the personalized card groups the local performance stats")
 	_check(circle.find_child("PersonalRewards", true, false) != null,
 		"the personalized card separates match rewards from performance")
+	var xp_bar := circle.find_child("SeasonXPProgress", true, false) as ProgressBar
+	var trophy_bar := circle.find_child("TrophyProgress", true, false) as ProgressBar
+	var reward_box := circle.find_child("CurrentMatchRewardBox", true, false) as PanelContainer
+	_check(xp_bar != null and trophy_bar != null and reward_box != null,
+		"the reward card builds XP, trophy/token, and current-match stages")
+	circle.set_actor_reward(1, {
+		"state": "settled", "xp_delta": 85, "season_xp_delta": 85,
+		"gun_tokens_delta": 250, "trophy_delta": 1,
+		"new_season_xp": 95, "next_level_xp": 150,
+		"new_season_trophies": 1, "new_gun_token_balance": 1250,
+	})
+	_check(xp_bar != null and is_equal_approx(xp_bar.max_value, 150.0)
+			and trophy_bar != null and trophy_bar.visible,
+		"settled rewards apply authoritative XP and Trophy progression")
+	circle.set_actor_reward(1, {
+		"state": "settled", "xp_delta": 45, "season_xp_delta": 45,
+		"gun_tokens_delta": 175, "trophy_delta": 0,
+		"new_season_xp": 140, "next_level_xp": 150,
+		"new_season_trophies": 1, "new_gun_token_balance": 1425,
+	})
+	_check(trophy_bar != null and not trophy_bar.visible,
+		"a no-Trophy result replaces the Trophy bar with Gun Tokens earned")
 	var local_standing: Node = circle.find_child("StandingRow_1", true, false)
 	_check(local_standing != null and bool(local_standing.get_meta("viewer_row", false)),
 		"the final standings identify the viewing player's row")
@@ -202,6 +236,11 @@ func _run() -> void:
 	_check(circle.find_child("CinematicStage", true, false) == null
 			and results_interface.modulate.a >= 0.99,
 		"the full cinematic finishes by revealing the results interface")
+	var ready_button := circle.find_child("ReadyButton", true, false) as Button
+	_check(ready_button != null and not ready_button.disabled and ready_button.has_focus(),
+		"the revealed results immediately focus an enabled Ready button")
+	_check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE,
+		"the Winners Circle keeps the pointer visible above live gameplay nodes")
 	_check(cinematic_camera.position.distance_to(
 		Vector3(0.0, 4.15, 12.20)) < 0.05
 			and cinematic_camera.fov >= 47.9,
@@ -217,6 +256,9 @@ func _run() -> void:
 		"the champion hero beat fires quality-scaled confetti")
 	circle.queue_free()
 	await process_frame
+	# Run exhaustive new-model podium coverage after the original ceremony so
+	# warming additional rig caches cannot perturb its cinematic timing checks.
+	await _validate_new_character_performers(stage_scene)
 
 	if _failures == 0:
 		print("WINNERS CIRCLE VALIDATION PASSED")
@@ -224,6 +266,51 @@ func _run() -> void:
 	else:
 		push_error("WINNERS CIRCLE VALIDATION FAILED: %d issue(s)" % _failures)
 		quit(1)
+
+
+func _validate_new_character_performers(stage_scene: PackedScene) -> void:
+	var seen_models := {}
+	for batch_start in range(0, NEW_CHARACTER_MODELS.size(), 3):
+		var stage := stage_scene.instantiate() as Node3D
+		root.add_child(stage)
+		var entries: Array = []
+		for batch_index in 3:
+			var model_index := batch_start + batch_index
+			if model_index >= NEW_CHARACTER_MODELS.size():
+				break
+			var model_id := NEW_CHARACTER_MODELS[model_index]
+			var entry := _sample_state(
+				batch_index + 1, model_id.capitalize(), 3 - batch_index,
+				2, 1, "blue", model_id)
+			entry["placement"] = batch_index + 1
+			(entry["cosmetics"] as Dictionary)["character_model"] = ""
+			(entry["cosmetics"] as Dictionary)["hat"] = "hat_top"
+			entries.append(entry)
+		stage.call("configure", entries, {"trophy_awarded": false})
+		await process_frame
+		await process_frame
+		var performers := stage.find_children(
+			"VictoryPerformer", "Node3D", true, false)
+		_check(performers.size() == entries.size(),
+			"Winners Circle builds every requested new-model performer batch")
+		for performer_value in performers:
+			var performer := performer_value as Node3D
+			var model_id := str(performer.get("model_id"))
+			seen_models[model_id] = true
+			var hat := performer.find_child("HatVisual", true, false)
+			var animation_player := performer.call(
+				"get_animation_player") as AnimationPlayer
+			_check(hat != null and str(hat.get_meta(
+					"supabase_hat_id", "")) == "hat_top",
+				"Winners Circle new performer retains hat: %s" % model_id)
+			_check(animation_player != null
+					and animation_player.has_animation("hip_hop_dance"),
+				"Winners Circle new performer loads its podium animation: %s" % model_id)
+		stage.queue_free()
+		await process_frame
+	for model_id in NEW_CHARACTER_MODELS:
+		_check(seen_models.has(model_id),
+			"Winners Circle accepts new character model: %s" % model_id)
 
 
 func _sample_state(actor_id: int, player_name: String, round_wins: int,
@@ -235,7 +322,10 @@ func _sample_state(actor_id: int, player_name: String, round_wins: int,
 		"skin_id": skin_id,
 		"model_id": model_id,
 		"cosmetics": {
-			"character_skin": "", "hat": "", "accessory": "",
+			"character_skin": "",
+			"character_model": "character_goldfish_bag_man" if actor_id == 1 else "",
+			"hat": ["hat_crown", "hat_top", "hat_chef", "hat_witch"][actor_id - 1],
+			"accessory": "",
 			"gun_skin": "", "melee_skin": "", "emote": "hip_hop_dance",
 			"ceremony_theme": "wc_theme_deep_orbit" if actor_id == 1 else "",
 		},

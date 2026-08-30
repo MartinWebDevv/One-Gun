@@ -72,7 +72,7 @@ func _validate_references() -> void:
 			_check("Background_Skyline" in child.scene_file_path,
 				"%s still uses an old skyline" % child.name)
 	_check(facade_count == 22, "expected 22 replacement facades, found %d" % facade_count)
-	_check(skyline_count == 8, "expected 8 replacement skyline buildings, found %d" % skyline_count)
+	_check(skyline_count == 13, "expected 13 replacement skyline buildings, found %d" % skyline_count)
 
 	var park := city.get_node("Park")
 	for index in GREEN_SCENES.size():
@@ -313,6 +313,9 @@ func _capture_isolated_hoop() -> void:
 
 func _set_camera_and_capture(position: Vector3, target: Vector3, file_name: String) -> void:
 	camera.look_at_from_position(position, target, Vector3.UP)
+	if DisplayServer.get_name() == "headless":
+		print("CITY_ENVIRONMENT_CAPTURE_SKIPPED_HEADLESS ", file_name)
+		return
 	await _wait_frames(4)
 	await RenderingServer.frame_post_draw
 	var output_dir := OS.get_environment("ONEGUN_CITY_ENV_OUTPUT")

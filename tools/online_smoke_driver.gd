@@ -7,6 +7,7 @@ extends Node
 const TEST_PORT := 24646
 const DEFAULT_TEST_MAP := "res://node_3d.tscn"
 const TIMEOUT_MSEC := 60000
+const VisibilityRules = preload("res://combat_visibility.gd")
 
 var role := ""
 var test_map := DEFAULT_TEST_MAP
@@ -811,12 +812,16 @@ func _run_host_checks() -> void:
 		_fail("client-owned bullet immunity did not expire on the host")
 		return
 	victim.melee_disarm_shields = 1
+	victim.sticky_hands_timer = GameConfig.STICKY_HANDS_DURATION
 	if victim.is_bullet_immune():
 		_fail("disarm shield incorrectly granted bullet immunity")
 		return
 	# A bullet must pass straight through the melee-only shield. Give the victim
 	# Second Wind solely as a non-destructive witness that the authoritative
 	# bullet reached the elimination path; the melee shield must remain intact.
+	# Clear spawn/previous-hit lethal protection so it cannot mask this isolated
+	# shield assertion.
+	victim.lethal_immunity_timer = 0.0
 	victim.second_wind_ready = true
 	var shield_test_bullet = preload("res://bullet.tscn").instantiate()
 	shield_test_bullet.is_server_bullet = true
@@ -826,7 +831,10 @@ func _run_host_checks() -> void:
 	shield_test_bullet._on_hit_online(victim)
 	await get_tree().create_timer(0.1).timeout
 	if victim.second_wind_ready or victim.melee_disarm_shields != 1 or victim.is_eliminated:
-		_fail("bullet did not bypass the melee-only disarm shield")
+		_fail("bullet did not bypass the melee-only disarm shield "
+			+ "(second_wind=%s shield=%d eliminated=%s lethal_immunity=%.3f)" % [
+				victim.second_wind_ready, victim.melee_disarm_shields,
+				victim.is_eliminated, victim.lethal_immunity_timer])
 		return
 	victim.bullet_immune_timer = 0.0
 	victim.melee_disarm_shields = 0
@@ -995,6 +1003,10 @@ func _run_host_checks() -> void:
 	if int(host_score.get("sets", -1)) != 1 or int(host_score.get("kills", -1)) < 2:
 		_fail("set/match score did not synchronize")
 		return
+	var host_ready_button = await _wait_for_winners_ready_button()
+	if host_ready_button == null:
+		return
+	host_ready_button.button_pressed = true
 	var lobby_returned := await _wait_for(func():
 		return get_tree().current_scene != null and get_tree().current_scene.scene_file_path == "res://game_setup.tscn"
 	, "coordinated lobby return")
@@ -1090,8 +1102,20 @@ func _run_host_item_powerup_checks(rm, host_player, victim) -> bool:
 		rm.server_collect_online_powerup(int(powerup.online_powerup_id), int(host_player.actor_id), rm.online_round_epoch)
 		await get_tree().create_timer(0.15).timeout
 		var loose_item = loose_items[0]
-		var reach_pickup_position: Vector3 = host_player.global_position + Vector3(3.15, 0.0, 0.0)
-		rm.broadcast_online_item_move(int(loose_item.online_item_id), reach_pickup_position)
+		# Reach requires visual contact. Powerup markers can sit beside cover, so
+		# choose a clear cardinal direction instead of assuming +X is unobstructed.
+		var found_clear_reach_position := false
+		for direction in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+			var reach_pickup_position: Vector3 = \
+				host_player.global_position + direction * 3.15
+			rm.broadcast_online_item_move(
+				int(loose_item.online_item_id), reach_pickup_position)
+			if VisibilityRules.has_visual_contact(host_player, loose_item):
+				found_clear_reach_position = true
+				break
+		if not found_clear_reach_position:
+			_fail("Reach fixture could not find an unobstructed extended pickup position")
+			return false
 		loose_item._server_try_pickup(1, rm.online_round_epoch)
 		await get_tree().create_timer(0.1).timeout
 		if host_player.reach_timer <= 0.0 or not loose_item.is_held:
@@ -1117,13 +1141,18 @@ func _run_client_checks() -> void:
 	var saw_deployed_item := false
 	var saw_powerup_collect := false
 	var saw_second_wind_survival := false
+	var winners_ready_pressed := false
 	while Time.get_ticks_msec() < deadline:
 		var scene := get_tree().current_scene
 		if scene != null and scene.scene_file_path == "res://game_setup.tscn":
-			if not saw_pickup or not saw_reload or not saw_melee_pickup or not saw_gun_disarm or not saw_first_death or not saw_round_reset or (expects_phase2d and (not saw_item_pickup or not saw_item_throw or not saw_deployed_item or not saw_powerup_collect or not saw_second_wind_survival)):
-				_fail("client missed state: gun_pickup=%s reload=%s melee_pickup=%s disarm=%s death=%s reset=%s item_pickup=%s item_throw=%s deployed=%s powerup=%s second_wind=%s" % [saw_pickup, saw_reload, saw_melee_pickup, saw_gun_disarm, saw_first_death, saw_round_reset, saw_item_pickup, saw_item_throw, saw_deployed_item, saw_powerup_collect, saw_second_wind_survival])
+			if not saw_pickup or not saw_reload or not saw_melee_pickup or not saw_gun_disarm or not saw_first_death or not saw_round_reset or not winners_ready_pressed or (expects_phase2d and (not saw_item_pickup or not saw_item_throw or not saw_deployed_item or not saw_powerup_collect or not saw_second_wind_survival)):
+				_fail("client missed state: gun_pickup=%s reload=%s melee_pickup=%s disarm=%s death=%s reset=%s winners_ready=%s item_pickup=%s item_throw=%s deployed=%s powerup=%s second_wind=%s" % [saw_pickup, saw_reload, saw_melee_pickup, saw_gun_disarm, saw_first_death, saw_round_reset, winners_ready_pressed, saw_item_pickup, saw_item_throw, saw_deployed_item, saw_powerup_collect, saw_second_wind_survival])
 				return
 			print("ONLINE_SMOKE_PASS client")
+			# current_scene switches before every deferred deletion and signal from
+			# the outgoing match scene has drained. Give teardown a few frames so
+			# the smoke runner does not quit midway through valid scene cleanup.
+			await get_tree().create_timer(0.35).timeout
 			get_tree().quit()
 			return
 		var guns := get_tree().get_nodes_in_group("gun")
@@ -1159,9 +1188,24 @@ func _run_client_checks() -> void:
 					return
 		if local_player != null and scene != null and scene.scene_file_path == test_map:
 			var hud = scene.get_node_or_null("OnlineHUD")
-			if hud == null or hud.player != local_player:
-				_fail("online HUD did not bind to the client player")
+			# The display player intentionally follows the spectator target after
+			# elimination.  The stable local binding must still remain the client,
+			# and a living client must always be the displayed player.
+			if hud == null or hud.get("_local_player") != local_player:
+				_fail("online HUD lost its local client binding")
 				return
+			if not local_player.is_eliminated and hud.player != local_player:
+				_fail("online HUD did not restore the living client display")
+				return
+		if not winners_ready_pressed and scene != null \
+				and scene.scene_file_path == test_map:
+			var coordinator = scene.get_node_or_null("RoundManager/WinnersCircleCoordinator")
+			var overlay = coordinator.get("_overlay") if coordinator != null else null
+			var ready_button = overlay.get("_ready_button") \
+				if overlay != null and is_instance_valid(overlay) else null
+			if ready_button != null and not ready_button.disabled:
+				ready_button.button_pressed = true
+				winners_ready_pressed = true
 		if local_player != null and local_player.is_eliminated:
 			if not saw_first_death:
 				saw_first_death = true
@@ -1173,6 +1217,25 @@ func _run_client_checks() -> void:
 				saw_round_reset = true
 		await get_tree().process_frame
 	_fail("client match completion")
+
+
+func _wait_for_winners_ready_button():
+	var button_holder := {"button": null}
+	var ready := await _wait_for(func():
+		var scene := get_tree().current_scene
+		if scene == null or scene.scene_file_path != test_map:
+			return false
+		var coordinator = scene.get_node_or_null("RoundManager/WinnersCircleCoordinator")
+		var overlay = coordinator.get("_overlay") if coordinator != null else null
+		if overlay == null or not is_instance_valid(overlay):
+			return false
+		var button = overlay.get("_ready_button")
+		if button == null or button.disabled:
+			return false
+		button_holder["button"] = button
+		return true
+	, "Winners Circle Ready button unlock")
+	return button_holder["button"] if ready else null
 
 func _verify_online_pause_menu(expect_return_to_lobby: bool) -> bool:
 	var scene := get_tree().current_scene

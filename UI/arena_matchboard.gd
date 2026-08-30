@@ -125,13 +125,9 @@ func _build_interface() -> void:
 
 func _build_title_block(parent: VBoxContainer) -> void:
 	var top_line := HBoxContainer.new()
+	top_line.alignment = BoxContainer.ALIGNMENT_END
 	top_line.add_theme_constant_override("separation", 8)
 	parent.add_child(top_line)
-
-	var kicker := OneGunUI.make_label(
-		"ONE GUN  //  LIVE ARENA", OneGunUI.TEXT_XS, "cyan", true)
-	kicker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_line.add_child(kicker)
 
 	_status_badge = PanelContainer.new()
 	_status_badge.name = "MatchStatusBadge"
@@ -542,4 +538,3 @@ func _team_color(team_id: int) -> Color:
 		Color(1.0, 0.75, 0.20),
 	]
 	return colors[clampi(team_id, 0, colors.size() - 1)]
-

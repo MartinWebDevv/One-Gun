@@ -86,7 +86,8 @@ func _run() -> void:
 	var catalog: Array[Dictionary] = [
 		Catalog.normalize_item({"id": "hat", "display_name": "Hat",
 			"item_type": "hat", "rarity": "common", "active": true,
-			"shop_visible": true, "rotation_scope": "daily"}),
+			"shop_visible": true, "rotation_scope": "daily",
+			"rotation_starts_at": null, "rotation_ends_at": null}),
 		Catalog.normalize_item({"id": "theme", "display_name": "Theme",
 			"item_type": "ceremony_theme", "rarity": "epic", "active": true,
 			"shop_visible": true, "rotation_scope": "monthly"}),
@@ -103,6 +104,8 @@ func _run() -> void:
 	]
 	_check(Catalog.item_matches(catalog[0], "CHARACTER", "COSMETICS", "HATS"),
 		"hat must appear in Character > Cosmetics > Hats")
+	_check(Catalog.is_in_live_rotation(catalog[0]),
+		"SQL-null rotation dates must keep an open-ended Prize Counter hat live")
 	_check(Catalog.item_matches(catalog[1], "AUDIO", "WINNERS CIRCLE"),
 		"ceremony theme must appear in Audio > Winners Circle")
 	_check(Catalog.item_matches(catalog[2], "WEAPONS", "GUN SKINS"),
@@ -113,6 +116,27 @@ func _run() -> void:
 		"unassigned placeholder must not silently enter a live rotation")
 	_check(Catalog.is_in_live_rotation(catalog[2]),
 		"assigned Seasonal Starter item must enter the live rotation")
+	for migrated_hat_id in [
+		"hat_chef", "hat_yellow_point", "hat_cowboy_classic",
+		"hat_fedora_black", "hat_straw_adventurer", "hat_cowboy_wide",
+		"hat_fedora_white", "hat_top", "hat_witch", "hat_crown",
+	]:
+		var migrated_hat := Catalog.normalize_item({
+			"id": migrated_hat_id,
+			"item_type": "hat",
+			"category": "character",
+			"subcategory": "hats",
+			"active": true,
+			"shop_visible": true,
+			"rotation_scope": "daily",
+			"rotation_starts_at": null,
+			"rotation_ends_at": null,
+		})
+		_check(Catalog.is_in_live_rotation(migrated_hat)
+			and Catalog.item_matches(
+				migrated_hat, "CHARACTER", "COSMETICS", "HATS"),
+			"migrated Prize Counter hat must remain live and browseable: %s"
+				% migrated_hat_id)
 	var sorted: Array[Dictionary] = Catalog.sorted_items(catalog, "rarity_asc")
 	_check(str(sorted[0].get("id", "")) == "hat"
 		and str(sorted[sorted.size() - 1].get("id", "")) == "gun",

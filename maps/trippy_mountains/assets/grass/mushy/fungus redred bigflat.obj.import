@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bdlp7ams3dxeb"
+path="res://.godot/imported/fungus redred bigflat.obj-90fc92c0e3ab889fbed6679236336935.mesh"
+
+[deps]
+
+files=["res://.godot/imported/fungus redred bigflat.obj-90fc92c0e3ab889fbed6679236336935.mesh"]
+
+source_file="res://maps/trippy_mountains/assets/grass/mushy/fungus redred bigflat.obj"
+dest_files=["res://.godot/imported/fungus redred bigflat.obj-90fc92c0e3ab889fbed6679236336935.mesh", "res://.godot/imported/fungus redred bigflat.obj-90fc92c0e3ab889fbed6679236336935.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

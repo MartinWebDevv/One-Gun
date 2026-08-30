@@ -254,7 +254,12 @@ func _configure_camera_and_lights() -> void:
 func _build_competitor(anchor: Node3D, entry: Dictionary) -> void:
 	for child in anchor.get_children():
 		child.queue_free()
+	var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
 	var model_id := SkinRegistry.sanitize_model_id(str(entry.get("model_id", "male")))
+	var equipped_model := CosmeticRegistry.local_character_model_id(
+		str(cosmetics.get("character_model", "")))
+	if equipped_model != "":
+		model_id = equipped_model
 	var visual_scene := SkinRegistry.load_visual_scene(model_id)
 	if visual_scene == null:
 		return
@@ -268,7 +273,7 @@ func _build_competitor(anchor: Node3D, entry: Dictionary) -> void:
 	visual.set("build_animation_library", false)
 	visual.visible = false
 	anchor.add_child(visual)
-	var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
+	CosmeticRegistry.apply_to_character_visual(visual, cosmetics)
 	var move_id := str(cosmetics.get("emote", ""))
 	var move_animation := CosmeticRegistry.local_podium_animation(move_id)
 	var requested := ["idle", "long_idle"]

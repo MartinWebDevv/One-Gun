@@ -250,6 +250,15 @@ func set_online_active(value: bool) -> void:
 	$Area3D.monitoring = value and not pickup_locked and not is_held and not is_in_flight
 	_update_pickup_label()
 
+
+func _set_loose_pickup_available(value: bool) -> void:
+	# preserve_held_for_overtime() disables the pickup shape while the weapon is
+	# attached to a survivor. Every path that makes it loose must restore both
+	# the shape and monitoring; monitoring alone cannot detect overlaps.
+	$Area3D/CollisionShape3D.disabled = not online_active
+	$Area3D.monitoring = value and online_active and not pickup_locked \
+		and not is_held and not is_in_flight
+
 # ============================================================
 # Pickup / drop / throw
 # ============================================================
@@ -444,8 +453,9 @@ func drop(is_death_drop: bool = false):
 	reparent(world, true)
 	global_transform = drop_transform
 	$CollisionShape3D.disabled = false
-	$Area3D.monitoring = true
 	is_held = false
+	is_in_flight = false
+	_set_loose_pickup_available(true)
 	_enable_loose_physics()
 	if p != null and p.held_melee_weapon == self:
 		p.held_melee_weapon = null
@@ -551,9 +561,9 @@ func throw():
 	global_rotation = p.global_rotation
 	_enable_loose_physics()
 	$CollisionShape3D.disabled = false
-	$Area3D.monitoring = false
 	is_held = false
 	is_in_flight = true
+	_set_loose_pickup_available(false)
 	if p.held_melee_weapon == self:
 		p.held_melee_weapon = null
 	_arm_thrower_collision_grace(p)
@@ -600,9 +610,9 @@ func _net_do_throw(start_pos: Vector3, start_rot: Vector3, launch_velocity: Vect
 	global_position = start_pos
 	global_rotation = start_rot
 	$CollisionShape3D.disabled = false
-	$Area3D.monitoring = false
 	is_held = false
 	is_in_flight = true
+	_set_loose_pickup_available(false)
 	_online_hit_actor_ids.clear()
 	_arm_thrower_collision_grace(p)
 	if p != null and p.held_melee_weapon == self:
@@ -686,9 +696,12 @@ func _net_land_throw(land_pos: Vector3, land_rot: Vector3) -> void:
 	_start_landed_cooldown()
 
 func _start_landed_cooldown():
+	# Keep the pickup shape enabled during the lock so actors already standing
+	# near the landing point are detected when monitoring resumes.
+	$Area3D/CollisionShape3D.disabled = not online_active
 	await get_tree().create_timer(THROW_PICKUP_LOCK_TIME).timeout
 	if not pickup_locked and not is_held and not is_in_flight:
-		$Area3D.monitoring = true
+		_set_loose_pickup_available(true)
 
 func _update_pickup_label():
 	if not has_node("PickupLabel"):
@@ -767,8 +780,13 @@ func swing(should_break: bool = false):
 		else was_already_in_deficit and GameConfig.melee_weapon_breaking
 
 	is_swinging = true
+	var speed_multiplier := maxf(float(p.melee_swing_speed_multiplier()), 1.0) \
+		if p.has_method("melee_swing_speed_multiplier") else 1.0
+	var windup_time := _windup_time / speed_multiplier
+	var active_time := _active_time / speed_multiplier
+	var recovery_time := _recovery_time / speed_multiplier
 	if p.has_method("play_melee_animation"):
-		p.play_melee_animation(_windup_time + _active_time + _recovery_time)
+		p.play_melee_animation(windup_time + active_time + recovery_time)
 	_online_hit_actor_ids.clear()
 	_apply_powerup_reach(p.has_method("has_active_reach") and p.has_active_reach())
 
@@ -786,13 +804,13 @@ func swing(should_break: bool = false):
 	GameEvents.combat_noise.emit(p.global_position, int(p.get("actor_id")), "melee", 12.0)
 	swing_tween = create_tween()
 	swing_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	swing_tween.tween_interval(_windup_time)
+	swing_tween.tween_interval(windup_time)
 	swing_tween.tween_callback(_begin_active_swing_window)
-	swing_tween.tween_interval(_active_time)
+	swing_tween.tween_interval(active_time)
 	swing_tween.tween_callback(func():
 		$HitBox.monitoring = false
 		_restore_powerup_reach())
-	swing_tween.tween_interval(_recovery_time)
+	swing_tween.tween_interval(recovery_time)
 
 	await swing_tween.finished
 	is_swinging = false
@@ -1204,7 +1222,7 @@ func _get_bullet_immunity_duration() -> float:
 func set_online_pickup_locked(value: bool) -> void:
 	pickup_locked = value
 	if not is_held and not is_in_flight:
-		$Area3D.monitoring = online_active and not value
+		_set_loose_pickup_available(not value)
 	_update_pickup_label()
 
 func reset_to_spawn(randomize_identity: bool = true):

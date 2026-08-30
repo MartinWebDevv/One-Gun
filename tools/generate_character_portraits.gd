@@ -24,17 +24,23 @@ func _generate() -> void:
 	_build_portrait_stage()
 	await _wait_frames(8)
 	var output_dir := OUTPUT_DIR
-	if _model_id != SkinRegistry.DEFAULT_MODEL_ID:
+	if _model_id != SkinRegistry.DEFAULT_MODEL_ID \
+			and not SkinRegistry.uses_fixed_texture(_model_id):
 		output_dir = OUTPUT_DIR.path_join(_model_id)
 	var absolute_dir := ProjectSettings.globalize_path(output_dir)
 	DirAccess.make_dir_recursive_absolute(absolute_dir)
-	for skin in SkinRegistry.SKINS:
+	var output_suffix := OS.get_environment("ONEGUN_PORTRAIT_SUFFIX").strip_edges()
+	var portrait_skins: Array = [SkinRegistry.SKINS[0]] \
+		if SkinRegistry.uses_fixed_texture(_model_id) else SkinRegistry.SKINS
+	for skin in portrait_skins:
 		var skin_id := str(skin["id"])
 		_visual.call("set_skin", skin_id)
 		await _wait_frames(3)
 		await RenderingServer.frame_post_draw
 		var image := _viewport.get_texture().get_image()
-		var path := absolute_dir.path_join("%s.png" % skin_id)
+		var file_name := "%s%s.png" % [_model_id, output_suffix] \
+			if SkinRegistry.uses_fixed_texture(_model_id) else "%s.png" % skin_id
+		var path := absolute_dir.path_join(file_name)
 		var error := image.save_png(path)
 		if error != OK:
 			push_error("CharacterPortraitGenerator: could not save %s (%d)" % [path, error])
@@ -42,7 +48,7 @@ func _generate() -> void:
 			return
 		print("CHARACTER_PORTRAIT_CAPTURE ", path)
 	print("CHARACTER_PORTRAITS_GENERATED model=", _model_id,
-		" count=", SkinRegistry.skin_count())
+		" count=", portrait_skins.size())
 	get_tree().quit(0)
 
 
@@ -69,6 +75,8 @@ func _build_portrait_stage() -> void:
 
 	_pivot = Node3D.new()
 	_pivot.name = "PortraitPivot"
+	_pivot.rotation_degrees.y = float(OS.get_environment(
+		"ONEGUN_PORTRAIT_YAW"))
 	world.add_child(_pivot)
 	var visual_scene := SkinRegistry.load_visual_scene(_model_id)
 	if visual_scene == null:
@@ -79,6 +87,9 @@ func _build_portrait_stage() -> void:
 	_visual.name = "PortraitCharacter"
 	_visual.set("build_animation_library", false)
 	_pivot.add_child(_visual)
+	var portrait_hat := OS.get_environment("ONEGUN_PORTRAIT_HAT").strip_edges()
+	if portrait_hat != "" and _visual.has_method("set_hat_cosmetic"):
+		_visual.call("set_hat_cosmetic", portrait_hat)
 	var animation_player := _visual.call("ensure_animations", ["idle"]) as AnimationPlayer
 	if animation_player != null and animation_player.has_animation("idle"):
 		animation_player.play("idle", 0.0)

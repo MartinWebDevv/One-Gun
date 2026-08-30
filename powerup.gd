@@ -15,6 +15,7 @@ const ICON_TEXTURES := {
 	"silent_steps": preload("res://models/2DPowerUpLogos/silent steps pixel.png"),
 	"extra_life": preload("res://models/2DPowerUpLogos/extra life.png"),
 	"reach": preload("res://models/2DPowerUpLogos/reach pixel.png"),
+	"fast_hands": preload("res://models/2DPowerUpLogos/fastHands2D.png"),
 }
 
 const DISPLAY_NAMES := {
@@ -24,6 +25,7 @@ const DISPLAY_NAMES := {
 	"silent_steps": "Silent Steps",
 	"extra_life": "Extra Life",
 	"reach": "Reach",
+	"fast_hands": "Fast Hands",
 }
 
 var color_map = {
@@ -33,6 +35,7 @@ var color_map = {
 	"silent_steps": Color(0.55, 0.55, 0.85),
 	"extra_life": Color(1.0, 0.72, 0.18),
 	"reach": Color(0.2, 1.0, 0.42),
+	"fast_hands": Color(1.0, 0.2, 0.68),
 }
 
 var power_type := "extra_dash"
@@ -66,11 +69,13 @@ func _ready():
 
 func _update_visual():
 	if powerup_icon != null:
-		powerup_icon.texture = ICON_TEXTURES.get(power_type, ICON_TEXTURES["extra_dash"])
+		powerup_icon.texture = ICON_TEXTURES.get(
+			power_type, ICON_TEXTURES["extra_dash"])
 	if powerup_name_label != null:
 		powerup_name_label.text = str(DISPLAY_NAMES.get(
 			power_type, power_type.replace("_", " ").capitalize()))
 		powerup_name_label.modulate = color_map.get(power_type, Color.WHITE)
+
 
 func _process(delta):
 	if collected:

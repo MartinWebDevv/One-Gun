@@ -46,6 +46,12 @@ var _orbit_center := Vector3.ZERO
 var _orbit_radius := 20.0
 var _orbit_height_ratio := 0.6
 var _orbit_target_height_ratio := 0.1
+var _orbit_camera_distance := 24.0
+var _orbit_camera_height := 12.0
+var _orbit_target_height := 2.0
+var _orbit_arc_center := 0.0
+var _orbit_arc_half_width := 0.0
+var _orbit_direction := 1.0
 
 var _cycling := false
 var _cycle_timer := 0.0
@@ -168,14 +174,24 @@ func _show_random_mystery() -> void:
 func _process(delta: float) -> void:
 	if _camera == null:
 		return
-	_orbit_angle += ORBIT_SPEED * delta
-	var r := _orbit_radius * 1.2
+	if _orbit_arc_half_width > 0.0:
+		_orbit_angle += ORBIT_SPEED * _orbit_direction * delta
+		var arc_min := _orbit_arc_center - _orbit_arc_half_width
+		var arc_max := _orbit_arc_center + _orbit_arc_half_width
+		if _orbit_angle > arc_max:
+			_orbit_angle = arc_max
+			_orbit_direction = -1.0
+		elif _orbit_angle < arc_min:
+			_orbit_angle = arc_min
+			_orbit_direction = 1.0
+	else:
+		_orbit_angle += ORBIT_SPEED * delta
 	_camera.position = _orbit_center + Vector3(
-		cos(_orbit_angle) * r,
-		_orbit_radius * _orbit_height_ratio,
-		sin(_orbit_angle) * r)
+		cos(_orbit_angle) * _orbit_camera_distance,
+		_orbit_camera_height,
+		sin(_orbit_angle) * _orbit_camera_distance)
 	_camera.look_at(
-		_orbit_center + Vector3(0, _orbit_radius * _orbit_target_height_ratio, 0),
+		_orbit_center + Vector3.UP * _orbit_target_height,
 		Vector3.UP)
 
 	if _cycling and not _swapping and _maps.size() > 1:
@@ -204,7 +220,7 @@ func _fade_swap_to(index: int) -> void:
 		_fade_tween.kill()
 	_fade_tween = create_tween()
 	_fade_tween.tween_property(_fade_rect, "color:a", 1.0, FADE_HALF_TIME)
-	_fade_tween.tween_callback(func(): _load_map(index))
+	_fade_tween.tween_callback(_load_map.bind(index))
 	_fade_tween.tween_property(_fade_rect, "color:a", 0.0, FADE_HALF_TIME)
 	_fade_tween.tween_callback(_finish_swap)
 
@@ -233,6 +249,7 @@ func _load_map(index: int) -> void:
 		_orbit_target_height_ratio = float(headless_data.get("preview_target_height_ratio", 0.1))
 		_orbit_center = headless_data.get("preview_center", Vector3.ZERO)
 		_orbit_radius = float(headless_data.get("preview_radius", 20.0))
+		_apply_orbit_camera_framing(headless_data)
 		_status.visible = false
 		map_shown.emit(index)
 		return
@@ -271,9 +288,26 @@ func _load_map(index: int) -> void:
 		_orbit_center = map_data["preview_center"]
 	if map_data.has("preview_radius"):
 		_orbit_radius = float(map_data["preview_radius"])
+	_apply_orbit_camera_framing(map_data)
 	_status.visible = false
 	map_shown.emit(index)
 
+
+func _apply_orbit_camera_framing(map_data: Dictionary) -> void:
+	# Most maps retain the legacy outside-in orbit. A map can provide absolute
+	# interior camera values when its perimeter must stay between the camera
+	# and all non-playable scenery.
+	_orbit_camera_distance = float(map_data.get(
+		"preview_camera_distance", _orbit_radius * 1.2))
+	_orbit_camera_height = float(map_data.get(
+		"preview_camera_height", _orbit_radius * _orbit_height_ratio))
+	_orbit_target_height = float(map_data.get(
+		"preview_target_height",
+		_orbit_radius * _orbit_target_height_ratio))
+	_orbit_arc_center = _orbit_angle
+	_orbit_arc_half_width = maxf(float(map_data.get(
+		"preview_orbit_half_arc", 0.0)), 0.0)
+	_orbit_direction = 1.0
 
 func _fail_map_load(index: int, reason: String) -> void:
 	_clear_current_map()

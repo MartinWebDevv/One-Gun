@@ -67,11 +67,15 @@ func _show_entry(entry: PanelContainer):
 	var tw = entry.create_tween()
 	tw.tween_property(entry, "modulate:a", 1.0, 0.15)
 	# Pivot on the right edge so the pop reads as sliding in from the right.
-	entry.resized.connect(func(): entry.pivot_offset = Vector2(entry.size.x, entry.size.y * 0.5), CONNECT_ONE_SHOT)
+	entry.resized.connect(_set_entry_pivot.bind(entry), CONNECT_ONE_SHOT)
 	entry.scale = Vector2(0.7, 0.7)
 	var tw2 = entry.create_tween()
 	tw2.tween_property(entry, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_fade_and_remove(entry)
+
+func _set_entry_pivot(entry: Control) -> void:
+	if is_instance_valid(entry):
+		entry.pivot_offset = Vector2(entry.size.x, entry.size.y * 0.5)
 
 func _add_label(parent: HBoxContainer, text: String, font_size: int, color: Color, min_width: int = 0, bold: bool = false) -> Label:
 	var label = Label.new()

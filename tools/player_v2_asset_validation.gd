@@ -160,6 +160,23 @@ func _run() -> void:
 			or initial_player_animation.current_animation != "idle":
 		_fail("player does not evaluate Idle immediately on spawn")
 		return
+	player.is_online = true
+	player._is_local_online = true
+	var opening_animation_sequence: int = player._network_animation_sequence
+	player.play_action_animation("hit", 0.45)
+	if player._network_animation_name != "hit" \
+			or player._network_animation_sequence <= opening_animation_sequence:
+		_fail("online owner did not publish its action animation state")
+		return
+	player._is_local_online = false
+	player._network_animation_name = "idle"
+	player._network_animation_speed = 1.0
+	player._network_animation_sequence += 1
+	if not player._apply_replicated_puppet_animation() \
+			or player._current_anim != "idle":
+		_fail("remote/spectator puppet did not apply replicated idle state")
+		return
+	player.is_online = false
 	await get_tree().process_frame
 	if player.call("get_hold_point") == null \
 			or player.call("get_melee_hold_point") == null \

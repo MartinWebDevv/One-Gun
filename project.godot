@@ -11,11 +11,14 @@ config_version=5
 [application]
 
 config/name="OneGun"
-config/version="0.0.4"
+config/version="0.0.7"
 run/main_scene="res://app_bootstrap.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 run/flush_stdout_on_print=true
-config/icon="res://icon.svg"
+boot_splash/bg_color=Color(0.005, 0.009, 0.02, 1)
+boot_splash/image="res://UI/branding/one_gun_boot_splash.png"
+config/icon="res://UI/branding/one_gun_app_icon.png"
+config/windows_native_icon="res://UI/branding/one_gun_app_icon.ico"
 
 [autoload]
 
@@ -31,6 +34,7 @@ ThemeManager="*uid://cpqhwwul3nbwa"
 AudioManager="*uid://cjchkap4v4q61"
 AccessibilityManager="*res://UI/accessibility_manager.gd"
 NetworkManager="*res://network_manager.gd"
+SocialManager="*res://supabase/social_manager.gd"
 RewardIdentityManager="*res://supabase/reward_identity_manager.gd"
 OnlineChat="*res://online_chat.gd"
 

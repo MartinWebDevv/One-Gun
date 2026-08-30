@@ -48,13 +48,13 @@ func start_queue(base_url_override := "") -> bool:
 		_base_url = requested_url
 	if not _is_allowed_base_url(_base_url):
 		queue_failed.emit("MATCHMAKING UNAVAILABLE",
-			"The development coordinator has not been configured for this build.")
+			"Matchmaking is not available right now.")
 		return false
 	_active = true
 	_queue_token = ""
 	_client_nonce = _random_nonce()
 	_deadline_msec = Time.get_ticks_msec() + QUEUE_TIMEOUT_MSEC
-	progress_changed.emit("JOINING THE DEVELOPMENT QUEUE…")
+	progress_changed.emit("SEARCHING FOR A MATCH…")
 	var compatibility := BuildInfo.compatibility_payload()
 	return _post("/v1/queue", {
 		"schema": 1,
@@ -94,7 +94,7 @@ func _post(path: String, payload: Dictionary, operation: String) -> bool:
 		JSON.stringify(payload))
 	if error != OK:
 		if operation != "cancel":
-			_fail("COORDINATOR UNAVAILABLE", "The matchmaking request could not be started.")
+			_fail("MATCHMAKING UNAVAILABLE", "The matchmaking request could not be started.")
 		return false
 	return true
 
@@ -108,16 +108,16 @@ func _on_request_completed(result: int, response_code: int,
 	if not _active:
 		return
 	if result != HTTPRequest.RESULT_SUCCESS:
-		_fail("COORDINATOR UNAVAILABLE", "The matchmaking coordinator did not respond.")
+		_fail("MATCHMAKING UNAVAILABLE", "The matchmaking service did not respond.")
 		return
 	var parsed = JSON.parse_string(body.get_string_from_utf8())
 	if parsed is not Dictionary:
-		_fail("INVALID COORDINATOR RESPONSE", "The coordinator returned unreadable data.")
+		_fail("MATCHMAKING ERROR", "The matchmaking service returned unreadable data.")
 		return
 	var response: Dictionary = parsed
 	if response_code < 200 or response_code >= 300:
 		_fail(str(response.get("title", "MATCHMAKING FAILED")),
-			str(response.get("message", "The development queue rejected this request.")))
+			str(response.get("message", "Matchmaking rejected this request.")))
 		return
 	match operation:
 		"create": _handle_created(response)
@@ -127,7 +127,7 @@ func _on_request_completed(result: int, response_code: int,
 func _handle_created(response: Dictionary) -> void:
 	_queue_token = str(response.get("queue_token", "")).strip_edges()
 	if _queue_token.length() < 24:
-		_fail("INVALID COORDINATOR RESPONSE", "The queue capability was missing.")
+		_fail("MATCHMAKING ERROR", "The matchmaking session could not be created.")
 		return
 	progress_changed.emit("SEARCHING FOR ANOTHER PLAYER…")
 	_schedule_poll(int(response.get("retry_after_ms", 2500)))

@@ -3,6 +3,13 @@ extends SceneTree
 # Runtime-only validation for Profile and Prize Counter. It seeds the manager
 # in memory and never writes a session or calls the live backend.
 
+const HatRegistry = preload("res://models/cosmetics/hats/hat_cosmetic_registry.gd")
+const GIFT_CHARACTER_ITEM_IDS: Array[String] = [
+	"character_goldfish_bag_man", "character_eye_wizard",
+	"character_mr_mushroom", "character_mr_poop", "character_mr_salt",
+	"character_spooky_witch",
+]
+
 var _failed := false
 
 
@@ -20,6 +27,7 @@ func _run() -> void:
 	var prefs = root.get_node("PlayerPrefs")
 	_validate_helpers(supabase)
 	var original_display_name := str(prefs.settings.get("player_name", "Player"))
+	var original_model_id := str(prefs.settings.get("character_model_id", "male"))
 	prefs.settings["player_name"] = "ArenaAlias"
 	_seed_runtime_data(supabase)
 
@@ -44,6 +52,47 @@ func _run() -> void:
 		"Prize Counter category tabs were not built")
 	_check(overlay.get("_store_page").visible,
 		"Prize Counter was not the configured initial page")
+	var back_button := overlay.find_child("ClosePlayerHub", true, false) as Button
+	var canvas := overlay.find_child("PlayerHubCanvas", true, false) as Control
+	_check(back_button != null and canvas != null and back_button.text == "BACK"
+			and str(back_button.get("variant")) == "navy"
+			and back_button.get_global_rect().get_center().x
+				< canvas.get_global_rect().get_center().x
+			and back_button.get_global_rect().get_center().y
+				> canvas.get_global_rect().get_center().y,
+		"Profile and Prize Counter share the blue bottom-left Back control")
+	var browse_panel := overlay.find_child(
+		"PrizeBrowseCounterPanel", true, false) as Control
+	var affordable_filter := overlay.find_child(
+		"PrizeAffordableFilter", true, false) as Control
+	var footer_panel := overlay.find_child("PlayerHubFeedback", true, false) as Control
+	var rotation_notice := overlay.find_child(
+		"PrizeCounterRotationNotice", true, false) as Label
+	_check(browse_panel != null and affordable_filter != null
+			and browse_panel.get_global_rect().encloses(
+				affordable_filter.get_global_rect()),
+		"Browse Counter border does not wrap Affordable")
+	_check(browse_panel != null and back_button != null
+			and not browse_panel.get_global_rect().intersects(
+				back_button.get_global_rect(), true),
+		"Browse Counter still covers the bottom-left Back button")
+	_check(rotation_notice != null and footer_panel != null
+			and rotation_notice.text == overlay.PRIZE_ROTATION_NOTICE
+			and footer_panel.is_ancestor_of(rotation_notice)
+			and rotation_notice.visible,
+		"public-rotation notice was not moved into the bottom footer bar")
+	_check(back_button != null and overlay.get("_store_page") != null
+			and back_button.get_index() > overlay.get("_store_page").get_index(),
+		"Prize Counter Back button is not above the page interaction layer")
+	for test_size in [Vector2(1280.0, 720.0), Vector2(1600.0, 900.0),
+			Vector2(1920.0, 1080.0)]:
+		overlay.size = test_size
+		overlay.call("_apply_responsive_layout")
+		await process_frame
+		_check(not browse_panel.get_global_rect().intersects(
+				back_button.get_global_rect(), true),
+			"Browse Counter covers Back at %dx%d" % [
+				int(test_size.x), int(test_size.y)])
 
 	var account_status = overlay.get("_account_status") as Label
 	_check(account_status != null and account_status.text.contains("TESTER"),
@@ -78,6 +127,11 @@ func _run() -> void:
 		"Prize Counter should build exactly one reusable move-preview viewport")
 	_check(not store_text.contains("FOUNDER CROWN"),
 		"hidden founder crown appeared in the public Prize Counter")
+	for item_id in GIFT_CHARACTER_ITEM_IDS:
+		var gift_name := SupabaseCosmeticRegistry.display_name_fallback(
+			item_id).to_upper()
+		_check(not store_text.contains(gift_name),
+			"gift-only character model appeared in the public Prize Counter: %s" % item_id)
 	_check(store_text.contains("DEEP ORBIT") and store_text.contains("PREVIEW"),
 		"music unlock was not previewable in the Prize Counter")
 
@@ -86,6 +140,63 @@ func _run() -> void:
 	store_text = _descendant_text(store_list)
 	_check(store_text.contains("COWBOY HAT") and not store_text.contains("GOLDEN GUN"),
 		"Character category did not isolate character cosmetics")
+	overlay.call("_select_store_item", "hat_cowboy_classic")
+	await process_frame
+	await process_frame
+	var hat_preview = overlay.get("_store_move_preview_container") as SubViewportContainer
+	var hat_viewport = overlay.get("_store_move_preview_viewport") as SubViewport
+	var hat_pivot = overlay.get("_store_move_preview_pivot") as Node3D
+	var hat_camera = overlay.get("_store_move_preview_camera") as Camera3D
+	var hat_visual = overlay.get("_store_move_preview_visual") as Node3D
+	var hat_player = overlay.get("_store_move_preview_player") as AnimationPlayer
+	var hat_socket = hat_visual.call("get_headwear_socket") as Marker3D \
+		if hat_visual != null else null
+	var hat_camera_distance := absf(
+		hat_camera.global_position.z - hat_socket.global_position.z) \
+		if hat_camera != null and hat_socket != null else 0.0
+	_check(bool(overlay.get("_store_hat_preview_active"))
+		and hat_preview != null and hat_preview.visible
+		and hat_preview.mouse_filter == Control.MOUSE_FILTER_STOP
+		and hat_viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS
+		and hat_player != null and hat_player.current_animation == "idle"
+		and hat_player.is_playing()
+		and hat_camera != null and hat_camera_distance >= 2.35 \
+		and hat_camera_distance <= 5.20
+		and hat_socket != null
+		and hat_socket.find_child("HatVisual", false, false) != null,
+		"Hat inspection did not use the animated interactive shoulder-up 3D framing")
+	var mouse_rotation: float = hat_pivot.rotation.y
+	overlay.set("_store_hat_preview_dragging", true)
+	var mouse_motion := InputEventMouseMotion.new()
+	mouse_motion.relative = Vector2(24.0, 0.0)
+	overlay.call("_on_store_hat_preview_gui_input", mouse_motion)
+	await process_frame
+	_check(not is_equal_approx(hat_pivot.rotation.y, mouse_rotation),
+		"Hat inspection did not rotate from a manual mouse drag")
+	var pivot_screen := hat_camera.unproject_position(hat_pivot.global_position)
+	_check(absf(pivot_screen.x - float(hat_viewport.size.x) * 0.5) < 1.0,
+		"Hat inspection moved its authored character pivot off center")
+	overlay.call("_show_store_hat_preview", "hat_yellow_point")
+	await process_frame
+	await process_frame
+	var replacement_hat := hat_socket.find_child(
+		"HatVisual", false, false) as Node3D
+	var replacement_pivot_screen := hat_camera.unproject_position(
+		hat_pivot.global_position)
+	_check(replacement_hat != null and str(replacement_hat.get_meta(
+		"supabase_hat_id", "")) == "hat_yellow_point"
+		and hat_pivot.rotation.is_zero_approx()
+		and absf(replacement_pivot_screen.x
+			- float(hat_viewport.size.x) * 0.5) < 1.0,
+		"Selecting another Hat after rotation did not reset attached/centered framing")
+	var stick_rotation: float = hat_pivot.rotation.y
+	Input.action_press("p1_look_right", 1.0)
+	overlay.call("_process", 0.25)
+	Input.action_release("p1_look_right")
+	_check(not is_equal_approx(hat_pivot.rotation.y, stick_rotation),
+		"Hat inspection did not rotate from the controller right stick")
+	var hat_ids: Array = HatRegistry.HATS.keys()
+	hat_ids.sort()
 	overlay.call("_on_store_category_selected", 2)
 	await process_frame
 	store_text = _descendant_text(store_list)
@@ -148,12 +259,50 @@ func _run() -> void:
 	_check(account_name_field != null and account_name_field.visible,
 		"Account Name was not shown in Create Account mode")
 
+	# Run the exhaustive 3D geometry matrix after the catalog/auth assertions.
+	# It intentionally advances many preview frames and must not race unrelated
+	# asynchronous catalog refresh work that those earlier assertions exercise.
+	overlay.call("_show_page", 1)
+	for model_id in ["male", "female"]:
+		prefs.settings["character_model_id"] = model_id
+		for item_id in hat_ids:
+			overlay.call("_show_store_hat_preview", str(item_id))
+			await process_frame
+			await process_frame
+			var active_camera = overlay.get(
+				"_store_move_preview_camera") as Camera3D
+			var active_viewport = overlay.get(
+				"_store_move_preview_viewport") as SubViewport
+			var active_visual = overlay.get(
+				"_store_move_preview_visual") as Node3D
+			var active_pivot = overlay.get(
+				"_store_move_preview_pivot") as Node3D
+			var active_socket = active_visual.call("get_headwear_socket") as Marker3D \
+				if active_visual != null else null
+			for yaw_degrees in [0.0, 90.0, 180.0, 270.0]:
+				if active_pivot != null:
+					active_pivot.rotation.y = deg_to_rad(yaw_degrees)
+				if active_visual != null and active_visual.has_method("_process"):
+					active_visual.call("_process", 0.0)
+				var screen_bounds := _hat_screen_bounds(active_camera, active_socket) \
+					if active_camera != null and active_socket != null else Rect2()
+				_check(active_camera != null and active_viewport != null \
+						and active_socket != null and screen_bounds.position.y >= 12.0,
+					"%s Prize Counter %s at %d degrees lost its top margin: %s" % [
+						model_id, item_id, int(yaw_degrees), screen_bounds])
+				_check(active_viewport != null and screen_bounds.position.x >= 8.0 \
+						and screen_bounds.end.x <= float(active_viewport.size.x) - 8.0,
+					"%s Prize Counter %s at %d degrees exceeded horizontal framing: %s" % [
+						model_id, item_id, int(yaw_degrees), screen_bounds])
+	prefs.settings["character_model_id"] = original_model_id
+
 	overlay.queue_free()
 	prefs.settings["player_name"] = original_display_name
+	prefs.settings["character_model_id"] = original_model_id
 	if _failed:
 		quit(1)
 		return
-	print("SUPABASE UI VALIDATION OK: Profile identity, auth onboarding, categories, and signed-out browsing")
+	print("SUPABASE UI VALIDATION OK: Profile identity, auth onboarding, categories, signed-out browsing, and 96 Hat preview frames")
 	quit(0)
 
 
@@ -203,10 +352,11 @@ func _seed_runtime_data(supabase: Node) -> void:
 	supabase.gun_tokens = 4321
 	supabase.shop_items.clear()
 	supabase.shop_items.append({
-		"id": "cowboy_hat", "display_name": "Cowboy Hat",
+		"id": "hat_cowboy_classic", "display_name": "Cowboy Hat",
 		"item_type": "hat", "description": "Test hat", "price": 100,
 		"rarity": "common", "purchasable": true,
 		"shop_visible": true, "active": true, "rotation_scope": "daily",
+		"rotation_starts_at": null, "rotation_ends_at": null,
 	})
 	supabase.shop_items.append({
 		"id": "golden_gun_skin", "display_name": "Golden Gun Skin",
@@ -234,12 +384,15 @@ func _seed_runtime_data(supabase: Node) -> void:
 		"price": 2200, "rarity": "legendary", "purchasable": true,
 		"shop_visible": true, "active": true, "rotation_scope": "seasonal_starter",
 	})
+	for item_id in GIFT_CHARACTER_ITEM_IDS:
+		supabase.shop_items.append(
+			SupabaseCosmeticRegistry.local_catalog_item(item_id))
 	supabase.inventory.clear()
-	supabase.inventory.append({"item_id": "cowboy_hat", "source": "purchase"})
+	supabase.inventory.append({"item_id": "hat_cowboy_classic", "source": "purchase"})
 	supabase.inventory.append({"item_id": "founder_crown", "source": "founder_grant"})
 	supabase.inventory.append({"item_id": "wc_theme_deep_orbit", "source": "purchase"})
 	supabase.set("_owned_item_ids", {
-		"cowboy_hat": true, "founder_crown": true,
+		"hat_cowboy_classic": true, "founder_crown": true,
 		"wc_theme_deep_orbit": true,
 	})
 	supabase.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
@@ -257,6 +410,31 @@ func _descendant_text(root_node: Node) -> String:
 	for child in root_node.find_children("*", "Button", true, false):
 		result += "%s\n" % str((child as Button).text)
 	return result
+
+
+func _hat_screen_bounds(camera: Camera3D, socket: Marker3D) -> Rect2:
+	var minimum := Vector2(INF, INF)
+	var maximum := Vector2(-INF, -INF)
+	var hat := socket.find_child("HatVisual", false, false) as Node3D
+	if hat == null:
+		return Rect2(Vector2(-INF, -INF), Vector2.ZERO)
+	for node in hat.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance == null or mesh_instance.mesh == null \
+				or not mesh_instance.is_visible_in_tree():
+			continue
+		var bounds := mesh_instance.mesh.get_aabb()
+		for corner_index in 8:
+			var corner := bounds.position + Vector3(
+				bounds.size.x if (corner_index & 1) != 0 else 0.0,
+				bounds.size.y if (corner_index & 2) != 0 else 0.0,
+				bounds.size.z if (corner_index & 4) != 0 else 0.0)
+			var screen := camera.unproject_position(mesh_instance.to_global(corner))
+			minimum.x = minf(minimum.x, screen.x)
+			minimum.y = minf(minimum.y, screen.y)
+			maximum.x = maxf(maximum.x, screen.x)
+			maximum.y = maxf(maximum.y, screen.y)
+	return Rect2(minimum, maximum - minimum)
 
 
 func _check(condition: bool, message: String) -> void:

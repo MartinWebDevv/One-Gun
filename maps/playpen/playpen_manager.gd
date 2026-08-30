@@ -4,6 +4,11 @@ const PLAYPEN_RESPAWN_TIME := 2.0
 const PLAYPEN_REFILL_TIME := 2.0
 const PLAYPEN_GUNS_PER_BAY := 2
 const PLAYPEN_BAY_COUNT := 3
+const PLAYPEN_RECOVERY_INTERVAL := 0.25
+const PLAYPEN_DESPAWN_GRACE_SECONDS := 0.35
+const PLAYPEN_MIN_SAFE_Y := -6.0
+const PLAYPEN_MAX_ABS_X := 39.5
+const PLAYPEN_MAX_ABS_Z := 27.5
 const PLAYPEN_WEAPONS := ["Sword", "Baseball Bat", "Stick", "Crowbar", "Frying Pan"]
 const PLAYPEN_ITEMS := [
 	"bubble_gum", "grenade", "bear_trap", "spring_pad", "smoke_bomb",
@@ -11,13 +16,16 @@ const PLAYPEN_ITEMS := [
 ]
 const PLAYPEN_POWERUPS := [
 	"extra_dash", "sticky_hands", "speed_surge", "silent_steps",
-	"extra_life", "reach",
+	"extra_life", "reach", "fast_hands",
 ]
 
 var _gun_spawn_positions: Dictionary = {}
 var _gun_spawn_generations: Dictionary = {}
 var _gun_refill_pending: Dictionary = {}
 var _practice_respawn_generation: Dictionary = {}
+var _practice_spawn_markers: Array[Node3D] = []
+var _practice_spawn_cursor := 0
+var _playpen_recovery_timer := 0.0
 var _armory_materials: Dictionary = {}
 var _host_lobby_layer: CanvasLayer
 var _status_label: Label
@@ -53,9 +61,13 @@ func _initialize_playpen() -> void:
 			show_host_lobby_overlay.call_deferred()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if NetworkManager.is_host() and online_combat_live:
 		_monitor_gun_refills()
+		_playpen_recovery_timer -= delta
+		if _playpen_recovery_timer <= 0.0:
+			_playpen_recovery_timer = PLAYPEN_RECOVERY_INTERVAL
+			_recover_invalid_playpen_actors()
 
 
 func get_round_timer_text() -> String:
@@ -91,9 +103,11 @@ func _reconcile_playpen_members() -> void:
 		return
 	for actor in net_players.get_children():
 		var owner_peer_id := int(actor.get("owner_peer_id"))
-		if not active_ids.has(owner_peer_id):
+		if not active_ids.has(owner_peer_id) \
+				and not bool(actor.get_meta("playpen_despawn_pending", false)):
 			online_actor_state.erase(int(actor.get("actor_id")))
-			actor.queue_free()
+			actor.set_meta("playpen_despawn_pending", true)
+			_retire_playpen_actor(actor, owner_peer_id)
 	for peer_id_value in active_ids:
 		var peer_id := int(peer_id_value)
 		var actor_id := NetworkManager.actor_id_for_peer(peer_id)
@@ -107,6 +121,10 @@ func _reconcile_playpen_members() -> void:
 				"owner_peer_id": peer_id,
 				"team_id": int(entry.get("team_id", -1)),
 				"skin_id": str(entry.get("skin_id", PlayerSkinRegistry.DEFAULT_SKIN_ID)),
+				"model_id": str(entry.get(
+					"model_id", PlayerSkinRegistry.DEFAULT_MODEL_ID)),
+				"cosmetics": CosmeticRegistry.sanitize_loadout(
+					entry.get("cosmetics", {})),
 				"name": str(entry.get("name", "Player")),
 				"pos": spawn_transform.origin,
 				"yaw": spawn_transform.basis.get_euler().y,
@@ -117,6 +135,19 @@ func _reconcile_playpen_members() -> void:
 	_broadcast_online_state()
 	_update_practice_overlay()
 	NetworkManager.refresh_playpen_replication_visibility()
+
+
+func _retire_playpen_actor(actor: Node, owner_peer_id: int) -> void:
+	# A departing controller can have one final unreliable NetSync packet in
+	# flight. Keep its stable synchronizer path alive briefly so MultiplayerAPI
+	# can drain that packet before the MultiplayerSpawner removes the actor.
+	await get_tree().create_timer(PLAYPEN_DESPAWN_GRACE_SECONDS).timeout
+	if not is_instance_valid(actor):
+		return
+	if NetworkManager.is_peer_in_playpen(owner_peer_id):
+		actor.remove_meta("playpen_despawn_pending")
+		return
+	actor.queue_free()
 
 func _practice_actor_entry(actor_id: int, peer_id: int) -> Dictionary:
 	var peer_entry: Dictionary = NetworkManager.peers.get(peer_id, {})
@@ -141,12 +172,38 @@ func _practice_actor_entry(actor_id: int, peer_id: int) -> Dictionary:
 
 
 func _practice_spawn_transform(actor_id: int) -> Transform3D:
-	var markers := get_tree().get_nodes_in_group("spawn_point")
+	var markers: Array[Node3D] = _practice_spawn_markers.filter(
+		func(marker): return is_instance_valid(marker) and marker.is_inside_tree())
 	if markers.is_empty():
-		return Transform3D(Basis.IDENTITY, Vector3.ZERO)
-	var index := posmod(actor_id * 3 + int(Time.get_ticks_msec() / 1000), markers.size())
-	var marker := markers[index] as Node3D
-	return marker.global_transform
+		return Transform3D(Basis.IDENTITY, Vector3(0.0, 0.65, 12.0))
+	var index := posmod(actor_id * 3 + _practice_spawn_cursor, markers.size())
+	_practice_spawn_cursor = posmod(_practice_spawn_cursor + 1, markers.size())
+	return markers[index].global_transform
+
+
+func _is_invalid_playpen_position(position: Vector3) -> bool:
+	return not position.is_finite() or position.y < PLAYPEN_MIN_SAFE_Y \
+		or absf(position.x) > PLAYPEN_MAX_ABS_X \
+		or absf(position.z) > PLAYPEN_MAX_ABS_Z
+
+
+func _recover_invalid_playpen_actors() -> void:
+	for actor_id_value in online_actor_state:
+		var actor_id := int(actor_id_value)
+		var actor = NetworkManager.find_actor(actor_id)
+		if actor == null or bool(actor.get("is_eliminated")) \
+				or not _is_invalid_playpen_position(actor.global_position):
+			continue
+		var safe_transform := _practice_spawn_transform(actor_id)
+		NetworkManager.broadcast_match_rpc(self, &"_net_recover_playpen_actor", [
+			actor_id, safe_transform.origin, safe_transform.basis.get_euler().y])
+
+
+@rpc("authority", "reliable", "call_local")
+func _net_recover_playpen_actor(actor_id: int, position: Vector3, yaw: float) -> void:
+	var actor = NetworkManager.find_actor(actor_id)
+	if actor != null and actor.has_method("recover_from_invalid_position"):
+		actor.recover_from_invalid_position(position, yaw)
 
 
 func server_eliminate(victim_id: int, killer_id: int, epoch: int = -1,
@@ -526,6 +583,7 @@ func _add_slot_label(text: String, world_position: Vector3, color: Color) -> voi
 
 func _build_practice_arena() -> void:
 	var root := get_tree().current_scene
+	_practice_spawn_markers.clear()
 	var environment_node := WorldEnvironment.new()
 	environment_node.name = "WorldEnvironment"
 	var environment := Environment.new()
@@ -610,7 +668,9 @@ func _build_practice_arena() -> void:
 		marker.position = Vector3(cos(angle) * 11.0, 0.65, 12 + sin(angle) * 11.0)
 		marker.rotation.y = -angle + PI * 0.5
 		marker.add_to_group("spawn_point", true)
+		marker.add_to_group("playpen_spawn_point", true)
 		root.add_child(marker)
+		_practice_spawn_markers.append(marker)
 
 
 func _add_omni_light(parent: Node, position: Vector3, color: Color) -> void:

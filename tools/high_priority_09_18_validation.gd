@@ -84,7 +84,7 @@ func _validate_smoke_rules() -> void:
 
 
 func _validate_build_metadata() -> void:
-	_check(BuildInfo.GAME_VERSION == "0.0.4", "build metadata does not match the current release")
+	_check(BuildInfo.GAME_VERSION == "0.0.7", "build metadata does not match the current release")
 	_check(BuildInfo.NETWORK_PROTOCOL > 0, "network protocol has no explicit version")
 	_check(BuildInfo.build_id() != "", "build identifier is empty")
 	_check(BuildInfo.compatibility_payload().get("build_id", "") == BuildInfo.build_id(),

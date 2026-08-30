@@ -2,6 +2,11 @@ extends Node
 
 const CUSTOMIZATION_SCRIPT = preload("res://UI/themed_locker_overlay.gd")
 const Catalog = preload("res://supabase/one_gun_catalog.gd")
+const GIFT_CHARACTER_ITEM_IDS: Array[String] = [
+	"character_goldfish_bag_man", "character_eye_wizard",
+	"character_mr_mushroom", "character_mr_poop", "character_mr_salt",
+	"character_spooky_witch",
+]
 
 var _failed := false
 var _overlay = null
@@ -53,22 +58,83 @@ func _run() -> void:
 	var title := _overlay.find_child("CustomizationTitle", true, false) as Label
 	_check(title != null and title.text == "THE LOCKER",
 		"customization screen did not build the themed Locker header")
+	var back_button := _overlay.find_child("Back", true, false) as Button
+	var canvas := _overlay.find_child("CustomizationCanvas", true, false) as Control
+	_check(back_button != null and canvas != null and back_button.text == "BACK"
+			and str(back_button.get("variant")) == "navy"
+			and back_button.get_global_rect().get_center().x
+				< canvas.get_global_rect().get_center().x
+			and back_button.get_global_rect().get_center().y
+				> canvas.get_global_rect().get_center().y,
+		"Locker establishes the blue bottom-left Back standard")
 	_check(_overlay.find_child("Player1Tab", true, false) != null
 		and _overlay.find_child("Player2Tab", true, false) != null,
 		"split-screen customization should show P1/P2 tabs")
 	_check(_overlay.find_child("MaleModel", true, false) != null
 		and _overlay.find_child("FemaleModel", true, false) != null,
-		"customization should show M/F model buttons beneath the preview")
+		"customization should retain the original M/F model buttons")
+	var model_buttons = _overlay.get("_model_buttons") as Dictionary
+	_check(model_buttons.size() == PlayerSkinRegistry.PUBLIC_MODEL_IDS.size(),
+		"customization should show every public character model")
+	for model_id in PlayerSkinRegistry.PUBLIC_MODEL_IDS:
+		var model_button := model_buttons.get(model_id) as Button
+		_check(model_button != null
+				and model_button.text == PlayerSkinRegistry.model_button_label(model_id),
+			"public character button is present and labeled: %s" % model_id)
 	_check(_overlay.find_child("Randomize", true, false) != null
 		and _overlay.find_child("Default", true, false) != null
 		and _overlay.find_child("ResetLoadout", true, false) != null
 		and _overlay.find_child("Confirm", true, false) != null,
 		"action bar should contain color tools, Reset Loadout, and Confirm")
 
-	_overlay.call("_show_character_subcategory", 2)
+	_overlay.call("_show_character_subcategory", 0)
 	await _wait_frames(2)
 	var owned_list = _overlay.get("_owned_list") as VBoxContainer
 	var owned_text := _descendant_text(owned_list)
+	var default_cat_tile := _overlay.find_child(
+		"DefaultCatTile", true, false) as Control
+	var default_cat_preview := _overlay.find_child(
+		"DefaultCatPreview", true, false) as Button
+	var default_cat_equip := _overlay.find_child(
+		"DefaultCatEquip", true, false) as Button
+	var default_cat_portrait := _overlay.find_child(
+		"DefaultCatPortrait", true, false) as TextureRect
+	_check(default_cat_tile != null and default_cat_preview != null
+		and default_cat_equip != null and not default_cat_equip.disabled
+		and default_cat_portrait != null
+		and default_cat_portrait.texture != null
+		and owned_text.contains("DEFAULT CAT")
+		and owned_text.contains("ALWAYS AVAILABLE")
+		and owned_text.contains("MALE")
+		and owned_text.contains("BLUE"),
+		"Locker Skins did not expose the Male Blue Default Cat tile")
+	for item_id in GIFT_CHARACTER_ITEM_IDS:
+		var model_id := SupabaseCosmeticRegistry.local_character_model_id(item_id)
+		var gift_model_portrait := _overlay.find_child(
+			"CharacterModelPortrait_%s" % item_id, true, false) as TextureRect
+		_check(gift_model_portrait != null and gift_model_portrait.texture != null,
+			"gifted character model did not use the shared Locker portrait layout: %s" % item_id)
+		_check(owned_text.contains(SupabaseCosmeticRegistry.display_name_fallback(
+			item_id).to_upper()),
+			"gifted character model did not appear in owned Locker Skins: %s" % item_id)
+		_overlay.call("_preview_locker_character_model", item_id)
+		await _wait_frames(2)
+		_check(str(_overlay._pending_model_ids.get(0, "")) == model_id,
+			"gifted character model preview did not resolve its entitlement: %s" % item_id)
+	_overlay.call("_preview_default_cat")
+	await _wait_frames(2)
+	_check(str(_overlay._pending_model_ids.get(0, "")) == "male"
+		and str(_overlay._pending_skin_ids.get(0, "")) == "blue",
+		"Default Cat preview did not select the Male Blue baseline")
+	var default_cloud_slots: Array = _overlay.call(
+		"_default_cat_cloud_slots")
+	_check(default_cloud_slots == ["character_skin", "character_model"],
+		"Default Cat Equip would not clear both cloud color and model overrides")
+	_check(owned_text.contains("PREVIEW"),
+		"gifted character models did not expose their owned Locker Skins previews")
+	_overlay.call("_show_character_subcategory", 2)
+	await _wait_frames(2)
+	owned_text = _descendant_text(owned_list)
 	_check(owned_text.contains("COWBOY HAT") and owned_text.contains("FOUNDER CROWN"),
 		"Character Owned Gear did not include owned hidden/public cosmetics")
 	_check(not owned_text.contains("GOLDEN GUN"),
@@ -117,6 +183,34 @@ func _run() -> void:
 			"portrait missing for %s" % skin_id)
 		_check(PlayerSkinRegistry.load_portrait(skin_id, "female") != null,
 			"female portrait missing for %s" % skin_id)
+	for model_id in PlayerSkinRegistry.MODEL_IDS:
+		_check(PlayerSkinRegistry.load_portrait(
+			PlayerSkinRegistry.DEFAULT_SKIN_ID, model_id) != null,
+			"registered character model is missing its Locker portrait: %s" % model_id)
+
+	# Fixed-look characters use their authored material and should never expose
+	# cat-color controls that cannot affect them.
+	_overlay.call("_show_locker_category", 0)
+	_overlay.call("_show_character_subcategory", 1)
+	var previous_model := str(_overlay._pending_model_ids.get(0, "male"))
+	var previous_skin := str(_overlay._pending_skin_ids.get(0, "blue"))
+	_overlay.call("_select_model", "eye_wizard")
+	await _wait_frames(3)
+	var color_grid := _overlay.find_child("ColorGrid", true, false) as Control
+	var randomize := _overlay.find_child("Randomize", true, false) as Button
+	var default_color := _overlay.find_child("Default", true, false) as Button
+	var selected_color := _overlay.find_child(
+		"SelectedColor", true, false) as Label
+	_check(color_grid != null and not color_grid.visible
+			and randomize != null and not randomize.visible
+			and default_color != null and not default_color.visible
+			and selected_color != null and selected_color.text == "EYE WIZARD",
+		"fixed-look character hides color editing and names its authored look")
+	_overlay.call("_select_skin", "red")
+	_check(str(_overlay._pending_skin_ids.get(0, "")) == previous_skin,
+		"fixed-look character rejects cat-color changes")
+	_overlay.call("_select_model", previous_model)
+	await _wait_frames(3)
 
 	var preview = _overlay.find_child("PreviewCharacter", true, false)
 	var animation_player := preview.find_child(
@@ -125,7 +219,7 @@ func _run() -> void:
 		and animation_player.current_animation == "idle",
 		"shared preview should show an evaluated Idle pose")
 	var preview_pivot = _overlay.get("_preview_pivot") as Node3D
-	var still_rotation := preview_pivot.rotation.y
+	var still_rotation: float = preview_pivot.rotation.y
 	await _wait_frames(8)
 	_check(is_equal_approx(preview_pivot.rotation.y, still_rotation),
 		"Locker preview rotated without a click-drag")
@@ -142,7 +236,7 @@ func _run() -> void:
 	_overlay.call("_on_preview_gui_input", release)
 	_check(preview_pivot.rotation.y > still_rotation,
 		"dragging right did not rotate the model to the right")
-	var released_rotation := preview_pivot.rotation.y
+	var released_rotation: float = preview_pivot.rotation.y
 	await _wait_frames(8)
 	_check(is_equal_approx(preview_pivot.rotation.y, released_rotation),
 		"Locker preview kept rotating after the mouse was released")
@@ -170,7 +264,6 @@ func _run() -> void:
 		"P2 model preview selection leaked before Confirm")
 	await _capture("%s_p2.png" % _prefix)
 
-	var canvas := _overlay.find_child("CustomizationCanvas", true, false) as Control
 	var viewport_rect := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 	_check(canvas != null and _rect_fits(canvas.get_global_rect(), viewport_rect),
 		"responsive customization canvas extends out of frame")
@@ -222,7 +315,10 @@ func _run() -> void:
 	if _failed:
 		get_tree().quit(1)
 	else:
-		print("LOCKER_VALIDATION_OK colors=13 owned-only categories=4 models=2 portraits=online-ready")
+		print("LOCKER_VALIDATION_OK colors=13 default-cat-tile=1 owned-only categories=4 public-models=%d gift-models=%d portraits=online-ready" % [
+			PlayerSkinRegistry.PUBLIC_MODEL_IDS.size(),
+			GIFT_CHARACTER_ITEM_IDS.size(),
+		])
 		get_tree().quit(0)
 
 
@@ -258,9 +354,14 @@ func _seed_locker_data() -> void:
 		"id": "founder_crown", "display_name": "Founder Crown",
 		"item_type": "hat", "shop_visible": false, "active": true,
 	}))
+	# Intentionally do not seed the hidden characters' catalog rows. Production
+	# inventory may arrive before its RLS-gated catalog request; the Locker must
+	# still resolve these trusted packaged entitlements locally.
 	supabase.inventory.clear()
 	supabase.inventory.append({"item_id": "cowboy_hat", "source": "purchase"})
 	supabase.inventory.append({"item_id": "founder_crown", "source": "founder_grant"})
+	for item_id in GIFT_CHARACTER_ITEM_IDS:
+		supabase.inventory.append({"item_id": item_id, "source": "manual_gift"})
 	supabase.inventory.append({"item_id": "golden_gun_skin", "source": "purchase"})
 	supabase.inventory.append({"item_id": "base_one_gun", "source": "base_game"})
 	supabase.inventory.append({"item_id": "base_arena_melee", "source": "base_game"})
@@ -268,7 +369,7 @@ func _seed_locker_data() -> void:
 	supabase.inventory.append({"item_id": "wc_theme_deep_orbit", "source": "purchase"})
 	supabase.inventory.append({"item_id": "podium_fresh_footwork", "source": "purchase"})
 	supabase.inventory.append({"item_id": "round_birdie_boogie", "source": "purchase"})
-	supabase.set("_owned_item_ids", {
+	var owned_item_ids := {
 		"cowboy_hat": true,
 		"founder_crown": true,
 		"golden_gun_skin": true,
@@ -278,8 +379,13 @@ func _seed_locker_data() -> void:
 		"wc_theme_deep_orbit": true,
 		"podium_fresh_footwork": true,
 		"round_birdie_boogie": true,
-	})
+	}
+	for item_id in GIFT_CHARACTER_ITEM_IDS:
+		owned_item_ids[item_id] = true
+	supabase.set("_owned_item_ids", owned_item_ids)
 	supabase.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
+		"character_skin": "red",
+		"character_model": "character_goldfish_bag_man",
 		"hat": "founder_crown",
 		"gun_skin": "base_one_gun",
 		"melee_skin": "base_arena_melee",

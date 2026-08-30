@@ -1,0 +1,10 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Too many arguments for "find_child()" call. Expected at most 3 but received 4.
+   at: GDScript::reload (res://UI/character_customization_overlay.gd:517)
+SCRIPT ERROR: Parse Error: Cannot pass a value of type "String" as "bool".
+   at: GDScript::reload (res://UI/character_customization_overlay.gd:517)
+SCRIPT ERROR: Parse Error: Invalid argument for "find_child()" function: argument 2 should be "bool" but is "String".
+   at: GDScript::reload (res://UI/character_customization_overlay.gd:517)
+ERROR: Failed to load script "res://UI/character_customization_overlay.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)

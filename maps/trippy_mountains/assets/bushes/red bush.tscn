@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://c6tgtw344m306"]
+
+[ext_resource type="PackedScene" uid="uid://ce5nonkk3pfet" path="res://maps/trippy_mountains/assets/bush_medium.dae" id="1_20xkf"]
+[ext_resource type="Material" path="res://maps/trippy_mountains/assets/bush_leaves_red.tres" id="2_euvqa"]
+
+[node name="bush_red_medium" unique_id=1763655198 instance=ExtResource("1_20xkf")]
+
+[node name="bush_green_medium" parent="." index="0" unique_id=406696774]
+material_override = ExtResource("2_euvqa")

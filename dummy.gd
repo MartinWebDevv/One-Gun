@@ -565,6 +565,8 @@ func _physics_process(delta):
 		sticky_hands_timer = 0.0
 	if speed_surge_timer > 0.0:
 		speed_surge_timer -= delta
+	if fast_hands_timer > 0.0:
+		fast_hands_timer = maxf(fast_hands_timer - delta, 0.0)
 	if reach_timer > 0.0:
 		reach_timer = maxf(reach_timer - delta, 0.0)
 		if not is_online or _is_online_authority:
@@ -580,6 +582,7 @@ func _physics_process(delta):
 		return
 	if _steam_boost_active and is_on_floor():
 		_clear_steam_boost()
+	_sanitize_unexpected_vertical_velocity()
 
 	if slow_timer > 0.0:
 		slow_timer -= delta
@@ -1558,8 +1561,33 @@ func get_camera():
 # ============================================================
 
 func apply_knockback(direction: Vector3, distance: float):
-	knockback_velocity = direction * (distance / KNOCKBACK_DURATION)
+	var horizontal_direction := Vector3(direction.x, 0.0, direction.z)
+	if not horizontal_direction.is_zero_approx():
+		horizontal_direction = horizontal_direction.normalized()
+	knockback_velocity = horizontal_direction * (distance / KNOCKBACK_DURATION)
 	knockback_timer = KNOCKBACK_DURATION
+
+
+func _sanitize_unexpected_vertical_velocity() -> void:
+	if not is_finite(velocity.y):
+		velocity.y = 0.0
+		return
+	if not _steam_boost_active and not _spring_air_active \
+			and not _directional_launch_active and velocity.y > 12.0:
+		velocity.y = 12.0
+
+
+func recover_from_invalid_position(safe_position: Vector3, yaw: float) -> void:
+	global_transform = Transform3D(Basis(Vector3.UP, yaw), safe_position)
+	velocity = Vector3.ZERO
+	knockback_velocity = Vector3.ZERO
+	knockback_timer = 0.0
+	stagger_timer = 0.0
+	is_dashing = false
+	is_sprinting = false
+	_clear_steam_boost()
+	_clear_spring_launch_state()
+	_dash_cancelled_spring_momentum = false
 
 func apply_stagger(duration: float):
 	stagger_timer = duration
@@ -1585,6 +1613,7 @@ const SPEED_SURGE_MULT := 1.4
 var second_wind_ready := false
 var sticky_hands_timer := 0.0
 var sticky_hands_cooldown_timer := 0.0
+var fast_hands_timer := 0.0
 
 func _canonical_powerup_type(power_type: String) -> String:
 	match power_type:
@@ -1599,6 +1628,10 @@ func _canonical_powerup_type(power_type: String) -> String:
 
 func can_collect_powerup(power_type: String) -> bool:
 	match _canonical_powerup_type(power_type):
+		"fast_hands":
+			return GameConfig.game_mode != GameConfig.MODE_ALL_GUN \
+				and (GameConfig.game_mode != GameConfig.MODE_ONE_OF_US \
+					or one_of_us_role == "them")
 		"sticky_hands":
 			return melee_disarm_shields <= 0 \
 				and sticky_hands_cooldown_timer <= 0.0
@@ -1634,6 +1667,9 @@ func apply_powerup(power_type: String, duration: float) -> bool:
 			reach_timer = _extend_timed_powerup(reach_timer, duration)
 		"silent_steps":
 			silent_steps_timer = _extend_timed_powerup(silent_steps_timer, duration)
+		"fast_hands":
+			fast_hands_timer = _extend_timed_powerup(
+				fast_hands_timer, GameConfig.FAST_HANDS_DURATION)
 		_:
 			active_powerup_order.erase(power_type)
 			return false
@@ -1656,6 +1692,8 @@ func get_active_powerups_for_display() -> Array:
 				if second_wind_ready: result.append({"type": power_type, "timed": false, "time_left": 0.0})
 			"reach":
 				if reach_timer > 0.0: result.append({"type": power_type, "timed": true, "time_left": reach_timer})
+			"fast_hands":
+				if fast_hands_timer > 0.0: result.append({"type": power_type, "timed": true, "time_left": fast_hands_timer})
 	active_powerup_order = result.map(func(entry): return entry["type"])
 	return result
 
@@ -1665,6 +1703,7 @@ func clear_all_powerups() -> void:
 	_reach_interactables.clear()
 	_rebuild_interactables()
 	silent_steps_timer = 0.0
+	fast_hands_timer = 0.0
 	second_wind_ready = false
 	melee_disarm_shields = 0
 	extra_dash_charge = 0
@@ -1737,6 +1776,11 @@ func confirm_online_double_jump_shoes() -> void:
 
 func has_active_reach() -> bool:
 	return reach_timer > 0.0
+
+
+func melee_swing_speed_multiplier() -> float:
+	return GameConfig.FAST_HANDS_SWING_SPEED_MULTIPLIER \
+		if fast_hands_timer > 0.0 else 1.0
 
 
 func _update_reach_candidates(delta: float) -> void:

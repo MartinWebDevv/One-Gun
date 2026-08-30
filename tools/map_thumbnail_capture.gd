@@ -38,14 +38,21 @@ func _capture_all() -> void:
 			await _preview.map_shown
 		# Let particles, lighting, and the orbit camera settle before readback.
 		await get_tree().create_timer(0.65).timeout
+		var requested_angle := OS.get_environment("ONEGUN_THUMBNAIL_ANGLE")
+		if requested_angle.is_valid_float():
+			_preview._orbit_angle = float(requested_angle)
+			await get_tree().process_frame
+			await RenderingServer.frame_post_draw
 		var image: Image = _preview.capture_image()
 		if image == null:
 			_failures += 1
 			push_error("Map thumbnail capture failed for index %d" % index)
 			continue
 		image.resize(OUTPUT_SIZE.x, OUTPUT_SIZE.y, Image.INTERPOLATE_LANCZOS)
-		var output_path := ProjectSettings.globalize_path(
-				str(MapRegistry.MAPS[index].get("thumbnail_path", "")))
+		var requested_output := OS.get_environment("ONEGUN_THUMBNAIL_OUTPUT")
+		var output_resource_path := requested_output if requested_output != "" else \
+			str(MapRegistry.MAPS[index].get("thumbnail_path", ""))
+		var output_path := ProjectSettings.globalize_path(output_resource_path)
 		DirAccess.make_dir_recursive_absolute(output_path.get_base_dir())
 		var err := image.save_png(output_path)
 		if err != OK:

@@ -1,17 +1,27 @@
 extends SceneTree
 
 # Two-process loopback validation for persistent cosmetic IDs. Launch one
-# process with `-- --role=host` and one with `-- --role=client`.
+# process with `-- --role=host` and one with `-- --role=client`. The fixture
+# publishes through NetworkManager's normal public loadout seam after admission
+# so a developer's saved Supabase session cannot overwrite the test data.
 
 const PORT := 24635
 const TIMEOUT := 10.0
+const TEST_HAT_ID := "hat_cowboy_classic"
+const TEST_GUN_ID := "golden_gun_skin"
+const TEST_THEME_ID := "wc_theme_deep_orbit"
+const TEST_CHARACTER_MODEL_ID := "character_goldfish_bag_man"
 
 class CosmeticTarget:
 	extends Node
 	var applied_skin := ""
+	var applied_model := ""
 
 	func set_character_skin(value: String) -> void:
 		applied_skin = value
+
+	func set_character_model(value: String) -> void:
+		applied_model = value
 
 
 var _role := ""
@@ -50,9 +60,10 @@ func _run_host() -> void:
 			remote_id = int(peer_id)
 	if remote_id < 0 or not await _wait_until(func() -> bool:
 		var cosmetics: Dictionary = _network.peer_cosmetic_loadout(remote_id)
-		return str(cosmetics.get("hat", "")) == "cowboy_hat" \
-			and str(cosmetics.get("gun_skin", "")) == "golden_gun_skin" \
-			and str(cosmetics.get("ceremony_theme", "")) == "wc_theme_deep_orbit"
+		return str(cosmetics.get("hat", "")) == TEST_HAT_ID \
+			and str(cosmetics.get("gun_skin", "")) == TEST_GUN_ID \
+			and str(cosmetics.get("ceremony_theme", "")) == TEST_THEME_ID \
+			and str(cosmetics.get("character_model", "")) == TEST_CHARACTER_MODEL_ID
 	):
 		_fail("Host never received the client's persistent cosmetic IDs")
 		return
@@ -68,7 +79,6 @@ func _run_host() -> void:
 
 
 func _run_client() -> void:
-	_seed_test_session()
 	_test_local_asset_mapping()
 	await create_timer(0.45).timeout
 	if not _network.join_game("127.0.0.1", PORT):
@@ -77,11 +87,27 @@ func _run_client() -> void:
 	if not await _wait_until(func() -> bool: return _network.peers.size() == 2):
 		_fail("Client never received the roster")
 		return
+	# Let the admission RPC unwind before issuing the client-owned loadout RPC.
+	# ENet can otherwise discard a same-frame nested request on slower runners.
+	await create_timer(0.25).timeout
+	var fixture_loadout := SupabaseCosmeticRegistry.sanitize_loadout({
+		"character_model": TEST_CHARACTER_MODEL_ID,
+		"hat": TEST_HAT_ID,
+		"gun_skin": TEST_GUN_ID,
+		"ceremony_theme": TEST_THEME_ID,
+	})
+	# Keep automatic post-roster reconciliation on the same runtime-only fixture.
+	# This process exits without saving or requesting anything from Supabase.
+	_supabase.loadout = fixture_loadout.duplicate(true)
+	if not _network.set_local_cosmetic_loadout(fixture_loadout):
+		_fail("Client could not publish its persistent cosmetic IDs")
+		return
 	if not await _wait_until(func() -> bool:
 		var cosmetics: Dictionary = _network.local_cosmetic_loadout()
-		return str(cosmetics.get("hat", "")) == "cowboy_hat" \
-			and str(cosmetics.get("gun_skin", "")) == "golden_gun_skin" \
-			and str(cosmetics.get("ceremony_theme", "")) == "wc_theme_deep_orbit"
+		return str(cosmetics.get("hat", "")) == TEST_HAT_ID \
+			and str(cosmetics.get("gun_skin", "")) == TEST_GUN_ID \
+			and str(cosmetics.get("ceremony_theme", "")) == TEST_THEME_ID \
+			and str(cosmetics.get("character_model", "")) == TEST_CHARACTER_MODEL_ID
 	):
 		_fail("Client's persistent cosmetic IDs did not reconcile")
 		return
@@ -92,29 +118,17 @@ func _run_client() -> void:
 	quit(0)
 
 
-func _seed_test_session() -> void:
-	# Runtime-only values: no session file is written and no backend request is
-	# made. This lets the network seam be validated independently of credentials.
-	_supabase.access_token = "validation-access-token"
-	_supabase.refresh_token = "validation-refresh-token"
-	_supabase.authenticated_user_id = "00000000-0000-0000-0000-000000000001"
-	_supabase.access_token_expires_at = int(Time.get_unix_time_from_system()) + 3600
-	_supabase.loadout = SupabaseCosmeticRegistry.sanitize_loadout({
-		"hat": "cowboy_hat",
-		"gun_skin": "golden_gun_skin",
-		"ceremony_theme": "wc_theme_deep_orbit",
-	})
-
-
 func _test_local_asset_mapping() -> void:
 	var target := CosmeticTarget.new()
 	root.add_child(target)
 	SupabaseCosmeticRegistry.apply_to_player(target, {
+		"character_model": TEST_CHARACTER_MODEL_ID,
 		"character_skin": "purple",
 		"hat": "missing_hat_art",
 	})
 	var stored = target.get_meta("supabase_cosmetic_loadout", {})
-	if target.applied_skin != "purple" or not stored is Dictionary \
+	if target.applied_model != "goldfish_bag_man" \
+			or target.applied_skin != "purple" or not stored is Dictionary \
 			or str(stored.get("hat", "")) != "missing_hat_art":
 		_fail("Local cosmetic mapping did not apply a supported skin safely")
 		target.queue_free()

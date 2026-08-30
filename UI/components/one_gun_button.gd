@@ -26,45 +26,38 @@ func _ready() -> void:
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 	pressed.connect(_on_pressed_sound)
-	resized.connect(func() -> void: pivot_offset = size * 0.5)
+	resized.connect(_update_pivot)
+	_update_pivot()
+
+
+func _update_pivot() -> void:
+	pivot_offset = size * 0.5
 
 
 func _apply_styles() -> void:
-	var bg: Color
-	var border: Color
-	var text_color: Color
-	var text_hover: Color
+	var accent: Color
 	match variant:
 		"gold":
-			bg = OneGunUI.color("gold")
-			border = OneGunUI.color("gold").lightened(0.18)
-			text_color = OneGunUI.color("ink")
-			text_hover = OneGunUI.color("ink")
+			accent = OneGunUI.color("gold")
 		"purple":
-			bg = OneGunUI.color("purple").darkened(0.28)
-			border = OneGunUI.color("purple").lightened(0.08)
-			text_color = OneGunUI.color("text")
-			text_hover = OneGunUI.color("text_bright")
+			accent = OneGunUI.color("purple")
 		"blue":
-			bg = OneGunUI.color("blue").darkened(0.18)
-			border = OneGunUI.color("blue").lightened(0.15)
-			text_color = OneGunUI.color("text_bright")
-			text_hover = OneGunUI.color("text_bright")
+			accent = OneGunUI.color("blue")
 		"green":
-			bg = OneGunUI.color("green").darkened(0.18)
-			border = OneGunUI.color("green").lightened(0.1)
-			text_color = OneGunUI.color("ink")
-			text_hover = OneGunUI.color("ink")
+			accent = OneGunUI.color("green")
 		"red":
-			bg = OneGunUI.color("red").darkened(0.12)
-			border = OneGunUI.color("red").lightened(0.12)
-			text_color = OneGunUI.color("text_bright")
-			text_hover = OneGunUI.color("text_bright")
+			accent = OneGunUI.color("red")
 		_:  # navy
-			bg = OneGunUI.color("face_raised")
-			border = OneGunUI.color("border")
-			text_color = OneGunUI.color("text")
-			text_hover = OneGunUI.color("gold")
+			accent = OneGunUI.color("cyan")
+
+	# Every semantic color shares one idle construction. Hue communicates the
+	# action family; opacity, border weight, depth, and label contrast no longer
+	# jump between filled, blacked-out, and washed-out buttons.
+	var tint_strength := 0.10 if variant == "navy" else 0.30
+	var bg := OneGunUI.color("face_raised").lerp(accent, tint_strength)
+	var border := Color(accent, 0.86)
+	var text_color := OneGunUI.color("text_bright")
+	var text_hover := OneGunUI.color("text_bright")
 
 	var radius := OneGunUI.RADIUS_BUTTON
 	var margin := 14.0
@@ -74,7 +67,8 @@ func _apply_styles() -> void:
 	pressed_style.content_margin_top = margin + 2.0
 	pressed_style.content_margin_bottom = margin - 2.0
 	var disabled := OneGunUI.style_box(
-		Color(OneGunUI.color("well"), 0.62), OneGunUI.color("border").darkened(0.25), radius, OneGunUI.BORDER_THIN, 0, margin)
+		Color(OneGunUI.color("well").lerp(accent, 0.10), 0.86),
+		Color(accent, 0.28), radius, OneGunUI.BORDER_THIN, 0, margin)
 
 	add_theme_stylebox_override("normal", normal)
 	add_theme_stylebox_override("hover", hover)

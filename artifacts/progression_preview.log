@@ -1,0 +1,19 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: Level 10 Rice Hat milestone is clickable and controller-focusable
+PASS: Gun Token milestones remain informational instead of opening a cosmetic preview
+PASS: Trophy 5 Pimp Hat milestone is clickable and controller-focusable
+PASS: Rice Hat milestone opens the small reward preview window
+PASS: Rice Hat preview instantiates the player's character model
+PASS: Rice Hat preview equips the actual Level 10 reward model
+PASS: reward preview rotates when dragged
+PASS: drag rotation leaves the reward-preview camera and background fixed
+PASS: reward preview gives controller focus to Close
+PASS: closing the reward preview returns to the progression screen
+PASS: art-pending cosmetic milestone remains previewable
+PASS: art-pending reward uses the centered podium character fallback
+PASS: art-pending reward plays the shared idle instead of showing a T-pose
+PASS: reward preview uses the player's selected Female character model
+PASS: Pimp Hat preview equips the actual Trophy 5 reward model
+PASS: controller Back closes only the preview, not the progression road
+PROGRESSION ROAD PREVIEW VALIDATION: PASS

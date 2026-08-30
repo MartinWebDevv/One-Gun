@@ -1,0 +1,152 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'HBoxContainer' to a variable of type 'Label'.
+   at: ThemedLockerOverlay._build_selection_panel (res://UI/character_customization_overlay.gd:513)
+   GDScript backtrace (most recent call first):
+       [0] _build_selection_panel (res://UI/character_customization_overlay.gd:513)
+       [1] _build_selection_panel (res://UI/themed_locker_overlay.gd:91)
+       [2] _build_ui (res://UI/character_customization_overlay.gd:133)
+       [3] _ready (res://UI/character_customization_overlay.gd:70)
+       [4] _ready (res://UI/themed_locker_overlay.gd:16)
+       [5] _run (res://tools/character_customization_validation.gd:35)
+ERROR: CharacterCustomizationValidation: customization should show all 13 color cards
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:40)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: color row 1 should contain 5 cards
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:45)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: color row 2 should contain 5 cards
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:45)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: color row 3 should contain 3 cards
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:45)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_character_subcategory (res://UI/character_customization_overlay.gd:638)
+   GDScript backtrace (most recent call first):
+       [0] _show_character_subcategory (res://UI/character_customization_overlay.gd:638)
+       [1] _run (res://tools/character_customization_validation.gd:77)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: Locker Skins did not expose the Male Blue Default Cat tile
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:92)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: gifted character model did not use the shared Locker portrait layout
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:101)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._preview_default_cat (res://UI/character_customization_overlay.gd:877)
+   GDScript backtrace (most recent call first):
+       [0] _preview_default_cat (res://UI/character_customization_overlay.gd:877)
+       [1] _run (res://tools/character_customization_validation.gd:103)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: gifted character model did not expose its owned Locker Skins preview
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:112)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_character_subcategory (res://UI/character_customization_overlay.gd:638)
+   GDScript backtrace (most recent call first):
+       [0] _show_character_subcategory (res://UI/character_customization_overlay.gd:638)
+       [1] _run (res://tools/character_customization_validation.gd:114)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: Character Owned Gear did not include owned hidden/public cosmetics
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:117)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_locker_category (res://UI/character_customization_overlay.gd:623)
+   GDScript backtrace (most recent call first):
+       [0] _show_locker_category (res://UI/character_customization_overlay.gd:623)
+       [1] _run (res://tools/character_customization_validation.gd:121)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: Weapons Locker did not isolate owned weapon cosmetics
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:124)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_locker_category (res://UI/character_customization_overlay.gd:623)
+   GDScript backtrace (most recent call first):
+       [0] _show_locker_category (res://UI/character_customization_overlay.gd:623)
+       [1] _run (res://tools/character_customization_validation.gd:126)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: Victory Locker did not expose dual-slot dance controls
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:132)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Cannot call method 'get_item_text' on a null value.
+   at: ThemedLockerOverlay._on_locker_subcategory_selected (res://UI/character_customization_overlay.gd:668)
+   GDScript backtrace (most recent call first):
+       [0] _on_locker_subcategory_selected (res://UI/character_customization_overlay.gd:668)
+       [1] _run (res://tools/character_customization_validation.gd:139)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Cannot call method 'get_item_text' on a null value.
+   at: ThemedLockerOverlay._on_locker_subcategory_selected (res://UI/character_customization_overlay.gd:668)
+   GDScript backtrace (most recent call first):
+       [0] _on_locker_subcategory_selected (res://UI/character_customization_overlay.gd:668)
+       [1] _run (res://tools/character_customization_validation.gd:145)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: Dances filter did not keep all animated victory moves together
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:148)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_locker_category (res://UI/character_customization_overlay.gd:623)
+   GDScript backtrace (most recent call first):
+       [0] _show_locker_category (res://UI/character_customization_overlay.gd:623)
+       [1] _run (res://tools/character_customization_validation.gd:151)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+ERROR: CharacterCustomizationValidation: Music Locker did not expose the owned Winners Circle theme
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_customization_validation.gd:376)
+       [1] _run (res://tools/character_customization_validation.gd:154)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_locker_category (res://UI/character_customization_overlay.gd:621)
+   GDScript backtrace (most recent call first):
+       [0] _show_locker_category (res://UI/character_customization_overlay.gd:621)
+       [1] _run (res://tools/character_customization_validation.gd:156)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'visible' with value of type 'bool' on a base object of type 'Nil'.
+   at: ThemedLockerOverlay._show_character_subcategory (res://UI/character_customization_overlay.gd:638)
+   GDScript backtrace (most recent call first):
+       [0] _show_character_subcategory (res://UI/character_customization_overlay.gd:638)
+       [1] _run (res://tools/character_customization_validation.gd:157)
+       [2] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Trying to assign value of type 'HBoxContainer' to a variable of type 'Label'.
+   at: ThemedLockerOverlay._build_selection_panel (res://UI/character_customization_overlay.gd:513)
+   GDScript backtrace (most recent call first):
+       [0] _build_selection_panel (res://UI/character_customization_overlay.gd:513)
+       [1] _build_selection_panel (res://UI/themed_locker_overlay.gd:91)
+       [2] _build_ui (res://UI/character_customization_overlay.gd:133)
+       [3] _ready (res://UI/character_customization_overlay.gd:70)
+       [4] _ready (res://UI/themed_locker_overlay.gd:16)
+       [5] _run (res://tools/character_customization_validation.gd:258)

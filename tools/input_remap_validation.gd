@@ -5,6 +5,8 @@ extends Node
 
 var _failures: Array[String] = []
 
+const PlayerScript = preload("res://character_body_3d.gd")
+
 const CONTROLLER_ACTION_SUFFIXES := [
 	"move_left", "move_right", "move_forward", "move_back",
 	"look_left", "look_right", "look_up", "look_down",
@@ -45,6 +47,21 @@ func _run() -> void:
 	await get_tree().process_frame
 	var opening_settings := PlayerPrefs.settings.duplicate(true)
 	var opening_split_screen: bool = GameConfig.split_screen_enabled
+	_expect(PlayerPrefs.get_default("input_device") == "keyboard_mouse",
+		"primary input default is not mouse and keyboard")
+	_expect(is_equal_approx(float(PlayerPrefs.get_default(
+		"gamepad_response_curve_exponent")), 1.35),
+		"controller response curve does not use the responsive default")
+	_expect(is_equal_approx(float(PlayerPrefs.get_default("gamepad_deadzone")), 0.15),
+		"controller deadzone default is not 0.15")
+	_expect(is_equal_approx(float(PlayerPrefs.get_default("gamepad_sensitivity_x")), 6.0)
+		and is_equal_approx(float(PlayerPrefs.get_default("gamepad_sensitivity_y")), 6.0),
+		"controller X/Y sensitivity defaults are not both 6.0")
+	var shaped_half := PlayerScript.shape_gamepad_look_input(Vector2(0.5, 0.0), 0.15, 1.35)
+	_expect(shaped_half.x > 0.29 and shaped_half.x < 0.32,
+		"controller mid-stick response is not using the new radial curve")
+	_expect(PlayerScript.shape_gamepad_look_input(Vector2(0.1, 0.0), 0.15, 1.35).is_zero_approx(),
+		"controller look deadzone does not suppress stick drift")
 
 	# Audit the authored defaults before active-device filtering. Both human
 	# prefixes need every controller path, including right-stick look.
@@ -115,6 +132,9 @@ func _run() -> void:
 	PlayerPrefs.apply_input_overrides()
 	_expect(PlayerPrefs.is_using_controller("p1"),
 		"Player 1 device selection did not switch to controller")
+	_expect(is_equal_approx(InputMap.action_get_deadzone("p1_move_right"), 0.15)
+		and is_equal_approx(InputMap.action_get_deadzone("p1_look_right"), 0.15),
+		"saved gamepad deadzone was not applied to movement and look actions")
 	_expect(not _has_group_event("p1_jump", "keyboard_mouse"),
 		"controller selection left Player 1 keyboard events active")
 	await _expect_joy_button_action(JOY_BUTTON_DPAD_DOWN, "p1_jump")

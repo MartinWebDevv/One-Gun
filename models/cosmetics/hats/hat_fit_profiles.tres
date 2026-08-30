@@ -1,0 +1,188 @@
+[gd_resource type="Resource" script_class="HatFitProfiles" format=3 uid="uid://csk2usghr2phn"]
+
+[ext_resource type="Script" uid="uid://6iquk546fw1j" path="res://models/cosmetics/hats/hat_fit_profiles.gd" id="1_fit"]
+
+[resource]
+script = ExtResource("1_fit")
+fits = {
+"beta_s1_ace_hat": {
+"goldfish_bag_man": {
+"offset": Vector3(0.035, -0.065, 0.225),
+"rotation_degrees": Vector3(-6.5, -33.5, 10.5),
+"seat_depth": -0.135,
+"width": 0.9
+},
+"male": {
+"offset": Vector3(0.08, -0.065, 0.225),
+"rotation_degrees": Vector3(-6.5, -33.5, 10.5),
+"seat_depth": -0.01500000000000001,
+"width": 1.5
+}
+},
+"beta_s1_level_30_hat": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.015, -0.075, 0.075),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.395,
+"width": 0.9
+},
+"male": {
+"offset": Vector3(-0.045, -0.13, 0.15),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.395,
+"width": 1.58
+}
+},
+"hat_chef": {
+"female": {
+"offset": Vector3(-0.045, 0, 0.055),
+"rotation_degrees": Vector3(3.5, 0, 0),
+"seat_depth": -0.135,
+"width": 1.39
+},
+"goldfish_bag_man": {
+"offset": Vector3(-0.025, 0, 0.085),
+"rotation_degrees": Vector3(3.5, 0, 0),
+"seat_depth": -0.19999999999999996,
+"width": 0.65
+},
+"male": {
+"offset": Vector3(-0.045, 0, 0.055),
+"rotation_degrees": Vector3(3.5, 0, 0),
+"seat_depth": -0.135,
+"width": 1.39
+}
+},
+"hat_cowboy_classic": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.025, -0.05, 0.08),
+"rotation_degrees": Vector3(0, -3.5, 2),
+"seat_depth": -0.10499999999999998,
+"width": 1.14
+},
+"male": {
+"offset": Vector3(-0.025, -0.05, 0.11),
+"rotation_degrees": Vector3(0, -3.5, 2),
+"seat_depth": -0.01500000000000001,
+"width": 1.93
+}
+},
+"hat_cowboy_wide": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.01, -0.07, 0.095),
+"rotation_degrees": Vector3(14, 0, 0),
+"seat_depth": -0.17500000000000004,
+"width": 0.9
+},
+"male": {
+"offset": Vector3(-0.065, -0.07, 0.1),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.16000000000000003,
+"width": 2.28
+}
+},
+"hat_crown": {
+"goldfish_bag_man": {
+"offset": Vector3(0, -0.22, 0.03),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.07499999999999996,
+"width": 0.95
+},
+"male": {
+"offset": Vector3(-0.045, -0.225, 0),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.07499999999999996,
+"width": 1.99
+}
+},
+"hat_fedora_black": {
+"female": {
+"offset": Vector3(-0.015, -0.14, 0.025),
+"rotation_degrees": Vector3(-9.5, 0, 0),
+"seat_depth": -0.04500000000000004,
+"width": 1.89
+},
+"goldfish_bag_man": {
+"offset": Vector3(-0.03, -0.095, 0.115),
+"rotation_degrees": Vector3(11, 0, 0),
+"seat_depth": -0.01500000000000001,
+"width": 0.92
+},
+"male": {
+"offset": Vector3(-0.015, -0.14, 0.025),
+"rotation_degrees": Vector3(-9.5, 0, 0),
+"seat_depth": -0.04500000000000004,
+"width": 1.89
+}
+},
+"hat_fedora_white": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.015, -0.03, 0.065),
+"rotation_degrees": Vector3(9.5, 0, 0),
+"seat_depth": -0.27,
+"width": 0.91
+},
+"male": {
+"offset": Vector3(-0.02, -0.03, 0.065),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.09499999999999996,
+"width": 1.57
+}
+},
+"hat_straw_adventurer": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.015, -0.165, 0.08),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": -0.11,
+"width": 0.9
+},
+"male": {
+"offset": Vector3(-0.04, -0.135, 0.08),
+"rotation_degrees": Vector3(0, 0, 0),
+"seat_depth": 0.06499999999999995,
+"width": 1.66
+}
+},
+"hat_top": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.005, -0.075, 0.09),
+"rotation_degrees": Vector3(0, 0, -3.5),
+"seat_depth": -0.24,
+"width": 0.9
+},
+"male": {
+"offset": Vector3(-0.075, -0.075, 0.115),
+"rotation_degrees": Vector3(0, 0, -3.5),
+"seat_depth": -0.15000000000000002,
+"width": 1.61
+}
+},
+"hat_witch": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.06, -0.07, 0.005),
+"rotation_degrees": Vector3(-15.5, 180, 0),
+"seat_depth": -0.28500000000000003,
+"width": 1.19
+},
+"male": {
+"offset": Vector3(-0.135, 0, -0.045),
+"rotation_degrees": Vector3(0, 180, 0),
+"seat_depth": -0.245,
+"width": 2.0
+}
+},
+"hat_yellow_point": {
+"goldfish_bag_man": {
+"offset": Vector3(-0.025, -0.175, 0.03),
+"rotation_degrees": Vector3(27, 0, 0),
+"seat_depth": -0.23,
+"width": 0.77
+},
+"male": {
+"offset": Vector3(-0.06, -0.14, 0.005),
+"rotation_degrees": Vector3(16, 0, 0),
+"seat_depth": -0.23,
+"width": 1.37
+}
+}
+}

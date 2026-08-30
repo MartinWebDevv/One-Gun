@@ -90,6 +90,28 @@ const MAPS := [
 		"preview_height_ratio": 0.16,
 		"preview_target_height_ratio": 0.03,
 	},
+	{
+		"name": "Trippy Mountains",
+		"scene_path": "res://maps/test/TrippyMountainsMap.tscn",
+		"thumbnail_path": "res://UI/map_thumbnails/trippy_mountains.png",
+		"description": "A psychedelic woodland arena with vivid flanks and an exposed open center.",
+		"size": "Large",
+		"recommended_players": "4–10",
+		"player_capacity": 10,
+		"playstyle": "Woodland skirmish",
+		"hazards": false,
+		"tint": Color(0.38, 0.12, 0.44),
+		"added_order": 6,
+		"preview_center": Vector3(68.235, 0.0, -118.369),
+		"preview_radius": 46.0,
+		"preview_angle": 5.2,
+		"preview_orbit_half_arc": 0.30,
+		"preview_height_ratio": 0.33,
+		"preview_target_height_ratio": 0.065,
+		"preview_camera_distance": 27.0,
+		"preview_camera_height": 15.0,
+		"preview_target_height": 3.0,
+	},
 ]
 
 

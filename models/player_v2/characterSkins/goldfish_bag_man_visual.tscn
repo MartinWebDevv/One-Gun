@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://models/player_v2/player_v2_visual.gd" id="1_visual"]
+[ext_resource type="PackedScene" path="res://models/player_v2/characterSkins/goldFishBagMan.glb" id="2_model"]
+
+[node name="GoldFishBagManVisual" type="Node3D"]
+scale = Vector3(0.617256, 0.617256, 0.617256)
+script = ExtResource("1_visual")
+model_id = "goldfish_bag_man"
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+position = Vector3(0, -0.381933, 0)
+rotation = Vector3(0, -1.5707963, 0)

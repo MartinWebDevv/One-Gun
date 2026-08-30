@@ -1,0 +1,102 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _build_ui (res://UI/character_customization_overlay.gd:135)
+       [3] _ready (res://UI/character_customization_overlay.gd:70)
+       [4] _ready (res://UI/themed_locker_overlay.gd:16)
+       [5] _run (res://tools/character_customization_validation.gd:35)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _preview_default_cat (res://UI/character_customization_overlay.gd:874)
+       [3] _run (res://tools/character_customization_validation.gd:103)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_skin (res://UI/character_customization_overlay.gd:1245)
+       [3] _run (res://tools/character_customization_validation.gd:199)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_model (res://UI/character_customization_overlay.gd:1250)
+       [3] _run (res://tools/character_customization_validation.gd:200)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_skin (res://UI/character_customization_overlay.gd:1245)
+       [3] _default_active_skin (res://UI/character_customization_overlay.gd:1276)
+       [4] _run (res://tools/character_customization_validation.gd:205)
+       [5] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _set_active_slot (res://UI/character_customization_overlay.gd:1204)
+       [3] _run (res://tools/character_customization_validation.gd:212)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_skin (res://UI/character_customization_overlay.gd:1245)
+       [3] _run (res://tools/character_customization_validation.gd:213)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_model (res://UI/character_customization_overlay.gd:1250)
+       [3] _run (res://tools/character_customization_validation.gd:214)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _build_ui (res://UI/character_customization_overlay.gd:135)
+       [3] _ready (res://UI/character_customization_overlay.gd:70)
+       [4] _ready (res://UI/themed_locker_overlay.gd:16)
+       [5] _run (res://tools/character_customization_validation.gd:258)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _set_active_slot (res://UI/character_customization_overlay.gd:1204)
+       [3] _run (res://tools/character_customization_validation.gd:260)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_skin (res://UI/character_customization_overlay.gd:1245)
+       [3] _run (res://tools/character_customization_validation.gd:261)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+SCRIPT ERROR: Invalid assignment of property or key 'text' with value of type 'String' on a base object of type 'HBoxContainer'.
+   at: ThemedLockerOverlay._refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+   GDScript backtrace (most recent call first):
+       [0] _refresh_active_player (res://UI/character_customization_overlay.gd:1219)
+       [1] _refresh_active_player (res://UI/themed_locker_overlay.gd:277)
+       [2] _select_model (res://UI/character_customization_overlay.gd:1250)
+       [3] _run (res://tools/character_customization_validation.gd:262)
+       [4] _wait_frames (res://tools/character_customization_validation.gd:389)
+LOCKER_VALIDATION_OK colors=13 default-cat-tile=1 owned-only categories=4 public-models=2 gift-model=1 portraits=online-ready

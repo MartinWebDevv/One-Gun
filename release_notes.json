@@ -20,10 +20,19 @@
 	  "Accounts now use a unique Account Name that is separate from the Display Name shown during matches. Account Names can be changed once every 14 days.",
 	  "A new Female character model is available in the Locker with all 13 character colors and matching portraits.",
 	  "Online chat is now available in lobbies, the Playpen, active matches, and spectator mode. Press T to open chat or Enter to begin typing.",
-      "A red damage indicator now shows the direction of incoming gunfire, and all six powerups have their own pickup icons."
+	  "Friends are now available from the circular blue-mascot button on the home screen and online lobby, with requests, Accept or Deny, online status, removal, and named-lobby invitations.",
+	  "The online-lobby Player Hub now groups Locker, Prize Counter, and Progression without leaving the lobby, while Friends stays one click away in the upper-right.",
+	  "Lobby invitations now appear as Accept or Deny notifications that work with mouse, keyboard, and controller.",
+	  "Twelve hats now work on both character models with real 3D Prize Counter and Locker previews. Rice Hat unlocks at Level 10, Pimp Hat unlocks at Trophy 5, and ten more hats rotate through the Prize Counter.",
+	  "Cosmetic milestones on both progression roads can now be selected to preview the exact reward on your current character, with complete mouse, keyboard, and controller navigation.",
+	  "Prize Counter items with open-ended rotation dates now appear correctly, including all ten new purchasable hats.",
+	  "Fast Hands joins the powerup pool for a five-second 50% melee swing-speed boost without changing stamina use.",
+	  "A red damage indicator now shows the direction of incoming gunfire, and all seven powerups have their own pickup icons or safe placeholder art."
 	],
 	"Improved": [
-	  "The home screen is now divided into Play, Locker, Prize Counter, Progression, Profile, and Settings.",
+	  "The title screen now uses taller Play, Player Hub, Settings, and Quit cards to fill the cabinet cleanly. Player Hub groups Profile, Locker, Prize Counter, and Progression, while Friends uses its own mascot button.",
+	  "Aiming down sights now uses a cleaner shoulder camera that keeps the center aiming lane visible.",
+	  "Controller look now has separate horizontal and vertical sensitivity sliders, and dynamic menu grids have deterministic gamepad focus paths.",
 	  "The Prize Counter now feels like a full arena shop with rotating shelves, item categories, rarity colors, favorites, affordability filters, and a larger item preview.",
 	  "The Seasonal Starter Pool contains six items for the season and displays three items per page.",
 	  "The Locker now shows only items you own. Character, weapon, dance, clothing, and audio items are organized into clearer categories.",
@@ -39,9 +48,13 @@
 	  "Twinkling background lights and redesigned result panels make the final standings easier to read without covering the podium scene.",
 	  "A separate Ceremony Volume slider now controls Winners Circle music. Previewing a ceremony theme pauses the menu music so the tracks do not overlap.",
 	  "Low, Medium, High, and Ultra settings now scale menus, map previews, gameplay effects, and the Winners Circle more consistently.",
-      "Original One Gun, Original Melee Finish, Hip Hop, Swing Dance, and Ceremony March now appear as permanently owned starter choices in the Locker.",
+	  "Original One Gun, Original Melee Finish, Hip Hop, Swing Dance, and Ceremony March now appear as permanently owned starter choices in the Locker.",
 	  "Winners Circle results now stay open until every connected player is Ready or the host returns everyone to the lobby.",
-	  "Holding Tab during a match now opens the Arena Matchboard, with clearer placement, round progress, kills, disarms, player status, match details, and markers for you, the host, and the current One Gun holder. The top five always stay visible, while the final row shows your true placement when you are 6th–10th."
+	  "Holding Tab during a match now opens the Arena Matchboard, with clearer placement, round progress, kills, disarms, player status, match details, and markers for you, the host, and the current One Gun holder. The top five always stay visible, while the final row shows your true placement when you are 6th–10th.",
+	  "Player Settings now defaults the primary player to Mouse & Keyboard and lets players explicitly switch to Controller, with full bindings, radial stick response, hot-plug routing, and controller-ready menus.",
+	  "Every melee weapon now uses the Frying Pan swing timing while retaining its own stamina cost.",
+	  "Winners Circle rewards now animate XP through the current level bar, then Trophy progress or Gun Tokens, followed by the current-match reward box.",
+	  "Bear Traps and their hitboxes are now 30% larger, and both character models share the same master idle animation."
 	],
 	"Fixed": [
 	  "Signed-in accounts without a loaded name now display CLOUD PROFILE instead of Signed In Null.",
@@ -49,7 +62,12 @@
 	  "Players who leave an Official match are marked DNF and receive no rewards. Players who stay can still finish and receive their full rewards.",
 	  "When only one player remains in an Official match, that player now wins immediately by forfeit and receives their earned XP, 250 Gun Tokens, and one Trophy.",
 	  "Typing in chat no longer moves your character or spectator camera.",
-      "Female character colors, portraits, animations, equipment, and online appearance now remain consistent."
+	  "Female character colors, portraits, animations, equipment, and online appearance now remain consistent.",
+	  "Classic overtime now places its final melee supply at map center and keeps already-dropped melee weapons pickable.",
+	  "All Gun overtime now clears its transition label and reliably starts the advancing fire.",
+	  "Playpen players now recover to safe spawns instead of falling forever, and unintended melee or gun impulses no longer launch players indefinitely.",
+	  "Winners Circle mouse focus, cursor visibility, Ready input, and synchronized exit controls are responsive again.",
+	  "Follow spectators now receive the current player's idle and action animations."
 	],
 	"Removed": [
       "Vampire Touch has been removed from powerup drops, Match Settings, saved presets, and the Playpen."

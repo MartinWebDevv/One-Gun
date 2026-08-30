@@ -1,0 +1,52 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+GAMEPLAY_HAT_CAMERA_MATRIX: checked=72 hats=12 models=3 modes=2
+GAMEPLAY_HAT_CAMERA_CAPTURE: skipped on dummy renderer
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (212.9322, 412.9047), S: (576.1884, 406.5247)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (212.6508, 412.9145), S: (576.4412, 407.1914)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (212.3693, 412.9249), S: (576.6943, 407.8579)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: male/beta_s1_ace_hat covers the center sight lane at ADS 1: [P: (212.0859, 412.9357), S: (576.9492, 408.529)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_witch covers the center sight lane at ADS 1: [P: (-0.356579, 257.9236), S: (787.6208, 475.7804)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_witch covers the center sight lane at ADS 1: [P: (-0.458527, 257.8828), S: (787.7097, 475.7848)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_witch covers the center sight lane at ADS 1: [P: (-0.559902, 257.8423), S: (787.7979, 475.7892)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)
+ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_witch covers the center sight lane at ADS 1: [P: (-0.682163, 257.8152), S: (787.8958, 475.7544)]
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:290)
+       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:66)
+       [2] _validate_every_hat (res://tools/gameplay_hat_camera_validation.gd:121)

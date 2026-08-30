@@ -29,33 +29,35 @@ func _ensure_built() -> void:
 	if _built:
 		return
 	_built = true
-	custom_minimum_size = Vector2(0.0, 52.0)
+	custom_minimum_size = Vector2(0.0, 40.0)
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	size_flags_stretch_ratio = 1.0
 	focus_mode = Control.FOCUS_ALL
 	_idle_style = OneGunUI.style_box(
 		OneGunUI.color("well"), OneGunUI.color("well").darkened(0.35),
 		OneGunUI.RADIUS_INPUT, 1, 0, 0.0)
-	_idle_style.content_margin_left = 10
-	_idle_style.content_margin_right = 10
-	_idle_style.content_margin_top = OneGunUI.SPACE_S
-	_idle_style.content_margin_bottom = OneGunUI.SPACE_S
+	_idle_style.content_margin_left = 8
+	_idle_style.content_margin_right = 8
+	_idle_style.content_margin_top = 4
+	_idle_style.content_margin_bottom = 4
 	add_theme_stylebox_override("panel", _idle_style)
 	focus_entered.connect(_on_focus_changed)
 	focus_exited.connect(_on_focus_changed)
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	row.add_theme_constant_override("separation", 4)
 	add_child(row)
 
 	var icon_frame := PanelContainer.new()
-	icon_frame.custom_minimum_size = Vector2(36.0, 36.0)
+	icon_frame.custom_minimum_size = Vector2(30.0, 30.0)
 	icon_frame.add_theme_stylebox_override("panel",
 		OneGunUI.style_box(OneGunUI.color("face"), OneGunUI.color("border"), 8, 1))
 	_icon = OneGunIcon.new()
-	_icon.custom_minimum_size = Vector2(26.0, 26.0)
+	_icon.custom_minimum_size = Vector2(22.0, 22.0)
 	icon_frame.add_child(_icon)
 	_portrait = CHARACTER_PORTRAIT_SCRIPT.new()
 	_portrait.name = "PlayerPortrait"
-	_portrait.custom_minimum_size = Vector2(32.0, 32.0)
+	_portrait.custom_minimum_size = Vector2(27.0, 27.0)
 	_portrait.visible = false
 	icon_frame.add_child(_portrait)
 	row.add_child(icon_frame)
@@ -69,11 +71,11 @@ func _ensure_built() -> void:
 	row.add_child(_name_label)
 
 	_badge_box = HBoxContainer.new()
-	_badge_box.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_badge_box.add_theme_constant_override("separation", 4)
 	row.add_child(_badge_box)
 
 	_trailing_box = HBoxContainer.new()
-	_trailing_box.add_theme_constant_override("separation", OneGunUI.SPACE_S)
+	_trailing_box.add_theme_constant_override("separation", 4)
 	row.add_child(_trailing_box)
 
 

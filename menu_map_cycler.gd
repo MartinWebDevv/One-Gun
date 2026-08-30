@@ -54,6 +54,14 @@ const MAP_OVERRIDES: Dictionary = {
 		"dof_begin": 6.0,
 		"dof_transition": 4.0,
 	},
+	"res://maps/test/TrippyMountainsMap.tscn": {
+		# Keep the menu camera inside the mountain ring and aim across the
+		# playable center. A narrow pan preserves the enclosure at both ends.
+		"anchor_local": Vector3(68.235, 0.0, -118.369),
+		"camera_direction": Vector3(-0.70, 0.0, 0.71),
+		"view_distance": 18.0,
+		"pan_range": 0.11,
+	},
 }
 
 var _viewport: SubViewport = null
@@ -74,6 +82,7 @@ var _cam_pos := Vector3.ZERO
 var _view_target := Vector3.ZERO
 var _pan_angle := 0.0
 var _pan_direction := 1.0
+var _pan_limit := PAN_RANGE
 var _swapping := false
 var _loading_path := ""
 var _loading_index := -1
@@ -95,8 +104,16 @@ func setup(viewport: SubViewport, camera: Camera3D, fade_rect: ColorRect, menu_r
 	if _maps.is_empty():
 		push_warning("MenuMapCycler: no maps registered in game_setup.MAPS")
 		return
-	# First preview shows immediately (synchronous — menu is still loading).
-	_show_map(0)
+	# Let the menu cabinet draw before preparing the expensive live map. The
+	# background starts covered, loads on Godot's resource thread, then fades in
+	# without holding the intro-to-menu scene change on a full map load.
+	_fade_rect.color.a = 1.0
+	_begin_initial_load()
+
+func _begin_initial_load() -> void:
+	await get_tree().process_frame
+	if is_inside_tree() and not _maps.is_empty():
+		_begin_threaded_load(0)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
@@ -115,9 +132,31 @@ func _running() -> bool:
 		and _menu_root.is_visible_in_tree())
 
 func _process(delta: float) -> void:
-	if _camera == null or _current_map == null:
+	if _camera == null:
 		return
 	if not _running():
+		return
+
+	# Poll the threaded load even before the first map exists.
+	if _loading_path != "" and not _swapping:
+		var status := ResourceLoader.load_threaded_get_status(_loading_path)
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			var packed: PackedScene = ResourceLoader.load_threaded_get(_loading_path)
+			_loading_path = ""
+			_fade_swap(packed, _loading_index)
+		elif status == ResourceLoader.THREAD_LOAD_FAILED \
+				or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			var fallback: PackedScene = load(_loading_path) as PackedScene
+			var fallback_index := _loading_index
+			_loading_path = ""
+			if fallback != null:
+				_fade_swap(fallback, fallback_index)
+			else:
+				push_warning("MenuMapCycler: failed to load " \
+					+ str(_maps[fallback_index]["scene_path"]))
+				_view_timer = 0.0
+
+	if _current_map == null:
 		return
 
 	if _grounded:
@@ -125,11 +164,11 @@ func _process(delta: float) -> void:
 		# gaze sweeping slowly — same panning treatment as the old title camera.
 		if not _reduced_motion:
 			_pan_angle += PAN_SPEED * _pan_direction * delta
-			if _pan_angle > PAN_RANGE:
-				_pan_angle = PAN_RANGE
+			if _pan_angle > _pan_limit:
+				_pan_angle = _pan_limit
 				_pan_direction = -1.0
-			elif _pan_angle < -PAN_RANGE:
-				_pan_angle = -PAN_RANGE
+			elif _pan_angle < -_pan_limit:
+				_pan_angle = -_pan_limit
 				_pan_direction = 1.0
 		_camera.position = _cam_pos
 		var gaze := (_view_target - _cam_pos).normalized().rotated(Vector3.UP, _pan_angle)
@@ -151,25 +190,6 @@ func _process(delta: float) -> void:
 		_view_timer += delta
 		if _view_timer >= VIEW_SECONDS:
 			_begin_threaded_load((_current_index + 1) % _maps.size())
-
-	# Poll the threaded load; swap behind the fade once it's ready.
-	if _loading_path != "" and not _swapping:
-		var status := ResourceLoader.load_threaded_get_status(_loading_path)
-		if status == ResourceLoader.THREAD_LOAD_LOADED:
-			var packed: PackedScene = ResourceLoader.load_threaded_get(_loading_path)
-			_loading_path = ""
-			_fade_swap(packed, _loading_index)
-		elif status == ResourceLoader.THREAD_LOAD_FAILED or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-			# Threaded path failed (can happen for cached resources) — fall back
-			# to a direct load so the cycle never silently stops.
-			var fallback: PackedScene = load(_loading_path) as PackedScene
-			var fallback_index := _loading_index
-			_loading_path = ""
-			if fallback != null:
-				_fade_swap(fallback, fallback_index)
-			else:
-				push_warning("MenuMapCycler: failed to load " + str(_maps[fallback_index]["scene_path"]))
-				_view_timer = 0.0
 
 func _begin_threaded_load(index: int) -> void:
 	var path := str(_maps[index]["scene_path"])
@@ -193,24 +213,19 @@ func _begin_threaded_load(index: int) -> void:
 func _fade_swap(packed: PackedScene, index: int) -> void:
 	_swapping = true
 	var tween := create_tween()
-	tween.tween_property(_fade_rect, "color:a", 1.0, FADE_TIME)
-	tween.tween_callback(func():
+	if _current_map == null:
 		_instance_map(packed, index)
-	)
-	tween.tween_property(_fade_rect, "color:a", 0.0, FADE_TIME)
-	tween.tween_callback(func():
-		_swapping = false
-		_view_timer = 0.0
-	)
-
-# Synchronous first-map path (menu open shows a preview immediately).
-func _show_map(index: int) -> void:
-	var path := str(_maps[index]["scene_path"])
-	if not ResourceLoader.exists(path):
+		tween.tween_property(_fade_rect, "color:a", 0.0, FADE_TIME)
+		tween.tween_callback(_finish_fade_swap)
 		return
-	var packed: PackedScene = load(path)
-	if packed != null:
-		_instance_map(packed, index)
+	tween.tween_property(_fade_rect, "color:a", 1.0, FADE_TIME)
+	tween.tween_callback(_instance_map.bind(packed, index))
+	tween.tween_property(_fade_rect, "color:a", 0.0, FADE_TIME)
+	tween.tween_callback(_finish_fade_swap)
+
+func _finish_fade_swap() -> void:
+	_swapping = false
+	_view_timer = 0.0
 
 func _instance_map(packed: PackedScene, index: int) -> void:
 	if _current_map != null and is_instance_valid(_current_map):
@@ -261,6 +276,7 @@ func _instance_map(packed: PackedScene, index: int) -> void:
 func _setup_view_camera(map: Node3D, gun_local: Vector3) -> void:
 	_grounded = false
 	var override: Dictionary = MAP_OVERRIDES.get(str(_maps[_current_index]["scene_path"]), {})
+	_pan_limit = float(override.get("pan_range", PAN_RANGE))
 	if override.has("anchor_local"):
 		gun_local = override["anchor_local"]
 	var target := Vector3.INF
@@ -288,9 +304,15 @@ func _setup_view_camera(map: Node3D, gun_local: Vector3) -> void:
 			if to_marker.length() > far_dist:
 				far_dist = to_marker.length()
 				back_dir = to_marker.normalized()
+	if override.has("camera_direction"):
+		var camera_direction: Vector3 = override["camera_direction"]
+		camera_direction.y = 0.0
+		if not camera_direction.is_zero_approx():
+			back_dir = camera_direction.normalized()
+	var view_distance := float(override.get("view_distance", VIEW_DISTANCE))
 	# Flat-on-the-ground: camera and gaze target share the same eye height,
 	# so the horizon stays level (no downward tilt).
-	_cam_pos = target + back_dir * VIEW_DISTANCE + Vector3(0.0, EYE_HEIGHT, 0.0)
+	_cam_pos = target + back_dir * view_distance + Vector3(0.0, EYE_HEIGHT, 0.0)
 	_view_target = target + Vector3(0.0, EYE_HEIGHT, 0.0)
 	_pan_angle = 0.0
 	_pan_direction = 1.0

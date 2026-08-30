@@ -16,8 +16,14 @@ const TARGETS := [
 	"res://game_setup.gd",
 	"res://game_setup.tscn",
 	"res://supabase/supabase_manager.gd",
+	"res://supabase/social_manager.gd",
 	"res://UI/supabase_overlay.gd",
+	"res://UI/social_overlay.gd",
+	"res://UI/components/friends_quick_access_orb.gd",
+	"res://UI/components/lobby_invite_notification.gd",
 	"res://UI/character_customization_overlay.gd",
+	"res://UI/lobby_player_hub_overlay.gd",
+	"res://UI/player_hub_overlay.gd",
 	"res://UI/progression_road_overlay.gd",
 	"res://lobby_map_preview.gd",
 	"res://menu_map_cycler.gd",
@@ -30,6 +36,13 @@ const TARGETS := [
 	"res://crosshair.gd",
 	"res://hit_marker.gd",
 	"res://character_body_3d.gd",
+	"res://models/player_v2/player_v2_visual.gd",
+	"res://models/cosmetics/hats/hat_fit_profiles.gd",
+	"res://models/cosmetics/hats/hat_fit_profiles.tres",
+	"res://models/cosmetics/hats/hat_cosmetic_registry.gd",
+	"res://tools/hat_fitting_tool.gd",
+	"res://tools/hat_fitting_tool.tscn",
+	"res://tools/equipped_cosmetic_visibility_validation.gd",
 	"res://gun.gd",
 	"res://bullet.gd",
 	"res://melee_weapon.gd",
@@ -37,9 +50,63 @@ const TARGETS := [
 	"res://spectator_controller.gd",
 ]
 
+const FORBIDDEN_MENU_COPY := {
+	"res://UI/lobby_player_hub_overlay.gd": [
+		"ONE GUN  //  PLAYER SERVICES",
+		"Profile and player services live here.",
+		"BACK TO HOME",
+		"BACK TO LOBBY",
+	],
+	"res://UI/player_hub_overlay.gd": [
+		"ONE GUN  //  ARENA SERVICES",
+		"ONE GUN  //  ARENA REWARDS",
+		"BACK TO HOME",
+	],
+	"res://UI/progression_road_overlay.gd": [
+		"ONE GUN  //  SEASON COMMAND",
+		"BACK TO HOME",
+	],
+	"res://UI/themed_locker_overlay.gd": ["ONE GUN  //  LOADOUT BAY"],
+	"res://UI/character_customization_overlay.gd": ["EQUIP WHAT YOU OWN"],
+	"res://UI/arena_matchboard.gd": ["ONE GUN  //  LIVE ARENA"],
+	"res://UI/components/cosmetic_character_preview.gd": [
+		"ONE GUN  //  REWARD PREVIEW",
+	],
+	"res://UI/online_play_overlay.gd": [
+		"FIND DEV MATCH",
+		"DEVELOPMENT MATCH",
+		"DEVELOPMENT QUEUE",
+		"DYNAMIC EDGEGAP",
+		"This gates discovery inside your tailnet.",
+		"The code is sent only in direct probes",
+	],
+	"res://UI/supabase_overlay.gd": [
+		"Gameplay networking remains on Godot/ENet.",
+		"will appear after persistent match rewards are enabled",
+		"_make_button(\"CLOSE\", \"red\")",
+	],
+	"res://game_setup.gd": ["intentionally deferred"],
+	"res://player_settings.gd": ["restore on Cancel"],
+	"res://main_menu.gd": [
+		"PLAYTEST",
+		"Local and online routes keep their existing lobby and match rules.",
+		"Match rules stay unchanged.",
+	],
+}
+
 class ReloadGunStub extends Node:
 	var can_fire := false
 	func get_reload_progress() -> float: return 0.42
+
+
+func _has_back_contract(button: Button, window: Control) -> bool:
+	if button == null or window == null or button.text != "BACK" \
+			or str(button.get("variant")) != "navy":
+		return false
+	var button_center := button.get_global_rect().get_center()
+	var window_rect := window.get_global_rect()
+	return button_center.x < window_rect.get_center().x \
+		and button_center.y > window_rect.get_center().y
 
 
 func _initialize() -> void:
@@ -48,6 +115,9 @@ func _initialize() -> void:
 
 func _validate() -> void:
 	var failed := false
+	var player_prefs = root.get_node("PlayerPrefs")
+	var saved_input_device := str(player_prefs.settings.get(
+		"input_device", "keyboard_mouse"))
 	for path in TARGETS:
 		var resource := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REPLACE)
 		if resource == null:
@@ -55,7 +125,155 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU VALIDATION OK: %s" % path)
+	for path in FORBIDDEN_MENU_COPY:
+		var source := FileAccess.get_file_as_string(path)
+		for forbidden_text in FORBIDDEN_MENU_COPY[path]:
+			if source.contains(str(forbidden_text)):
+				push_error("Menu validation: developer-facing copy remains in %s: %s" % [
+					path, forbidden_text])
+				failed = true
 	if not failed:
+		var lobby_hub = load("res://UI/lobby_player_hub_overlay.gd").new()
+		root.add_child(lobby_hub)
+		await process_frame
+		var hub_destinations: Array[String] = []
+		lobby_hub.destination_requested.connect(func(destination: String) -> void:
+			hub_destinations.append(destination))
+		for button_name in ["OpenLockerButton", "OpenPrizeCounterButton",
+				"OpenProgressionButton"]:
+			var hub_button := lobby_hub.find_child(button_name, true, false) as Button
+			if hub_button == null:
+				push_error("Menu validation: Player Hub missing %s" % button_name)
+				failed = true
+			else:
+				hub_button.pressed.emit()
+		if hub_destinations != ["locker", "prize_counter", "progression"]:
+			push_error("Menu validation: Player Hub destinations are not fully wired")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: online Player Hub exposes Locker, Prize Counter, and Progression")
+		lobby_hub.queue_free()
+		await process_frame
+		player_prefs.settings["input_device"] = "controller"
+		var home_hub = load("res://UI/lobby_player_hub_overlay.gd").new()
+		home_hub.configure("home")
+		root.add_child(home_hub)
+		await process_frame
+		await process_frame
+		var home_destinations: Array[String] = []
+		home_hub.destination_requested.connect(func(destination: String) -> void:
+			home_destinations.append(destination))
+		for button_name in ["OpenProfileButton", "OpenLockerButton",
+				"OpenPrizeCounterButton", "OpenProgressionButton"]:
+			var home_button := home_hub.find_child(button_name, true, false) as Button
+			if home_button == null:
+				push_error("Menu validation: home Player Hub missing %s" % button_name)
+				failed = true
+			else:
+				home_button.pressed.emit()
+		var home_close := home_hub.find_child("ClosePlayerHubButton", true, false) as Button
+		var account_strip: Node = home_hub.find_child(
+			"PlayerHubAccountStrip", true, false) as Node
+		var home_cabinet := home_hub.find_child(
+			"LobbyPlayerHubCabinet", true, false) as Control
+		if home_destinations != ["profile", "locker", "prize_counter", "progression"]:
+			push_error("Menu validation: home Player Hub destinations are not fully wired")
+			failed = true
+		elif not _has_back_contract(home_close, home_cabinet) or account_strip == null:
+			push_error("Menu validation: home Player Hub presentation is incomplete")
+			failed = true
+		elif root.gui_get_focus_owner() == null \
+				or not home_hub.is_ancestor_of(root.gui_get_focus_owner()):
+			push_error("Menu validation: home Player Hub did not claim controller focus")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: home Player Hub exposes profile/loadout/reward services and claims controller focus")
+		var pointer_motion := InputEventMouseMotion.new()
+		pointer_motion.relative = Vector2(3.0, 0.0)
+		home_hub.call("_input", pointer_motion)
+		await process_frame
+		if root.gui_get_focus_owner() != null \
+				and home_hub.is_ancestor_of(root.gui_get_focus_owner()):
+			push_error("Menu validation: pointer-mode Player Hub kept a false controller highlight")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: pointer-mode Player Hub clears controller-only highlighting")
+		player_prefs.settings["input_device"] = saved_input_device
+		home_hub.queue_free()
+		await process_frame
+		var friends_orb = load(
+			"res://UI/components/friends_quick_access_orb.gd").new()
+		root.add_child(friends_orb)
+		await process_frame
+		var friends_label := friends_orb.find_child(
+			"FriendsHoverLabel", true, false) as Label
+		if friends_orb.focus_mode != Control.FOCUS_ALL or friends_label == null \
+				or friends_label.text != "FRIENDS":
+			push_error("Menu validation: controller-ready Friends orb is incomplete")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Friends orb is controller-focusable and labeled")
+		friends_orb.queue_free()
+		await process_frame
+		var invite_toast = load(
+			"res://UI/components/lobby_invite_notification.gd").new()
+		root.add_child(invite_toast)
+		invite_toast.call("present", {
+			"id": "validation-invite", "username": "BlueCat",
+			"lobby_name": "Controller QA"})
+		await process_frame
+		var accept_invite := invite_toast.find_child(
+			"AcceptLobbyInviteToastButton", true, false) as Button
+		var deny_invite := invite_toast.find_child(
+			"DeclineLobbyInviteToastButton", true, false) as Button
+		if accept_invite == null or deny_invite == null \
+				or accept_invite.focus_neighbor_right.is_empty() \
+				or deny_invite.focus_neighbor_left.is_empty():
+			push_error("Menu validation: lobby invite notification is not controller-routable")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: lobby invite notification exposes controller Accept / Deny")
+		invite_toast.queue_free()
+		await process_frame
+		player_prefs.settings["input_device"] = "controller"
+		var social_overlay = load("res://UI/social_overlay.gd").new()
+		root.add_child(social_overlay)
+		await process_frame
+		await process_frame
+		var social_tabs := social_overlay.find_child(
+			"SocialTabs", true, false) as Control
+		var social_tab_button: Button = null
+		if social_tabs != null:
+			social_tab_button = social_tabs.find_child(
+				"*", false, false) as Button
+		var social_focus := root.gui_get_focus_owner()
+		var social_back := social_overlay.find_child(
+			"CloseFriendsButton", true, false) as Button
+		var social_cabinet := social_overlay.find_child(
+			"FriendsCabinet", true, false) as Control
+		if social_tabs == null or social_tab_button == null \
+				or social_tab_button.focus_mode == Control.FOCUS_NONE \
+				or social_focus == null or not social_overlay.is_ancestor_of(social_focus):
+			push_error("Menu validation: Friends overlay did not establish controller focus")
+			failed = true
+		elif not _has_back_contract(social_back, social_cabinet):
+			push_error("Menu validation: Friends Back is not blue and bottom-left")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Friends overlay claims controller focus")
+		var social_pointer := InputEventMouseMotion.new()
+		social_pointer.relative = Vector2(3.0, 0.0)
+		social_overlay.call("_input", social_pointer)
+		await process_frame
+		if root.gui_get_focus_owner() != null \
+				and social_overlay.is_ancestor_of(root.gui_get_focus_owner()):
+			push_error("Menu validation: pointer-mode Friends kept a false controller highlight")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: pointer-mode Friends clears controller-only highlighting")
+		player_prefs.settings["input_device"] = saved_input_device
+		social_overlay.queue_free()
+		await process_frame
 		var scene := load("res://player_settings.tscn") as PackedScene
 		var settings_screen := scene.instantiate()
 		settings_screen.is_overlay = true
@@ -63,8 +281,15 @@ func _validate() -> void:
 		await process_frame
 		await process_frame
 		var settings_focus := root.gui_get_focus_owner()
+		var settings_back := settings_screen.find_child(
+			"SettingsCancel", true, false) as Button
+		var settings_cabinet := settings_screen.find_child(
+			"PlayerSettingsCabinet", true, false) as Control
 		if settings_focus == null or not settings_screen.is_ancestor_of(settings_focus):
 			push_error("Menu validation: Player Settings did not claim controller focus")
+			failed = true
+		elif not _has_back_contract(settings_back, settings_cabinet):
+			push_error("Menu validation: Player Settings Back is not blue and bottom-left")
 			failed = true
 		else:
 			print("MENU RUNTIME OK: Player Settings claims controller focus")
@@ -91,6 +316,21 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU RUNTIME OK: Controls exposes Mouse & Keyboard / Controller")
+		settings_screen.call("_select_category", "Gameplay")
+		await process_frame
+		await process_frame
+		var horizontal_sensitivity := false
+		var vertical_sensitivity := false
+		for label in settings_screen.find_children("*", "Label", true, false):
+			horizontal_sensitivity = horizontal_sensitivity \
+				or str(label.text) == "Gamepad Horizontal Sensitivity"
+			vertical_sensitivity = vertical_sensitivity \
+				or str(label.text) == "Gamepad Vertical Sensitivity"
+		if not horizontal_sensitivity or not vertical_sensitivity:
+			push_error("Menu validation: separate X/Y gamepad sensitivity controls are missing")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: Gameplay exposes separate gamepad X / Y sensitivity")
 		settings_screen.call("_select_category", "Audio")
 		await process_frame
 		var ceremony_slider_found := false
@@ -339,6 +579,15 @@ func _validate() -> void:
 			failed = true
 		else:
 			print("MENU RUNTIME OK: Low main menu uses the lightweight live title world")
+		var first_map_load_started := Time.get_ticks_msec()
+		while low_cycler.get("_current_map") == null \
+				and Time.get_ticks_msec() - first_map_load_started < 5000:
+			await process_frame
+		if low_cycler.get("_current_map") == null:
+			push_error("Menu validation: asynchronous first title world did not finish loading")
+			failed = true
+		else:
+			print("MENU RUNTIME OK: asynchronous first title world becomes live")
 		low_viewport.queue_free()
 		low_menu_host.queue_free()
 		prefs.settings["effects_quality"] = saved_effects_quality
@@ -426,6 +675,7 @@ func _validate() -> void:
 		await process_frame
 	if not failed:
 		print("MENU SYSTEMS VALIDATION: PASS")
+	player_prefs.settings["input_device"] = saved_input_device
 	quit(1 if failed else 0)
 
 

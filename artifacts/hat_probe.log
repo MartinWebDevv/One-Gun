@@ -1,0 +1,201 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+Loading resource: res://one_gun_theme.tres remapped: res://one_gun_theme.tres
+Loading resource: res://fonts/Fredoka-VariableFont_wdth,wght.ttf remapped: res://fonts/Fredoka-VariableFont_wdth,wght.ttf
+Loading resource: res://.godot/imported/Fredoka-VariableFont_wdth,wght.ttf-738020177dd543c76cbf97a78c18b720.fontdata remapped: res://.godot/imported/Fredoka-VariableFont_wdth,wght.ttf-738020177dd543c76cbf97a78c18b720.fontdata
+Completed load for: 'res://fonts/Fredoka-VariableFont_wdth,wght.ttf' remapped 'res://fonts/Fredoka-VariableFont_wdth,wght.ttf' at thread -1
+Completed load for: 'res://one_gun_theme.tres' remapped 'res://one_gun_theme.tres' at thread -1
+CORE API HASH: 3769296884
+EDITOR API HASH: 3146738256
+SceneTreeFTI: traversal method DEFAULT
+Loading resource: res://game_events.gd remapped: res://game_events.gd
+Completed load for: 'res://game_events.gd' remapped 'res://game_events.gd' at thread -1
+Loading resource: res://game_config.gd remapped: res://game_config.gd
+Completed load for: 'res://game_config.gd' remapped 'res://game_config.gd' at thread -1
+Loading resource: res://player_prefs.gd remapped: res://player_prefs.gd
+Completed load for: 'res://player_prefs.gd' remapped 'res://player_prefs.gd' at thread -1
+Loading resource: res://supabase/supabase_manager.gd remapped: res://supabase/supabase_manager.gd
+Completed load for: 'res://supabase/supabase_manager.gd' remapped 'res://supabase/supabase_manager.gd' at thread -1
+Loading resource: res://supabase/progression_manager.gd remapped: res://supabase/progression_manager.gd
+Completed load for: 'res://supabase/progression_manager.gd' remapped 'res://supabase/progression_manager.gd' at thread -1
+Loading resource: res://graphics_quality_manager.gd remapped: res://graphics_quality_manager.gd
+Completed load for: 'res://graphics_quality_manager.gd' remapped 'res://graphics_quality_manager.gd' at thread -1
+Loading resource: res://pause_manager.gd remapped: res://pause_manager.gd
+Completed load for: 'res://pause_manager.gd' remapped 'res://pause_manager.gd' at thread -1
+Loading resource: res://melee_weapon_registry.gd remapped: res://melee_weapon_registry.gd
+Completed load for: 'res://melee_weapon_registry.gd' remapped 'res://melee_weapon_registry.gd' at thread -1
+Loading resource: res://theme_manager.gd remapped: res://theme_manager.gd
+Completed load for: 'res://theme_manager.gd' remapped 'res://theme_manager.gd' at thread -1
+Loading resource: res://UI/accessibility_manager.gd remapped: res://UI/accessibility_manager.gd
+Completed load for: 'res://UI/accessibility_manager.gd' remapped 'res://UI/accessibility_manager.gd' at thread -1
+Loading resource: res://supabase/social_manager.gd remapped: res://supabase/social_manager.gd
+Completed load for: 'res://supabase/social_manager.gd' remapped 'res://supabase/social_manager.gd' at thread -1
+Loading resource: res://supabase/reward_identity_manager.gd remapped: res://supabase/reward_identity_manager.gd
+Completed load for: 'res://supabase/reward_identity_manager.gd' remapped 'res://supabase/reward_identity_manager.gd' at thread -1
+Loading resource: res://online_chat.gd remapped: res://online_chat.gd
+Completed load for: 'res://online_chat.gd' remapped 'res://online_chat.gd' at thread -1
+Loaded system CA certificates
+Loading resource: res://tools/hat_asset_probe.tscn remapped: res://tools/hat_asset_probe.tscn
+Loading resource: res://tools/hat_asset_probe.gd remapped: res://tools/hat_asset_probe.gd
+Completed load for: 'res://tools/hat_asset_probe.gd' remapped 'res://tools/hat_asset_probe.gd' at thread -1
+Completed load for: 'res://tools/hat_asset_probe.tscn' remapped 'res://tools/hat_asset_probe.tscn' at thread -1
+Loading resource: res://models/player_v2/player_v2_visual.tscn remapped: res://models/player_v2/player_v2_visual.tscn
+Loading resource: res://models/player_v2/player_v2_visual.gd remapped: res://models/player_v2/player_v2_visual.gd
+Completed load for: 'res://models/player_v2/player_v2_visual.gd' remapped 'res://models/player_v2/player_v2_visual.gd' at thread -1
+Loading resource: res://models/player_v2/animations/Idle.fbx remapped: res://models/player_v2/animations/Idle.fbx
+Loading resource: res://.godot/imported/Idle.fbx-30d7b7480fbc6e1ecf11d003b83fcc8c.scn remapped: res://.godot/imported/Idle.fbx-30d7b7480fbc6e1ecf11d003b83fcc8c.scn
+Completed load for: 'res://models/player_v2/animations/Idle.fbx' remapped 'res://models/player_v2/animations/Idle.fbx' at thread -1
+Completed load for: 'res://models/player_v2/player_v2_visual.tscn' remapped 'res://models/player_v2/player_v2_visual.tscn' at thread -1
+Loading resource: res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png remapped: res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png
+Loading resource: res://.godot/imported/OGCatModelV2_Rigged_OGcat color blue.png-f6e467b52ec39a101206faf0b3c96c68.s3tc.ctex remapped: res://.godot/imported/OGCatModelV2_Rigged_OGcat color blue.png-f6e467b52ec39a101206faf0b3c96c68.s3tc.ctex
+Completed load for: 'res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png' remapped 'res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png' at thread -1
+HAT_MODEL_BOUNDS model=male center=(1.127418, 0.834995, 0.048598) size=(0.035078, 0.053691, 0.041719) socket=(1.510485, 1.974086, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb remapped: res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb
+Loading resource: res://.godot/imported/Pimphat_final_budget.glb-8f3d2339e09995e1be848b965315bf15.scn remapped: res://.godot/imported/Pimphat_final_budget.glb-8f3d2339e09995e1be848b965315bf15.scn
+Loading resource: res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg remapped: res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg
+Loading resource: res://.godot/imported/Pimphat_final_budget_fabric.jpg-de10a7489ead8b9bb547a641c9f673af.ctex remapped: res://.godot/imported/Pimphat_final_budget_fabric.jpg-de10a7489ead8b9bb547a641c9f673af.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg' remapped 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg' at thread -1
+Loading resource: res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg remapped: res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg
+Loading resource: res://.godot/imported/Pimphat_final_budget_pellnegre.jpg-4f08a6a3915a626adc114fad7c4514b2.ctex remapped: res://.godot/imported/Pimphat_final_budget_pellnegre.jpg-4f08a6a3915a626adc114fad7c4514b2.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg' remapped 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg' at thread -1
+Completed load for: 'res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb' remapped 'res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb' at thread -1
+HAT_RUNTIME_OK model=male id=beta_s1_ace_hat width=0.720 height=0.368 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.15805, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Ricehat_runtime.glb remapped: res://models/cosmetics/hats/runtime/Ricehat_runtime.glb
+Loading resource: res://.godot/imported/Ricehat_runtime.glb-a9c0409058c4e2efb1d7e1ded49ed51c.scn remapped: res://.godot/imported/Ricehat_runtime.glb-a9c0409058c4e2efb1d7e1ded49ed51c.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Ricehat_runtime.glb' remapped 'res://models/cosmetics/hats/runtime/Ricehat_runtime.glb' at thread -1
+HAT_RUNTIME_OK model=male id=beta_s1_level_30_hat width=0.820 height=0.275 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.111695, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Chefhat.glb remapped: res://models/cosmetics/hats/runtime/Chefhat.glb
+Loading resource: res://.godot/imported/Chefhat.glb-f6fef87b45b79675c86695eab3da77cd.scn remapped: res://.godot/imported/Chefhat.glb-f6fef87b45b79675c86695eab3da77cd.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Chefhat.glb' remapped 'res://models/cosmetics/hats/runtime/Chefhat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_chef width=0.620 height=0.662 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.305113, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Cowboyhat.glb remapped: res://models/cosmetics/hats/runtime/Cowboyhat.glb
+Loading resource: res://.godot/imported/Cowboyhat.glb-ebe78d3ba97f90ed6099ff1fb5722085.scn remapped: res://.godot/imported/Cowboyhat.glb-ebe78d3ba97f90ed6099ff1fb5722085.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Cowboyhat.glb' remapped 'res://models/cosmetics/hats/runtime/Cowboyhat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_cowboy_classic width=0.760 height=0.211 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.079445, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Cowboyhat 2.glb remapped: res://models/cosmetics/hats/runtime/Cowboyhat 2.glb
+Loading resource: res://.godot/imported/Cowboyhat 2.glb-5738aab58d7393d4499ed15ca570864b.scn remapped: res://.godot/imported/Cowboyhat 2.glb-5738aab58d7393d4499ed15ca570864b.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Cowboyhat 2.glb' remapped 'res://models/cosmetics/hats/runtime/Cowboyhat 2.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_cowboy_wide width=0.820 height=0.198 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.073139, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Crownhat_runtime.glb remapped: res://models/cosmetics/hats/runtime/Crownhat_runtime.glb
+Loading resource: res://.godot/imported/Crownhat_runtime.glb-533967eeff0619ef7f2de9d9bb751a87.scn remapped: res://.godot/imported/Crownhat_runtime.glb-533967eeff0619ef7f2de9d9bb751a87.scn
+Loading resource: res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png remapped: res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png
+Loading resource: res://.godot/imported/Crownhat_runtime_Image.png-a91369c32175bd0f4360bf2506748292.ctex remapped: res://.godot/imported/Crownhat_runtime_Image.png-a91369c32175bd0f4360bf2506748292.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png' remapped 'res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png' at thread -1
+Completed load for: 'res://models/cosmetics/hats/runtime/Crownhat_runtime.glb' remapped 'res://models/cosmetics/hats/runtime/Crownhat_runtime.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_crown width=0.540 height=0.400 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.173914, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Fedorablackhat.glb remapped: res://models/cosmetics/hats/runtime/Fedorablackhat.glb
+Loading resource: res://.godot/imported/Fedorablackhat.glb-cf3058c759dc0c4baa40b4a8060979d4.scn remapped: res://.godot/imported/Fedorablackhat.glb-cf3058c759dc0c4baa40b4a8060979d4.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Fedorablackhat.glb' remapped 'res://models/cosmetics/hats/runtime/Fedorablackhat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_fedora_black width=0.720 height=0.212 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.080119, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat.glb remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat.glb
+Loading resource: res://.godot/imported/FedoraWhitehat.glb-11fd2034ce0e9e089df36c7318b05768.scn remapped: res://.godot/imported/FedoraWhitehat.glb-11fd2034ce0e9e089df36c7318b05768.scn
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png
+Loading resource: res://.godot/imported/FedoraWhitehat_hat_basecolor.png-e64e9aa1026b6e98c2389f3b27a0a607.ctex remapped: res://.godot/imported/FedoraWhitehat_hat_basecolor.png-e64e9aa1026b6e98c2389f3b27a0a607.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png' at thread -1
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png
+Loading resource: res://.godot/imported/FedoraWhitehat_hat_metalness-hat_roughness.png-e8bd10954ab10d0b16081652c1ef6c04.ctex remapped: res://.godot/imported/FedoraWhitehat_hat_metalness-hat_roughness.png-e8bd10954ab10d0b16081652c1ef6c04.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png' at thread -1
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png
+Loading resource: res://.godot/imported/FedoraWhitehat_hat_normal.png-1ecc5e37465a24fed0eb2834db167cb2.ctex remapped: res://.godot/imported/FedoraWhitehat_hat_normal.png-1ecc5e37465a24fed0eb2834db167cb2.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png' at thread -1
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat.glb' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_fedora_white width=0.720 height=0.315 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.131584, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Luffyhat.glb remapped: res://models/cosmetics/hats/runtime/Luffyhat.glb
+Loading resource: res://.godot/imported/Luffyhat.glb-0c321ae1e186b8f6dacf876818aa57f9.scn remapped: res://.godot/imported/Luffyhat.glb-0c321ae1e186b8f6dacf876818aa57f9.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Luffyhat.glb' remapped 'res://models/cosmetics/hats/runtime/Luffyhat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_straw_adventurer width=0.820 height=0.251 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.099517, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Tophat.glb remapped: res://models/cosmetics/hats/runtime/Tophat.glb
+Loading resource: res://.godot/imported/Tophat.glb-88997628e39e5ffe1e8f0fdb38ddec2c.scn remapped: res://.godot/imported/Tophat.glb-88997628e39e5ffe1e8f0fdb38ddec2c.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Tophat.glb' remapped 'res://models/cosmetics/hats/runtime/Tophat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_top width=0.640 height=0.394 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.171284, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Witchhat.glb remapped: res://models/cosmetics/hats/runtime/Witchhat.glb
+Loading resource: res://.godot/imported/Witchhat.glb-7b9f5af5c4045b3e10818ab87cc4721c.scn remapped: res://.godot/imported/Witchhat.glb-7b9f5af5c4045b3e10818ab87cc4721c.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Witchhat.glb' remapped 'res://models/cosmetics/hats/runtime/Witchhat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_witch width=0.680 height=0.443 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.195459, 0.301057)
+Loading resource: res://models/cosmetics/hats/runtime/Yellowpointhat.glb remapped: res://models/cosmetics/hats/runtime/Yellowpointhat.glb
+Loading resource: res://.godot/imported/Yellowpointhat.glb-d4190bdfa723a883190355319e8b07ef.scn remapped: res://.godot/imported/Yellowpointhat.glb-d4190bdfa723a883190355319e8b07ef.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Yellowpointhat.glb' remapped 'res://models/cosmetics/hats/runtime/Yellowpointhat.glb' at thread -1
+HAT_RUNTIME_OK model=male id=hat_yellow_point width=0.620 height=0.731 socket=(1.510485, 1.974086, 0.301057) center=(1.510485, 2.33942, 0.301057)
+Loading resource: res://models/player_v2/femaleOGCat/female_player_v2_visual.tscn remapped: res://models/player_v2/femaleOGCat/female_player_v2_visual.tscn
+Loading resource: res://models/player_v2/femaleOGCat/femaleOGCatRigged.glb remapped: res://models/player_v2/femaleOGCat/femaleOGCatRigged.glb
+Loading resource: res://.godot/imported/femaleOGCatRigged.glb-f1b1b9aff67e3ddc620a0dd1091ad367.scn remapped: res://.godot/imported/femaleOGCatRigged.glb-f1b1b9aff67e3ddc620a0dd1091ad367.scn
+Completed load for: 'res://models/player_v2/femaleOGCat/femaleOGCatRigged.glb' remapped 'res://models/player_v2/femaleOGCat/femaleOGCatRigged.glb' at thread -1
+Completed load for: 'res://models/player_v2/femaleOGCat/female_player_v2_visual.tscn' remapped 'res://models/player_v2/femaleOGCat/female_player_v2_visual.tscn' at thread -1
+Loading resource: res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA corrected.png remapped: res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA corrected.png
+Loading resource: res://.godot/imported/OGcat color blue BOOBA corrected.png-51eeb0b17979a2ec4324bb47560b6f0c.ctex remapped: res://.godot/imported/OGcat color blue BOOBA corrected.png-51eeb0b17979a2ec4324bb47560b6f0c.ctex
+Completed load for: 'res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA corrected.png' remapped 'res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA corrected.png' at thread -1
+Loading resource: res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA.png remapped: res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA.png
+Loading resource: res://.godot/imported/OGcat color blue BOOBA.png-cdab9ef28bf2404d9c968a4a0bb85a18.ctex remapped: res://.godot/imported/OGcat color blue BOOBA.png-cdab9ef28bf2404d9c968a4a0bb85a18.ctex
+Completed load for: 'res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA.png' remapped 'res://models/player_v2/femaleOGCat/femaleOGCatCOLORS/OGcat color blue BOOBA.png' at thread -1
+HAT_MODEL_BOUNDS model=female center=(0.011179, -0.00469, 0.00828) size=(0.035078, 0.041719, 0.053691) socket=(1.499756, 1.957242, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb remapped: res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb
+Loading resource: res://.godot/imported/Pimphat_final_budget.glb-8f3d2339e09995e1be848b965315bf15.scn remapped: res://.godot/imported/Pimphat_final_budget.glb-8f3d2339e09995e1be848b965315bf15.scn
+Loading resource: res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg remapped: res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg
+Loading resource: res://.godot/imported/Pimphat_final_budget_fabric.jpg-de10a7489ead8b9bb547a641c9f673af.ctex remapped: res://.godot/imported/Pimphat_final_budget_fabric.jpg-de10a7489ead8b9bb547a641c9f673af.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg' remapped 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_fabric.jpg' at thread -1
+Loading resource: res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg remapped: res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg
+Loading resource: res://.godot/imported/Pimphat_final_budget_pellnegre.jpg-4f08a6a3915a626adc114fad7c4514b2.ctex remapped: res://.godot/imported/Pimphat_final_budget_pellnegre.jpg-4f08a6a3915a626adc114fad7c4514b2.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg' remapped 'res://models/cosmetics/hats/runtime/Pimphat_final_budget_pellnegre.jpg' at thread -1
+Completed load for: 'res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb' remapped 'res://models/cosmetics/hats/runtime/Pimphat_final_budget.glb' at thread -1
+HAT_RUNTIME_OK model=female id=beta_s1_ace_hat width=0.720 height=0.368 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.141206, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Ricehat_runtime.glb remapped: res://models/cosmetics/hats/runtime/Ricehat_runtime.glb
+Loading resource: res://.godot/imported/Ricehat_runtime.glb-a9c0409058c4e2efb1d7e1ded49ed51c.scn remapped: res://.godot/imported/Ricehat_runtime.glb-a9c0409058c4e2efb1d7e1ded49ed51c.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Ricehat_runtime.glb' remapped 'res://models/cosmetics/hats/runtime/Ricehat_runtime.glb' at thread -1
+HAT_RUNTIME_OK model=female id=beta_s1_level_30_hat width=0.820 height=0.275 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.094851, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Chefhat.glb remapped: res://models/cosmetics/hats/runtime/Chefhat.glb
+Loading resource: res://.godot/imported/Chefhat.glb-f6fef87b45b79675c86695eab3da77cd.scn remapped: res://.godot/imported/Chefhat.glb-f6fef87b45b79675c86695eab3da77cd.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Chefhat.glb' remapped 'res://models/cosmetics/hats/runtime/Chefhat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_chef width=0.620 height=0.662 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.288269, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Cowboyhat.glb remapped: res://models/cosmetics/hats/runtime/Cowboyhat.glb
+Loading resource: res://.godot/imported/Cowboyhat.glb-ebe78d3ba97f90ed6099ff1fb5722085.scn remapped: res://.godot/imported/Cowboyhat.glb-ebe78d3ba97f90ed6099ff1fb5722085.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Cowboyhat.glb' remapped 'res://models/cosmetics/hats/runtime/Cowboyhat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_cowboy_classic width=0.760 height=0.211 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.062601, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Cowboyhat 2.glb remapped: res://models/cosmetics/hats/runtime/Cowboyhat 2.glb
+Loading resource: res://.godot/imported/Cowboyhat 2.glb-5738aab58d7393d4499ed15ca570864b.scn remapped: res://.godot/imported/Cowboyhat 2.glb-5738aab58d7393d4499ed15ca570864b.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Cowboyhat 2.glb' remapped 'res://models/cosmetics/hats/runtime/Cowboyhat 2.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_cowboy_wide width=0.820 height=0.198 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.056295, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Crownhat_runtime.glb remapped: res://models/cosmetics/hats/runtime/Crownhat_runtime.glb
+Loading resource: res://.godot/imported/Crownhat_runtime.glb-533967eeff0619ef7f2de9d9bb751a87.scn remapped: res://.godot/imported/Crownhat_runtime.glb-533967eeff0619ef7f2de9d9bb751a87.scn
+Loading resource: res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png remapped: res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png
+Loading resource: res://.godot/imported/Crownhat_runtime_Image.png-a91369c32175bd0f4360bf2506748292.ctex remapped: res://.godot/imported/Crownhat_runtime_Image.png-a91369c32175bd0f4360bf2506748292.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png' remapped 'res://models/cosmetics/hats/runtime/Crownhat_runtime_Image.png' at thread -1
+Completed load for: 'res://models/cosmetics/hats/runtime/Crownhat_runtime.glb' remapped 'res://models/cosmetics/hats/runtime/Crownhat_runtime.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_crown width=0.540 height=0.400 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.15707, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Fedorablackhat.glb remapped: res://models/cosmetics/hats/runtime/Fedorablackhat.glb
+Loading resource: res://.godot/imported/Fedorablackhat.glb-cf3058c759dc0c4baa40b4a8060979d4.scn remapped: res://.godot/imported/Fedorablackhat.glb-cf3058c759dc0c4baa40b4a8060979d4.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Fedorablackhat.glb' remapped 'res://models/cosmetics/hats/runtime/Fedorablackhat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_fedora_black width=0.720 height=0.212 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.063275, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat.glb remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat.glb
+Loading resource: res://.godot/imported/FedoraWhitehat.glb-11fd2034ce0e9e089df36c7318b05768.scn remapped: res://.godot/imported/FedoraWhitehat.glb-11fd2034ce0e9e089df36c7318b05768.scn
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png
+Loading resource: res://.godot/imported/FedoraWhitehat_hat_basecolor.png-e64e9aa1026b6e98c2389f3b27a0a607.ctex remapped: res://.godot/imported/FedoraWhitehat_hat_basecolor.png-e64e9aa1026b6e98c2389f3b27a0a607.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_basecolor.png' at thread -1
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png
+Loading resource: res://.godot/imported/FedoraWhitehat_hat_metalness-hat_roughness.png-e8bd10954ab10d0b16081652c1ef6c04.ctex remapped: res://.godot/imported/FedoraWhitehat_hat_metalness-hat_roughness.png-e8bd10954ab10d0b16081652c1ef6c04.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_metalness-hat_roughness.png' at thread -1
+Loading resource: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png remapped: res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png
+Loading resource: res://.godot/imported/FedoraWhitehat_hat_normal.png-1ecc5e37465a24fed0eb2834db167cb2.ctex remapped: res://.godot/imported/FedoraWhitehat_hat_normal.png-1ecc5e37465a24fed0eb2834db167cb2.ctex
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat_hat_normal.png' at thread -1
+Completed load for: 'res://models/cosmetics/hats/runtime/FedoraWhitehat.glb' remapped 'res://models/cosmetics/hats/runtime/FedoraWhitehat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_fedora_white width=0.720 height=0.315 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.11474, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Luffyhat.glb remapped: res://models/cosmetics/hats/runtime/Luffyhat.glb
+Loading resource: res://.godot/imported/Luffyhat.glb-0c321ae1e186b8f6dacf876818aa57f9.scn remapped: res://.godot/imported/Luffyhat.glb-0c321ae1e186b8f6dacf876818aa57f9.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Luffyhat.glb' remapped 'res://models/cosmetics/hats/runtime/Luffyhat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_straw_adventurer width=0.820 height=0.251 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.082674, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Tophat.glb remapped: res://models/cosmetics/hats/runtime/Tophat.glb
+Loading resource: res://.godot/imported/Tophat.glb-88997628e39e5ffe1e8f0fdb38ddec2c.scn remapped: res://.godot/imported/Tophat.glb-88997628e39e5ffe1e8f0fdb38ddec2c.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Tophat.glb' remapped 'res://models/cosmetics/hats/runtime/Tophat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_top width=0.640 height=0.394 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.15444, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Witchhat.glb remapped: res://models/cosmetics/hats/runtime/Witchhat.glb
+Loading resource: res://.godot/imported/Witchhat.glb-7b9f5af5c4045b3e10818ab87cc4721c.scn remapped: res://.godot/imported/Witchhat.glb-7b9f5af5c4045b3e10818ab87cc4721c.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Witchhat.glb' remapped 'res://models/cosmetics/hats/runtime/Witchhat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_witch width=0.680 height=0.443 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.178615, 0.709002)
+Loading resource: res://models/cosmetics/hats/runtime/Yellowpointhat.glb remapped: res://models/cosmetics/hats/runtime/Yellowpointhat.glb
+Loading resource: res://.godot/imported/Yellowpointhat.glb-d4190bdfa723a883190355319e8b07ef.scn remapped: res://.godot/imported/Yellowpointhat.glb-d4190bdfa723a883190355319e8b07ef.scn
+Completed load for: 'res://models/cosmetics/hats/runtime/Yellowpointhat.glb' remapped 'res://models/cosmetics/hats/runtime/Yellowpointhat.glb' at thread -1
+HAT_RUNTIME_OK model=female id=hat_yellow_point width=0.620 height=0.731 socket=(1.499756, 1.957242, 0.709002) center=(1.499756, 2.322576, 0.709002)
+HAT_COSMETICS_VALIDATION: PASS hats=12 models=2 previews=24

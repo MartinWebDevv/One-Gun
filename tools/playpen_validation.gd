@@ -1,5 +1,9 @@
 extends Node
 
+const NEW_CHARACTER_MODELS: Array[String] = [
+	"eye_wizard", "mr_mushroom", "mr_poop", "mr_salt", "spooky_witch",
+]
+
 var failures: Array[String] = []
 
 
@@ -48,6 +52,13 @@ func _run() -> void:
 		get_tree().quit(1)
 		return
 	await get_tree().process_frame
+	var host_entry: Dictionary = network.peers.get(1, {})
+	host_entry["model_id"] = "goldfish_bag_man"
+	host_entry["cosmetics"] = {
+		"character_model": "character_goldfish_bag_man",
+		"hat": "hat_top",
+	}
+	network.peers[1] = host_entry
 	reparent(network)
 	network.pending_map_path = "res://maps/test/CityMap.tscn"
 	network.request_enter_playpen()
@@ -81,12 +92,66 @@ func _run() -> void:
 			"Expected all five melee weapons in every armory bay")
 		_check(get_tree().get_nodes_in_group("online_item").size() == 27,
 			"Expected all nine items in every armory bay")
-		_check(get_tree().get_nodes_in_group("online_powerup").size() == 18,
-			"Expected all six powerups in every armory bay")
+		_check(get_tree().get_nodes_in_group("online_powerup").size() == 21,
+			"Expected all seven powerups in every armory bay")
 		var host_actor = playpen.get_node_or_null("NetPlayers/NP1")
+		if manager != null:
+			var foreign_spawn := Node3D.new()
+			foreign_spawn.position = Vector3(900.0, -100.0, 900.0)
+			foreign_spawn.add_to_group("spawn_point")
+			playpen.add_child(foreign_spawn)
+			for actor_test_id in range(1, 25):
+				var chosen: Transform3D = manager._practice_spawn_transform(actor_test_id)
+				_check(absf(chosen.origin.x) < 39.5 and absf(chosen.origin.z) < 27.5
+					and chosen.origin.y >= 0.5,
+					"Playpen selected a foreign or unsafe scene-tree spawn")
+			foreign_spawn.queue_free()
 		if host_actor != null:
 			_check(is_zero_approx(host_actor.rotation.y),
 				"Playpen human body kept spawn yaw and would double-rotate WASD")
+			_check(str(host_actor.get("character_model_id")) == "goldfish_bag_man",
+				"Playpen did not spawn the selected Gold Fish character model")
+			var character_visual := host_actor.get_node_or_null("CharacterModel")
+			_check(character_visual != null
+					and str(character_visual.get("model_id")) == "goldfish_bag_man",
+				"Playpen runtime visual did not retain the selected character model")
+			if character_visual != null:
+				var authored_model := character_visual.get_node_or_null("Model") as Node3D
+				_check(authored_model != null and is_equal_approx(
+						wrapf(authored_model.rotation.y, -PI, PI), -PI * 0.5),
+					"Playpen Gold Fish mesh is not using the corrected forward rotation")
+				var equipped_hat := character_visual.find_child(
+					"HatVisual", true, false)
+				_check(equipped_hat != null and str(equipped_hat.get_meta(
+					"supabase_hat_id", "")) == "hat_top",
+					"Playpen did not carry equipped cosmetics into the actor visual")
+			# Exercise every new skin on the live networked Playpen actor. This is
+			# the same replacement path used when a roster appearance is applied,
+			# and it must preserve the actor's equipped cosmetics across the swap.
+			for model_id in NEW_CHARACTER_MODELS:
+				host_actor.call("set_character_model", model_id)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				character_visual = host_actor.get_node_or_null("CharacterModel")
+				var swapped_hat := character_visual.find_child(
+					"HatVisual", true, false) if character_visual != null else null
+				_check(str(host_actor.get("character_model_id")) == model_id
+						and character_visual != null
+						and str(character_visual.get("model_id")) == model_id,
+					"Playpen live actor accepts new character model: %s" % model_id)
+				_check(swapped_hat != null and str(swapped_hat.get_meta(
+						"supabase_hat_id", "")) == "hat_top",
+					"Playpen preserves cosmetics on new character model: %s" % model_id)
+			if manager != null:
+				host_actor.global_position = Vector3(0.0, -50.0, 0.0)
+				host_actor.velocity = Vector3(0.0, 99.0, 0.0)
+				manager._recover_invalid_playpen_actors()
+				await get_tree().process_frame
+				_check(host_actor.global_position.y >= 0.5
+					and absf(host_actor.global_position.x) < 39.5
+					and absf(host_actor.global_position.z) < 27.5
+					and host_actor.velocity.is_zero_approx(),
+					"Playpen out-of-bounds recovery did not restore a stable arena spawn")
 			host_actor.activate_double_jump_shoes()
 			for _frame in 3:
 				await get_tree().process_frame
@@ -151,7 +216,11 @@ func _run() -> void:
 				_check(not is_instance_valid(dropped_item),
 					"Dropped Playpen item did not despawn after two seconds")
 		network.request_leave_playpen()
-		await get_tree().create_timer(0.35).timeout
+		# Leaving first suspends owner replication for 0.15s, then the Playpen
+		# keeps the actor path alive for its 0.35s stale-packet grace. Headless
+		# frames can advance faster than wall-clock time, so wait in scene time.
+		await get_tree().create_timer(0.75).timeout
+		await get_tree().process_frame
 		_check(network.local_match_role == "playpen_hosting",
 			"Host did not independently return to the lobby role")
 		_check(network.is_playpen_open(),
@@ -187,11 +256,32 @@ func _run() -> void:
 			host_lobby.call("_discard_settings_slideout_immediately")
 			await get_tree().process_frame
 			var customization_button = host_lobby.get("_character_customization_button")
+			_check(customization_button.text == "PLAYER HUB",
+				"Online lobby did not replace Locker with Player Hub")
 			customization_button.emit_signal("pressed")
 			await get_tree().process_frame
+			var player_hub = host_lobby.get("_lobby_player_hub_overlay")
+			_check(player_hub != null and player_hub.get_parent() == modal_layer,
+				"Host lobby Player Hub did not open above Playpen")
+			for destination_button in ["OpenLockerButton", "OpenPrizeCounterButton",
+					"OpenProgressionButton"]:
+				_check(player_hub != null and player_hub.find_child(
+					destination_button, true, false) != null,
+					"Player Hub is missing destination %s" % destination_button)
+			_check(player_hub != null and player_hub.find_child(
+				"OpenFriendsButton", true, false) == null,
+				"Player Hub duplicated the separate Friends quick-access action")
+			_check(host_lobby.get("_friends_orb") != null
+					and host_lobby.get("_invite_notification") != null,
+				"Returned online lobby is missing the Friends orb or invite notification")
+			if player_hub != null:
+				var open_locker := player_hub.find_child(
+					"OpenLockerButton", true, false) as Button
+				open_locker.pressed.emit()
+				await get_tree().process_frame
 			var customization = host_lobby.get("_character_customization_overlay")
 			_check(customization != null and customization.get_parent() == modal_layer,
-				"Host lobby Character Customization button did not open above Playpen")
+				"Player Hub Locker destination did not open above Playpen")
 			if customization != null:
 				customization.call("_cancel")
 				await get_tree().process_frame

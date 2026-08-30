@@ -1,0 +1,128 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: requested validation model is registered: mr_poop
+PASS: mr_poop is available in the public character selector
+PASS: mr_poop preserves its authored material
+PASS: mr_poop declares a headwear socket profile
+PASS: mr_poop has a customization and roster portrait
+PASS: mr_poop visual wrapper loads
+PASS: mr_poop wrapper keeps its normalized gameplay scale
+PASS: mr_poop authored mesh faces gameplay forward
+PASS: mr_poop exposes its skinned skeleton
+PASS: mr_poop required bone exists: mixamorig_Hips
+PASS: mr_poop required bone exists: mixamorig_Head
+PASS: mr_poop required bone exists: mixamorig_RightHand
+PASS: mr_poop required bone exists: mixamorig_LeftFoot
+PASS: mr_poop required bone exists: mixamorig_RightFoot
+PASS: mr_poop animated socket is valid: GunHoldPoint
+PASS: mr_poop animated socket is valid: MeleeHoldPoint
+PASS: mr_poop animated socket is valid: ItemHoldPoint
+PASS: mr_poop animated socket is valid: LeftFootSocket
+PASS: mr_poop animated socket is valid: RightFootSocket
+PASS: mr_poop animated socket is valid: HeadwearSocket
+PASS: mr_poop skinned mesh is present
+PASS: mr_poop cat-color changes cannot overwrite its authored look
+PASS: mr_poop runtime animation player is available
+PASS: mr_poop animation retargeted: idle
+PASS: mr_poop animation has a complete body track set: idle
+PASS: mr_poop animation pose remains finite: idle
+PASS: mr_poop animation retargeted: idle_pistol
+PASS: mr_poop animation has a complete body track set: idle_pistol
+PASS: mr_poop animation pose remains finite: idle_pistol
+PASS: mr_poop animation retargeted: long_idle
+PASS: mr_poop animation has a complete body track set: long_idle
+PASS: mr_poop animation pose remains finite: long_idle
+PASS: mr_poop animation retargeted: standard_run
+PASS: mr_poop animation has a complete body track set: standard_run
+PASS: mr_poop animation pose remains finite: standard_run
+PASS: mr_poop animation retargeted: run
+PASS: mr_poop animation has a complete body track set: run
+PASS: mr_poop animation pose remains finite: run
+PASS: mr_poop animation retargeted: jump
+PASS: mr_poop animation has a complete body track set: jump
+PASS: mr_poop animation pose remains finite: jump
+PASS: mr_poop animation retargeted: running_jump
+PASS: mr_poop animation has a complete body track set: running_jump
+PASS: mr_poop animation pose remains finite: running_jump
+PASS: mr_poop animation retargeted: fall
+PASS: mr_poop animation has a complete body track set: fall
+PASS: mr_poop animation pose remains finite: fall
+PASS: mr_poop animation retargeted: pistol_jump
+PASS: mr_poop animation has a complete body track set: pistol_jump
+PASS: mr_poop animation pose remains finite: pistol_jump
+PASS: mr_poop animation retargeted: pistol_run
+PASS: mr_poop animation has a complete body track set: pistol_run
+PASS: mr_poop animation pose remains finite: pistol_run
+PASS: mr_poop animation retargeted: pistol_backward
+PASS: mr_poop animation has a complete body track set: pistol_backward
+PASS: mr_poop animation pose remains finite: pistol_backward
+PASS: mr_poop animation retargeted: pistol_strafe_left
+PASS: mr_poop animation has a complete body track set: pistol_strafe_left
+PASS: mr_poop animation pose remains finite: pistol_strafe_left
+PASS: mr_poop animation retargeted: pistol_strafe_right
+PASS: mr_poop animation has a complete body track set: pistol_strafe_right
+PASS: mr_poop animation pose remains finite: pistol_strafe_right
+PASS: mr_poop animation retargeted: run_with_sword
+PASS: mr_poop animation has a complete body track set: run_with_sword
+PASS: mr_poop animation pose remains finite: run_with_sword
+PASS: mr_poop animation retargeted: melee
+PASS: mr_poop animation has a complete body track set: melee
+PASS: mr_poop animation pose remains finite: melee
+PASS: mr_poop animation retargeted: throw_object
+PASS: mr_poop animation has a complete body track set: throw_object
+PASS: mr_poop animation pose remains finite: throw_object
+PASS: mr_poop animation retargeted: hit
+PASS: mr_poop animation has a complete body track set: hit
+PASS: mr_poop animation pose remains finite: hit
+PASS: mr_poop animation retargeted: hip_hop_dance
+PASS: mr_poop animation has a complete body track set: hip_hop_dance
+PASS: mr_poop animation pose remains finite: hip_hop_dance
+PASS: mr_poop animation retargeted: swing_dance
+PASS: mr_poop animation has a complete body track set: swing_dance
+PASS: mr_poop animation pose remains finite: swing_dance
+PASS: mr_poop animation retargeted: podium_backbeat_bounce
+PASS: mr_poop animation has a complete body track set: podium_backbeat_bounce
+PASS: mr_poop animation pose remains finite: podium_backbeat_bounce
+PASS: mr_poop animation retargeted: podium_champion_canter
+PASS: mr_poop animation has a complete body track set: podium_champion_canter
+PASS: mr_poop animation pose remains finite: podium_champion_canter
+PASS: mr_poop animation retargeted: podium_fresh_footwork
+PASS: mr_poop animation has a complete body track set: podium_fresh_footwork
+PASS: mr_poop animation pose remains finite: podium_fresh_footwork
+PASS: mr_poop animation retargeted: podium_house_party_heat
+PASS: mr_poop animation has a complete body track set: podium_house_party_heat
+PASS: mr_poop animation pose remains finite: podium_house_party_heat
+PASS: mr_poop animation retargeted: podium_serpent_flow
+PASS: mr_poop animation has a complete body track set: podium_serpent_flow
+PASS: mr_poop animation pose remains finite: podium_serpent_flow
+PASS: mr_poop animation retargeted: podium_midnight_monster
+PASS: mr_poop animation has a complete body track set: podium_midnight_monster
+PASS: mr_poop animation pose remains finite: podium_midnight_monster
+PASS: mr_poop animation retargeted: podium_victory_wave
+PASS: mr_poop animation has a complete body track set: podium_victory_wave
+PASS: mr_poop animation pose remains finite: podium_victory_wave
+PASS: mr_poop animation retargeted: round_breakspin_finale
+PASS: mr_poop animation has a complete body track set: round_breakspin_finale
+PASS: mr_poop animation pose remains finite: round_breakspin_finale
+PASS: mr_poop animation retargeted: round_floorwork_finish
+PASS: mr_poop animation has a complete body track set: round_floorwork_finish
+PASS: mr_poop animation pose remains finite: round_floorwork_finish
+PASS: mr_poop animation retargeted: round_birdie_boogie
+PASS: mr_poop animation has a complete body track set: round_birdie_boogie
+PASS: mr_poop animation pose remains finite: round_birdie_boogie
+PASS: mr_poop animation retargeted: round_arena_clapline
+PASS: mr_poop animation has a complete body track set: round_arena_clapline
+PASS: mr_poop animation pose remains finite: round_arena_clapline
+PASS: mr_poop animation retargeted: round_soul_cyclone
+PASS: mr_poop animation has a complete body track set: round_soul_cyclone
+PASS: mr_poop animation pose remains finite: round_soul_cyclone
+PASS: mr_poop animation retargeted: round_quickstep_shuffle
+PASS: mr_poop animation has a complete body track set: round_quickstep_shuffle
+PASS: mr_poop animation pose remains finite: round_quickstep_shuffle
+PASS: mr_poop animation retargeted: round_victory_swing
+PASS: mr_poop animation has a complete body track set: round_victory_swing
+PASS: mr_poop animation pose remains finite: round_victory_swing
+PASS: mr_poop equipped hat is attached beneath its animated head socket
+PASS: gameplay actor spawns with mr_poop
+PASS: gameplay actor retains mr_poop cosmetics
+NEW CHARACTER INTEGRATION VALIDATION PASSED models=1 animations=33

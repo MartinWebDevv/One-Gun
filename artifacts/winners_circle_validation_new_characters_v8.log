@@ -1,0 +1,79 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: Winners Circle presentation resources load
+PASS: ceremony theme loads: winners_circle_ceremony.wav
+PASS: ceremony theme loads: neon_victory.wav
+PASS: ceremony theme loads: western_toybox.wav
+PASS: ceremony theme loads: grand_arena.wav
+PASS: ceremony theme loads: pixel_champion.wav
+PASS: ceremony theme loads: champion_groove.wav
+PASS: ceremony theme loads: deep_orbit.wav
+PASS: blockout stage preserves replacement anchor StageShell
+PASS: blockout stage preserves replacement anchor Podiums
+PASS: blockout stage preserves replacement anchor Decor
+PASS: blockout stage preserves replacement anchor Anchors/FirstPlace
+PASS: blockout stage preserves replacement anchor Anchors/SecondPlace
+PASS: blockout stage preserves replacement anchor Anchors/ThirdPlace
+PASS: blockout stage preserves replacement anchor Anchors/TrophyStart
+PASS: blockout stage preserves replacement anchor Anchors/TrophyLanding
+PASS: blockout stage preserves replacement anchor Anchors/CeremonialGun
+PASS: RoundManager parses with Winners Circle integration
+PASS: Winners Circle coordinator parses
+PASS: GameConfig autoload is available to the validator
+PASS: three-human bot-free default Classic FFA qualifies as an Official Beta candidate
+PASS: Official Beta candidates require at least three humans and no bots
+PASS: changing an official rule makes the match custom
+PASS: all match participants enter the frozen result
+PASS: the match champion is always first
+PASS: round finishes outrank kills for runner-up placement
+PASS: an Official Classic result marks the champion Trophy presentation
+PASS: per-client presentation identity cannot change the shared reward result
+PASS: the reward boundary mirrors the locked official formula before settlement
+PASS: custom results never preview a Trophy
+PASS: a match that started Official preserves its one-finisher forfeit state
+PASS: the sole finisher stays first while departed players remain visible as DNF
+PASS: the full-screen Winners Circle interface builds
+PASS: the isolated 3D podium stage builds
+PASS: the champion's equipped ceremony theme selects the shared audio cue
+PASS: the ceremony begins on the full-screen cinematic stage
+PASS: standings, personal results and controls stay hidden during the cinematic
+PASS: the result interface builds its soft twinkling backdrop
+PASS: the camera begins on the third-place reveal track
+PASS: all three visible performers start in an active Victory Move or idle
+PASS: all equipped performer hats are attached during the ceremony
+PASS: the shared standings panel builds
+PASS: an online participant receives a Ready button
+PASS: the host receives the synchronized return control
+PASS: results wait for Ready or the host without an automatic return timer
+PASS: the local player receives a personalized result card
+PASS: the personalized card emphasizes the local placement
+PASS: the personalized card groups the local performance stats
+PASS: the personalized card separates match rewards from performance
+PASS: the reward card builds XP, trophy/token, and current-match stages
+PASS: settled rewards apply authoritative XP and Trophy progression
+PASS: a no-Trophy result replaces the Trophy bar with Gun Tokens earned
+PASS: the final standings identify the viewing player's row
+PASS: the full cinematic finishes by revealing the results interface
+PASS: the revealed results immediately focus an enabled Ready button
+PASS: the Winners Circle keeps the pointer visible above live gameplay nodes
+PASS: the champion hero angle preserves outer-medallion headroom
+PASS: the Official Classic Trophy finishes on its landing plinth
+PASS: the champion hero beat fires quality-scaled confetti
+PASS: Winners Circle builds every requested new-model performer batch
+PASS: Winners Circle new performer retains hat: eye_wizard
+PASS: Winners Circle new performer loads its podium animation: eye_wizard
+PASS: Winners Circle new performer retains hat: mr_mushroom
+PASS: Winners Circle new performer loads its podium animation: mr_mushroom
+PASS: Winners Circle new performer retains hat: mr_poop
+PASS: Winners Circle new performer loads its podium animation: mr_poop
+PASS: Winners Circle builds every requested new-model performer batch
+PASS: Winners Circle new performer retains hat: mr_salt
+PASS: Winners Circle new performer loads its podium animation: mr_salt
+PASS: Winners Circle new performer retains hat: spooky_witch
+PASS: Winners Circle new performer loads its podium animation: spooky_witch
+PASS: Winners Circle accepts new character model: eye_wizard
+PASS: Winners Circle accepts new character model: mr_mushroom
+PASS: Winners Circle accepts new character model: mr_poop
+PASS: Winners Circle accepts new character model: mr_salt
+PASS: Winners Circle accepts new character model: spooky_witch
+WINNERS CIRCLE VALIDATION PASSED

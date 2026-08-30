@@ -1,0 +1,94 @@
+[gd_scene format=3 uid="uid://s362xhnt5cso"]
+
+[ext_resource type="Texture2D" uid="uid://82c81vpug11r" path="res://maps/trippy_mountains/assets/plants colors/Tree6.png" id="1_aasui"]
+[ext_resource type="ArrayMesh" uid="uid://bb652lyxwvnn2" path="res://maps/trippy_mountains/assets/ROCKTREES/rock trees SKINNY.obj" id="2_cp64c"]
+[ext_resource type="ArrayMesh" uid="uid://dl2gqamky6htj" path="res://maps/trippy_mountains/assets/ROCKTREES/rock trees SMALL THICK.obj" id="3_r7to8"]
+[ext_resource type="Texture2D" uid="uid://banm8k32xnev4" path="res://maps/trippy_mountains/assets/plants colors/Flower4.png" id="4_ax5pc"]
+[ext_resource type="Texture2D" uid="uid://c525e78o5gnvj" path="res://maps/trippy_mountains/assets/plants colors/Flower3.png" id="5_2uks1"]
+[ext_resource type="ArrayMesh" uid="uid://dxrcbgijhv128" path="res://maps/trippy_mountains/assets/ROCKTREES/rock trees THICK.obj" id="6_oy0mm"]
+[ext_resource type="Texture2D" uid="uid://dckp3nbqf6f1j" path="res://maps/trippy_mountains/assets/plants colors/Tree4.png" id="7_13pkh"]
+[ext_resource type="Texture2D" uid="uid://bpuafgnv86kin" path="res://maps/trippy_mountains/assets/plants colors/Flower.png" id="8_x4fgo"]
+[ext_resource type="Texture2D" uid="uid://b55tdg7q425i4" path="res://maps/trippy_mountains/assets/plants colors/Tree3.png" id="9_n2mee"]
+[ext_resource type="Texture2D" uid="uid://d4bc577wbpe03" path="res://maps/trippy_mountains/assets/plants colors/Tree7.png" id="10_bwifl"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n3756"]
+albedo_texture = ExtResource("1_aasui")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i5s4v"]
+albedo_texture = ExtResource("1_aasui")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_640hs"]
+albedo_texture = ExtResource("4_ax5pc")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0r3dj"]
+albedo_texture = ExtResource("5_2uks1")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_g6ch7"]
+albedo_texture = ExtResource("7_13pkh")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ox8ip"]
+albedo_texture = ExtResource("1_aasui")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3uj85"]
+albedo_texture = ExtResource("8_x4fgo")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0e1x4"]
+albedo_texture = ExtResource("9_n2mee")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ge43i"]
+albedo_texture = ExtResource("4_ax5pc")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ksa22"]
+albedo_texture = ExtResource("10_bwifl")
+
+[node name="rainbow rock3" type="CSGCombiner3D" unique_id=1674521907]
+
+[node name="RockTreesSkinny8" type="MeshInstance3D" parent="." unique_id=2021709131]
+transform = Transform3D(0.008126216, 0, 0.47165853, 0, 0.13404225, 0, -0.605088, 0, 0.0063342834, 91.72137, -0.77433205, -125.17238)
+material_override = SubResource("StandardMaterial3D_n3756")
+mesh = ExtResource("2_cp64c")
+
+[node name="RockTreesSmallThick14" type="MeshInstance3D" parent="." unique_id=2116327315]
+transform = Transform3D(-0.55670804, 0, 0.48835018, 0, 0.21847808, 0, -0.49878907, 0, -0.545057, 105.17657, -0.58624935, -115.748924)
+material_override = SubResource("StandardMaterial3D_i5s4v")
+mesh = ExtResource("3_r7to8")
+
+[node name="RockTreesSkinny9" type="MeshInstance3D" parent="." unique_id=989644626]
+transform = Transform3D(0.34840783, 0, 0, 0, 0.27, 0, 0, 0, 0.2781973, 98.21465, -1.9058897, -106.76962)
+material_override = SubResource("StandardMaterial3D_640hs")
+mesh = ExtResource("2_cp64c")
+
+[node name="RockTreesThick9" type="MeshInstance3D" parent="." unique_id=37651424]
+transform = Transform3D(0.084662564, 0, 0.38113183, 0, 0.39042184, 0, -0.38113183, 0, 0.084662564, 90.906, -2.6070433, -100.535675)
+material_override = SubResource("StandardMaterial3D_0r3dj")
+mesh = ExtResource("6_oy0mm")
+
+[node name="RockTreesSmallThick11" type="MeshInstance3D" parent="." unique_id=2025780078]
+transform = Transform3D(0.7255788, 0, 0.49691617, 0, 0.9764672, 0, -0.560217, 0, 0.6435931, 96.84963, -2.3224478, -89.35268)
+material_override = SubResource("StandardMaterial3D_g6ch7")
+mesh = ExtResource("3_r7to8")
+
+[node name="RockTreesThick8" type="MeshInstance3D" parent="." unique_id=1910357415]
+transform = Transform3D(0.01708541, 0, -0.42519006, 0, 0.22069499, 0, 0.44670564, 0, 0.016262488, 87.657394, -1.2517061, -113.04446)
+material_override = SubResource("StandardMaterial3D_ox8ip")
+mesh = ExtResource("6_oy0mm")
+
+[node name="RockTreesThick11" type="MeshInstance3D" parent="." unique_id=377682442]
+transform = Transform3D(-0.5447182, 0, 0.49059376, 0, 0.33999997, 0, -0.6001262, 0, -0.44529858, 95.85427, -1.9124885, -102.34655)
+material_override = SubResource("StandardMaterial3D_3uj85")
+mesh = ExtResource("6_oy0mm")
+
+[node name="RockTreesSmallThick7" type="MeshInstance3D" parent="." unique_id=1000511958]
+transform = Transform3D(0.40293947, 0, -0.8624908, 0, 0.95197195, 0, 0.8624908, 0, 0.40293947, 68.374275, -2.7691307, -103.172646)
+material_override = SubResource("StandardMaterial3D_0e1x4")
+mesh = ExtResource("3_r7to8")
+
+[node name="RockTreesThick7" type="MeshInstance3D" parent="." unique_id=1446569618]
+transform = Transform3D(0.07125158, 0, 0.7631477, 0, 0.3806013, 0, -0.54712206, 0, 0.09938455, 88.77913, -2.0408278, -99.23742)
+material_override = SubResource("StandardMaterial3D_ge43i")
+mesh = ExtResource("6_oy0mm")
+
+[node name="RockTreesSmallThick10" type="MeshInstance3D" parent="." unique_id=837785265]
+transform = Transform3D(-0.27702647, 0, -0.5713854, 0, 0.635, 0, 0.5713854, 0, -0.27702647, 77.0638, -2.2327867, -114.45777)
+material_override = SubResource("StandardMaterial3D_ksa22")
+mesh = ExtResource("3_r7to8")

@@ -30,6 +30,7 @@ const POWERUP_DISPLAY_NAMES := {
 	"silent_steps": "SILENT STEPS",
 	"extra_life": "EXTRA LIFE",
 	"reach": "REACH",
+	"fast_hands": "FAST HANDS",
 }
 
 @export var panel_kind: Kind = Kind.MATCH
@@ -96,14 +97,6 @@ func _build_ui() -> void:
 		OneGunUI.TEXT_S, "muted")
 	subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	titles.add_child(subtitle_label)
-	var close_button := OneGunButton.new()
-	close_button.name = "CloseSettings"
-	close_button.variant = "navy"
-	close_button.text = "CLOSE"
-	close_button.font_size = OneGunUI.TEXT_S
-	close_button.tooltip_text = "Discard pending changes and close"
-	close_button.pressed.connect(close_without_applying)
-	header.add_child(close_button)
 
 	var workspace := HBoxContainer.new()
 	workspace.add_theme_constant_override("separation", OneGunUI.SPACE_M)
@@ -158,6 +151,15 @@ func _build_ui() -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	root.add_child(footer)
+	var close_button := OneGunButton.new()
+	close_button.name = "CloseSettings"
+	close_button.variant = "navy"
+	close_button.text = "BACK"
+	close_button.font_size = OneGunUI.TEXT_S
+	close_button.custom_minimum_size = Vector2(220.0, 60.0)
+	close_button.tooltip_text = "Discard pending changes and return"
+	close_button.pressed.connect(close_without_applying)
+	footer.add_child(close_button)
 	var reset := OneGunButton.new()
 	reset.name = "ResetPending"
 	reset.variant = "navy"

@@ -236,6 +236,11 @@ func _ready() -> void:
 				"overtime left a non-supply melee placement available")
 	_check(overtime_supply.size() == 1,
 		"overtime did not leave exactly one active melee supply marker")
+	if overtime_supply.size() == 1:
+		var supply_position: Vector3 = overtime_supply[0].global_position
+		_check(Vector2(supply_position.x, supply_position.z).is_equal_approx(
+			Vector2(manager._overtime_center.x, manager._overtime_center.z)),
+			"overtime melee supply is not in the exact map center")
 	_check(held_melee == null or (held_melee.is_held
 		and held_melee.player_ref == melee_actor
 		and not held_melee.overtime_disabled),
@@ -271,6 +276,14 @@ func _ready() -> void:
 		_check(tested_actor.speed_surge_timer > 0.0
 			and tested_actor.extra_dash_charge == 1,
 			"standard overtime did not preserve allowed carried powerups")
+	if held_melee != null:
+		held_melee.drop()
+		_check(not held_melee.get_node("Area3D/CollisionShape3D").disabled
+			and held_melee.get_node("Area3D").monitoring,
+			"dropping a preserved overtime melee did not restore its pickup volume")
+		if not chaos_mode:
+			_check(held_melee._local_pickup(melee_actor),
+				"a dropped overtime melee could not be picked up again")
 	_finish(chaos_mode)
 
 func _check(condition: bool, message: String) -> void:

@@ -145,6 +145,67 @@ def translate_material(
     print(f"Translated {material_name} in {input_path} -> {output_path}: {translation}")
 
 
+def isolate_material(input_path: Path, output_path: Path, material_name: str) -> None:
+    """Keep only primitives using one named material for a later prune/merge pass."""
+    document, binary, extra_chunks = _load_glb(input_path)
+    material_names = [material.get("name", "") for material in document.get("materials", [])]
+    if material_name not in material_names:
+        raise ValueError(f"Material {material_name!r} was not found")
+    material_index = material_names.index(material_name)
+    kept_meshes: set[int] = set()
+    for mesh_index, mesh in enumerate(document.get("meshes", [])):
+        primitives = [
+            primitive for primitive in mesh.get("primitives", [])
+            if primitive.get("material") == material_index
+        ]
+        mesh["primitives"] = primitives
+        if primitives:
+            kept_meshes.add(mesh_index)
+    for node in document.get("nodes", []):
+        if "mesh" in node and node["mesh"] not in kept_meshes:
+            del node["mesh"]
+    document.setdefault("asset", {})["generator"] = "One Gun GLB material isolator"
+    _write_glb(output_path, document, binary, extra_chunks)
+    print(f"Isolated material {material_name!r} from {input_path} -> {output_path}")
+
+
+def isolate_node(input_path: Path, output_path: Path, node_name: str) -> None:
+    """Keep the mesh referenced by one named node for a later prune/merge pass."""
+    document, binary, extra_chunks = _load_glb(input_path)
+    nodes = document.get("nodes", [])
+    matching = [index for index, node in enumerate(nodes) if node.get("name", "") == node_name]
+    if not matching:
+        raise ValueError(f"Node {node_name!r} was not found")
+    kept_meshes = {
+        nodes[index]["mesh"] for index in matching if "mesh" in nodes[index]
+    }
+    if not kept_meshes:
+        raise ValueError(f"Node {node_name!r} has no mesh")
+    for index, node in enumerate(nodes):
+        if index not in matching and "mesh" in node:
+            del node["mesh"]
+    document.setdefault("asset", {})["generator"] = "One Gun GLB node isolator"
+    _write_glb(output_path, document, binary, extra_chunks)
+    print(f"Isolated node {node_name!r} from {input_path} -> {output_path}")
+
+
+def strip_attribute(input_path: Path, output_path: Path, attribute_name: str) -> None:
+    """Drop an unused vertex attribute before prune/weld/simplify optimization."""
+    document, binary, extra_chunks = _load_glb(input_path)
+    removed = 0
+    for mesh in document.get("meshes", []):
+        for primitive in mesh.get("primitives", []):
+            attributes = primitive.get("attributes", {})
+            if attribute_name in attributes:
+                del attributes[attribute_name]
+                removed += 1
+    if removed == 0:
+        raise ValueError(f"Attribute {attribute_name!r} was not found")
+    document.setdefault("asset", {})["generator"] = "One Gun GLB attribute stripper"
+    _write_glb(output_path, document, binary, extra_chunks)
+    print(f"Stripped {attribute_name!r} from {removed} primitives: {output_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -162,16 +223,37 @@ def main() -> None:
     translate_parser.add_argument("--y", type=float, default=0.0)
     translate_parser.add_argument("--z", type=float, default=0.0)
 
+    material_parser = subparsers.add_parser("isolate-material")
+    material_parser.add_argument("input", type=Path)
+    material_parser.add_argument("output", type=Path)
+    material_parser.add_argument("--material", required=True)
+
+    node_parser = subparsers.add_parser("isolate-node")
+    node_parser.add_argument("input", type=Path)
+    node_parser.add_argument("output", type=Path)
+    node_parser.add_argument("--node", required=True)
+
+    attribute_parser = subparsers.add_parser("strip-attribute")
+    attribute_parser.add_argument("input", type=Path)
+    attribute_parser.add_argument("output", type=Path)
+    attribute_parser.add_argument("--attribute", required=True)
+
     args = parser.parse_args()
     if args.command == "normalize":
         normalize(args.input, args.output, args.target_width)
-    else:
+    elif args.command == "translate-material":
         translate_material(
             args.input,
             args.output,
             args.material,
             (args.x, args.y, args.z),
         )
+    elif args.command == "isolate-material":
+        isolate_material(args.input, args.output, args.material)
+    elif args.command == "isolate-node":
+        isolate_node(args.input, args.output, args.node)
+    else:
+        strip_attribute(args.input, args.output, args.attribute)
 
 
 if __name__ == "__main__":

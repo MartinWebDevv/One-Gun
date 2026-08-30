@@ -14,11 +14,11 @@ func _build_sword() -> WeaponData:
 	d.held_rotation = Vector3(-PI/2, PI, 0)
 	d.held_grip_anchor = Vector3(0.0, -0.723, 0.0)
 	d.held_scale = _normalized_held_scale(d.raw_model_length)
-	d.base_windup_time = 0.08
-	d.base_active_time = 0.18
-	d.base_recovery_time = 0.25
+	d.base_windup_time = 0.32
+	d.base_active_time = 0.28
+	d.base_recovery_time = 0.55
 	d.base_stamina_cost = 15.0
-	d.description = "Fast, responsive handling with the shared melee reach."
+	d.description = "Shared frying-pan handling with the shared melee reach."
 	return d
 
 func _build_bat() -> WeaponData:
@@ -30,11 +30,11 @@ func _build_bat() -> WeaponData:
 	# The narrow +Z end is the bat's handle; the opposite end is the barrel.
 	d.held_grip_anchor = Vector3(0.0, -0.243, 0.5)
 	d.held_scale = _normalized_held_scale(d.raw_model_length)
-	d.base_windup_time = 0.12
-	d.base_active_time = 0.22
-	d.base_recovery_time = 0.35
+	d.base_windup_time = 0.32
+	d.base_active_time = 0.28
+	d.base_recovery_time = 0.55
 	d.base_stamina_cost = 15.0
-	d.description = "Deliberate handling with the shared melee reach."
+	d.description = "Shared frying-pan handling with the shared melee reach."
 	return d
 
 func _build_stick() -> WeaponData:
@@ -45,11 +45,11 @@ func _build_stick() -> WeaponData:
 	d.held_rotation = Vector3(-PI/2, PI, 0)
 	d.held_grip_anchor = Vector3(0.018, 0.0, -0.168)
 	d.held_scale = _normalized_held_scale(d.raw_model_length)
-	d.base_windup_time = 0.04
-	d.base_active_time = 0.12
-	d.base_recovery_time = 0.14
+	d.base_windup_time = 0.32
+	d.base_active_time = 0.28
+	d.base_recovery_time = 0.55
 	d.base_stamina_cost = 8.0
-	d.description = "Very fast handling and low stamina cost."
+	d.description = "Shared frying-pan handling with a low stamina cost."
 	return d
 
 func _build_crowbar() -> WeaponData:
@@ -61,11 +61,11 @@ func _build_crowbar() -> WeaponData:
 	# Grip the straight end, leaving the hooked end away from the paw.
 	d.held_grip_anchor = Vector3(0.0, -5.791, -0.276)
 	d.held_scale = _normalized_held_scale(d.raw_model_length)
-	d.base_windup_time = 0.08
-	d.base_active_time = 0.18
-	d.base_recovery_time = 0.26
+	d.base_windup_time = 0.32
+	d.base_active_time = 0.28
+	d.base_recovery_time = 0.55
 	d.base_stamina_cost = 14.0
-	d.description = "Fast, reliable all-rounder handling."
+	d.description = "Shared frying-pan handling with all-rounder stamina cost."
 	return d
 
 func _build_frying_pan() -> WeaponData:

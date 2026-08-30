@@ -49,6 +49,8 @@ var _results_interface: Control
 var _cinematic_overlay: Control
 var _cinematic_shade: ColorRect
 var _ceremony_complete := false
+var _controls_unlocked := false
+var _controls_focused := false
 
 
 func _ready() -> void:
@@ -118,18 +120,28 @@ func set_ready_peers(ready_peer_ids: Array,
 
 
 func set_actor_reward(actor_id: int, reward: Dictionary) -> void:
-	var labels = _reward_labels.get(actor_id, {})
-	if not labels is Dictionary:
+	var controls = _reward_labels.get(actor_id, {})
+	if not controls is Dictionary:
 		return
-	var primary := labels.get("primary") as Label
-	var secondary := labels.get("secondary") as Label
-	var presentation := _reward_presentation(reward)
-	if primary != null:
-		primary.text = str(presentation.get("primary", "MATCH REWARDS"))
-		primary.add_theme_color_override("font_color", OneGunUI.color(
-			str(presentation.get("role", "green"))))
-	if secondary != null:
-		secondary.text = str(presentation.get("secondary", ""))
+	_update_reward_summary(controls, reward, true)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _controls_unlocked or _return_deadline_msec >= 0 \
+			or not event.is_action_pressed("ui_accept"):
+		return
+	var viewport := get_viewport()
+	if viewport != null and viewport.gui_get_focus_owner() != null:
+		return
+	var button := _primary_control()
+	if button == null or button.disabled:
+		return
+	button.grab_focus()
+	if button.toggle_mode:
+		button.button_pressed = not button.button_pressed
+	else:
+		button.pressed.emit()
+	get_viewport().set_input_as_handled()
 
 
 func start_return_countdown(seconds: float) -> void:
@@ -149,10 +161,18 @@ func start_return_countdown(seconds: float) -> void:
 func _process(_delta: float) -> void:
 	if _root == null:
 		return
+	# Gameplay and spectator nodes remain alive behind this presentation. Keep
+	# them from stealing the cursor while the results UI owns interaction.
+	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var now := Time.get_ticks_msec()
-	var elapsed := float(now - _started_msec) / 1000.0
-	var controls_unlocked := _ceremony_complete \
-		and elapsed >= MINIMUM_VIEW_TIME and _return_deadline_msec < 0
+	var controls_unlocked := _ceremony_complete and _return_deadline_msec < 0
+	var focus_after_unlock := false
+	if controls_unlocked and not _controls_unlocked:
+		_controls_unlocked = true
+		focus_after_unlock = true
+	elif not controls_unlocked:
+		_controls_unlocked = false
 	if _ready_button != null:
 		_ready_button.disabled = not controls_unlocked
 	if _host_return_button != null:
@@ -161,6 +181,8 @@ func _process(_delta: float) -> void:
 		var button := button_value as Button
 		if button != null:
 			button.disabled = not controls_unlocked
+	if focus_after_unlock:
+		_focus_primary_control()
 	if _return_deadline_msec >= 0:
 		var remaining := maxf(float(_return_deadline_msec - now) / 1000.0, 0.0)
 		if _return_status_label != null:
@@ -433,7 +455,7 @@ func _make_standings_row(entry: Dictionary, full: bool) -> Control:
 func _build_personal_results(parent: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.name = "PersonalResults"
-	row.custom_minimum_size.y = 168.0
+	row.custom_minimum_size.y = 228.0
 	row.add_theme_constant_override("separation", 10)
 	parent.add_child(row)
 	var found := false
@@ -562,27 +584,176 @@ func _make_reward_summary(reward: Dictionary, compact: bool, actor_id: int) -> C
 		12, 1, 0, 9.0))
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation", 5)
+	column.add_theme_constant_override("separation", 4)
 	panel.add_child(column)
-	var heading := OneGunUI.make_label("MATCH REWARDS", 11 if compact else 13,
+	var heading := OneGunUI.make_label("MATCH PROGRESSION", 10 if compact else 12,
 		"muted", true)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
-	var presentation := _reward_presentation(reward)
-	var primary := OneGunUI.make_heading(str(presentation["primary"]),
-		16 if compact else 20, str(presentation["role"]))
+	var xp_title := OneGunUI.make_label("SEASON XP", 9 if compact else 11,
+		"green", true)
+	column.add_child(xp_title)
+	var xp_bar := _make_reward_progress_bar("green", 16.0 if compact else 20.0)
+	xp_bar.name = "SeasonXPProgress"
+	column.add_child(xp_bar)
+	var xp_detail := _make_reward_detail_row(compact)
+	column.add_child(xp_detail["row"])
+
+	var secondary_title := OneGunUI.make_label("TROPHY ROAD", 9 if compact else 11,
+		"cyan", true)
+	column.add_child(secondary_title)
+	var trophy_bar := _make_reward_progress_bar("cyan", 14.0 if compact else 18.0)
+	trophy_bar.name = "TrophyProgress"
+	column.add_child(trophy_bar)
+	var secondary_detail := _make_reward_detail_row(compact)
+	column.add_child(secondary_detail["row"])
+
+	var reward_box := PanelContainer.new()
+	reward_box.name = "CurrentMatchRewardBox"
+	reward_box.add_theme_stylebox_override("panel", OneGunUI.style_box(
+		Color(0.006, 0.016, 0.035), Color(OneGunUI.color("border"), 0.7), 7, 1))
+	column.add_child(reward_box)
+	var reward_column := VBoxContainer.new()
+	reward_column.add_theme_constant_override("separation", 1)
+	reward_box.add_child(reward_column)
+	var primary := OneGunUI.make_heading("MATCH REWARD", 11 if compact else 14, "green")
 	primary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(primary)
-	var secondary := OneGunUI.make_label(str(presentation["secondary"]),
-		9 if compact else 12, "green" if official else "muted", true)
+	reward_column.add_child(primary)
+	var secondary := OneGunUI.make_label("RESULTS ONLY", 8 if compact else 10,
+		"muted", true)
 	secondary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	secondary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(secondary)
-	_reward_labels[actor_id] = {
+	reward_column.add_child(secondary)
+	var controls := {
+		"xp_bar": xp_bar,
+		"xp_gain": xp_detail["gain"],
+		"xp_total": xp_detail["total"],
+		"secondary_title": secondary_title,
+		"trophy_bar": trophy_bar,
+		"secondary_gain": secondary_detail["gain"],
+		"secondary_total": secondary_detail["total"],
 		"primary": primary,
 		"secondary": secondary,
+		"official": official,
 	}
+	_reward_labels[actor_id] = controls
+	_update_reward_summary(controls, reward, false)
 	return panel
+
+
+func _make_reward_progress_bar(role: String, height: float) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0.0, height)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_theme_stylebox_override("background", OneGunUI.style_box(
+		Color(0.004, 0.012, 0.03), Color(OneGunUI.color("border"), 0.6), 7, 1))
+	bar.add_theme_stylebox_override("fill", OneGunUI.style_box(
+		Color(OneGunUI.color(role), 0.88), OneGunUI.color(role), 7, 1))
+	return bar
+
+
+func _make_reward_detail_row(compact: bool) -> Dictionary:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	var gain := OneGunUI.make_label("+0", 8 if compact else 10, "gold", true)
+	gain.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(gain)
+	var total := OneGunUI.make_label("0 / 0", 8 if compact else 10, "muted", true)
+	total.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(total)
+	return {"row": row, "gain": gain, "total": total}
+
+
+func _update_reward_summary(controls: Dictionary, reward: Dictionary,
+		animate: bool) -> void:
+	var progress = ProgressionManager.progression.get("progress", {})
+	if not progress is Dictionary:
+		progress = {}
+	var xp_gain := maxi(int(reward.get("season_xp_delta",
+		reward.get("xp_delta", 0))), 0)
+	var current_xp := maxi(int(reward.get("new_season_xp",
+		progress.get("xp_into_level", 0))), 0)
+	var needed_xp := maxi(int(reward.get("next_level_xp",
+		progress.get("next_level_xp", 150))), 1)
+	var xp_bar := controls.get("xp_bar") as ProgressBar
+	if xp_bar != null:
+		xp_bar.max_value = needed_xp
+		_set_reward_bar_value(xp_bar, maxf(current_xp - xp_gain, 0), current_xp,
+			animate and str(reward.get("state", "")) == "settled")
+	var xp_gain_label := controls.get("xp_gain") as Label
+	if xp_gain_label != null:
+		xp_gain_label.text = "+%d XP" % xp_gain
+	var xp_total := controls.get("xp_total") as Label
+	if xp_total != null:
+		xp_total.text = "%d / %d XP" % [current_xp, needed_xp]
+
+	var trophy_gain := maxi(int(reward.get("trophy_delta", 0)), 0)
+	var trophy_bar := controls.get("trophy_bar") as ProgressBar
+	var secondary_title := controls.get("secondary_title") as Label
+	var secondary_gain := controls.get("secondary_gain") as Label
+	var secondary_total := controls.get("secondary_total") as Label
+	if trophy_gain > 0:
+		var trophies := maxi(int(reward.get("new_season_trophies",
+			progress.get("trophies", trophy_gain))), 0)
+		var next_trophy := _next_trophy_milestone(trophies)
+		if secondary_title != null:
+			secondary_title.text = "TROPHY ROAD"
+		if trophy_bar != null:
+			trophy_bar.visible = true
+			trophy_bar.max_value = next_trophy
+			_set_reward_bar_value(trophy_bar, maxi(trophies - trophy_gain, 0),
+				trophies, animate and str(reward.get("state", "")) == "settled")
+		if secondary_gain != null:
+			secondary_gain.text = "+%d TROPH%s" % [trophy_gain,
+				"Y" if trophy_gain == 1 else "IES"]
+		if secondary_total != null:
+			secondary_total.text = "%d / %d NEXT REWARD" % [trophies, next_trophy]
+	else:
+		var token_gain := maxi(int(reward.get("gun_tokens_delta", 0)), 0)
+		if secondary_title != null:
+			secondary_title.text = "GUN TOKENS EARNED"
+		if trophy_bar != null:
+			trophy_bar.visible = false
+		if secondary_gain != null:
+			secondary_gain.text = "+%d GUN TOKENS" % token_gain
+		if secondary_total != null:
+			var balance := int(reward.get("new_gun_token_balance", -1))
+			secondary_total.text = "%d TOTAL" % balance if balance >= 0 else "MATCH TOTAL"
+
+	var presentation := _reward_presentation(reward)
+	var primary := controls.get("primary") as Label
+	var secondary := controls.get("secondary") as Label
+	if primary != null:
+		primary.text = str(presentation.get("primary", "MATCH REWARDS"))
+		primary.add_theme_color_override("font_color", OneGunUI.color(
+			str(presentation.get("role", "green"))))
+	if secondary != null:
+		secondary.text = str(presentation.get("secondary", ""))
+
+
+func _set_reward_bar_value(bar: ProgressBar, start_value: float,
+		end_value: float, animate: bool) -> void:
+	if not animate or _reduced_motion():
+		bar.value = end_value
+		return
+	bar.value = clampf(start_value, 0.0, bar.max_value)
+	var tween := create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.tween_property(bar, "value", clampf(end_value, 0.0, bar.max_value), 0.85) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func _next_trophy_milestone(current: int) -> int:
+	var result := maxi(current + 1, 1)
+	var road = ProgressionManager.progression.get("trophy_road", [])
+	if road is Array:
+		for value in road:
+			if value is Dictionary:
+				var threshold := int(value.get("threshold", 0))
+				if threshold > current:
+					return threshold
+	return result
 
 
 func _reward_presentation(reward: Dictionary) -> Dictionary:
@@ -622,6 +793,9 @@ func _reward_presentation(reward: Dictionary) -> Dictionary:
 		"sign_in_required":
 			return {"primary": "SIGN IN REQUIRED",
 				"secondary": "RESULT RECORDED LOCALLY ONLY", "role": "muted"}
+		"error":
+			return {"primary": "REWARD CHECK FAILED",
+				"secondary": str(reward.get("message", "TRY AGAIN LATER")), "role": "muted"}
 	return {"primary": "CUSTOM MATCH", "secondary": "RESULTS ONLY", "role": "muted"}
 
 
@@ -656,7 +830,7 @@ func _build_controls(parent: VBoxContainer) -> void:
 			_ready_button.toggle_mode = true
 			_ready_button.disabled = true
 			_ready_button.custom_minimum_size = Vector2(170.0, 52.0)
-			_ready_button.toggled.connect(func(value: bool) -> void: ready_changed.emit(value))
+			_ready_button.toggled.connect(_on_online_ready_toggled)
 			row.add_child(_ready_button)
 		if _host_view:
 			_host_return_button = OneGunButton.new()
@@ -665,7 +839,7 @@ func _build_controls(parent: VBoxContainer) -> void:
 			_host_return_button.variant = "purple"
 			_host_return_button.disabled = true
 			_host_return_button.custom_minimum_size = Vector2(205.0, 52.0)
-			_host_return_button.pressed.connect(func() -> void: force_return_requested.emit())
+			_host_return_button.pressed.connect(_on_force_return_pressed)
 			row.add_child(_host_return_button)
 	else:
 		_ready_count_label.text = "LOCAL PLAYERS READY"
@@ -720,17 +894,48 @@ func _build_full_stats_overlay() -> void:
 	scroll.add_child(rows)
 	for entry_value in _entries:
 		rows.add_child(_make_standings_row(entry_value, true))
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", 10)
+	column.add_child(footer)
 	var close := OneGunButton.new()
-	close.text = "BACK TO WINNERS CIRCLE"
-	close.variant = "gold"
-	close.custom_minimum_size.y = 48.0
-	close.pressed.connect(func() -> void: _full_stats_overlay.visible = false)
-	column.add_child(close)
+	close.name = "FullStatsBackButton"
+	close.text = "BACK"
+	close.variant = "navy"
+	close.custom_minimum_size = Vector2(220.0, 48.0)
+	close.pressed.connect(_hide_full_stats_overlay)
+	footer.add_child(close)
+	var footer_spacer := Control.new()
+	footer_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	footer.add_child(footer_spacer)
 
 
 func _show_full_stats() -> void:
 	if _full_stats_overlay != null:
 		_full_stats_overlay.visible = true
+
+
+func _hide_full_stats_overlay() -> void:
+	if _full_stats_overlay != null:
+		_full_stats_overlay.visible = false
+
+
+func _primary_control() -> Button:
+	if _ready_button != null:
+		return _ready_button
+	if not _local_ready_buttons.is_empty():
+		return _local_ready_buttons.values()[0] as Button
+	if _host_return_button != null:
+		return _host_return_button
+	return null
+
+
+func _focus_primary_control() -> void:
+	if _controls_focused:
+		return
+	var button := _primary_control()
+	if button != null and not button.disabled:
+		button.grab_focus()
+		_controls_focused = true
 
 
 func _on_local_ready_toggled(value: bool, actor_id: int,
@@ -745,7 +950,16 @@ func _on_local_ready_toggled(value: bool, actor_id: int,
 	_ready_count_label.text = "%d / %d LOCAL PLAYERS READY" % [
 		ready_count, _local_ready_actor_ids.size()]
 	if ready_count == _local_ready_actor_ids.size() and ready_count > 0:
-		start_return_countdown(3.0)
+		var elapsed := float(Time.get_ticks_msec() - _started_msec) / 1000.0
+		start_return_countdown(maxf(3.0, MINIMUM_VIEW_TIME - elapsed))
+
+
+func _on_online_ready_toggled(value: bool) -> void:
+	ready_changed.emit(value)
+
+
+func _on_force_return_pressed() -> void:
+	force_return_requested.emit()
 
 
 func _build_stage_world(container: SubViewportContainer) -> void:
@@ -887,7 +1101,12 @@ func _build_podium_competitor(world: Node3D, entry: Dictionary,
 	var pivot := Node3D.new()
 	pivot.position = Vector3(x, height + 0.02, z)
 	world.add_child(pivot)
+	var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
 	var model_id := SkinRegistry.sanitize_model_id(str(entry.get("model_id", "male")))
+	var equipped_model := CosmeticRegistry.local_character_model_id(
+		str(cosmetics.get("character_model", "")))
+	if equipped_model != "":
+		model_id = equipped_model
 	var visual_scene := SkinRegistry.load_visual_scene(model_id)
 	if visual_scene != null:
 		var visual := visual_scene.instantiate() as Node3D
@@ -897,7 +1116,7 @@ func _build_podium_competitor(world: Node3D, entry: Dictionary,
 				str(entry.get("skin_id", "blue"))))
 			visual.set("build_animation_library", false)
 			pivot.add_child(visual)
-			var cosmetics := CosmeticRegistry.sanitize_loadout(entry.get("cosmetics", {}))
+			CosmeticRegistry.apply_to_character_visual(visual, cosmetics)
 			var move_id := str(cosmetics.get("emote", ""))
 			var move_animation := CosmeticRegistry.local_podium_animation(move_id)
 			var requested := ["idle", "long_idle"]

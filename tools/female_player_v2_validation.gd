@@ -7,6 +7,8 @@ const FEMALE_MODEL_PATH := "res://models/player_v2/femaleOGCat/femaleOGCatRigged
 
 
 func _ready() -> void:
+	if PlayerV2Visual.IDLE_SOURCE_PATH != PlayerV2Visual.MASTER_RIG_PATH:
+		_fail("female and male cats do not share the master idle animation source")
 	_run.call_deferred()
 
 
@@ -49,6 +51,8 @@ func _run() -> void:
 	for animation_name in PlayerV2Visual.ANIMATION_SOURCES:
 		expected_animations.append(str(animation_name))
 	for animation_name in expected_animations:
+		if not animation_player.has_animation(animation_name):
+			visual.call("ensure_animations", [animation_name])
 		if not animation_player.has_animation(animation_name):
 			_fail("female runtime animation missing: %s" % animation_name)
 			return

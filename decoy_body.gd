@@ -2,9 +2,10 @@ extends CharacterBody3D
 
 ## Runtime decoy actor.
 ##
-## World movement belongs exclusively to this CharacterBody3D. The visual gait
-## is procedural and can only alter bone rotations plus VisualRoot's local Y,
-## so animation can never translate the rendered cat backward inside its body.
+## World movement belongs exclusively to this CharacterBody3D. The visual uses
+## the shared retargeted idle/run clips (with horizontal hips motion anchored),
+## then falls back to a rotation-only procedural gait if imports are unavailable.
+## Neither path may translate VisualRoot on its local X/Z axes.
 
 const CombatIdentityTagScript = preload("res://combat_identity_tag.gd")
 const REFERENCE_POSE_SOURCE := "res://models/player_v2/OGCatModelV2_Rigged.glb"

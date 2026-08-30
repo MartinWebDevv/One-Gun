@@ -1,0 +1,14 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: social manager, Friends overlay/orb/toast, and lobby Player Hub resources load
+PASS: friend joins accept only valid Tailscale/localhost UDP endpoints
+PASS: malformed backend collections are normalized without exposing invalid rows
+PASS: Friends overlay builds its full-screen cabinet
+PASS: Friends overlay reports online friends from the private snapshot
+PASS: joinable friend presence exposes a Join action
+PASS: incoming requests expose Accept and Deny actions
+PASS: lobby invitations expose Accept & Join and Deny actions
+PASS: online Player Hub preserves its three destinations without duplicating Friends
+PASS: separate Friends orb contains the blue mascot portrait and hover label
+PASS: separate invitation toast exposes Accept and Deny controls
+SOCIAL SYSTEM VALIDATION: PASS
