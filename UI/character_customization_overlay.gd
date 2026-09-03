@@ -439,7 +439,10 @@ func _play_preview_idle() -> void:
 		"ensure_animations", ["idle"]) as AnimationPlayer
 	if _preview_animation_player != null \
 			and _preview_animation_player.has_animation("idle"):
-		_preview_animation_player.play("idle", 0.10)
+		# A preview has no locomotion transition to blend from. Stopping first avoids
+		# displaying an imported/fall pose during the blend window on model swaps.
+		_preview_animation_player.stop()
+		_preview_animation_player.play("idle", 0.0)
 		_preview_animation_player.advance(0.0)
 
 

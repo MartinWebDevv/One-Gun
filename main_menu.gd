@@ -211,6 +211,7 @@ var _progression_overlay: Control
 var _social_overlay: Control
 var _main_player_hub_overlay: Control
 var _return_to_player_hub := false
+var _social_join_pending := false
 var _showcase_actor: Node3D
 var _online_status: Label
 var _online_ip_field: LineEdit
@@ -2813,30 +2814,32 @@ func _on_social_join_requested(lobby: Dictionary) -> void:
 		if _social_overlay != null:
 			_social_overlay.call("_set_status", "INVALID OR EXPIRED LOBBY ENDPOINT", true)
 		return
-	if not NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
-		NetworkManager.connection_succeeded.connect(_on_social_join_ok, CONNECT_ONE_SHOT)
-	if not NetworkManager.connection_failed.is_connected(_on_social_join_failed):
-		NetworkManager.connection_failed.connect(_on_social_join_failed, CONNECT_ONE_SHOT)
+	if _social_join_pending:
+		return
+	_social_join_pending = true
 	if _social_overlay != null:
 		_social_overlay.call("_set_status", "CONNECTING TO %s…" %
 			str(lobby.get("name", "FRIEND LOBBY")).to_upper(), false)
+	_begin_social_join.call_deferred(lobby.duplicate(true))
+
+
+func _begin_social_join(lobby: Dictionary) -> void:
+	if not is_inside_tree() or not _social_join_pending:
+		return
+	var address := str(lobby.get("address", ""))
+	var port := int(lobby.get("port", 0))
+	if not NetworkManager.connection_failed.is_connected(_on_social_join_failed):
+		NetworkManager.connection_failed.connect(_on_social_join_failed, CONNECT_ONE_SHOT)
 	if not NetworkManager.join_game(address, port):
 		_on_social_join_failed()
 		return
 	NetworkManager.lobby_name = str(lobby.get("name", "Friend Lobby"))
 
 
-func _on_social_join_ok() -> void:
+func _on_social_join_failed() -> void:
+	_social_join_pending = false
 	if NetworkManager.connection_failed.is_connected(_on_social_join_failed):
 		NetworkManager.connection_failed.disconnect(_on_social_join_failed)
-	_prepare_online_lobby_defaults()
-	GameConfig.split_screen_enabled = false
-	get_tree().change_scene_to_file("res://game_setup.tscn")
-
-
-func _on_social_join_failed() -> void:
-	if NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
-		NetworkManager.connection_succeeded.disconnect(_on_social_join_ok)
 	if _social_overlay != null:
 		_social_overlay.call("_set_status",
 			"CONNECTION FAILED — CHECK TAILSCALE AND ASK THE HOST TO KEEP THE LOBBY OPEN", true)

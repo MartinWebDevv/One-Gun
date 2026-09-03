@@ -444,6 +444,13 @@ func _spawn_playpen_gun(spawn_id: int, generation: int, position: Vector3) -> vo
 	get_tree().current_scene.add_child(gun)
 	gun.global_position = position
 	gun.spawn_position = position
+	# Every peer creates the same deterministic armory stock locally. Keep a bay
+	# gun fixed until pickup; independent rigid-body simulation otherwise lets the
+	# host's copy roll away while a client still sees it sitting in the station.
+	gun.linear_velocity = Vector3.ZERO
+	gun.angular_velocity = Vector3.ZERO
+	gun.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
+	gun.freeze = true
 
 
 @rpc("authority", "reliable", "call_local")

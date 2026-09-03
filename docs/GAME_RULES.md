@@ -133,7 +133,7 @@ Sprinting is a match-wide setting (`GameConfig.sprinting_enabled`) that applies 
 - **One gun spawns per match** — no ammo pickups, no second gun.
 - Semi-automatic: one shot per trigger pull, then a reload.
 - Reload time: 2.0s.
-- Bullet speed: 200 m/s, still a physically simulated projectile with a 10s emergency lifetime.
+- Bullet speed: 200 m/s, still a physically simulated projectile with a 10s emergency lifetime. Its bright visible sphere remains 0.1m radius for readability, while the gameplay collision core is a precise 0.025m radius so a visibly offset shot cannot graze a target.
 - A bullet hit is an **instant elimination** — there is no health pool or damage falloff.
 - Every valid hostile bullet contact, including a protected or nonlethal All Gun hit, shows the victim a red directional arc for 0.9s. The arc uses the shot's impact bearing, stays camera-relative while the victim is alive, and freezes across an immediate lethal spectator handoff so the direction remains readable. Hits within 20 degrees merge and refresh; at most four distinct bearings display together.
 - Getting disarmed (see below) locks the ex-holder out of re-picking up the gun for **`disarm_lock_time`** seconds (default 3.0), giving the disarmer a window to grab it.

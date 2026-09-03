@@ -342,25 +342,32 @@ func _online_gun_for_actor(actor_id: int):
 # this stable RoundManager path so dedicated and client scene-tree differences
 # cannot invalidate RPC delivery after a pickup.
 func request_online_gun_action(action: String, epoch: int,
-		direction: Vector3 = Vector3.ZERO, gun_instance_name: String = "") -> void:
+		direction: Vector3 = Vector3.ZERO, gun_instance_name: String = "",
+		fire_origin: Vector3 = Vector3.ZERO,
+		has_fire_origin := false) -> void:
 	if NetworkManager.is_host():
 		_server_route_online_gun_action(NetworkManager.local_actor_id(), action,
-			epoch, direction, gun_instance_name)
+			epoch, direction, gun_instance_name, fire_origin, has_fire_origin)
 	else:
 		_net_request_online_gun_action.rpc_id(
-			1, action, epoch, direction, gun_instance_name)
+			1, action, epoch, direction, gun_instance_name, fire_origin,
+			has_fire_origin)
 
 
 @rpc("any_peer", "reliable")
 func _net_request_online_gun_action(action: String, epoch: int,
-		direction: Vector3, gun_instance_name: String) -> void:
+		direction: Vector3, gun_instance_name: String,
+		fire_origin: Vector3, has_fire_origin: bool) -> void:
 	_server_route_online_gun_action(
 		NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()),
-		action, epoch, direction, gun_instance_name)
+		action, epoch, direction, gun_instance_name, fire_origin,
+		has_fire_origin)
 
 
 func _server_route_online_gun_action(sender_id: int, action: String, epoch: int,
-		direction: Vector3, gun_instance_name: String = "") -> void:
+		direction: Vector3, gun_instance_name: String = "",
+		fire_origin: Vector3 = Vector3.ZERO,
+		has_fire_origin := false) -> void:
 	if not multiplayer.is_server():
 		return
 	var gun = _online_loose_gun(gun_instance_name) \
@@ -373,7 +380,8 @@ func _server_route_online_gun_action(sender_id: int, action: String, epoch: int,
 		print("[DEDICATED ACTION] gun %s requested by actor %d (epoch %d)" % [action, sender_id, epoch])
 	match action:
 		"pickup": gun._server_try_pickup(sender_id, epoch)
-		"fire": gun._server_try_fire(sender_id, direction, epoch)
+		"fire": gun._server_try_fire(
+			sender_id, direction, epoch, fire_origin, has_fire_origin)
 		"drop": gun._server_try_drop(sender_id, epoch)
 
 

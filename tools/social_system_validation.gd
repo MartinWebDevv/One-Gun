@@ -5,12 +5,16 @@ var _failures := 0
 
 class FakeSocialBackend extends Node:
 	var response_data: Dictionary
+	var invite_receipt: Dictionary
 
 	func is_authenticated() -> bool:
 		return true
 
-	func _authenticated_request(_path: String, _method: int,
+	func _authenticated_request(path: String, _method: int,
 			_payload = null) -> Dictionary:
+		if path.ends_with("/respond_lobby_invite"):
+			return {"ok": true, "status": 200,
+				"data": invite_receipt.duplicate(true)}
 		return {"ok": true, "status": 200, "data": response_data.duplicate(true)}
 
 	func _response_message(response: Dictionary, fallback: String) -> String:
@@ -84,6 +88,7 @@ func _run() -> void:
 	var real_backend = manager.get("_backend")
 	var fake_backend := FakeSocialBackend.new()
 	fake_backend.response_data = fixture
+	fake_backend.invite_receipt = fixture["invites"][0]
 	root.add_child(fake_backend)
 	manager.set("_backend", fake_backend)
 	manager.set("snapshot", fixture.duplicate(true))
@@ -98,7 +103,9 @@ func _run() -> void:
 	var online_label := overlay.get("_online_label") as Label
 	_check(online_label != null and online_label.text == "1 ONLINE",
 		"Friends overlay reports online friends from the private snapshot")
-	_check(overlay.find_child("JoinFriendButton", true, false) != null,
+	var join_friend_button := overlay.find_child(
+		"JoinFriendButton", true, false) as Button
+	_check(join_friend_button != null,
 		"joinable friend presence exposes a Join action")
 	_check(overlay.find_child("AcceptFriendButton", true, false) != null
 			and overlay.find_child("DenyFriendButton", true, false) != null,
@@ -125,6 +132,28 @@ func _run() -> void:
 	_check(invite_toast.find_child("AcceptLobbyInviteToastButton", true, false) != null
 			and invite_toast.find_child("DeclineLobbyInviteToastButton", true, false) != null,
 		"separate invitation toast exposes Accept and Deny controls")
+	var overlay_join_endpoints: Array[Dictionary] = []
+	overlay.join_requested.connect(func(endpoint: Dictionary) -> void:
+		overlay_join_endpoints.append(endpoint.duplicate(true)))
+	if join_friend_button != null:
+		join_friend_button.pressed.emit()
+	await process_frame
+	_check(overlay_join_endpoints.size() == 1
+			and str(overlay_join_endpoints[0].get("address", "")) == "100.64.2.3",
+		"Friends-window Join emits one stable endpoint on the deferred join path")
+	var toast_join_endpoints: Array[Dictionary] = []
+	invite_toast.join_requested.connect(func(endpoint: Dictionary) -> void:
+		toast_join_endpoints.append(endpoint.duplicate(true)))
+	invite_toast.present(fixture["invites"][0])
+	var toast_accept := invite_toast.find_child(
+		"AcceptLobbyInviteToastButton", true, false) as Button
+	if toast_accept != null:
+		toast_accept.pressed.emit()
+	await process_frame
+	await process_frame
+	_check(toast_join_endpoints.size() == 1
+			and str(toast_join_endpoints[0].get("address", "")) == "100.64.2.3",
+		"invite popup Accept emits one stable endpoint after its async receipt")
 
 	overlay.queue_free()
 	hub.queue_free()

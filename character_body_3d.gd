@@ -76,6 +76,7 @@ const BASE_GRAVITY := 9.8
 # would thrash the walk<->jump animation. This debounces it. Purely visual —
 # jump gameplay still uses raw is_on_floor().
 const AIRBORNE_ANIM_GRACE = 0.12
+const AIRBORNE_ANIM_MAX_TIMER_STEP = 1.0 / 30.0
 
 var holding_gun = false
 var held_melee_weapon = null
@@ -248,9 +249,9 @@ func _ready():
 				_on_persistent_cosmetic_loadout_updated):
 		SupabaseManager.loadout_updated.connect(
 			_on_persistent_cosmetic_loadout_updated)
-	model_anim_player = $CharacterModel.find_child("AnimationPlayer", true, false)
+	model_anim_player = null
+	_merge_animations()
 	if model_anim_player != null:
-		_merge_animations()
 		if model_anim_player.has_animation(ANIM_IDLE):
 			_current_anim = ANIM_IDLE
 			model_anim_player.play(ANIM_IDLE)
@@ -427,13 +428,15 @@ func _apply_character_model(requested_id: String) -> void:
 	character_model_id = safe_id
 	if next_visual.has_method("set_cosmetic_loadout"):
 		next_visual.call("set_cosmetic_loadout", cosmetic_loadout)
+	model_anim_player = null
+	_merge_animations()
 	if model_anim_player != null:
-		model_anim_player = next_visual.find_child(
-			"AnimationPlayer", true, false) as AnimationPlayer
-		if model_anim_player != null:
-			_merge_animations()
-			if model_anim_player.has_animation(_current_anim):
-				model_anim_player.play(_current_anim)
+		var resume_animation := _current_anim if model_anim_player.has_animation(
+			_current_anim) else ANIM_IDLE
+		# The old AnimationPlayer was freed with its model. Force the shared state
+		# onto the replacement even when the logical animation name did not change.
+		_current_anim = ""
+		_play_anim(resume_animation, true)
 
 
 func _apply_character_skin(requested_id: String) -> void:
@@ -568,6 +571,7 @@ func _physics_process(delta):
 		if not is_on_floor():
 			_apply_air_gravity(delta)
 		move_and_slide()
+		_update_animation_after_motion(Vector2.ZERO, delta)
 		return
 
 	if _steam_boost_active and is_on_floor():
@@ -579,13 +583,6 @@ func _physics_process(delta):
 		slow_timer -= delta
 		if slow_timer <= 0.0:
 			slow_multiplier_value = 1.0
-
-	# Refresh the animation grounded-grace timer every frame (uses last
-	# frame's floor state, which is fine for a purely-visual debounce).
-	if is_on_floor():
-		_airborne_grace_timer = AIRBORNE_ANIM_GRACE
-	else:
-		_airborne_grace_timer = max(_airborne_grace_timer - delta, 0.0)
 
 	if is_eliminated:
 		if not is_on_floor():
@@ -607,6 +604,7 @@ func _physics_process(delta):
 		_update_stamina(delta)
 		_update_dash_recharge(delta)
 		_update_facing()
+		_update_animation_after_motion(Vector2.ZERO, delta)
 		return
 
 	if use_gamepad_look:
@@ -627,22 +625,22 @@ func _physics_process(delta):
 		stagger_timer -= delta
 		velocity.x = 0
 		velocity.z = 0
-		_stop_movement_animation()
 		move_and_slide()
 		_update_stamina(delta)
 		_update_dash_recharge(delta)
 		_update_facing()
+		_update_animation_after_motion(Vector2.ZERO, delta)
 		return
 
 	if knockback_timer > 0.0:
 		knockback_timer -= delta
 		velocity.x = knockback_velocity.x
 		velocity.z = knockback_velocity.z
-		_stop_movement_animation()
 		move_and_slide()
 		_update_stamina(delta)
 		_update_dash_recharge(delta)
 		_update_facing()
+		_update_animation_after_motion(Vector2.ZERO, delta)
 		return
 
 	if Input.is_action_just_pressed(input_prefix + "_jump"):
@@ -706,6 +704,8 @@ func _physics_process(delta):
 	else:
 		is_sprinting = Input.is_action_pressed(input_prefix + "_sprint") and stamina > 0.0
 
+	var animation_input := Vector2.ZERO
+	var update_locomotion_animation: bool = not bool(is_dashing)
 	if is_dashing:
 		dash_timer -= delta
 		if _dash_cancelled_spring_momentum:
@@ -732,6 +732,7 @@ func _physics_process(delta):
 			current_speed *= GameConfig.ONE_OF_US_THEM_SPEED_MULTIPLIER
 
 		var input_dir = _get_movement_input_dir()
+		animation_input = input_dir
 		var flash_camera_movement := _active_flash_camera_mode()
 		if flash_camera_movement:
 			input_dir.x *= 0.70
@@ -763,12 +764,13 @@ func _physics_process(delta):
 				velocity.x = move_toward(velocity.x, 0, current_speed)
 				velocity.z = move_toward(velocity.z, 0, current_speed)
 
-		_update_animation(input_dir, delta)
-
 	var _desired_h_vel := Vector3(velocity.x, 0, velocity.z)
 	move_and_slide()
 	if _spring_air_active and is_on_floor() and velocity.y <= 0.0:
 		_clear_spring_launch_state()
+	_refresh_animation_ground_state(delta)
+	if update_locomotion_animation:
+		_update_animation(animation_input, delta)
 	_try_step_up(_desired_h_vel, delta)
 	_update_footsteps(delta)
 	_update_stamina(delta)
@@ -1274,7 +1276,7 @@ func _play_anim(anim_name: String, force := false, custom_speed := 1.0):
 		return
 	if _action_animation_time > 0.0 and not force:
 		return
-	if _current_anim == anim_name:
+	if _current_anim == anim_name and not force:
 		return
 	if not model_anim_player.has_animation(anim_name):
 		push_warning("_play_anim: not found: " + anim_name)
@@ -1295,6 +1297,24 @@ func _publish_network_animation(anim_name: String, custom_speed: float) -> void:
 func _is_grounded_for_anim() -> bool:
 	# Debounced grounded check for animation only — see AIRBORNE_ANIM_GRACE.
 	return _airborne_grace_timer > 0.0
+
+func _refresh_animation_ground_state(delta: float) -> void:
+	# Sample after move_and_slide so landing replaces a stale fall pose during the
+	# same physics tick on every model.
+	if is_on_floor():
+		_airborne_grace_timer = AIRBORNE_ANIM_GRACE
+	else:
+		# Animation retargeting/model swaps can make one frame unusually long.
+		# Count at most a 30 Hz step so one asset-load hitch cannot consume the
+		# entire spawn/landing grace window and strand the model in Fall.
+		_airborne_grace_timer = maxf(_airborne_grace_timer
+			- minf(delta, AIRBORNE_ANIM_MAX_TIMER_STEP), 0.0)
+
+
+func _update_animation_after_motion(input_dir: Vector2, delta: float) -> void:
+	_refresh_animation_ground_state(delta)
+	_update_animation(input_dir, delta)
+
 
 func _update_animation(input_dir: Vector2, delta: float):
 	if _action_animation_time > 0.0:
@@ -1508,6 +1528,28 @@ func get_camera():
 	if _spectator != null and _spectator.has_method("get_spectator_camera"):
 		return _spectator.get_spectator_camera()
 	return $AimPivot/SpringArm3D/Camera3D
+
+
+func get_gun_fire_camera() -> Camera3D:
+	var source_camera := get_camera() as Camera3D
+	if is_online:
+		return source_camera
+	var scene := get_tree().current_scene
+	if scene == null:
+		return source_camera
+	# Local players are authored beside SplitScreenLayer. Check that arena root
+	# first so validation/preview wrappers do not make current_scene ambiguous.
+	var arena_root := get_parent()
+	var split_screen_manager = arena_root.get_node_or_null("SplitScreenLayer") \
+		if arena_root != null else null
+	if split_screen_manager == null:
+		split_screen_manager = scene.get_node_or_null("SplitScreenLayer")
+	if split_screen_manager != null and split_screen_manager.has_method(
+			"get_render_camera_for_player"):
+		var render_camera = split_screen_manager.get_render_camera_for_player(self)
+		if render_camera is Camera3D:
+			return render_camera
+	return source_camera
 
 func play_match_intro(authored_start: Vector3, duration := 3.0, orbit_angle := PI) -> void:
 	if not is_locally_controlled() or is_eliminated:
@@ -2484,5 +2526,7 @@ func respawn(spawn_transform):
 	_current_anim = ""
 	_action_animation_time = 0.0
 	_idle_animation_time = 0.0
+	_airborne_grace_timer = AIRBORNE_ANIM_GRACE
 	if model_anim_player != null:
 		model_anim_player.stop()
+		_play_anim(ANIM_IDLE, true)

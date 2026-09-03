@@ -79,6 +79,7 @@ var _social_overlay: Control
 var _friends_orb: FriendsQuickAccessOrb
 var _invite_notification: LobbyInviteNotification
 var _return_to_player_hub := false
+var _social_join_pending := false
 var _settings_target_position := Vector2.ZERO
 var _settings_tween: Tween
 var _left_cabinet: OneGunCabinet
@@ -1395,10 +1396,24 @@ func _on_social_join_requested(lobby: Dictionary) -> void:
 		if _social_overlay != null:
 			_social_overlay.call("_set_status", "YOU ARE ALREADY IN THIS LOBBY", false)
 		return
+	if _social_join_pending:
+		return
+	_social_join_pending = true
 	_return_to_player_hub = false
 	if _social_overlay != null:
-		_social_overlay.queue_free()
-		_social_overlay = null
+		_social_overlay.visible = false
+		_social_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _lobby_notice_label != null:
+		_lobby_notice_label.text = "JOINING %s…" % str(
+			lobby.get("name", "FRIEND LOBBY")).to_upper()
+	_begin_social_join.call_deferred(lobby.duplicate(true))
+
+
+func _begin_social_join(lobby: Dictionary) -> void:
+	if not is_inside_tree() or not _social_join_pending:
+		return
+	var address := str(lobby.get("address", ""))
+	var port := int(lobby.get("port", 0))
 	if not NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
 		NetworkManager.connection_succeeded.connect(_on_social_join_ok, CONNECT_ONE_SHOT)
 	if not NetworkManager.connection_failed.is_connected(_on_social_join_failed):
@@ -1407,18 +1422,21 @@ func _on_social_join_requested(lobby: Dictionary) -> void:
 		_on_social_join_failed()
 		return
 	NetworkManager.lobby_name = str(lobby.get("name", "Friend Lobby"))
-	if _lobby_notice_label != null:
-		_lobby_notice_label.text = "JOINING %s…" % NetworkManager.lobby_name.to_upper()
 
 
 func _on_social_join_ok() -> void:
+	_social_join_pending = false
 	if NetworkManager.connection_failed.is_connected(_on_social_join_failed):
 		NetworkManager.connection_failed.disconnect(_on_social_join_failed)
+	if _social_overlay != null and is_instance_valid(_social_overlay):
+		_social_overlay.queue_free()
+	_social_overlay = null
 	_refresh_roster()
 	_configure_focus_navigation.call_deferred()
 
 
 func _on_social_join_failed() -> void:
+	_social_join_pending = false
 	if NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
 		NetworkManager.connection_succeeded.disconnect(_on_social_join_ok)
 	NetworkManager.disconnect_net()

@@ -160,6 +160,12 @@ func _validate_gameplay_actor(model_id: String) -> void:
 	actor.set("character_skin_id", "blue")
 	actor.set("cosmetic_loadout", {"hat": TEST_HAT_ID})
 	add_child(actor)
+	var spawned_visual := actor.get_node_or_null("CharacterModel") as Node3D
+	var spawned_animation_player := spawned_visual.call(
+		"get_animation_player") as AnimationPlayer if spawned_visual != null else null
+	var started_in_idle: bool = (
+		spawned_animation_player != null
+		and spawned_animation_player.current_animation == "idle")
 	await get_tree().process_frame
 	await get_tree().process_frame
 	actor.process_mode = Node.PROCESS_MODE_DISABLED
@@ -170,6 +176,20 @@ func _validate_gameplay_actor(model_id: String) -> void:
 	var hat := visual.find_child("HatVisual", true, false) if visual != null else null
 	_check(hat != null and str(hat.get_meta("supabase_hat_id", "")) == TEST_HAT_ID,
 		"gameplay actor retains %s cosmetics" % model_id)
+	var animation_player := visual.call(
+		"get_animation_player") as AnimationPlayer if visual != null else null
+	_check(started_in_idle,
+		"gameplay actor starts %s in the shared idle animation" % model_id)
+	if animation_player != null and animation_player.has_animation("fall"):
+		actor.set("_airborne_grace_timer", 0.0)
+		actor.velocity.y = -2.0
+		actor.call("_update_animation", Vector2.ZERO, 0.0)
+		_check(animation_player.current_animation == "fall",
+			"%s uses the shared fall state only while airborne" % model_id)
+		actor.respawn(Transform3D(Basis(), Vector3(0.0, 1.0, 0.0)))
+		_check(animation_player.current_animation == "idle"
+				and str(actor.get("_network_animation_name")) == "idle",
+			"%s respawn clears a stale fall pose locally and for network puppets" % model_id)
 	actor.queue_free()
 	await get_tree().process_frame
 

@@ -42,8 +42,40 @@ func _sync_camera(player: Node, viewport_camera: Camera3D) -> void:
 	if not is_instance_valid(source_camera):
 		return
 	viewport_camera.global_transform = source_camera.global_transform
-	viewport_camera.fov = source_camera.fov
+	# Preserve the exact projection without repeatedly dirtying render-camera
+	# state on lower-end hardware when these values have not changed.
+	if viewport_camera.projection != source_camera.projection:
+		viewport_camera.projection = source_camera.projection
+	if not is_equal_approx(viewport_camera.fov, source_camera.fov):
+		viewport_camera.fov = source_camera.fov
+	if not is_equal_approx(viewport_camera.size, source_camera.size):
+		viewport_camera.size = source_camera.size
+	if not viewport_camera.frustum_offset.is_equal_approx(source_camera.frustum_offset):
+		viewport_camera.frustum_offset = source_camera.frustum_offset
+	if not is_equal_approx(viewport_camera.near, source_camera.near):
+		viewport_camera.near = source_camera.near
+	if not is_equal_approx(viewport_camera.far, source_camera.far):
+		viewport_camera.far = source_camera.far
+	if viewport_camera.keep_aspect != source_camera.keep_aspect:
+		viewport_camera.keep_aspect = source_camera.keep_aspect
+	if not is_equal_approx(viewport_camera.h_offset, source_camera.h_offset):
+		viewport_camera.h_offset = source_camera.h_offset
+	if not is_equal_approx(viewport_camera.v_offset, source_camera.v_offset):
+		viewport_camera.v_offset = source_camera.v_offset
 	# Per-view combat presentation (Reach ring and gun-holder identity tags)
 	# uses reserved visual layers on the source camera. Mirror the mask as well
 	# as the transform so P1 and P2 cannot see each other's private overlays.
 	viewport_camera.cull_mask = source_camera.cull_mask
+
+
+func get_render_camera_for_player(player: Node) -> Camera3D:
+	# The crosshair overlays these SubViewports, so screen-to-world gameplay rays
+	# must use the camera that actually renders the corresponding image. Refresh
+	# it immediately on a shot instead of depending on _process ordering.
+	if player == player1:
+		_sync_camera(player1, _viewport_camera_1)
+		return _viewport_camera_1
+	if _split_screen_active and player == player2:
+		_sync_camera(player2, _viewport_camera_2)
+		return _viewport_camera_2
+	return null

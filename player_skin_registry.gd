@@ -46,15 +46,15 @@ const FIXED_MODEL_PORTRAIT_PATHS := {
 	GOLDFISH_BAG_MAN_MODEL_ID: \
 		"res://UI/assets/character_portraits/goldfish_bag_man.png",
 	EYE_WIZARD_MODEL_ID: \
-		"res://models/player_v2/characterSkins/Eye_Wizard_100Avatars_113_EyeWizard.png",
+		"res://UI/assets/character_portraits/eye_wizard.png",
 	MR_MUSHROOM_MODEL_ID: \
-		"res://models/player_v2/characterSkins/Mr_Mushroom_100Avatars_025_Mushy.png",
+		"res://UI/assets/character_portraits/mr_mushroom.png",
 	MR_POOP_MODEL_ID: \
-		"res://models/player_v2/characterSkins/Mr_Poop_100Avatars_176_CoolPoo.png",
+		"res://UI/assets/character_portraits/mr_poop.png",
 	MR_SALT_MODEL_ID: \
-		"res://models/player_v2/characterSkins/Mr_Salt_100Avatars_132_SaltySalt.png",
+		"res://UI/assets/character_portraits/mr_salt.png",
 	SPOOKY_WITCH_MODEL_ID: \
-		"res://models/player_v2/characterSkins/Spooky_Witch_100Avatars_039_Witch.png",
+		"res://UI/assets/character_portraits/spooky_witch.png",
 }
 
 # Runtime-skinned idle envelopes measured in the standard player.tscn actor

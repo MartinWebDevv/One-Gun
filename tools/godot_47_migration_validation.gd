@@ -31,6 +31,29 @@ func _run() -> void:
 		var player_2 = arena.get_node_or_null("player2")
 		_check(player_1 != null and player_1.get_camera() != null,
 			"player 1 did not provide a camera")
+		if player_1 != null:
+			var render_camera_1 := layer.get_render_camera_for_player(player_1) as Camera3D
+			_check(render_camera_1 != null,
+				"player 1 did not resolve its rendered firing camera")
+			if render_camera_1 != null:
+				_check(render_camera_1.get_viewport() is SubViewport,
+					"player 1 firing camera is not the rendered SubViewport camera")
+				_check(render_camera_1.global_transform.is_equal_approx(
+						player_1.get_camera().global_transform),
+					"player 1 rendered firing camera was not synchronized at query time")
+				_check(player_1.get_gun_fire_camera() == render_camera_1,
+					"player 1 did not expose the rendered camera to its held gun")
+				var arena_gun = arena.get_node_or_null("Gun")
+				_check(arena_gun != null, "CityMap has no gun for aim validation")
+				if arena_gun != null:
+					arena_gun.player_ref = player_1
+					var fire_ray: Dictionary = arena_gun._calculate_fire_ray()
+					var center := render_camera_1.get_viewport().get_visible_rect().size * 0.5
+					var projected := render_camera_1.unproject_position(
+						fire_ray["origin"] + fire_ray["direction"] * 25.0)
+					_check(projected.distance_to(center) < 0.01,
+						"CityMap gun ray does not stay on player 1's rendered crosshair")
+					arena_gun.player_ref = null
 		if split_enabled:
 			_check(container_2.visible, "splitscreen hid player 2's viewport")
 			_check(viewport_2.render_target_update_mode == SubViewport.UPDATE_ALWAYS,
@@ -38,6 +61,10 @@ func _run() -> void:
 			_check(layer.player2 == player_2, "splitscreen did not retain player 2")
 			_check(player_2 != null and player_2.get_camera() != null,
 				"player 2 did not provide a camera")
+			if player_2 != null:
+				var render_camera_2 := layer.get_render_camera_for_player(player_2) as Camera3D
+				_check(render_camera_2 != null and render_camera_2.get_viewport() is SubViewport,
+					"player 2 did not resolve its rendered SubViewport firing camera")
 		else:
 			_check(not container_2.visible, "solo play left player 2's viewport visible")
 			_check(viewport_2.render_target_update_mode == SubViewport.UPDATE_DISABLED,

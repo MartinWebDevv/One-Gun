@@ -108,6 +108,11 @@ func _ready() -> void:
 	process_priority = 100
 	_animation_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
 	_skeleton = find_child("Skeleton3D", true, false) as Skeleton3D
+	# Imported character files may carry their own autoplay selection. Gameplay,
+	# previews, decoys, and ceremonies all choose from the shared named library;
+	# clear imported playback first so every model starts from the same state.
+	if _animation_player != null:
+		_animation_player.stop()
 	model_id = SkinRegistry.sanitize_model_id(model_id)
 	_prepare_unique_skin_materials()
 	set_skin(skin_id)

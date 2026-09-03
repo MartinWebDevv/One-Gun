@@ -108,8 +108,14 @@ func _accept_invite() -> void:
 		_decline.disabled = false
 		_busy = false
 		return
+	var stable_endpoint := endpoint.duplicate(true)
 	dismiss()
-	join_requested.emit(endpoint)
+	_emit_join_requested.call_deferred(stable_endpoint)
+
+
+func _emit_join_requested(endpoint: Dictionary) -> void:
+	if is_inside_tree() and not endpoint.is_empty():
+		join_requested.emit(endpoint)
 
 
 func _decline_invite() -> void:

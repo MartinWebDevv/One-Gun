@@ -30,6 +30,15 @@ func launch(direction: Vector3, who_fired: Node):
 		add_collision_exception_with(who_fired)
 	linear_velocity = direction.normalized() * projectile_speed
 
+
+func launch_from(origin: Vector3, direction: Vector3, who_fired: Node) -> void:
+	# Rigid bodies can otherwise interpolate their first rendered transform from
+	# the scene's authored origin. Position and reset interpolation before making
+	# this projectile visible so frame zero is already on the reticle ray.
+	global_position = origin
+	reset_physics_interpolation()
+	launch(direction, who_fired)
+
 func _expire() -> void:
 	if is_instance_valid(self):
 		queue_free()

@@ -88,6 +88,15 @@ func _run() -> void:
 			return int(gun.get("playpen_spawn_id")) >= 0)
 		_check(playpen_guns.size() == 6,
 			"Expected exactly two initial guns in each of three armory bays")
+		_check(playpen_guns.all(func(gun):
+				var spawn_id := int(gun.get("playpen_spawn_id"))
+				return (
+					bool(gun.get("freeze"))
+					and manager != null
+					and manager.get("_gun_spawn_positions").has(spawn_id)
+					and gun.global_position.is_equal_approx(
+						manager.get("_gun_spawn_positions")[spawn_id]))),
+			"Playpen station guns are not fixed at their deterministic host/client positions")
 		_check(get_tree().get_nodes_in_group("melee").size() == 15,
 			"Expected all five melee weapons in every armory bay")
 		_check(get_tree().get_nodes_in_group("online_item").size() == 27,
@@ -142,6 +151,12 @@ func _run() -> void:
 				_check(swapped_hat != null and str(swapped_hat.get_meta(
 						"supabase_hat_id", "")) == "hat_top",
 					"Playpen preserves cosmetics on new character model: %s" % model_id)
+				var swapped_animation_player: AnimationPlayer = (
+					character_visual.call("get_animation_player") as AnimationPlayer
+					if character_visual != null else null)
+				_check(swapped_animation_player != null
+						and swapped_animation_player.current_animation == "idle",
+					"grounded Playpen actor keeps shared idle after model swap: %s" % model_id)
 			if manager != null:
 				host_actor.global_position = Vector3(0.0, -50.0, 0.0)
 				host_actor.velocity = Vector3(0.0, 99.0, 0.0)
@@ -186,14 +201,15 @@ func _run() -> void:
 			if not playpen_guns.is_empty():
 				var far_bay_gun = playpen_guns[-1]
 				var saved_actor_transform: Transform3D = host_actor.global_transform
-				host_actor.global_position = far_bay_gun.global_position
+				host_actor.global_position = (
+					far_bay_gun.global_position + Vector3(2.6, 0.0, 0.0))
 				manager._server_route_online_gun_action(actor_id, "pickup",
 					int(manager.get("online_round_epoch")), Vector3.ZERO,
 					str(far_bay_gun.name))
 				await get_tree().process_frame
 				_check(bool(far_bay_gun.get("is_held"))
 					and far_bay_gun.get("player_ref") == host_actor,
-					"Playpen rejected the exact gun touched outside the first armory bay")
+					"Playpen rejected a station gun within interaction/latency tolerance")
 				if bool(far_bay_gun.get("is_held")):
 					far_bay_gun._net_do_drop(saved_actor_transform.origin + Vector3.UP)
 				host_actor.global_transform = saved_actor_transform

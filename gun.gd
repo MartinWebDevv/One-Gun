@@ -3,8 +3,9 @@ extends RigidBody3D
 const VisibilityRules = preload("res://combat_visibility.gd")
 
 const BulletScene = preload("res://bullet.tscn")
-const ONLINE_PICKUP_MAX_DISTANCE := 2.25
+const ONLINE_PICKUP_MAX_DISTANCE := 2.75
 const ONLINE_FIRE_MIN_AIM_DOT := 0.25
+const ONLINE_FIRE_MAX_ORIGIN_DISTANCE_FROM_HOLDER := 7.0
 
 @export var HELD_SCALE := 1.0
 @export var projectile_speed := 200.0
@@ -89,11 +90,13 @@ func try_fire():
 		# authoritative bullet (server owns hit detection + eliminations).
 		if player_ref != null and player_ref.has_method("is_locally_controlled") \
 				and player_ref.is_locally_controlled():
-			var dir = _calculate_fire_direction()
+			var fire_ray := _calculate_fire_ray()
+			var dir: Vector3 = fire_ray["direction"]
 			var epoch := _online_round_epoch()
 			var rm = _online_round_manager()
 			if rm != null:
-				rm.request_online_gun_action("fire", epoch, dir)
+				rm.request_online_gun_action(
+					"fire", epoch, dir, "", fire_ray["origin"], true)
 		return
 	fire()
 
@@ -111,11 +114,9 @@ func _holder_actor_id() -> int:
 		return player_ref.actor_id
 	return _holder_peer_id()
 
-@rpc("any_peer", "reliable")
-func _net_request_fire(dir: Vector3, epoch: int) -> void:
-	_server_try_fire(NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()), dir, epoch)
-
-func _server_try_fire(sender_id: int, dir: Vector3, epoch: int) -> void:
+func _server_try_fire(sender_id: int, dir: Vector3, epoch: int,
+		requested_origin: Vector3 = Vector3.ZERO,
+		has_requested_origin := false) -> void:
 	if not multiplayer.is_server() or not is_held or not can_fire:
 		return
 	var rm = _online_round_manager()
@@ -130,7 +131,19 @@ func _server_try_fire(sender_id: int, dir: Vector3, epoch: int) -> void:
 	var shot_dir := dir.normalized()
 	if server_aim.dot(shot_dir) < ONLINE_FIRE_MIN_AIM_DOT:
 		return
-	var origin := _calculate_fire_origin(shot_dir)
+	var origin: Vector3
+	if has_requested_origin:
+		# Never combine the owner's direction with a host-reconstructed camera
+		# origin: those two different rays create the visible left-to-center
+		# convergence the crosshair contract forbids. Validate the paired owner
+		# origin against the authoritative actor, then preserve it exactly.
+		if not requested_origin.is_finite() or requested_origin.distance_to(
+				holder.global_position) > ONLINE_FIRE_MAX_ORIGIN_DISTANCE_FROM_HOLDER:
+			return
+		origin = requested_origin
+	else:
+		# Server-owned bots have no camera and intentionally fire from the muzzle.
+		origin = _calculate_fire_origin(shot_dir)
 	rm.broadcast_online_gun_action("fire", {
 		"holder_actor_id": _holder_actor_id(),
 		"origin": origin,
@@ -147,9 +160,7 @@ func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: in
 	bullet.set("net_shooter_id", shooter_id)
 	bullet.set("is_server_bullet", multiplayer.is_server())
 	bullet.set("net_round_epoch", epoch)
-	get_tree().current_scene.add_child(bullet)
-	bullet.global_position = origin
-	bullet.launch(dir, NetworkManager.find_actor(shooter_id))
+	_launch_bullet_instance(bullet, origin, dir, NetworkManager.find_actor(shooter_id))
 	AudioManager.play_sfx("gun_shot")
 	GameEvents.combat_noise.emit(origin, shooter_id, "gunshot", 30.0)
 
@@ -287,12 +298,11 @@ func _net_do_force_disarm(drop_pos: Vector3, holder_actor_id: int) -> void:
 
 func fire():
 	can_fire = false
+	var fire_ray := _calculate_fire_ray()
+	var fire_direction: Vector3 = fire_ray["direction"]
 	var bullet = BulletScene.instantiate()
 	bullet.set("projectile_speed", projectile_speed)
-	get_tree().current_scene.add_child(bullet)
-	var fire_direction = _calculate_fire_direction()
-	bullet.global_position = _calculate_fire_origin(fire_direction)
-	bullet.launch(fire_direction, player_ref)
+	_launch_bullet_instance(bullet, fire_ray["origin"], fire_direction, player_ref)
 	AudioManager.play_sfx("gun_shot")
 	GameEvents.combat_noise.emit(global_position, int(player_ref.get("actor_id")) if player_ref != null else -1, "gunshot", 30.0)
 	$ReloadTimer.start()
@@ -323,31 +333,80 @@ func get_reload_progress():
 		return 1.0
 	return 1.0 - ($ReloadTimer.time_left / $ReloadTimer.wait_time)
 
-func _calculate_fire_direction() -> Vector3:
-	var cam: Camera3D = player_ref.get_camera()
+func _get_fire_camera() -> Camera3D:
+	if player_ref == null:
+		return null
+	if player_ref.has_method("get_gun_fire_camera"):
+		var render_camera = player_ref.get_gun_fire_camera()
+		if render_camera is Camera3D:
+			return render_camera
+	if player_ref.has_method("get_camera"):
+		return player_ref.get_camera() as Camera3D
+	return null
+
+
+func _calculate_fire_direction(camera_override: Camera3D = null) -> Vector3:
+	var cam := camera_override if camera_override != null else _get_fire_camera()
 	if cam == null:
 		if player_ref.has_method("get_gun_fire_direction"):
 			return player_ref.get_gun_fire_direction()
 		return player_ref.get_aim_direction()
-	var viewport_rect: Rect2 = cam.get_viewport().get_visible_rect()
-	var crosshair_position: Vector2 = viewport_rect.position + viewport_rect.size * 0.5
+	# project_ray_* expects viewport-local coordinates. Adding visible_rect.position
+	# offsets the shot on embedded/splitscreen viewports even though the crosshair
+	# is centered in local viewport space.
+	var crosshair_position := cam.get_viewport().get_visible_rect().size * 0.5
 	return cam.project_ray_normal(crosshair_position).normalized()
 
-func _calculate_fire_origin(direction: Vector3) -> Vector3:
+func _calculate_fire_origin(direction: Vector3,
+		camera_override: Camera3D = null) -> Vector3:
 	var muzzle: Node3D = get_node_or_null("WaterGun/MuzzlePoint")
 	var muzzle_origin: Vector3 = muzzle.global_position if muzzle != null else global_position
-	var cam: Camera3D = player_ref.get_camera()
+	var cam := camera_override if camera_override != null else _get_fire_camera()
 	if cam == null or direction.is_zero_approx():
 		return muzzle_origin
-	var viewport_rect: Rect2 = cam.get_viewport().get_visible_rect()
-	var crosshair_position: Vector2 = viewport_rect.position + viewport_rect.size * 0.5
-	var ray_origin: Vector3 = cam.project_ray_origin(crosshair_position)
-	# The model's muzzle is shoulder-offset from the reticle. Start the gameplay
-	# projectile on the reticle ray at the muzzle's forward depth so it remains
-	# dead-center instead of converging diagonally from the left or right.
-	var muzzle_depth: float = (muzzle_origin - ray_origin).dot(direction)
-	var spawn_depth: float = maxf(muzzle_depth, cam.near + 0.05)
-	return ray_origin + direction * spawn_depth
+	var crosshair_position := cam.get_viewport().get_visible_rect().size * 0.5
+	# A human projectile never inherits position from the shoulder-offset,
+	# animated muzzle. Use the stable actor/aim-pivot plane only to choose how far
+	# along the camera's center ray it begins. Its origin and direction therefore
+	# describe one line through the rendered crosshair from the first frame onward.
+	var camera_forward := -cam.global_basis.z.normalized()
+	var fire_reference: Vector3 = global_position
+	if player_ref is Node3D:
+		var aim_pivot := player_ref.get_node_or_null("AimPivot") as Node3D
+		fire_reference = aim_pivot.global_position \
+			if aim_pivot != null else (player_ref as Node3D).global_position
+	var actor_depth: float = (fire_reference - cam.global_position).dot(camera_forward)
+	var spawn_depth: float = maxf(actor_depth, cam.near + 0.05)
+	# project_position is the inverse of unproject_position and guarantees that
+	# this first world point maps to the exact crosshair pixel at the chosen depth.
+	return cam.project_position(crosshair_position, spawn_depth)
+
+
+func _calculate_fire_ray() -> Dictionary:
+	# Direction and origin are sampled together so every caller launches the
+	# projectile along the same exact reticle ray.
+	var camera := _get_fire_camera()
+	var direction := _calculate_fire_direction(camera)
+	return {
+		"direction": direction,
+		"origin": _calculate_fire_origin(direction, camera),
+	}
+
+
+func _launch_bullet_instance(bullet: RigidBody3D, origin: Vector3,
+		direction: Vector3, shooter: Node) -> void:
+	# Put the body at its launch transform before it enters the physics world.
+	# This prevents a render/physics interpolation sample from ever observing the
+	# authored scene origin and drawing a one-frame diagonal toward the reticle.
+	bullet.visible = false
+	var world_parent := get_tree().current_scene
+	if world_parent is Node3D:
+		bullet.position = (world_parent as Node3D).to_local(origin)
+	else:
+		bullet.position = origin
+	world_parent.add_child(bullet)
+	bullet.launch_from(origin, direction, shooter)
+	bullet.visible = true
 
 func _on_reload_finished():
 	if NetworkManager.is_online():

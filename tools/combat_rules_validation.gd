@@ -91,6 +91,21 @@ class MockManualPickupPlayer:
 	func get_display_name() -> String:
 		return "Pickup Gate Mock"
 
+class MockAimPlayer:
+	extends Node3D
+	var camera: Camera3D
+	var render_camera: Camera3D
+	var actor_id := 7401
+
+	func get_camera() -> Camera3D:
+		return camera
+
+	func get_gun_fire_camera() -> Camera3D:
+		return render_camera if render_camera != null else camera
+
+	func get_aim_direction() -> Vector3:
+		return -camera.global_basis.z
+
 class MockLooseMelee:
 	extends Node3D
 	var holder = null
@@ -190,8 +205,60 @@ func _test_projectile_and_gun() -> void:
 	_check(is_equal_approx(bullet.emergency_lifetime, 10.0), "projectile emergency lifetime is not 10 seconds")
 	var gun = load("res://gun.tscn").instantiate()
 	get_tree().current_scene.add_child(gun)
+	var bullet_scene: RigidBody3D = (load("res://bullet.tscn") as PackedScene).instantiate()
+	var bullet_shape := bullet_scene.get_node("CollisionShape3D").shape as SphereShape3D
+	var bullet_mesh := bullet_scene.get_node("MeshInstance3D").mesh as SphereMesh
+	_check(is_equal_approx(bullet_shape.radius, 0.025),
+		"projectile collision core is not the precise 0.025m radius")
+	_check(is_equal_approx(bullet_mesh.radius, 0.1),
+		"projectile visible radius changed with its collision core")
+	bullet_scene.free()
 	_check(is_equal_approx(gun.projectile_speed, 200.0), "gun and projectile speed defaults differ")
 	_check(is_equal_approx(gun.reload_time, 2.0), "reload default changed")
+	var aim_player := MockAimPlayer.new()
+	var source_camera := Camera3D.new()
+	var aim_viewport := SubViewport.new()
+	aim_viewport.size = Vector2i(800, 900)
+	var aim_camera := Camera3D.new()
+	aim_player.add_child(source_camera)
+	aim_viewport.add_child(aim_camera)
+	get_tree().current_scene.add_child(aim_viewport)
+	aim_player.camera = source_camera
+	aim_player.render_camera = aim_camera
+	get_tree().current_scene.add_child(aim_player)
+	aim_camera.global_transform = Transform3D(
+		Basis.from_euler(Vector3(-0.17, 0.43, 0.0)), Vector3(3.0, 4.0, 7.0))
+	# Deliberately make the player's source camera disagree. This catches the
+	# exact production regression where the ray used a different viewport camera
+	# from the one that rendered the crosshair image.
+	source_camera.global_transform = Transform3D(
+		Basis.from_euler(Vector3(0.08, -0.31, 0.0)), Vector3(-4.0, 2.0, 1.0))
+	gun.player_ref = aim_player
+	var fire_ray: Dictionary = gun._calculate_fire_ray()
+	var projected_point: Vector2 = aim_camera.unproject_position(
+		fire_ray["origin"] + fire_ray["direction"] * 25.0)
+	var viewport_center := aim_camera.get_viewport().get_visible_rect().size * 0.5
+	_check(projected_point.distance_to(viewport_center) < 0.01,
+		"gun projectile ray does not remain on the exact viewport-center crosshair")
+	gun.fire()
+	var spawned_bullet: RigidBody3D = null
+	var bullet_script := load("res://bullet.gd")
+	for candidate in get_tree().current_scene.get_children():
+		if candidate.get_script() == bullet_script:
+			spawned_bullet = candidate as RigidBody3D
+			break
+	_check(spawned_bullet != null, "gun did not create a projectile")
+	if spawned_bullet != null:
+		var first_frame_point := aim_camera.unproject_position(
+			spawned_bullet.global_position)
+		var later_point := aim_camera.unproject_position(
+			spawned_bullet.global_position + spawned_bullet.linear_velocity * 0.1)
+		_check(first_frame_point.distance_to(viewport_center) < 0.01,
+			"bullet's first visible position is not centered on the crosshair")
+		_check(later_point.distance_to(viewport_center) < 0.01,
+			"bullet trajectory converges toward the crosshair instead of staying centered")
+		spawned_bullet.free()
+	gun.player_ref = null
 	var player := MockManualPickupPlayer.new()
 	var old_melee := MockLooseMelee.new()
 	get_tree().current_scene.add_child(player)
@@ -215,6 +282,8 @@ func _test_projectile_and_gun() -> void:
 	_check(gun.reload_time != gun.loose_return_time, "reload and loose-return tuning are coupled")
 	bullet.free()
 	gun.free()
+	aim_player.free()
+	aim_viewport.free()
 	old_melee.free()
 	player.free()
 

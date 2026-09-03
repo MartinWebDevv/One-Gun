@@ -283,7 +283,8 @@ func _make_friend_row(friend: Dictionary) -> Control:
 	if not endpoint.is_empty():
 		var join_button := _action_button("JOIN", "green")
 		join_button.name = "JoinFriendButton"
-		join_button.pressed.connect(func() -> void: join_requested.emit(endpoint))
+		join_button.pressed.connect(
+			_request_join.bind(endpoint.duplicate(true)))
 		row.add_child(join_button)
 	var invite_button := _action_button("INVITE", "gold")
 	invite_button.name = "InviteFriendButton"
@@ -381,7 +382,7 @@ func _make_invite_row(invite: Dictionary) -> Control:
 		str(invite.get("lobby_name", "LOBBY")).to_upper(), 12, "purple", true))
 	var accept := _action_button("ACCEPT & JOIN", "green", 155.0)
 	accept.name = "AcceptLobbyInviteButton"
-	accept.pressed.connect(_accept_invite.bind(invite))
+	accept.pressed.connect(_accept_invite.bind(invite.duplicate(true)))
 	row.add_child(accept)
 	var deny := _action_button("DENY", "red")
 	deny.name = "DenyLobbyInviteButton"
@@ -405,7 +406,18 @@ func _accept_invite(invite: Dictionary) -> void:
 	if endpoint.is_empty():
 		_set_status("THE INVITATION ENDPOINT IS NO LONGER VALID", true)
 		return
-	join_requested.emit(endpoint)
+	_request_join(endpoint)
+
+
+func _request_join(endpoint: Dictionary) -> void:
+	# Network peer replacement and scene changes must not run inside the GUI
+	# button signal (or an invite coroutine resumed by a social refresh).
+	_emit_join_requested.call_deferred(endpoint.duplicate(true))
+
+
+func _emit_join_requested(endpoint: Dictionary) -> void:
+	if is_inside_tree() and not endpoint.is_empty():
+		join_requested.emit(endpoint)
 
 
 func _deny_invite(invite: Dictionary) -> void:
