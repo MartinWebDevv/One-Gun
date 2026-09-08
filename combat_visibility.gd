@@ -26,3 +26,15 @@ static func has_visual_contact(viewer: Node3D, target: Node3D, check_geometry :=
 		query.exclude.append(target.get_rid())
 	query.collision_mask = 1
 	return viewer.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+# Physical cover only: smoke obscures vision but cannot stop a swing or shot.
+static func world_segment_clear(viewer: Node3D, from: Vector3, to: Vector3,
+		excluded: Array[RID] = []) -> bool:
+	if not is_instance_valid(viewer) or not from.is_finite() or not to.is_finite():
+		return false
+	if from.is_equal_approx(to):
+		return true
+	var query := PhysicsRayQueryParameters3D.create(from, to, 1, excluded)
+	query.hit_from_inside = true
+	return viewer.get_world_3d().direct_space_state.intersect_ray(query).is_empty()

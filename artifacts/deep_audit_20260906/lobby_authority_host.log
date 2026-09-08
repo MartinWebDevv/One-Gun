@@ -1,0 +1,13 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1317] hosting 'Authority Test' on UDP 24615 as 'Player 1'
+LOBBY TEST OK: chat history stayed closed and notification card built
+[ONLINE 1621] peer 743586210 connected
+[ONLINE 1918] peer 743586210 admitted | client build itch-380e65c
+LOBBY TEST OK: female appearance synchronized to host roster
+LOBBY TEST OK: host received and replied to client chat
+LOBBY TEST OK: host received guest readiness
+LOBBY TEST OK: host reset readiness and changed privacy
+[ONLINE 2539] peer 743586210 disconnected
+LOBBY TEST OK: host kick removed client
+[ONLINE 2589] disconnect requested

@@ -17,6 +17,7 @@ const TROPHY_MODEL_PATH := "res://models/rewards/winners_circle_trophy.glb"
 const PERFORMER_PRE_ROLL := 0.18
 const INTRO_FADE_DURATION := 1.35
 const RESULTS_FADE_DURATION := 0.34
+const MODAL_INPUT_GROUP := &"modal_input_owner"
 
 signal ready_changed(ready: bool)
 signal force_return_requested
@@ -56,6 +57,10 @@ var _controls_focused := false
 func _ready() -> void:
 	layer = 300
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Spectator cameras remain alive behind the results screen and normally
+	# consume LMB/RMB plus gamepad face buttons in _input(), before GUI routing.
+	# This group gives the top-level results modal exclusive input ownership.
+	add_to_group(MODAL_INPUT_GROUP)
 
 
 func _exit_tree() -> void:

@@ -1,0 +1,22 @@
+{
+  "label": "online_exit_flow",
+  "code": 1,
+  "seconds": 24.37,
+  "errors": [
+    "ERROR: 39 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+    "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details).",
+    "ERROR: 39 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+    "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_EXIT_FLOW_PASS host",
+    "ONLINE_EXIT_FLOW_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_exit_flow.log"
+}

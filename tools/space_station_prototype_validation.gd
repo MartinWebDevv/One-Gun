@@ -87,9 +87,9 @@ func _ready() -> void:
 		"ResearchLabel": "GREEN CIRCUIT",
 		"ZeroGLabel": "VIOLET CIRCUIT",
 		"EngineLabel": "RED CIRCUIT",
-		"CoreStatusLabel": "ONE GUN // LIVE VAULT",
-		"DeckHeaderLabel": "NEON CIRCUIT // ORBITAL TAG ARENA",
-		"ArenaCapacityLabel": "NEON CIRCUIT // 10 PLAYERS // SYSTEM LIVE",
+		"CoreStatusLabel": "ONE GUN\nLIVE VAULT",
+		"DeckHeaderLabel": "NEON CIRCUIT",
+		"ArenaCapacityLabel": "10 PLAYERS\nSYSTEM LIVE",
 	}
 	var zone_identity_matches := true
 	for label_name in expected_zone_labels:

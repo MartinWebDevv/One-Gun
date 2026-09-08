@@ -1,0 +1,22 @@
+{
+  "label": "online_diagnostic_host",
+  "code": 0,
+  "seconds": 48.86,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "ONLINE_SMOKE_PASS host"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://artifacts/deep_audit_20260906/online_diagnostic.tscn",
+    "--",
+    "--role=host",
+    "--mode=match"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_diagnostic_host.log"
+}

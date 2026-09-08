@@ -1,0 +1,17 @@
+{
+  "label": "victory_move_integration_validation",
+  "code": 0,
+  "seconds": 18.52,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/victory_move_integration_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\victory_move_integration_validation.log"
+}

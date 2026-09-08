@@ -1,0 +1,31 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 2124] hosting 'Player 1's Lobby' on UDP 24646 as 'Player 1'
+[ONLINE 6966] peer 1827457985 connected
+[ONLINE 7119] peer 1827457985 admitted | client build itch-380e65c
+[ONLINE 11256] peer 1827457985 renamed to 'Smoke Client'
+ONLINE_LOBBY_PASS host
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 2117] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 2128] connected to host as peer 1827457985
+[ONLINE 2131] peer 1 connected
+ONLINE_LOBBY_PASS client
+[ONLINE 21736] peer 1 disconnected
+[ONLINE 21782] host disconnected
+ERROR: 24 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
+
+ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .
+   at: _printerr (scene/resources/resource_format_text.cpp:41)
+ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.
+   at: _load (core/io/resource_loader.cpp:317)
+WARNING: 2 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 107 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+

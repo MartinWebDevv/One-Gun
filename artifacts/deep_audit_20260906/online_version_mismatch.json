@@ -1,0 +1,13 @@
+{
+  "label": "online_version_mismatch",
+  "code": 0,
+  "seconds": 2.96,
+  "errors": [
+    "ERROR: Trying to call an RPC via a multiplayer peer which is not connected."
+  ],
+  "markers": [
+    "VERSION_MISMATCH_CLIENT_PASS reason=network_protocol",
+    "VERSION MISMATCH SMOKE: PASS"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_version_mismatch.log"
+}

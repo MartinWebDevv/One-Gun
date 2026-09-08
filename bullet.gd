@@ -5,24 +5,28 @@ extends RigidBody3D
 var shooter = null            # local play: the shooter node
 
 # Online (set by gun._net_spawn_bullet): the server owns hit detection; client
-# bullets are visual-only and pass through everything.
+# bullets predict world impacts for presentation and never resolve damage.
 var net_shooter_id := -1
 var is_server_bullet := false
 var net_round_epoch := -1
+var net_shot_id := -1
+var _retired := false
+var _age := 0.0
+var _visual_client := false
 
 func _ready():
 	continuous_cd = true
 	contact_monitor = true
 	max_contacts_reported = 1
 	body_entered.connect(_on_body_entered)
-	get_tree().create_timer(emergency_lifetime).timeout.connect(_expire)
 	if NetworkManager.is_online():
 		add_to_group("online_bullet")
 		gravity_scale = 0.0   # straight-line, deterministic across peers
 		if not is_server_bullet:
-			# client bullet: fly through everything, purely visual
+			_visual_client = true
 			set_deferred("contact_monitor", false)
 			collision_mask = 0
+			collision_layer = 0
 
 func launch(direction: Vector3, who_fired: Node):
 	shooter = who_fired
@@ -39,9 +43,45 @@ func launch_from(origin: Vector3, direction: Vector3, who_fired: Node) -> void:
 	reset_physics_interpolation()
 	launch(direction, who_fired)
 
+func _physics_process(delta: float) -> void:
+	_age += delta
+	if _age >= emergency_lifetime:
+		_retire()
+		return
+	if not _visual_client or _retired or linear_velocity.is_zero_approx():
+		return
+	# Cosmetic prediction only. Peer actor motion can differ, so actor impacts
+	# wait for the reliable host event; static cover stops the tracer immediately.
+	var excluded: Array[RID] = [get_rid()]
+	if is_instance_valid(shooter) and shooter is CollisionObject3D:
+		excluded.append(shooter.get_rid())
+	var query := PhysicsRayQueryParameters3D.create(global_position,
+		global_position + linear_velocity * delta, 1, excluded)
+	query.hit_from_inside = true
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty():
+		retire_at(hit["position"])
+
+
+func retire_at(impact_position: Vector3) -> void:
+	if not impact_position.is_finite():
+		return
+	global_position = impact_position
+	_retire()
+
+
+func _retire() -> void:
+	if _retired:
+		return
+	_retired = true
+	visible = false
+	if is_server_bullet and net_shot_id >= 0:
+		GameEvents.online_projectile_retired.emit(net_shot_id, net_round_epoch, global_position)
+	queue_free()
+
+
 func _expire() -> void:
-	if is_instance_valid(self):
-		queue_free()
+	_retire()
 
 func _is_decoy(body: Node) -> bool:
 	return body != null and body.has_method("is_combat_decoy") and body.is_combat_decoy()
@@ -70,9 +110,11 @@ func _hit_decoy(body: PhysicsBody3D) -> void:
 		body.pop_from_attack(attacker, "gun")
 	# Decoys are real collision targets. Whether friendly or hostile, a bullet
 	# stops at this first impact instead of receiving a pass-through exception.
-	queue_free()
+	_retire()
 
 func _on_body_entered(body):
+	if _retired:
+		return
 	if NetworkManager.is_online():
 		_on_hit_online(body)
 		return
@@ -88,10 +130,10 @@ func _on_body_entered(body):
 			_emit_local_damage_direction(body)
 			GameEvents.combat_feedback.emit(shooter_name, "gun_hit")
 			GameEvents.actor_combat_feedback.emit(int(shooter.get("actor_id")) if shooter != null and shooter.get("actor_id") != null else -1, "gun_hit")
-		queue_free()
+		_retire()
 		return
 	if not GameConfig.can_affect(shooter, body):
-		queue_free()
+		_retire()
 		return
 	if body.is_in_group("player"):
 		_emit_local_damage_direction(body)
@@ -106,7 +148,7 @@ func _on_body_entered(body):
 		var event_kind := "gun_elimination" if eliminated else "gun_hit"
 		GameEvents.combat_feedback.emit(shooter_name, event_kind)
 		GameEvents.actor_combat_feedback.emit(shooter_actor_id, event_kind)
-	queue_free()
+	_retire()
 
 func _on_hit_online(body):
 	# Only the server resolves hits (authoritative). Clients never reach here
@@ -117,11 +159,11 @@ func _on_hit_online(body):
 		_hit_decoy(body)
 		return
 	if not body.is_in_group("player"):
-		queue_free()   # hit world geometry
+		_retire()   # hit world geometry
 		return
 	if body.has_method("server_online_hit"):
 		body.server_online_hit()
-		queue_free()
+		_retire()
 		return
 	var vid = body.get("actor_id")
 	if vid == null or vid == net_shooter_id:
@@ -134,8 +176,8 @@ func _on_hit_online(body):
 		# Blocked by immunity — still confirm the connect to the shooter.
 		if rm != null and rm.has_method("server_confirm_hit"):
 			rm.server_confirm_hit(net_shooter_id, false, "gun")
-		queue_free()
+		_retire()
 		return
 	if rm != null and rm.has_method("server_eliminate"):
 		rm.server_eliminate(int(vid), net_shooter_id, net_round_epoch)
-	queue_free()
+	_retire()

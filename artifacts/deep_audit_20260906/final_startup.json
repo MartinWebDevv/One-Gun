@@ -1,0 +1,16 @@
+{
+  "label": "final_startup",
+  "code": 0,
+  "seconds": 1.38,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--quit"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\final_startup.log"
+}

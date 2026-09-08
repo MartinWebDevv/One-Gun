@@ -1,0 +1,14 @@
+ M UI/assets/character_portraits/blue.png.import
+ M UI/winners_circle.gd
+ M docs/ARCHITECTURE.md
+ M docs/GAME_RULES.md
+ M docs/TODO.md
+ M online_chat.gd
+ M spectator_controller.gd
+ M tools/winners_circle_validation.gd
+ M winners_circle_coordinator.gd
+?? artifacts/deep_audit_20260906/
+?? artifacts/quality_pass_20260907/
+?? docs/DEEP_AUDIT_2026-09-07.md
+?? tools/live_lobby_lab/
+?? tools/live_lobby_preview/

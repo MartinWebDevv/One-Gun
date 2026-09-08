@@ -1,0 +1,26 @@
+{
+  "label": "goldfish_bag_character_validation",
+  "code": 0,
+  "seconds": 3.52,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PASS: runtime socket exists: MeleeHoldPoint",
+    "PASS: runtime socket exists: ItemHoldPoint",
+    "PASS: runtime socket exists: LeftFootSocket",
+    "PASS: runtime socket exists: RightFootSocket",
+    "PASS: runtime socket exists: HeadwearSocket",
+    "PASS: equipped hat attaches to the animated Gold Fish head socket",
+    "PASS: presentation character retains the complete sanitized cosmetic loadout",
+    "GOLD FISH BAG MAN VALIDATION PASSED"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/goldfish_bag_character_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\goldfish_bag_character_validation.log"
+}

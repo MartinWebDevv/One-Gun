@@ -1,0 +1,10 @@
+{
+  "label": "version_3",
+  "code": 0,
+  "seconds": 2.73,
+  "errors": [],
+  "markers": [
+    "VERSION_MISMATCH_CLIENT_PASS reason=network_protocol",
+    "VERSION MISMATCH SMOKE: PASS"
+  ]
+}

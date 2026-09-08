@@ -86,6 +86,7 @@ var _pan_limit := PAN_RANGE
 var _swapping := false
 var _loading_path := ""
 var _loading_index := -1
+var _load_ticket := 0
 var _app_focused := true
 var _ambient_suspended := false
 
@@ -101,6 +102,11 @@ func setup(viewport: SubViewport, camera: Camera3D, fade_rect: ColorRect, menu_r
 		_maps = [{"scene_path": LOW_SPEC_PREVIEW_SCENE}]
 	else:
 		_maps = GAME_SETUP.MAPS
+		# Dedicated/headless sessions never need full arena previews. Keep the
+		# lightweight Low world available for renderer-independent lifecycle checks.
+		if DisplayServer.get_name() == "headless":
+			set_process(false)
+			return
 	if _maps.is_empty():
 		push_warning("MenuMapCycler: no maps registered in game_setup.MAPS")
 		return
@@ -136,25 +142,6 @@ func _process(delta: float) -> void:
 		return
 	if not _running():
 		return
-
-	# Poll the threaded load even before the first map exists.
-	if _loading_path != "" and not _swapping:
-		var status := ResourceLoader.load_threaded_get_status(_loading_path)
-		if status == ResourceLoader.THREAD_LOAD_LOADED:
-			var packed: PackedScene = ResourceLoader.load_threaded_get(_loading_path)
-			_loading_path = ""
-			_fade_swap(packed, _loading_index)
-		elif status == ResourceLoader.THREAD_LOAD_FAILED \
-				or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
-			var fallback: PackedScene = load(_loading_path) as PackedScene
-			var fallback_index := _loading_index
-			_loading_path = ""
-			if fallback != null:
-				_fade_swap(fallback, fallback_index)
-			else:
-				push_warning("MenuMapCycler: failed to load " \
-					+ str(_maps[fallback_index]["scene_path"]))
-				_view_timer = 0.0
 
 	if _current_map == null:
 		return
@@ -192,23 +179,21 @@ func _process(delta: float) -> void:
 			_begin_threaded_load((_current_index + 1) % _maps.size())
 
 func _begin_threaded_load(index: int) -> void:
-	var path := str(_maps[index]["scene_path"])
-	if not ResourceLoader.exists(path):
-		_view_timer = 0.0
-		return
-	# Already in the resource cache (e.g. cycling back to the map that loaded
-	# synchronously at menu open): threaded status reporting is unreliable for
-	# cached resources, and load() is instant here anyway — swap directly.
-	if ResourceLoader.has_cached(path):
-		var packed: PackedScene = load(path)
-		if packed != null:
-			_fade_swap(packed, index)
-		else:
-			_view_timer = 0.0
-		return
+	SceneLoadManager.cancel(_load_ticket)
 	_loading_index = index
-	_loading_path = path
-	ResourceLoader.load_threaded_request(path)
+	_loading_path = str(_maps[index]["scene_path"])
+	_load_ticket = SceneLoadManager.request_scene(_loading_path, _on_preview_loaded.bind(index))
+
+func _on_preview_loaded(packed: PackedScene, index: int) -> void:
+	_loading_path = ""
+	_load_ticket = 0
+	if packed != null:
+		_fade_swap(packed, index)
+	else:
+		_view_timer = 0.0
+
+func _exit_tree() -> void:
+	SceneLoadManager.cancel(_load_ticket)
 
 func _fade_swap(packed: PackedScene, index: int) -> void:
 	_swapping = true

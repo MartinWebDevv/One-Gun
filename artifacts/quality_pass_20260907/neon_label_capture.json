@@ -1,0 +1,23 @@
+{
+  "label": "neon_label_capture",
+  "code": 0,
+  "seconds": 7.49,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "NEON_LABEL_CAPTURE: PASS seven viewpoints"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/quality_pass_20260907/neon_labels.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\neon_label_capture.log"
+}

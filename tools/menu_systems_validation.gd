@@ -383,7 +383,7 @@ func _validate() -> void:
 			audio.set_ceremony_volume(float(before.get("ceremony_volume", 0.8)))
 		var alphabetical := MapRegistry.sorted_indices("alphabetical")
 		var newest := MapRegistry.sorted_indices("newest")
-		if alphabetical.is_empty() or newest.is_empty() or str(MapRegistry.MAPS[newest[0]]["name"]) != "Neon Circuit":
+		if alphabetical.is_empty() or newest.is_empty() or int(MapRegistry.MAPS[newest[0]].get("added_order", 0)) != int(MapRegistry.MAPS.map(func(entry): return int(entry.get("added_order", 0))).max()):
 			push_error("Menu validation: map sorting modes are incomplete")
 			failed = true
 		else:

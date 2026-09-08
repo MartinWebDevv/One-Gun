@@ -9,7 +9,7 @@ const ENV = {
   MATCHMAKER_PROFILE: "simple-example",
   MATCHMAKER_BEACONS: '{"Montreal":12.3}',
   GAME_VERSION: "0.0.4",
-  NETWORK_PROTOCOL: "2",
+  NETWORK_PROTOCOL: "3",
   GAME_PORT: "24545",
 };
 
@@ -46,7 +46,7 @@ test("queue capability hides the backend token and returns assigned UDP endpoint
     schema: 1,
     client_nonce: "0123456789abcdef0123456789abcdef",
     game_version: "0.0.4",
-    protocol: 2,
+    protocol: 3,
     build_id: "dev-test",
   }), ENV, 1000);
   assert.equal(created.status, 201);
@@ -102,7 +102,7 @@ test("invalid external mapping is never returned to the game", async (t) => {
     schema: 1,
     client_nonce: "fedcba9876543210fedcba9876543210",
     game_version: "0.0.4",
-    protocol: 2,
+    protocol: 3,
     build_id: "dev-test",
   }), ENV, 2000);
   const token = (await created.json()).queue_token;

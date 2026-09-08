@@ -1,0 +1,21 @@
+{
+  "label": "map_runtime_valid",
+  "code": 0,
+  "seconds": 201.66,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/deep_audit_20260906/map_runtime.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\map_runtime_valid.log"
+}

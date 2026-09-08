@@ -1,0 +1,28 @@
+{
+  "label": "social_system_validation",
+  "code": 0,
+  "seconds": 1.94,
+  "timeout": false,
+  "errors": [
+    "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "PASS: incoming requests expose Accept and Deny actions",
+    "PASS: lobby invitations expose Accept & Join and Deny actions",
+    "PASS: online Player Hub preserves its three destinations without duplicating Friends",
+    "PASS: separate Friends orb contains the blue mascot portrait and hover label",
+    "PASS: separate invitation toast exposes Accept and Deny controls",
+    "PASS: Friends-window Join emits one stable endpoint on the deferred join path",
+    "PASS: invite popup Accept emits one stable endpoint after its async receipt",
+    "SOCIAL SYSTEM VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/social_system_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\social_system_validation.log"
+}

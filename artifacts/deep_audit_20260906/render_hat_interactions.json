@@ -1,0 +1,23 @@
+{
+  "label": "render_hat_interactions",
+  "code": 0,
+  "seconds": 12.39,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "HAT_PREVIEW_INTERACTION_VALIDATION: PASS hats=12 models=8 angles=4 controller=1"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--script",
+    "res://tools/hat_preview_interaction_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_hat_interactions.log"
+}

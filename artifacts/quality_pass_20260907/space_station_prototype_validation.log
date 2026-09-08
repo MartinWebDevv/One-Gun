@@ -1,0 +1,30 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PASS: prototype scene loads
+PASS: preserved compact snapshot remains F6-playable
+PASS: preserved pre-asset Neon Circuit snapshot remains F6-playable
+PASS: Neon Circuit remains in the map rotation
+PASS: Neon Circuit does not use its dedicated thumbnail
+PASS: Neon Circuit lobby preview is not framed from inside the play area
+PASS: Neon Circuit thumbnail does not import as a texture
+PASS: Neon Circuit carries ten player spawns
+PASS: prototype carries four random-gun candidates
+PASS: prototype carries six melee supplies
+PASS: prototype carries four item supplies
+PASS: prototype carries three powerup supplies
+PASS: expanded arena carries four additional lane-cover props
+PASS: Neon Circuit arena identity layer is present
+PASS: curated external-asset art layer is present
+PASS: external model dressing remains visual-only and collision-free
+PASS: external art layer contains the curated station shell and props
+PASS: all ten spawns have visible arena entry pads
+PASS: Neon Circuit primitive dressing remains visual-only and collision-free
+PASS: color circuits and one-gun vault retain their arena identities
+PASS: single-room footprint supports up to ten players
+PASS: prototype navigation bake is non-empty
+PASS: Neon Circuit navigation map synchronizes
+PASS: all ten player spawns sit over baked navigation
+PASS: bots can path between all ten player spawns
+PASS: all rotated spawns keep movement camera-relative
+NEON_CIRCUIT_CAPTURE_SKIPPED_HEADLESS
+NEON_CIRCUIT_PROTOTYPE_VALIDATION failures=0

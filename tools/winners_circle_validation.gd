@@ -29,6 +29,7 @@ func _check(condition: bool, message: String) -> void:
 
 
 func _run() -> void:
+	root.size = Vector2i(1920, 1080)
 	await process_frame
 	var result_builder = load("res://winners_circle_match_result.gd")
 	var winners_circle_script = load("res://UI/winners_circle.gd")
@@ -115,6 +116,11 @@ func _run() -> void:
 
 	result["local_peer_id"] = 1
 	var circle = winners_circle_script.new()
+	var control_events := {"ready": [], "return": 0}
+	circle.ready_changed.connect(func(value: bool) -> void:
+		(control_events["ready"] as Array).append(value))
+	circle.force_return_requested.connect(func() -> void:
+		control_events["return"] = int(control_events["return"]) + 1)
 	var forfeit_result: Dictionary = result_builder.build_online(
 		{1: state[1]}, 1, true, "forfeit-validation",
 		"res://maps/test/ForestMap.tscn", 3,
@@ -231,14 +237,64 @@ func _run() -> void:
 	var original_time_scale := Engine.time_scale
 	Engine.time_scale = 20.0
 	await create_timer(10.40, true).timeout
+	# Forward+ may spend an extra render frame compiling the podium performers.
+	# Keep advancing the accelerated ceremony until its observable end state is
+	# present instead of assuming one exact wall-clock/render-frame boundary.
+	var ready_button := circle.find_child("ReadyButton", true, false) as Button
+	var ceremony_deadline_msec := Time.get_ticks_msec() + 5000
+	while Time.get_ticks_msec() < ceremony_deadline_msec:
+		var active_cinematic_stage: Node = circle.find_child(
+			"CinematicStage", true, false)
+		if active_cinematic_stage == null \
+				and results_interface.modulate.a >= 0.99 \
+				and ready_button != null \
+				and not ready_button.disabled \
+				and ready_button.has_focus():
+			break
+		await process_frame
 	Engine.time_scale = original_time_scale
 	await process_frame
 	_check(circle.find_child("CinematicStage", true, false) == null
 			and results_interface.modulate.a >= 0.99,
 		"the full cinematic finishes by revealing the results interface")
-	var ready_button := circle.find_child("ReadyButton", true, false) as Button
 	_check(ready_button != null and not ready_button.disabled and ready_button.has_focus(),
 		"the revealed results immediately focus an enabled Ready button")
+	# A losing local participant still owns an active SpectatorController behind
+	# this modal. Exercise real viewport clicks while that controller is present;
+	# its LMB/RMB cycling must not consume the Winners Circle controls first.
+	circle.set_ready_peers([3], [1, 2, 3])
+	var host_return_button := circle.find_child(
+		"HostReturnButton", true, false) as Button
+	_check(circle.is_in_group("modal_input_owner"),
+		"the Winners Circle claims exclusive modal input")
+	if DisplayServer.get_name() != "headless":
+		var previous_scene := current_scene
+		var spectator_world := Node3D.new()
+		spectator_world.name = "WinnersCircleInputWorld"
+		root.add_child(spectator_world)
+		current_scene = spectator_world
+		var background_spectator = load("res://spectator_controller.gd").new()
+		background_spectator.pure_online_spectator = true
+		spectator_world.add_child(background_spectator)
+		await process_frame
+		# Keep the real spectator on its click-to-cycle path after its deferred
+		# setup selects free camera in this actor-less validation scene.
+		background_spectator.set("_mode", 0)
+		await _push_mouse_click(ready_button)
+		await _push_mouse_click(host_return_button)
+		background_spectator.cleanup()
+		current_scene = previous_scene
+		spectator_world.queue_free()
+	else:
+		# The dummy display server does not route pointer events through GUI.
+		# Preserve signal-wiring coverage in the ordinary headless suite; the
+		# Forward+ run below exercises the real spectator conflict.
+		ready_button.button_pressed = true
+		host_return_button.pressed.emit()
+	_check((control_events["ready"] as Array) == [true],
+		"a real Ready click survives background spectator input")
+	_check(int(control_events["return"]) == 1,
+		"a real Return All click survives background spectator input")
 	_check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE,
 		"the Winners Circle keeps the pointer visible above live gameplay nodes")
 	_check(cinematic_camera.position.distance_to(
@@ -266,6 +322,33 @@ func _run() -> void:
 	else:
 		push_error("WINNERS CIRCLE VALIDATION FAILED: %d issue(s)" % _failures)
 		quit(1)
+
+
+func _push_mouse_click(button: Button) -> void:
+	if button == null:
+		return
+	var position := button.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = position
+	motion.global_position = position
+	button.get_viewport().push_input(motion, true)
+	await process_frame
+	var pressed := InputEventMouseButton.new()
+	pressed.button_index = MOUSE_BUTTON_LEFT
+	pressed.button_mask = MOUSE_BUTTON_MASK_LEFT
+	pressed.pressed = true
+	pressed.position = position
+	pressed.global_position = position
+	button.get_viewport().push_input(pressed, true)
+	await process_frame
+	var released := InputEventMouseButton.new()
+	released.button_index = MOUSE_BUTTON_LEFT
+	released.button_mask = 0
+	released.pressed = false
+	released.position = position
+	released.global_position = position
+	button.get_viewport().push_input(released, true)
+	await process_frame
 
 
 func _validate_new_character_performers(stage_scene: PackedScene) -> void:

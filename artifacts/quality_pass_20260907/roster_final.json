@@ -1,0 +1,21 @@
+{
+  "label": "roster_final",
+  "code": 0,
+  "seconds": 8.38,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/quality_pass_20260907/roster_capture.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\roster_final.log"
+}

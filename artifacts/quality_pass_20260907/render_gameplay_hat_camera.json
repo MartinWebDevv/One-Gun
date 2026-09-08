@@ -1,0 +1,23 @@
+{
+  "label": "render_gameplay_hat_camera",
+  "code": 0,
+  "seconds": 58.88,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "GAMEPLAY_HAT_CAMERA_VALIDATION: PASS hats=12 models=8 modes=2 captures=5"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/gameplay_hat_camera_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_gameplay_hat_camera.log"
+}

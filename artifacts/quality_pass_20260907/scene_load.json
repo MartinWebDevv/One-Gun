@@ -1,0 +1,19 @@
+{
+  "label": "scene_load",
+  "code": 0,
+  "seconds": 3.61,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "SCENE_LOAD_VALIDATION: PASS shared/cancel/missing/local-cancel"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/scene_load_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\scene_load.log"
+}

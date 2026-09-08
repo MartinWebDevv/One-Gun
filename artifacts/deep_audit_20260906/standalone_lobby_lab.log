@@ -1,0 +1,42 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+LAB PASS: engine uses only its default offline peer
+LAB PASS: standalone project registers zero autoloads
+LAB PASS: scene has no HTTP requests or multiplayer replication nodes
+LAB PASS: separate user-data namespace
+LAB PASS: three local light-trainer targets
+LAB PASS: player capsule matches live dimensions
+LAB PASS: normal third-person boom and FOV
+LAB PASS: Low is the default with 75 percent render scale
+LAB PASS: Low disables expensive optional effects
+LAB PASS: floor tier at radius 6.2 supports height -0.4
+LAB PASS: floor tier at radius 7.0 supports height -0.2
+LAB PASS: floor tier at radius 7.8 supports height 0.0
+LAB PASS: floor tier at radius 9.0 supports height 0.0
+LAB PASS: arrival doors open before the first movement route
+LAB PASS: real capsule can walk from arrival stairs into central pit
+LAB PASS: pit floor supports the pilot at minus 0.6 metres
+LAB PASS: pilot can climb concentric steps toward event terminal
+LAB PASS: outer wall blocks real player movement
+LAB PASS: dash moves the player and consumes a charge
+LAB PASS: station overlay suppresses movement
+LAB PASS: cancelled cosmetic preview rolls back
+LAB PASS: confirm keeps the mask only in the lab session
+LAB PASS: one pilot plus nine simulated guests respects ten-actor capacity
+LAB PASS: local setup clamps two humans plus eight bots
+LAB PASS: duplicate queue start is ignored
+LAB PASS: global ready shortcut accepts from inside locker
+LAB PASS: accepted departure leaves an unobstructed physical tunnel
+LAB PASS: departure ends at the local destination rehearsal
+LAB PASS: stale cancel input cannot dismiss the required return screen
+LAB PASS: return preserves party and confirmed mask
+LAB PASS: cancelled search cannot fire a late ready check
+LAB PASS: ready timeout returns safely home
+LAB PASS: departure countdown can be cancelled
+LAB PASS: light trainer scores an actual line-of-sight target ray
+LAB PASS: 40 departure-return rehearsals retain a stable node count
+LAB PASS: 40 cycles do not retain extra scene objects
+LAB PASS: all simulated visitors and their tween handles can be removed
+LAB PASS: five station create/free cycles release every scene node
+LAB PASS: station create/free memory growth stays below 4 MB after cached resources
+LAB RESULT: 39 checks, 0 failures; station memory delta 208780 bytes

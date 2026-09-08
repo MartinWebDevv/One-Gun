@@ -1,0 +1,15 @@
+{
+  "label": "online_lobby",
+  "code": 0,
+  "seconds": 20.27,
+  "errors": [
+    "ERROR: 23 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_LOBBY_PASS host",
+    "ONLINE_LOBBY_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_lobby.log"
+}

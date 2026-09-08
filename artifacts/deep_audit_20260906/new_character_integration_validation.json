@@ -1,0 +1,26 @@
+{
+  "label": "new_character_integration_validation",
+  "code": 0,
+  "seconds": 16.93,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PASS: mr_salt uses the shared fall state only while airborne",
+    "PASS: mr_salt respawn clears a stale fall pose locally and for network puppets",
+    "PASS: gameplay actor spawns with spooky_witch",
+    "PASS: gameplay actor retains spooky_witch cosmetics",
+    "PASS: gameplay actor starts spooky_witch in the shared idle animation",
+    "PASS: spooky_witch uses the shared fall state only while airborne",
+    "PASS: spooky_witch respawn clears a stale fall pose locally and for network puppets",
+    "NEW CHARACTER INTEGRATION VALIDATION PASSED models=5 animations=33"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/new_character_integration_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\new_character_integration_validation.log"
+}

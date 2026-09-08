@@ -1,0 +1,11 @@
+{
+  "label": "online_match",
+  "code": 0,
+  "seconds": 46.42,
+  "errors": [],
+  "markers": [
+    "ONLINE_SMOKE_PASS host",
+    "ONLINE_SMOKE_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_match.log"
+}

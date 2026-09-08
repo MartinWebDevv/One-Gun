@@ -58,6 +58,8 @@ var _cycle_timer := 0.0
 var _fade_tween: Tween = null
 var _swapping := false
 var _requested_index := -1
+var _load_ticket := 0
+var _load_generation := 0
 
 # ------------------------------------------------------------
 
@@ -158,6 +160,9 @@ func apply(mode: int, index: int) -> void:
 		_cycle_timer = MAP_VIEW_SECONDS
 
 func _show_random_mystery() -> void:
+	_load_generation += 1
+	SceneLoadManager.cancel(_load_ticket)
+	_load_ticket = 0
 	_cycling = false
 	_swapping = false
 	_requested_index = -1
@@ -207,23 +212,25 @@ func _fade_swap_to(index: int) -> void:
 	if index < 0 or index >= _maps.size():
 		return
 	_requested_index = index
-	if _current_map == null:
-		# First load: no fade, just show it.
-		_load_map(index)
-		return
 	if _swapping:
-		# Preserve the latest carousel request. The current transition completes,
-		# then immediately continues to the newest requested map.
 		return
 	_swapping = true
 	if _fade_tween != null and _fade_tween.is_valid():
 		_fade_tween.kill()
+	if _current_map == null:
+		_load_map(index)
+		return
 	_fade_tween = create_tween()
 	_fade_tween.tween_property(_fade_rect, "color:a", 1.0, FADE_HALF_TIME)
 	_fade_tween.tween_callback(_load_map.bind(index))
+
+func _reveal_preview() -> void:
+	_fade_tween = create_tween()
 	_fade_tween.tween_property(_fade_rect, "color:a", 0.0, FADE_HALF_TIME)
 	_fade_tween.tween_callback(_finish_swap)
 
+func _exit_tree() -> void:
+	SceneLoadManager.cancel(_load_ticket)
 
 func _finish_swap() -> void:
 	_swapping = false
@@ -252,8 +259,19 @@ func _load_map(index: int) -> void:
 		_apply_orbit_camera_framing(headless_data)
 		_status.visible = false
 		map_shown.emit(index)
+		_finish_swap()
 		return
-	var packed := load(path) as PackedScene
+	_load_generation += 1
+	SceneLoadManager.cancel(_load_ticket)
+	_load_ticket = SceneLoadManager.request_scene(path, _on_map_loaded.bind(index, _load_generation))
+
+func _on_map_loaded(packed: PackedScene, index: int, generation: int) -> void:
+	if generation != _load_generation:
+		return
+	_load_ticket = 0
+	if _requested_index >= 0 and _requested_index != index:
+		_load_map(_requested_index)
+		return
 	if packed == null:
 		_fail_map_load(index, "The map scene could not be loaded.")
 		return
@@ -291,6 +309,7 @@ func _load_map(index: int) -> void:
 	_apply_orbit_camera_framing(map_data)
 	_status.visible = false
 	map_shown.emit(index)
+	_reveal_preview()
 
 
 func _apply_orbit_camera_framing(map_data: Dictionary) -> void:
@@ -315,6 +334,7 @@ func _fail_map_load(index: int, reason: String) -> void:
 	_status.visible = true
 	_status.show_unavailable("PREVIEW UNAVAILABLE", reason)
 	map_failed.emit(index, reason)
+	_reveal_preview()
 
 
 func _clear_current_map() -> void:

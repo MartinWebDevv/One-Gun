@@ -223,7 +223,7 @@ func _show_browser(refresh := true) -> void:
 	filters.add_child(_search_field)
 	var privacy_filter := OneGunUI.make_dropdown(PackedStringArray(["ALL DISCOVERABLE", "PUBLIC"]))
 	privacy_filter.disabled = true
-	privacy_filter.tooltip_text = "Private lobbies are intentionally absent from discovery; use Join by Code."
+	privacy_filter.tooltip_text = "Unlisted lobbies are hidden from the browser. Join by code or address."
 	filters.add_child(privacy_filter)
 	var mode_filter := OneGunUI.make_dropdown(PackedStringArray(["ONE GUN"]))
 	mode_filter.disabled = true
@@ -332,7 +332,7 @@ func _render_lobbies() -> void:
 		_rows_box.visible = false
 		_browser_state.visible = true
 		if _lobbies.is_empty():
-			_browser_state.show_empty("NO PUBLIC LOBBIES FOUND", "Host one now, refresh, or use Join by Code for a private lobby.")
+			_browser_state.show_empty("NO PUBLIC LOBBIES FOUND", "Host one now, refresh, or use Join by Code for an unlisted lobby.")
 		else:
 			_browser_state.show_empty("NO MATCHING LOBBIES", "Clear the search field or try a different lobby name.")
 	else:
@@ -391,7 +391,7 @@ func _quick_join() -> void:
 	if _browser_state != null:
 		_browser_state.visible = true
 		_rows_box.visible = false
-		_browser_state.show_empty("NO JOINABLE LOBBY", "Refresh, host a lobby, or join a private lobby by code.")
+		_browser_state.show_empty("NO JOINABLE LOBBY", "Refresh, host a lobby, or join an unlisted lobby by code.")
 
 
 func _join_selected() -> void:
@@ -426,11 +426,11 @@ func _show_host() -> void:
 	_host_error = OneGunInlineError.new()
 	_page_root.add_child(_host_error)
 
-	_add_form_heading("PRIVACY", "Public lobbies appear in the browser. Private lobbies answer only to their share code.")
+	_add_form_heading("PRIVACY", "Public lobbies appear in the browser. Unlisted lobbies are hidden; anyone with their code or address can join.")
 	var privacy_row := HBoxContainer.new()
 	privacy_row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	_page_root.add_child(privacy_row)
-	for option in [["public", "PUBLIC"], ["friends", "FRIENDS ONLY"], ["private", "PRIVATE"]]:
+	for option in [["public", "PUBLIC"], ["friends", "FRIENDS ONLY"], ["private", "UNLISTED"]]:
 		var privacy_button := OneGunButton.new()
 		privacy_button.text = option[1]
 		privacy_button.variant = "navy"
@@ -470,7 +470,7 @@ func _show_host() -> void:
 	_private_code_section = VBoxContainer.new()
 	_private_code_section.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	_page_root.add_child(_private_code_section)
-	_private_code_section.add_child(OneGunUI.make_label("PRIVATE SHARE CODE", OneGunUI.TEXT_S, "gold", true))
+	_private_code_section.add_child(OneGunUI.make_label("UNLISTED SHARE CODE", OneGunUI.TEXT_S, "gold", true))
 	var code_row := HBoxContainer.new()
 	code_row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	_private_code_section.add_child(code_row)
@@ -480,7 +480,7 @@ func _show_host() -> void:
 	code_row.add_child(_host_code)
 	var generate := _make_button("GENERATE", "navy", func() -> void: _host_code.text = _random_code())
 	code_row.add_child(generate)
-	var code_help := OneGunUI.make_label("Only players on your Tailscale network can use this private lobby code.", OneGunUI.TEXT_XS, "muted")
+	var code_help := OneGunUI.make_label("Only players on your Tailscale network can use this unlisted lobby code.", OneGunUI.TEXT_XS, "muted")
 	code_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_private_code_section.add_child(code_help)
 
@@ -532,7 +532,7 @@ func _host_lobby() -> void:
 		return
 	var share_code := _clean_code(_host_code.text) if _host_privacy == "private" else _random_code()
 	if _host_privacy == "private" and share_code.length() < 4:
-		_host_error.show_error("Private share codes must contain 4–12 supported characters.")
+		_host_error.show_error("Share codes must contain 4–12 supported characters.")
 		_host_code.grab_focus()
 		return
 	_busy = true
@@ -551,7 +551,7 @@ func _show_code() -> void:
 	_page = Page.CODE
 	_busy = false
 	_clear_page()
-	_build_header("JOIN BY CODE", "PRIVATE ENTRY")
+	_build_header("JOIN BY CODE", "UNLISTED ENTRY")
 	_add_form_heading("LOBBY CODE", "Paste a private code, direct Tailscale address, or server hostname with its public port.")
 	_code_field = _make_line_edit("LOBBY CODE OR SERVER:PORT", 128)
 	_code_field.name = "JoinByCode"
@@ -574,7 +574,7 @@ func _show_code() -> void:
 	summary_column.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	summary.get_content().add_child(summary_column)
 	summary_column.add_child(OneGunUI.make_heading("SECURE DISCOVERY", OneGunUI.TEXT_L, "purple"))
-	var explanation := OneGunUI.make_label("Only players on your Tailscale network can use this private lobby code.", OneGunUI.TEXT_S, "muted")
+	var explanation := OneGunUI.make_label("Only players on your Tailscale network can use this unlisted lobby code.", OneGunUI.TEXT_S, "muted")
 	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	explanation.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	summary_column.add_child(explanation)

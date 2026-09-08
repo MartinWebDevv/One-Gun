@@ -164,6 +164,9 @@ func _detach_and_run() -> void:
 	if role == "controller":
 		await get_tree().create_timer(0.75).timeout
 		NetworkManager.host_return_everyone_to_lobby()
+		# Reproduce a busy client that cannot process suspension within 150ms.
+		var return_stall := OS.get_environment("ONEGUN_RETURN_STALL_MS").to_int()
+		if return_stall > 0: OS.delay_msec(mini(return_stall, 1000))
 	if not await _wait_until(_returned_to_lobby):
 		_fail("dedicated session did not return to its persistent lobby")
 		return

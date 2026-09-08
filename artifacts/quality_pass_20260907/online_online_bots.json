@@ -1,0 +1,13 @@
+{
+  "label": "online_online_bots",
+  "code": 0,
+  "seconds": 18.31,
+  "errors": [
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_BOTS_PASS host",
+    "ONLINE_BOTS_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_online_bots.log"
+}

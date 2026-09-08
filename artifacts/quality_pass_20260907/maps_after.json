@@ -1,0 +1,23 @@
+{
+  "label": "maps_after",
+  "code": 0,
+  "seconds": 199.44,
+  "timeout": false,
+  "errors": [
+    "ERROR: Error calling from signal 'player_disarmed' to callable: 'VBoxContainer(kill_feed.gd)::_on_player_disarmed': Cannot convert argument 3 from Nil to String."
+  ],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/quality_pass_20260907/map_runtime.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\maps_after.log"
+}

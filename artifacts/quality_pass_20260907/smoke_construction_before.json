@@ -1,0 +1,23 @@
+{
+  "label": "smoke_construction_before",
+  "code": 0,
+  "seconds": 15.66,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "SMOKE_SPAWN_PROFILE [{\"construction_ms\":87.623,\"max_ms\":241.839,\"p95_ms\":2.176,\"preprocess\":3.2},{\"construction_ms\":26.36,\"max_ms\":51.555,\"p95_ms\":1.811,\"preprocess\":0.0},{\"construction_ms\":23.748,\"max_ms\":46.881,\"p95_ms\":1.659,\"preprocess\":3.2},{\"construction_ms\":26.674,\"max_ms\":48.627,\"p95_ms\":1.71,\"preprocess\":0.0}]"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/quality_pass_20260907/smoke_profile.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\smoke_construction_before.log"
+}

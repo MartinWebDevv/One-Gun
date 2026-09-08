@@ -27,6 +27,7 @@ var practice_mode := false
 
 func _ready() -> void:
 	layer = 10
+	add_child(preload("res://connection_status.gd").new())
 
 	match_hud = Control.new()
 	match_hud.name = "MatchHUD"

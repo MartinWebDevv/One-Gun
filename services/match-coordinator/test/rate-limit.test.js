@@ -15,7 +15,7 @@ test("queue creation rate key cannot be bypassed by rotating client nonce", asyn
     MATCHMAKER_PROFILE: "simple-example",
     MATCHMAKER_BEACONS: '{"Montreal":12.3}',
     GAME_VERSION: "0.0.4",
-    NETWORK_PROTOCOL: "2",
+    NETWORK_PROTOCOL: "3",
     GAME_PORT: "24545",
     QUEUE_RATE_LIMITER: {
       async limit({ key }) { keys.push(key); return { success: true }; },
@@ -29,7 +29,7 @@ test("queue creation rate key cannot be bypassed by rotating client nonce", asyn
         schema: 1,
         client_nonce: nonce,
         game_version: "0.0.4",
-        protocol: 2,
+        protocol: 3,
         build_id: "dev-test",
       }),
     }), env, 1000);

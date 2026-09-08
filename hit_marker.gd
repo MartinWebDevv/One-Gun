@@ -35,10 +35,12 @@ func show_feedback(event_kind: String) -> void:
 	if not incoming_elimination and not bool(PlayerPrefs.get_setting("hit_marker_enabled")): return
 	_event_kind = event_kind
 	_elimination = incoming_elimination
-	_duration = float(PlayerPrefs.get_setting("elimination_marker_duration" if _elimination else "hit_marker_duration"))
+	_duration = 0.65 if event_kind == "gun_obstructed" else float(PlayerPrefs.get_setting("elimination_marker_duration" if _elimination else "hit_marker_duration"))
 	_life = 1.0
 	visible = true
 	queue_redraw()
+	if event_kind == "gun_obstructed":
+		return
 	var sound_key := "elimination_marker_sound" if _elimination else "hit_marker_sound"
 	if bool(PlayerPrefs.get_setting(sound_key)):
 		var volume_key := "elimination_marker_volume" if _elimination else "hit_marker_volume"
@@ -55,6 +57,12 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if _life <= 0.0: return
 	var center := size * 0.5
+	if _event_kind == "gun_obstructed":
+		var blocked_color := Color(1.0, 0.72, 0.25, minf(_life * 2.5, 1.0))
+		var font := ThemeDB.fallback_font
+		var width := font.get_string_size("COVER", HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		draw_string(font, center + Vector2(-width * 0.5, 32), "COVER", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, blocked_color)
+		return
 	var size_key := "elimination_marker_size" if _elimination else "hit_marker_size"
 	var opacity_key := "elimination_marker_opacity" if _elimination else "hit_marker_opacity"
 	var style_key := "elimination_marker_style" if _elimination else "hit_marker_style"

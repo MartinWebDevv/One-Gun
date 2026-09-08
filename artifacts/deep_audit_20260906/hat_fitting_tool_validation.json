@@ -1,0 +1,19 @@
+{
+  "label": "hat_fitting_tool_validation",
+  "code": 0,
+  "seconds": 5.54,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "HAT_FITTING_TOOL_VALIDATION: PASS hats=12 models=8 previews=96"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/hat_fitting_tool_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\hat_fitting_tool_validation.log"
+}

@@ -66,6 +66,11 @@ var _next_human_actor_id := 2
 # action is Start/Force Start; other players explicitly toggle their state.
 var lobby_ready: Dictionary = {}
 var pending_map_path: String = ""
+var _match_scene_ticket := 0
+var _match_scene_generation := 0
+var _return_barrier_id := 0
+var _return_barrier_pending: Dictionary = {}
+var _returning_to_lobby := false
 var pending_match_id := 0
 var _online := false
 var _match_ready_peers: Dictionary = {}
@@ -612,6 +617,10 @@ func host_return_everyone_to_lobby() -> void:
 		if can_manage_lobby():
 			_request_controller_return_to_lobby.rpc_id(1)
 		return
+	if _returning_to_lobby:
+		return
+	_returning_to_lobby = true
+	_cancel_match_scene_load()
 	for peer_id in peers:
 		peers[peer_id]["role"] = "lobby"
 	match_participant_peers.clear()
@@ -622,11 +631,32 @@ func host_return_everyone_to_lobby() -> void:
 
 
 func _return_everyone_to_lobby_after_despawn() -> void:
-	# Hand client-owned movement synchronizers back to the server before actors
-	# are removed. Otherwise a final client delta can arrive after the matching
-	# NetSync node has been despawned and produce stale replication-cache errors.
-	_net_suspend_match_replication.rpc()
+	# A fixed sleep can expire before a busy client even handles suspension.
+	# Wait for each connected peer to stop its owned movement synchronizers.
+	_return_barrier_id += 1
+	var barrier := _return_barrier_id
+	var connection := _connection_attempt
+	_return_barrier_pending.clear()
+	for peer_id in multiplayer.get_peers():
+		_return_barrier_pending[int(peer_id)] = true
+	_net_suspend_match_replication.rpc(barrier)
+	var deadline := Time.get_ticks_msec() + 5000
+	while not _return_barrier_pending.is_empty() and Time.get_ticks_msec() < deadline:
+		if connection != _connection_attempt or not is_host():
+			return
+		for peer_id in _return_barrier_pending.keys():
+			if peer_id not in multiplayer.get_peers():
+				_return_barrier_pending.erase(peer_id)
+		await get_tree().process_frame
+	if connection != _connection_attempt or not is_host():
+		return
+	# A non-responsive peer must not keep sending into actors being removed.
+	for peer_id in _return_barrier_pending.keys():
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+	_return_barrier_pending.clear()
 	await get_tree().create_timer(0.15).timeout
+	if connection != _connection_attempt or not is_host():
+		return
 	# Let MultiplayerSpawner send valid despawns while every peer still has
 	# the match scene and its replication cache. The lobby-change RPC follows
 	# on the next frame, after queued actors have left the tree.
@@ -636,23 +666,37 @@ func _return_everyone_to_lobby_after_despawn() -> void:
 		for actor in net_players.get_children():
 			actor.free()
 		await get_tree().process_frame
+	_returning_to_lobby = false
 	_net_return_everyone_to_lobby.rpc()
 
 
 @rpc("authority", "reliable", "call_local")
-func _net_suspend_match_replication() -> void:
+func _net_suspend_match_replication(barrier: int = -1) -> void:
+	_cancel_match_scene_load()
 	var scene := get_tree().current_scene
 	var net_players := scene.get_node_or_null("NetPlayers") if scene != null else null
-	if net_players == null:
-		return
-	for actor in net_players.get_children():
-		var sync := actor.get_node_or_null("NetSync") as MultiplayerSynchronizer
-		if sync == null or not sync.is_multiplayer_authority():
-			continue
-		for peer_id in multiplayer.get_peers():
-			sync.set_visibility_for(int(peer_id), false)
-			sync.update_visibility(int(peer_id))
+	if net_players != null:
+		for actor in net_players.get_children():
+			if barrier < 0 and int(actor.get("actor_id")) != local_actor_id():
+				continue
+			var sync := actor.get_node_or_null("NetSync") as MultiplayerSynchronizer
+			if sync == null or not sync.is_multiplayer_authority():
+				continue
+			# update_visibility otherwise reruns the gameplay filter and turns
+			# publication back on (peer 1 is normally always visible).
+			sync.set_meta("replication_suspended", true)
+			sync.remove_visibility_filter(Callable(self, "is_gameplay_replication_visible_to_peer"))
+			for peer_id in multiplayer.get_peers():
+				sync.set_visibility_for(int(peer_id), false)
+				sync.update_visibility(int(peer_id))
+	if not multiplayer.is_server():
+		_confirm_replication_suspended.rpc_id(1, barrier)
 
+
+@rpc("any_peer", "reliable")
+func _confirm_replication_suspended(barrier: int) -> void:
+	if is_host() and _returning_to_lobby and barrier == _return_barrier_id:
+		_return_barrier_pending.erase(multiplayer.get_remote_sender_id())
 
 @rpc("any_peer", "reliable")
 func _request_controller_return_to_lobby() -> void:
@@ -661,6 +705,7 @@ func _request_controller_return_to_lobby() -> void:
 
 @rpc("authority", "reliable", "call_local")
 func _net_return_everyone_to_lobby() -> void:
+	_cancel_match_scene_load()
 	lobby_in_progress = false
 	local_match_role = "server" if is_dedicated_server() else "lobby"
 	set_accepting_new_peers(true)
@@ -702,6 +747,9 @@ func _return_local_to_main_menu() -> void:
 	get_tree().change_scene_to_file("res://main_menu.tscn")
 
 func _reset_session(emit_change: bool) -> void:
+	_returning_to_lobby = false
+	_return_barrier_pending.clear()
+	_cancel_match_scene_load()
 	_connection_attempt += 1
 	_discovery_attempt += 1
 	_joining = false
@@ -992,7 +1040,10 @@ func set_local_appearance(requested_skin_id: String,
 			peers[id]["skin_id"] = safe_skin_id
 			peers[id]["model_id"] = safe_model_id
 			lobby_changed.emit()
-		_request_appearance_change.rpc_id(1, safe_skin_id, safe_model_id)
+		if multiplayer.multiplayer_peer != null \
+				and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED \
+				and peers.has(id):
+			_request_appearance_change.rpc_id(1, safe_skin_id, safe_model_id)
 	return true
 
 func set_local_name(new_name: String) -> bool:
@@ -1890,7 +1941,8 @@ func _refresh_gameplay_replication_visibility(peer_id: int = 0) -> void:
 	for actor in net_players.get_children():
 		for sync_name in ["SpawnVisibility", "NetSync"]:
 			var synchronizer := actor.get_node_or_null(sync_name) as MultiplayerSynchronizer
-			if synchronizer == null or not synchronizer.is_multiplayer_authority():
+			if synchronizer == null or not synchronizer.is_multiplayer_authority() \
+					or bool(synchronizer.get_meta("replication_suspended", false)):
 				continue
 			if peer_id > 0:
 				var actor_visible := is_gameplay_replication_visible_to_peer(peer_id)
@@ -2078,10 +2130,7 @@ func _start_game(map_path: String, match_id: int, spectator: bool = false) -> vo
 		_match_ready_peers.clear()
 	local_match_role = "server" if is_dedicated_server() else ("spectator" if spectator else "participant")
 	set_accepting_new_peers(true)
-	var error := get_tree().change_scene_to_file(map_path)
-	if error != OK:
-		_ensure_load_recovery_overlay()
-		report_match_scene_failed("Could not load map resource (error %d)." % error, spectator)
+	_queue_match_scene_load(map_path, match_id, spectator)
 
 # Host-only ENet admission gate. Matches currently keep this open because late
 # peers enter the waiting role; visibility and match-RPC recipient filtering
@@ -2197,11 +2246,32 @@ func _retry_match_load(map_path: String, match_id: int) -> void:
 	pending_map_path = map_path
 	pending_match_id = match_id
 	local_match_role = "participant"
-	var error := get_tree().change_scene_to_file(map_path)
-	if error != OK:
-		_ensure_load_recovery_overlay()
-		report_match_scene_failed("Retry could not load map resource (error %d)." % error)
+	_queue_match_scene_load(map_path, match_id, false)
 
+
+func _cancel_match_scene_load() -> void:
+	_match_scene_generation += 1
+	SceneLoadManager.cancel(_match_scene_ticket)
+	_match_scene_ticket = 0
+
+func _queue_match_scene_load(path: String, match_id: int, spectator: bool) -> void:
+	_cancel_match_scene_load()
+	_ensure_load_recovery_overlay()
+	_match_scene_ticket = SceneLoadManager.request_scene(path,
+		_finish_match_scene_load.bind(match_id, _connection_attempt, _match_scene_generation, spectator))
+
+func _finish_match_scene_load(packed: PackedScene, match_id: int,
+		connection: int, generation: int, spectator: bool) -> void:
+	if not is_online() or connection != _connection_attempt \
+			or generation != _match_scene_generation or match_id != pending_match_id:
+		return
+	_match_scene_ticket = 0
+	if packed == null:
+		report_match_scene_failed("The selected map could not be loaded. Retry or return to the lobby.", spectator)
+		return
+	var error := get_tree().change_scene_to_packed(packed)
+	if error != OK:
+		report_match_scene_failed("Could not open the loaded map (error %d)." % error, spectator)
 
 func _ensure_load_recovery_overlay() -> void:
 	var scene := get_tree().current_scene
@@ -2331,6 +2401,7 @@ func _set_peer_actor_replication(peer_id: int, visible: bool) -> void:
 
 
 func return_spectator_to_waiting_room() -> void:
+	_cancel_match_scene_load()
 	if not is_online() or local_match_role != "spectator":
 		return
 	local_match_role = "waiting"

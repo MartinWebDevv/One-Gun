@@ -1,0 +1,35 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1963] hosting 'Player 1's Lobby' on UDP 24646 as 'Player 1'
+[ONLINE 2580] peer 933989306 connected
+[ONLINE 2870] peer 933989306 admitted | client build itch-380e65c
+[ONLINE 2873] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2876] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9280] match 1 ready peer 1 (1/2)
+[ONLINE 9392] match 1 ready peer 933989306 (2/2)
+[ONLINE] gun pickup rejected for actor 1: distance 10.01 > 7.00
+[ONLINE 25347] peer 933989306 disconnected
+
+ERROR: ONLINE_SMOKE_FAIL host: round reset did not restore gun, melee weapon, and players
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tools/online_smoke_driver.gd:1276)
+       [1] _run_host_checks (res://tools/online_smoke_driver.gd:987)
+       [2] _wait_for (res://tools/online_smoke_driver.gd:1270)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1864] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1875] connected to host as peer 933989306
+[ONLINE 1878] peer 1 connected
+[ONLINE 2186] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 8381] reporting match 1 scene ready
+
+ERROR: ONLINE_SMOKE_FAIL client: online HUD did not restore the living client display
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _fail (res://tools/online_smoke_driver.gd:1276)
+       [1] _run_client_checks (res://tools/online_smoke_driver.gd:1198)
+WARNING: 2 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+

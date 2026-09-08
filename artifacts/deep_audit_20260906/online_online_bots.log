@@ -1,0 +1,23 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1707] hosting 'Smoke Client's Lobby' on UDP 24646 as 'Smoke Client'
+[ONLINE 2275] peer 310507185 connected
+[ONLINE 2578] peer 310507185 admitted | client build itch-380e65c
+[ONLINE 2580] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2582] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 8238] match 1 ready peer 1 (1/2)
+[ONLINE 8344] match 1 ready peer 310507185 (2/2)
+[ONLINE 16607] peer 310507185 disconnected
+ONLINE_BOTS_PASS host
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1688] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1697] connected to host as peer 310507185
+[ONLINE 1699] peer 1 connected
+[ONLINE 2022] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 7679] reporting match 1 scene ready
+ONLINE_BOTS_PASS client
+
+

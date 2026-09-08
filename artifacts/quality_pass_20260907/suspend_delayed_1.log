@@ -1,0 +1,84 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 3
+[DEDICATED] Listening on UDP 24756 | max players 4 | lobby 'Dedicated-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[ONLINE 2245] peer 1138676279 connected
+[ONLINE 2542] peer 1138676279 admitted | client build itch-380e65c
+[DEDICATED] Peer 1138676279 became lobby controller.
+[ONLINE 2721] peer 1284420187 connected
+[ONLINE 3018] peer 1284420187 admitted | client build itch-380e65c
+[ONLINE 6089] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 6095] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 10816] match 1 ready peer 1284420187 (1/2)
+[ONLINE 10818] match 1 ready peer 1138676279 (2/2)
+[DEDICATED ACTION] gun pickup requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun fire requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun drop requested by actor 1 (epoch 1)
+[DEDICATED ACTION] melee pickup requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee swing requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee hit confirmed actor 1 -> actor 2 (candidate 0, epoch 1)
+[DEDICATED ACTION] melee drop requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item drop requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 1 (epoch 1)
+[DEDICATED ACTION] item throw requested by actor 1 for item 1 (epoch 1)
+[DEDICATED] Lobby runtime restored; ENet remains active on UDP 24756.
+[ONLINE 27261] peer 1284420187 disconnected
+[ONLINE 27337] peer 1138676279 disconnected
+[DEDICATED] Lobby has no controller; waiting for a player.
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1414] joining 127.0.0.1:24756 (attempt 2)
+[ONLINE 1425] connected to host as peer 1138676279
+[ONLINE 1427] peer 1 connected
+[ONLINE 1915] peer 1284420187 connected
+[ONLINE 5289] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9904] reporting match 1 scene ready
+DEDICATED_SERVER_PASS controller
+DEDICATED_MOVEMENT_SYNC_PASS controller
+DEDICATED_INPUT_PICKUP_PASS controller
+DEDICATED_INPUT_FIRE_PASS controller
+DEDICATED_INPUT_DROP_PASS controller
+DEDICATED_MELEE_PICKUP_PASS controller
+DEDICATED_MELEE_SWING_PASS controller
+DEDICATED_MELEE_HIT_PASS controller
+DEDICATED_MELEE_DROP_PASS controller
+DEDICATED_ITEM_PICKUP_PASS controller
+DEDICATED_ITEM_DROP_PASS controller
+DEDICATED_ITEM_THROW_PASS controller
+DEDICATED_RETURN_PASS controller
+[ONLINE 26458] peer 1284420187 disconnected
+[ONLINE 26522] disconnect requested
+
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1375] joining 127.0.0.1:24756 (attempt 2)
+[ONLINE 1387] connected to host as peer 1284420187
+[ONLINE 1389] peer 1 connected
+[ONLINE 1401] peer 1138676279 connected
+[ONLINE 4775] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9381] reporting match 1 scene ready
+DEDICATED_SERVER_PASS guest
+DEDICATED_MOVEMENT_SYNC_PASS guest
+DEDICATED_INPUT_PICKUP_PASS guest
+DEDICATED_INPUT_FIRE_PASS guest
+DEDICATED_INPUT_DROP_PASS guest
+DEDICATED_MELEE_PICKUP_PASS guest
+DEDICATED_MELEE_SWING_PASS guest
+DEDICATED_MELEE_HIT_PASS guest
+DEDICATED_MELEE_DROP_PASS guest
+DEDICATED_ITEM_PICKUP_PASS guest
+DEDICATED_ITEM_DROP_PASS guest
+DEDICATED_ITEM_THROW_PASS guest
+DEDICATED_RETURN_PASS guest
+[ONLINE 25934] disconnect requested
+
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+

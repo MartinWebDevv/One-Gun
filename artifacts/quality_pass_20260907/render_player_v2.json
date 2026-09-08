@@ -1,0 +1,23 @@
+{
+  "label": "render_player_v2",
+  "code": 0,
+  "seconds": 22.9,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PLAYER_V2_RENDER_VALIDATION_OK output=D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\player_v2_captures"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/player_v2_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_player_v2.log"
+}

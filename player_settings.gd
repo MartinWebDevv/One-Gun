@@ -381,6 +381,8 @@ func _build_accessibility_page() -> void:
 	_add_toggle(column, "Reduce Flashing", "reduce_flashing")
 	_add_toggle(column, "Reduced Motion", "reduced_motion")
 	_add_toggle(column, "Motion Blur", "motion_blur")
+	_add_section(column, "ONLINE HUD")
+	_add_toggle(column, "Connection Status / Ping", "network_status_enabled")
 	_add_section(column, "PROTECTION ICONS")
 	_add_slider(column, "Icon Size", "protection_icon_size", 0.5, 2.0, 0.05, true)
 	_add_color_dropdown(column, "Extra Life Color", "extra_life_icon_color")

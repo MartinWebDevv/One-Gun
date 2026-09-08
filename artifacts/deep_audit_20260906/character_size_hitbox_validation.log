@@ -1,0 +1,46 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+CHARACTER_SIZE model=male bounds=[P: (-0.905984, -1.138241, -0.786671), S: (1.62002, 2.85992, 1.882732)] bottom=-1.1382 top=1.7217
+ERROR: CHARACTER SIZE/HITBOX: female measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=female bounds=[P: (-1.172104, -1.020521, -1.106922), S: (2.38352, 2.450278, 1.799872)] bottom=-1.0205 top=1.4298
+ERROR: CHARACTER SIZE/HITBOX: goldfish_bag_man measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=goldfish_bag_man bounds=[P: (-0.529499, -1.08546, -1.339319), S: (1.864982, 2.650325, 2.157453)] bottom=-1.0855 top=1.5649
+ERROR: CHARACTER SIZE/HITBOX: eye_wizard measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=eye_wizard bounds=[P: (-0.620949, -1.088358, -1.763983), S: (2.331818, 2.640378, 2.844544)] bottom=-1.0884 top=1.5520
+ERROR: CHARACTER SIZE/HITBOX: mr_mushroom measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=mr_mushroom bounds=[P: (-0.336767, -1.086889, -1.379142), S: (1.757511, 2.64305, 2.052671)] bottom=-1.0869 top=1.5562
+ERROR: CHARACTER SIZE/HITBOX: mr_poop measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=mr_poop bounds=[P: (-1.231517, -1.091826, -2.174868), S: (3.315471, 2.661018, 3.721966)] bottom=-1.0918 top=1.5692
+ERROR: CHARACTER SIZE/HITBOX: mr_salt measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=mr_salt bounds=[P: (-0.662623, -1.085794, -1.730284), S: (2.450638, 2.642811, 2.776558)] bottom=-1.0858 top=1.5570
+ERROR: CHARACTER SIZE/HITBOX: spooky_witch measured bounds drifted from its presentation envelope
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _check (res://tools/character_size_hitbox_validation.gd:201)
+       [1] _run (res://tools/character_size_hitbox_validation.gd:67)
+CHARACTER_SIZE model=spooky_witch bounds=[P: (-0.506635, -1.08645, -1.3282), S: (1.826602, 2.652677, 2.187625)] bottom=-1.0864 top=1.5662
+CHARACTER_SIZE_BASELINE height=2.6551 bottom=-1.0794 capsule_bottom=-1.0900 capsule_top=1.2367

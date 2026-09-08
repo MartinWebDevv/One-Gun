@@ -1,0 +1,88 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 3
+[DEDICATED] Listening on UDP 24756 | max players 4 | lobby 'Dedicated-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[ONLINE 2122] peer 1643365447 connected
+[ONLINE 2419] peer 1643365447 admitted | client build itch-380e65c
+[DEDICATED] Peer 1643365447 became lobby controller.
+[ONLINE 2681] peer 1449233365 connected
+[ONLINE 2977] peer 1449233365 admitted | client build itch-380e65c
+[ONLINE 6048] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 6054] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 10452] match 1 ready peer 1643365447 (1/2)
+[ONLINE 10507] match 1 ready peer 1449233365 (2/2)
+[DEDICATED ACTION] gun pickup requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun fire requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun drop requested by actor 1 (epoch 1)
+[DEDICATED ACTION] melee pickup requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee swing requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee hit confirmed actor 1 -> actor 2 (candidate 0, epoch 1)
+[DEDICATED ACTION] melee drop requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item drop requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 1 (epoch 1)
+[DEDICATED ACTION] item throw requested by actor 1 for item 1 (epoch 1)
+[DEDICATED] Lobby runtime restored; ENet remains active on UDP 24756.
+[ONLINE 26660] peer 1449233365 disconnected
+[ONLINE 26743] peer 1643365447 disconnected
+[DEDICATED] Lobby has no controller; waiting for a player.
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1298] joining 127.0.0.1:24756 (attempt 2)
+[ONLINE 1308] connected to host as peer 1643365447
+[ONLINE 1310] peer 1 connected
+[ONLINE 1881] peer 1449233365 connected
+[ONLINE 5255] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9641] reporting match 1 scene ready
+DEDICATED_SERVER_PASS controller
+DEDICATED_MOVEMENT_SYNC_PASS controller
+DEDICATED_INPUT_PICKUP_PASS controller
+DEDICATED_INPUT_FIRE_PASS controller
+DEDICATED_INPUT_DROP_PASS controller
+DEDICATED_MELEE_PICKUP_PASS controller
+DEDICATED_MELEE_SWING_PASS controller
+DEDICATED_MELEE_HIT_PASS controller
+DEDICATED_MELEE_DROP_PASS controller
+DEDICATED_ITEM_PICKUP_PASS controller
+DEDICATED_ITEM_DROP_PASS controller
+DEDICATED_ITEM_THROW_PASS controller
+DEDICATED_RETURN_PASS controller
+[ONLINE 25863] peer 1449233365 disconnected
+[ONLINE 25934] disconnect requested
+
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1341] joining 127.0.0.1:24756 (attempt 2)
+[ONLINE 1351] connected to host as peer 1449233365
+[ONLINE 1353] peer 1 connected
+[ONLINE 1365] peer 1643365447 connected
+[ONLINE 4739] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9182] reporting match 1 scene ready
+DEDICATED_SERVER_PASS guest
+DEDICATED_MOVEMENT_SYNC_PASS guest
+DEDICATED_INPUT_PICKUP_PASS guest
+DEDICATED_INPUT_FIRE_PASS guest
+DEDICATED_INPUT_DROP_PASS guest
+DEDICATED_MELEE_PICKUP_PASS guest
+DEDICATED_MELEE_SWING_PASS guest
+DEDICATED_MELEE_HIT_PASS guest
+DEDICATED_MELEE_DROP_PASS guest
+DEDICATED_ITEM_PICKUP_PASS guest
+DEDICATED_ITEM_DROP_PASS guest
+DEDICATED_ITEM_THROW_PASS guest
+DEDICATED_RETURN_PASS guest
+[ONLINE 25332] disconnect requested
+
+ERROR: Node not found: "Node3D/NetPlayers/NP1/NetSync" (relative to "/root").
+   at: get_node (scene/main/node.cpp:1975)
+ERROR: Failed to get cached node from peer 1643365447 with cache ID 2.
+   at: get_cached_object (modules/multiplayer/scene_cache_interface.cpp:293)
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+

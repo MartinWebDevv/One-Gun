@@ -1,0 +1,1769 @@
+{
+  "note": "Final results supersede intermediate attempts. Isolated shutdown warnings remain explicit; raw logs are retained. Render and performance data are development-machine samples, not human/WAN/laptop certification.",
+  "results": [
+    {
+      "label": "camera_collision_validation",
+      "code": 0,
+      "seconds": 2.31,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "CAMERA COLLISION VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/camera_collision_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\camera_collision_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "character_size_hitbox_validation",
+      "code": 0,
+      "seconds": 6.0,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "CHARACTER_SIZE_HITBOX_VALIDATION: PASS models=8 shared_capsule=true"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/character_size_hitbox_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\character_size_hitbox_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "combat_rules_validation",
+      "code": 0,
+      "seconds": 12.8,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "COMBAT RULES VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/combat_rules_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\combat_rules_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "female_player_v2_validation",
+      "code": 0,
+      "seconds": 6.02,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "FEMALE_PLAYER_V2_VALIDATION_OK bones=33 animations=19 colors=13 portraits=13 decoy=true customization=true"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/female_player_v2_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\female_player_v2_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "player_v2_asset_validation",
+      "code": 0,
+      "seconds": 5.37,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PLAYER_V2_VALIDATION_OK bones=33 animations=31 lazy_optional=14 skins=13 decoy=true customization=true bounds=[P: (0.154583, -0.654033, -1.108419), S: (1.945671, 2.978056, 2.314033)]"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/player_v2_asset_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\player_v2_asset_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "goldfish_bag_character_validation",
+      "code": 0,
+      "seconds": 3.52,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: runtime socket exists: MeleeHoldPoint",
+        "PASS: runtime socket exists: ItemHoldPoint",
+        "PASS: runtime socket exists: LeftFootSocket",
+        "PASS: runtime socket exists: RightFootSocket",
+        "PASS: runtime socket exists: HeadwearSocket",
+        "PASS: equipped hat attaches to the animated Gold Fish head socket",
+        "PASS: presentation character retains the complete sanitized cosmetic loadout",
+        "GOLD FISH BAG MAN VALIDATION PASSED"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/goldfish_bag_character_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\goldfish_bag_character_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "cosmetic_body_binding_validation",
+      "code": 0,
+      "seconds": 1.86,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "COSMETIC_BODY_BINDING_VALIDATION: PASS models=8 rigid=1 skinned-contract=1"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/cosmetic_body_binding_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\cosmetic_body_binding_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "new_character_integration_validation",
+      "code": 0,
+      "seconds": 11.6,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: mr_salt uses the shared fall state only while airborne",
+        "PASS: mr_salt respawn clears a stale fall pose locally and for network puppets",
+        "PASS: gameplay actor spawns with spooky_witch",
+        "PASS: gameplay actor retains spooky_witch cosmetics",
+        "PASS: gameplay actor starts spooky_witch in the shared idle animation",
+        "PASS: spooky_witch uses the shared fall state only while airborne",
+        "PASS: spooky_witch respawn clears a stale fall pose locally and for network puppets",
+        "NEW CHARACTER INTEGRATION VALIDATION PASSED models=5 animations=33"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/new_character_integration_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\new_character_integration_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "damage_direction_indicator_validation",
+      "code": 0,
+      "seconds": 1.47,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "DAMAGE DIRECTION INDICATOR VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/damage_direction_indicator_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\damage_direction_indicator_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "decoy_validation",
+      "code": 0,
+      "seconds": 9.64,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "DECOY VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/decoy_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\decoy_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "city_asset_replacement_validation",
+      "code": 0,
+      "seconds": 6.2,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "CITY_ASSET_REPLACEMENT_VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/city_asset_replacement_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\city_asset_replacement_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "cat_tower_validation",
+      "code": 0,
+      "seconds": 14.27,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "CAT TOWER VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/cat_tower_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\cat_tower_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "city_environment_map_validation",
+      "code": 0,
+      "seconds": 5.56,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "CITY_ENVIRONMENT_MAP_VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/city_environment_map_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\city_environment_map_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "enterable_city_buildings_validation",
+      "code": 0,
+      "seconds": 5.9,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "       [0] _validate_navigation (res://tools/enterable_city_buildings_validation.gd:178)",
+        "       [1] _run (res://tools/enterable_city_buildings_validation.gd:68)",
+        "       [0] _validate_navigation (res://tools/enterable_city_buildings_validation.gd:178)",
+        "       [1] _run (res://tools/enterable_city_buildings_validation.gd:68)",
+        "ENTERABLE_CITY_BUILDINGS_VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/enterable_city_buildings_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\enterable_city_buildings_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "player_capacity_validation",
+      "code": 0,
+      "seconds": 1.57,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PLAYER CAPACITY VALIDATION: boot",
+        "PLAYER CAPACITY VALIDATION: local caps complete",
+        "PLAYER CAPACITY VALIDATION: map capacities complete",
+        "PLAYER CAPACITY VALIDATION: roster selection complete",
+        "PLAYER CAPACITY VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/player_capacity_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\player_capacity_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "space_station_final",
+      "code": 0,
+      "seconds": 4.23,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: color circuits and one-gun vault retain their arena identities",
+        "PASS: single-room footprint supports up to ten players",
+        "PASS: prototype navigation bake is non-empty",
+        "PASS: Neon Circuit navigation map synchronizes",
+        "PASS: all ten player spawns sit over baked navigation",
+        "PASS: bots can path between all ten player spawns",
+        "PASS: all rotated spawns keep movement camera-relative",
+        "NEON_CIRCUIT_PROTOTYPE_VALIDATION failures=0"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/space_station_prototype_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\space_station_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "gameplay_packet_final",
+      "code": 0,
+      "seconds": 4.38,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "GAMEPLAY PACKET VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/gameplay_packet_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\gameplay_packet_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "high_priority_final",
+      "code": 0,
+      "seconds": 5.72,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "HIGH PRIORITY 09-18 VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/high_priority_09_18_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\high_priority_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "all_gun_overtime_validation",
+      "code": 0,
+      "seconds": 13.35,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "ALL GUN OVERTIME VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/all_gun_overtime_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\all_gun_overtime_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "overtime_transition_validation",
+      "code": 0,
+      "seconds": 11.75,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "OVERTIME TRANSITION VALIDATION: setup",
+        "OVERTIME TRANSITION VALIDATION: arena loaded",
+        "OVERTIME TRANSITION VALIDATION: round state live",
+        "OVERTIME TRANSITION VALIDATION: overtime entered=true",
+        "OVERTIME TRANSITION VALIDATION (STANDARD): PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/overtime_transition_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\overtime_transition_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "new_game_modes_validation",
+      "code": 0,
+      "seconds": 26.69,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "NEW GAME MODES VALIDATION PASSED"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/new_game_modes_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\new_game_modes_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "input_remap_validation",
+      "code": 0,
+      "seconds": 1.93,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "INPUT_REMAP_VALIDATION_OK defaults=complete device_switch=true keyboard=true mouse=true controller_button=true controller_axis=true split_routing=true ui=true pause=true scoreboard=true"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/input_remap_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\input_remap_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "hat_fitting_tool_validation",
+      "code": 0,
+      "seconds": 4.06,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "HAT_FITTING_TOOL_VALIDATION: PASS hats=12 models=8 previews=96"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/hat_fitting_tool_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\hat_fitting_tool_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "menu_systems_validation",
+      "code": 0,
+      "seconds": 8.31,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "MENU VALIDATION OK: res://tools/equipped_cosmetic_visibility_validation.gd",
+        "MENU VALIDATION OK: res://gun.gd",
+        "MENU VALIDATION OK: res://bullet.gd",
+        "MENU VALIDATION OK: res://melee_weapon.gd",
+        "MENU VALIDATION OK: res://match_hud.gd",
+        "MENU VALIDATION OK: res://spectator_controller.gd",
+        "MENU RUNTIME OK: home Player Hub exposes profile/loadout/reward services and claims controller focus",
+        "MENU SYSTEMS VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/menu_systems_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\menu_systems_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "playpen_validation",
+      "code": 0,
+      "seconds": 19.09,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PLAYPEN VALIDATION PASSED"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/playpen_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\playpen_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "equipped_cosmetic_visibility_validation",
+      "code": 0,
+      "seconds": 2.96,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "EQUIPPED_COSMETIC_VISIBILITY_VALIDATION: PASS gameplay=1 gift-model=1 hat=1 animation=1 live-refresh=1"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/equipped_cosmetic_visibility_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\equipped_cosmetic_visibility_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "social_system_validation",
+      "code": 0,
+      "seconds": 1.94,
+      "timeout": false,
+      "errors": [
+        "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "PASS: incoming requests expose Accept and Deny actions",
+        "PASS: lobby invitations expose Accept & Join and Deny actions",
+        "PASS: online Player Hub preserves its three destinations without duplicating Friends",
+        "PASS: separate Friends orb contains the blue mascot portrait and hover label",
+        "PASS: separate invitation toast exposes Accept and Deny controls",
+        "PASS: Friends-window Join emits one stable endpoint on the deferred join path",
+        "PASS: invite popup Accept emits one stable endpoint after its async receipt",
+        "SOCIAL SYSTEM VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/social_system_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\social_system_validation.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "progression_catalog_validation",
+      "code": 0,
+      "seconds": 1.39,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PROGRESSION_CATALOG_VALIDATION_OK"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/progression_catalog_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\progression_catalog_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "winners_circle_validation",
+      "code": 0,
+      "seconds": 6.4,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: Winners Circle new performer retains hat: spooky_witch",
+        "PASS: Winners Circle new performer loads its podium animation: spooky_witch",
+        "PASS: Winners Circle accepts new character model: eye_wizard",
+        "PASS: Winners Circle accepts new character model: mr_mushroom",
+        "PASS: Winners Circle accepts new character model: mr_poop",
+        "PASS: Winners Circle accepts new character model: mr_salt",
+        "PASS: Winners Circle accepts new character model: spooky_witch",
+        "WINNERS CIRCLE VALIDATION PASSED"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/winners_circle_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\winners_circle_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "supabase_ui_validation",
+      "code": 0,
+      "seconds": 3.88,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "SUPABASE UI VALIDATION OK: Profile identity, auth onboarding, categories, signed-out browsing, and 96 Hat preview frames"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/supabase_ui_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\supabase_ui_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "victory_move_integration_validation",
+      "code": 0,
+      "seconds": 14.54,
+      "timeout": false,
+      "errors": [],
+      "markers": [],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/victory_move_integration_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\victory_move_integration_validation.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "supabase_main_menu_validation",
+      "code": 0,
+      "seconds": 7.6,
+      "timeout": false,
+      "errors": [
+        "ERROR: 41 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 3 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "MAIN MENU VALIDATION OK: Play, Player Hub destinations, Friends orb, map sort, and empty online bots"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/supabase_main_menu_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\supabase_main_menu_validation.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "validate_trippy_mountains_map",
+      "code": 0,
+      "seconds": 5.45,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "TRIPPY_MAP_VALIDATION_OK nav_polygons=1555 markers=34 barriers=4"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/validate_trippy_mountains_map.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\validate_trippy_mountains_map.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "validate_trippy_mountains_runtime",
+      "code": 0,
+      "seconds": 6.11,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "TRIPPY_RUNTIME_VALIDATION_OK markers=28"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/validate_trippy_mountains_runtime.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\validate_trippy_mountains_runtime.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "migration_solo",
+      "code": 0,
+      "seconds": 6.7,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "GODOT 4.7 MIGRATION VALIDATION (SOLO): PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/godot_47_migration_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\migration_solo.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "migration_split",
+      "code": 0,
+      "seconds": 6.38,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "GODOT 4.7 MIGRATION VALIDATION (SPLITSCREEN): PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/godot_47_migration_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\migration_split.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "hideout_shared_final",
+      "code": 0,
+      "seconds": 114.75,
+      "timeout": false,
+      "errors": [
+        "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "PREVIEW PASS: soft ball resets and stops processing after its throw",
+        "PREVIEW PASS: a descending ball through a basket scores and resets",
+        "PREVIEW PASS: central toy resets before leaving its social activity area",
+        "PREVIEW PASS: automated previews and cancellation do not change saved preferences",
+        "PREVIEW PASS: rehearsals do not change live match rules",
+        "PREVIEW PASS: all kiosk/rehearsal tests leave networking offline",
+        "PREVIEW PASS: Low preview scales the scene without saving settings",
+        "PREVIEW VALIDATION: {\"checks\":291,\"failures\":[],\"scope\":\"Native F6 scene, real controller/skins, shared menus, contained local Play Pen combat and rehearsal lifecycle. No account transactions or live matches tested.\"}"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/live_lobby_preview/live_lobby_preview.tscn",
+        "--",
+        "--live-lobby-validate"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\hideout_shared_final.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "render_projectile_solo",
+      "code": 0,
+      "seconds": 7.88,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PROJECTILE CROSSHAIR RENDER VALIDATION (SOLO): PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/projectile_crosshair_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_projectile_solo.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_projectile_split",
+      "code": 0,
+      "seconds": 8.64,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PROJECTILE CROSSHAIR RENDER VALIDATION (SPLITSCREEN): PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/projectile_crosshair_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_projectile_split.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_new_characters",
+      "code": 0,
+      "seconds": 8.49,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "NEW_CHARACTER_RENDER_VALIDATION: PASS models=6 poses=6 output=D:/Godot Projects/one-gun/.godot/new_character_render_validation"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/new_character_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_new_characters.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_player_v2",
+      "code": 0,
+      "seconds": 22.9,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PLAYER_V2_RENDER_VALIDATION_OK output=D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\player_v2_captures"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/player_v2_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_player_v2.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_ads",
+      "code": 0,
+      "seconds": 5.04,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "ADS_CAMERA_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/ads_camera_validation.png offset=(1.409632, 2.054351, 1.953273) fov=64.50"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/ads_camera_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_ads.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_menu_clicks",
+      "code": 0,
+      "seconds": 10.74,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: Friends exposes its Back button",
+        "PASS: Friends preserves controller focus through the pre-GUI mouse press",
+        "PASS: focused Friends button receives a real pointer click",
+        "PASS: Lobby exposes Match Settings",
+        "PASS: Lobby Match Settings opens from a pointer click",
+        "PASS: Progression exposes both road tabs",
+        "PASS: Progression switches roads from a pointer click",
+        "MENU_POINTER_CLICK_VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--script",
+        "res://tools/menu_pointer_click_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_menu_clicks.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_winners_circle",
+      "code": 0,
+      "seconds": 9.01,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: Winners Circle new performer retains hat: spooky_witch",
+        "PASS: Winners Circle new performer loads its podium animation: spooky_witch",
+        "PASS: Winners Circle accepts new character model: eye_wizard",
+        "PASS: Winners Circle accepts new character model: mr_mushroom",
+        "PASS: Winners Circle accepts new character model: mr_poop",
+        "PASS: Winners Circle accepts new character model: mr_salt",
+        "PASS: Winners Circle accepts new character model: spooky_witch",
+        "WINNERS CIRCLE VALIDATION PASSED"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--script",
+        "res://tools/winners_circle_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_winners_circle.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_hat_interactions",
+      "code": 0,
+      "seconds": 9.13,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "HAT_PREVIEW_INTERACTION_VALIDATION: PASS hats=12 models=8 angles=4 controller=1"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--script",
+        "res://tools/hat_preview_interaction_validation.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_hat_interactions.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_hats",
+      "code": 0,
+      "seconds": 25.1,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "HAT_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/hat_render_validation"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/hat_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_hats.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_gameplay_hat_camera",
+      "code": 0,
+      "seconds": 58.88,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "GAMEPLAY_HAT_CAMERA_VALIDATION: PASS hats=12 models=8 modes=2 captures=5"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/gameplay_hat_camera_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_gameplay_hat_camera.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "render_customization",
+      "code": 0,
+      "seconds": 7.39,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "LOCKER_VALIDATION_OK colors=13 default-cat-tile=1 owned-only categories=4 public-models=2 gift-models=6 portraits=online-ready"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/character_customization_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_customization.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_match",
+      "code": 0,
+      "seconds": 46.42,
+      "errors": [],
+      "markers": [
+        "ONLINE_SMOKE_PASS host",
+        "ONLINE_SMOKE_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_match.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_lobby",
+      "code": 0,
+      "seconds": 20.27,
+      "errors": [
+        "ERROR: 23 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "ONLINE_LOBBY_PASS host",
+        "ONLINE_LOBBY_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_lobby.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "online_named_lobby",
+      "code": 0,
+      "seconds": 3.9,
+      "errors": [],
+      "markers": [
+        "ONLINE_NAMED_LOBBY_PASS host",
+        "ONLINE_NAMED_LOBBY_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_named_lobby.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_exit_flow",
+      "code": 0,
+      "seconds": 17.99,
+      "errors": [
+        "ERROR: 38 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 2 resources still in use at exit (run with --verbose for details).",
+        "ERROR: 38 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "ONLINE_EXIT_FLOW_PASS host",
+        "ONLINE_EXIT_FLOW_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_exit_flow.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "online_client_exit",
+      "code": 0,
+      "seconds": 18.53,
+      "errors": [
+        "ERROR: 36 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "ONLINE_CLIENT_EXIT_PASS host",
+        "ONLINE_CLIENT_EXIT_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_client_exit.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "online_online_bots",
+      "code": 0,
+      "seconds": 18.31,
+      "errors": [
+        "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "ONLINE_BOTS_PASS host",
+        "ONLINE_BOTS_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_online_bots.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "online_overtime",
+      "code": 0,
+      "seconds": 14.88,
+      "errors": [],
+      "markers": [
+        "ONLINE_OVERTIME_PASS host",
+        "ONLINE_OVERTIME_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_overtime.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_one_of_us",
+      "code": 0,
+      "seconds": 19.34,
+      "errors": [
+        "ERROR: 40 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+        "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+        "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "ONLINE_ONE_OF_US_PASS host",
+        "ONLINE_ONE_OF_US_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_one_of_us.log",
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "online_playpen",
+      "code": 0,
+      "seconds": 18.07,
+      "errors": [],
+      "markers": [
+        "ONLINE_PLAYPEN_PASS host",
+        "ONLINE_PLAYPEN_PASS client"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_playpen.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_late_spectator",
+      "code": 0,
+      "seconds": 18.45,
+      "errors": [],
+      "markers": [
+        "ONLINE_LATE_SPECTATOR_PASS host",
+        "ONLINE_LATE_SPECTATOR_PASS client",
+        "ONLINE_LATE_SPECTATOR_PASS spectator"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_late_spectator.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_dedicated",
+      "code": 0,
+      "seconds": 27.44,
+      "errors": [],
+      "markers": [
+        "DEDICATED_SERVER_PASS controller",
+        "DEDICATED_MOVEMENT_SYNC_PASS controller",
+        "DEDICATED_INPUT_PICKUP_PASS controller",
+        "DEDICATED_INPUT_FIRE_PASS controller",
+        "DEDICATED_INPUT_DROP_PASS controller",
+        "DEDICATED_MELEE_PICKUP_PASS controller",
+        "DEDICATED_MELEE_SWING_PASS controller",
+        "DEDICATED_MELEE_HIT_PASS controller",
+        "DEDICATED_MELEE_DROP_PASS controller",
+        "DEDICATED_ITEM_PICKUP_PASS controller",
+        "DEDICATED_ITEM_DROP_PASS controller",
+        "DEDICATED_ITEM_THROW_PASS controller",
+        "DEDICATED_RETURN_PASS controller",
+        "DEDICATED_SERVER_PASS guest",
+        "DEDICATED_MOVEMENT_SYNC_PASS guest",
+        "DEDICATED_INPUT_PICKUP_PASS guest",
+        "DEDICATED_INPUT_FIRE_PASS guest",
+        "DEDICATED_INPUT_DROP_PASS guest",
+        "DEDICATED_MELEE_PICKUP_PASS guest",
+        "DEDICATED_MELEE_SWING_PASS guest",
+        "DEDICATED_MELEE_HIT_PASS guest",
+        "DEDICATED_MELEE_DROP_PASS guest",
+        "DEDICATED_ITEM_PICKUP_PASS guest",
+        "DEDICATED_ITEM_DROP_PASS guest",
+        "DEDICATED_ITEM_THROW_PASS guest",
+        "DEDICATED_RETURN_PASS guest"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_dedicated.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "online_version_mismatch",
+      "code": 0,
+      "seconds": 2.69,
+      "errors": [],
+      "markers": [
+        "VERSION_MISMATCH_CLIENT_PASS reason=network_protocol",
+        "VERSION MISMATCH SMOKE: PASS"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_version_mismatch.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "combat_cover_final",
+      "code": 0,
+      "seconds": 3.88,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "COMBAT_COVER_VALIDATION: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/combat_cover_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\combat_cover_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "scene_load_final",
+      "code": 0,
+      "seconds": 3.86,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "SCENE_LOAD_VALIDATION: PASS shared/cancel/missing/local-cancel"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--scene",
+        "res://tools/scene_load_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\scene_load_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "menu_phase2_final",
+      "code": 0,
+      "seconds": 15.41,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "PASS: Western Town preview strips SpawnPoints",
+        "PASS: Western Town preview strips ItemSpawnPoints",
+        "PASS: Western Town preview strips gun_spawn_point",
+        "PASS: Western Town preview strips NavigationRegion3D",
+        "PASS: Western Town preview strips ForestAmbience",
+        "PASS: splitscreen clamps bots to the eight-slot capacity",
+        "PASS: splitscreen plus bots still renders ten total roster slots",
+        "PHASE 2 MENU SMOKE: PASS"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/menu_phase2_smoke.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\menu_phase2_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "lobby_accessibility_final",
+      "code": 0,
+      "seconds": 8.37,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "LOBBY_ACCESSIBILITY_VALIDATION: PASS 720p/125%/large/10-actors/focus-scroll"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/lobby_accessibility_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\lobby_accessibility_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "ticket_server",
+      "code": 0,
+      "seconds": 22.92,
+      "errors": [],
+      "markers": [
+        "MATCH_TICKET_REJECTION_PASS reason=match_ticket_invalid",
+        "DEDICATED_SERVER_PASS controller",
+        "DEDICATED_MOVEMENT_SYNC_PASS controller",
+        "DEDICATED_INPUT_PICKUP_PASS controller",
+        "DEDICATED_INPUT_FIRE_PASS controller",
+        "DEDICATED_INPUT_DROP_PASS controller",
+        "DEDICATED_MELEE_PICKUP_PASS controller",
+        "DEDICATED_MELEE_SWING_PASS controller",
+        "DEDICATED_MELEE_HIT_PASS controller",
+        "DEDICATED_MELEE_DROP_PASS controller",
+        "DEDICATED_ITEM_PICKUP_PASS controller",
+        "DEDICATED_ITEM_DROP_PASS controller",
+        "DEDICATED_ITEM_ACTION_PASS controller",
+        "MATCH_SERVER_ACTIONS_PASS controller",
+        "DEDICATED_SERVER_PASS guest",
+        "DEDICATED_MOVEMENT_SYNC_PASS guest",
+        "DEDICATED_INPUT_PICKUP_PASS guest",
+        "DEDICATED_INPUT_FIRE_PASS guest",
+        "DEDICATED_INPUT_DROP_PASS guest",
+        "DEDICATED_MELEE_PICKUP_PASS guest",
+        "DEDICATED_MELEE_SWING_PASS guest",
+        "DEDICATED_MELEE_HIT_PASS guest",
+        "DEDICATED_MELEE_DROP_PASS guest",
+        "DEDICATED_ITEM_PICKUP_PASS guest",
+        "DEDICATED_ITEM_DROP_PASS guest",
+        "DEDICATED_ITEM_ACTION_PASS guest",
+        "MATCH_SERVER_ACTIONS_PASS guest",
+        "MATCH SERVER SMOKE: PASS"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "version_3",
+      "code": 0,
+      "seconds": 2.73,
+      "errors": [],
+      "markers": [
+        "VERSION_MISMATCH_CLIENT_PASS reason=network_protocol",
+        "VERSION MISMATCH SMOKE: PASS"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "protocol3_match",
+      "code": 0,
+      "seconds": 49.51,
+      "errors": [],
+      "markers": [
+        "ONLINE_SMOKE_PASS host",
+        "ONLINE_SMOKE_PASS client"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "suspend_delayed_1",
+      "code": 0,
+      "seconds": 28.11,
+      "errors": [],
+      "markers": [
+        "DEDICATED_SERVER_PASS controller",
+        "DEDICATED_MOVEMENT_SYNC_PASS controller",
+        "DEDICATED_INPUT_PICKUP_PASS controller",
+        "DEDICATED_INPUT_FIRE_PASS controller",
+        "DEDICATED_INPUT_DROP_PASS controller",
+        "DEDICATED_MELEE_PICKUP_PASS controller",
+        "DEDICATED_MELEE_SWING_PASS controller",
+        "DEDICATED_MELEE_HIT_PASS controller",
+        "DEDICATED_MELEE_DROP_PASS controller",
+        "DEDICATED_ITEM_PICKUP_PASS controller",
+        "DEDICATED_ITEM_DROP_PASS controller",
+        "DEDICATED_ITEM_THROW_PASS controller",
+        "DEDICATED_RETURN_PASS controller",
+        "DEDICATED_SERVER_PASS guest",
+        "DEDICATED_MOVEMENT_SYNC_PASS guest",
+        "DEDICATED_INPUT_PICKUP_PASS guest",
+        "DEDICATED_INPUT_FIRE_PASS guest",
+        "DEDICATED_INPUT_DROP_PASS guest",
+        "DEDICATED_MELEE_PICKUP_PASS guest",
+        "DEDICATED_MELEE_SWING_PASS guest",
+        "DEDICATED_MELEE_HIT_PASS guest",
+        "DEDICATED_MELEE_DROP_PASS guest",
+        "DEDICATED_ITEM_PICKUP_PASS guest",
+        "DEDICATED_ITEM_DROP_PASS guest",
+        "DEDICATED_ITEM_THROW_PASS guest",
+        "DEDICATED_RETURN_PASS guest"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "suspend_delayed_2",
+      "code": 0,
+      "seconds": 28.44,
+      "errors": [],
+      "markers": [
+        "DEDICATED_SERVER_PASS controller",
+        "DEDICATED_MOVEMENT_SYNC_PASS controller",
+        "DEDICATED_INPUT_PICKUP_PASS controller",
+        "DEDICATED_INPUT_FIRE_PASS controller",
+        "DEDICATED_INPUT_DROP_PASS controller",
+        "DEDICATED_MELEE_PICKUP_PASS controller",
+        "DEDICATED_MELEE_SWING_PASS controller",
+        "DEDICATED_MELEE_HIT_PASS controller",
+        "DEDICATED_MELEE_DROP_PASS controller",
+        "DEDICATED_ITEM_PICKUP_PASS controller",
+        "DEDICATED_ITEM_DROP_PASS controller",
+        "DEDICATED_ITEM_THROW_PASS controller",
+        "DEDICATED_RETURN_PASS controller",
+        "DEDICATED_SERVER_PASS guest",
+        "DEDICATED_MOVEMENT_SYNC_PASS guest",
+        "DEDICATED_INPUT_PICKUP_PASS guest",
+        "DEDICATED_INPUT_FIRE_PASS guest",
+        "DEDICATED_INPUT_DROP_PASS guest",
+        "DEDICATED_MELEE_PICKUP_PASS guest",
+        "DEDICATED_MELEE_SWING_PASS guest",
+        "DEDICATED_MELEE_HIT_PASS guest",
+        "DEDICATED_MELEE_DROP_PASS guest",
+        "DEDICATED_ITEM_PICKUP_PASS guest",
+        "DEDICATED_ITEM_DROP_PASS guest",
+        "DEDICATED_ITEM_THROW_PASS guest",
+        "DEDICATED_RETURN_PASS guest"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "suspend_normal",
+      "code": 0,
+      "seconds": 28.44,
+      "errors": [],
+      "markers": [
+        "DEDICATED_SERVER_PASS controller",
+        "DEDICATED_MOVEMENT_SYNC_PASS controller",
+        "DEDICATED_INPUT_PICKUP_PASS controller",
+        "DEDICATED_INPUT_FIRE_PASS controller",
+        "DEDICATED_INPUT_DROP_PASS controller",
+        "DEDICATED_MELEE_PICKUP_PASS controller",
+        "DEDICATED_MELEE_SWING_PASS controller",
+        "DEDICATED_MELEE_HIT_PASS controller",
+        "DEDICATED_MELEE_DROP_PASS controller",
+        "DEDICATED_ITEM_PICKUP_PASS controller",
+        "DEDICATED_ITEM_DROP_PASS controller",
+        "DEDICATED_ITEM_THROW_PASS controller",
+        "DEDICATED_RETURN_PASS controller",
+        "DEDICATED_SERVER_PASS guest",
+        "DEDICATED_MOVEMENT_SYNC_PASS guest",
+        "DEDICATED_INPUT_PICKUP_PASS guest",
+        "DEDICATED_INPUT_FIRE_PASS guest",
+        "DEDICATED_INPUT_DROP_PASS guest",
+        "DEDICATED_MELEE_PICKUP_PASS guest",
+        "DEDICATED_MELEE_SWING_PASS guest",
+        "DEDICATED_MELEE_HIT_PASS guest",
+        "DEDICATED_MELEE_DROP_PASS guest",
+        "DEDICATED_ITEM_PICKUP_PASS guest",
+        "DEDICATED_ITEM_DROP_PASS guest",
+        "DEDICATED_ITEM_THROW_PASS guest",
+        "DEDICATED_RETURN_PASS guest"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "suspend_playpen",
+      "code": 0,
+      "seconds": 22.82,
+      "errors": [
+        "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+      ],
+      "markers": [
+        "ONLINE_PLAYPEN_PASS host",
+        "ONLINE_PLAYPEN_PASS client"
+      ],
+      "final_status": "pass_with_shutdown_warning"
+    },
+    {
+      "label": "barrier_listen_return",
+      "code": 0,
+      "seconds": 18.62,
+      "errors": [],
+      "markers": [
+        "ONLINE_EXIT_FLOW_PASS host",
+        "ONLINE_EXIT_FLOW_PASS client"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "barrier_client_leave",
+      "code": 0,
+      "seconds": 20.7,
+      "errors": [],
+      "markers": [
+        "ONLINE_CLIENT_EXIT_PASS host",
+        "ONLINE_CLIENT_EXIT_PASS client"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "coordinator_tests",
+      "code": 0,
+      "seconds": 0.4,
+      "errors": [],
+      "markers": [
+        "# Subtest: tampered capabilities and incompatible clients fail closed",
+        "ok 2 - tampered capabilities and incompatible clients fail closed",
+        "# pass 4",
+        "# fail 0"
+      ],
+      "final_status": "pass"
+    },
+    {
+      "label": "map_profile",
+      "code": 0,
+      "seconds": 199.51,
+      "timeout": false,
+      "errors": [],
+      "markers": [],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://artifacts/quality_pass_20260907/map_profile.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\map_profile.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "smoke_render_final",
+      "code": 0,
+      "seconds": 4.09,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "SMOKE_RENDER_VALIDATION_OK output=D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\smoke_final.png"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://tools/smoke_cloud_render_validation.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\smoke_render_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "generate_smoke_mask",
+      "code": 0,
+      "seconds": 1.48,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "SMOKE_MASK_GENERATOR: PASS exact RGBA pixels and mipmaps"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--script",
+        "res://tools/generate_smoke_mask.gd"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\generate_smoke_mask.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "lobby_cleanup",
+      "code": 0,
+      "seconds": 4.93,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "Loading resource: res://models/cosmetics/hats/hat_fit_profiles.tres remapped: res://models/cosmetics/hats/hat_fit_profiles.tres",
+        "Loading resource: res://models/cosmetics/hats/hat_fit_profiles.gd remapped: res://models/cosmetics/hats/hat_fit_profiles.gd",
+        "Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.gd' remapped 'res://models/cosmetics/hats/hat_fit_profiles.gd' at thread -1",
+        "Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.tres' remapped 'res://models/cosmetics/hats/hat_fit_profiles.tres' at thread -1",
+        "Loading resource: res://UI/assets/menu_hubs/profile_backdrop.png remapped: res://UI/assets/menu_hubs/profile_backdrop.png",
+        "Loading resource: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex remapped: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex",
+        "Completed load for: 'res://UI/assets/menu_hubs/profile_backdrop.png' remapped 'res://UI/assets/menu_hubs/profile_backdrop.png' at thread -1"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--verbose",
+        "--scene",
+        "res://artifacts/quality_pass_20260907/lobby_cleanup.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\lobby_cleanup.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "startup_final",
+      "code": 0,
+      "seconds": 1.46,
+      "timeout": false,
+      "errors": [],
+      "markers": [],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--headless",
+        "--quit"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\startup_final.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "smoke_construction_after",
+      "code": 0,
+      "seconds": 16.18,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "SMOKE_SPAWN_PROFILE [{\"construction_ms\":42.829,\"max_ms\":175.626,\"p95_ms\":1.828,\"preprocess\":3.2},{\"construction_ms\":23.861,\"max_ms\":2251.596,\"p95_ms\":1.69,\"preprocess\":0.0},{\"construction_ms\":33.894,\"max_ms\":151.4,\"p95_ms\":7.259,\"preprocess\":3.2},{\"construction_ms\":32.658,\"max_ms\":62.516,\"p95_ms\":1.76,\"preprocess\":0.0}]"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://artifacts/quality_pass_20260907/smoke_profile.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\smoke_construction_after.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "neon_label_capture",
+      "code": 0,
+      "seconds": 7.49,
+      "timeout": false,
+      "errors": [],
+      "markers": [
+        "NEON_LABEL_CAPTURE: PASS seven viewpoints"
+      ],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://artifacts/quality_pass_20260907/neon_labels.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\neon_label_capture.log",
+      "final_status": "pass"
+    },
+    {
+      "label": "roster_final",
+      "code": 0,
+      "seconds": 8.38,
+      "timeout": false,
+      "errors": [],
+      "markers": [],
+      "command": [
+        "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+        "--path",
+        "D:\\Godot Projects\\one-gun",
+        "--windowed",
+        "--resolution",
+        "1600x900",
+        "--position",
+        "-3000,-3000",
+        "--scene",
+        "res://artifacts/quality_pass_20260907/roster_capture.tscn"
+      ],
+      "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\roster_final.log",
+      "final_status": "pass"
+    }
+  ]
+}

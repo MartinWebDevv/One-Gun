@@ -1,0 +1,8 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1330] hosting 'Audit private admission' on UDP 24903 as 'Player 1'
+[ONLINE 1863] peer 1295509591 connected
+[ONLINE 2146] peer 1295509591 admitted | client build itch-380e65c
+AUDIT_PRIVATE role=host peers=2 private=private client_supplied_no_code=true
+[ONLINE 2664] peer 1295509591 disconnected
+[ONLINE 3140] disconnect requested

@@ -1,0 +1,23 @@
+{
+  "label": "render_character_customization",
+  "code": 0,
+  "seconds": 7.45,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "LOCKER_VALIDATION_OK colors=13 default-cat-tile=1 owned-only categories=4 public-models=2 gift-models=6 portraits=online-ready"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/character_customization_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_character_customization.log"
+}

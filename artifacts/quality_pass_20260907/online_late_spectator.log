@@ -1,0 +1,52 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1421] hosting 'Player 1's Lobby' on UDP 24646 as 'Player 1'
+[ONLINE 2086] peer 696315686 connected
+[ONLINE 2383] peer 696315686 admitted | client build itch-380e65c
+[ONLINE 2384] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2385] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 6475] match 1 ready peer 1 (1/2)
+[ONLINE 6538] match 1 ready peer 696315686 (2/2)
+[ONLINE 10404] peer 200966793 connected
+[ONLINE 10701] peer 200966793 admitted | client build itch-380e65c
+[ONLINE 13157] accepted spectator request from peer 200966793 for match 1
+[ONLINE 13303] spectator start sent to peer 200966793 attempt 1
+[ONLINE 13911] spectator start sent to peer 200966793 attempt 2
+[ONLINE 14518] spectator start sent to peer 200966793 attempt 3
+[ONLINE 16807] spectator peer 200966793 ready for match 1
+ONLINE_LATE_SPECTATOR_PASS host
+[ONLINE 17318] peer 200966793 disconnected
+
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1511] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1521] connected to host as peer 696315686
+[ONLINE 1523] peer 1 connected
+[ONLINE 1839] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 5818] reporting match 1 scene ready
+[ONLINE 9853] peer 200966793 connected
+ONLINE_LATE_SPECTATOR_PASS client
+[ONLINE 16766] peer 200966793 disconnected
+
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1315] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1324] connected to host as peer 200966793
+[ONLINE 1325] peer 1 connected
+[ONLINE 1338] peer 696315686 connected
+[ONLINE 4085] requesting spectator entry for match 0
+[ONLINE 4235] received match scene start (match=1, spectator=true, map=res://node_3d.tscn)
+[ONLINE 4847] ignored duplicate spectator start for match 1
+[ONLINE 5455] ignored duplicate spectator start for match 1
+[ONLINE 7728] reporting spectator scene ready for match 1
+ONLINE_LATE_SPECTATOR_PASS spectator
+
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+

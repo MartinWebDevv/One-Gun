@@ -1,0 +1,86 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+MENU VALIDATION OK: res://audio_manager.gd
+MENU VALIDATION OK: res://map_registry.gd
+MENU VALIDATION OK: res://network_manager.gd
+MENU VALIDATION OK: res://player_prefs.gd
+MENU VALIDATION OK: res://graphics_quality_manager.gd
+MENU VALIDATION OK: res://UI/player_settings_applier.gd
+MENU VALIDATION OK: res://player_settings.gd
+MENU VALIDATION OK: res://player_settings.tscn
+MENU VALIDATION OK: res://game_setup.gd
+MENU VALIDATION OK: res://game_setup.tscn
+MENU VALIDATION OK: res://supabase/supabase_manager.gd
+MENU VALIDATION OK: res://supabase/social_manager.gd
+MENU VALIDATION OK: res://UI/supabase_overlay.gd
+MENU VALIDATION OK: res://UI/social_overlay.gd
+MENU VALIDATION OK: res://UI/components/friends_quick_access_orb.gd
+MENU VALIDATION OK: res://UI/components/lobby_invite_notification.gd
+MENU VALIDATION OK: res://UI/character_customization_overlay.gd
+MENU VALIDATION OK: res://UI/lobby_player_hub_overlay.gd
+MENU VALIDATION OK: res://UI/player_hub_overlay.gd
+MENU VALIDATION OK: res://UI/progression_road_overlay.gd
+MENU VALIDATION OK: res://lobby_map_preview.gd
+MENU VALIDATION OK: res://menu_map_cycler.gd
+MENU VALIDATION OK: res://maps/test/title_bg_map.tscn
+MENU VALIDATION OK: res://main_menu.gd
+MENU VALIDATION OK: res://UI/components/one_gun_roster_row.gd
+MENU VALIDATION OK: res://pause_menu.gd
+MENU VALIDATION OK: res://UI/accessibility_manager.gd
+MENU VALIDATION OK: res://UI/crosshair_renderer.gd
+MENU VALIDATION OK: res://crosshair.gd
+MENU VALIDATION OK: res://hit_marker.gd
+MENU VALIDATION OK: res://character_body_3d.gd
+MENU VALIDATION OK: res://models/player_v2/player_v2_visual.gd
+MENU VALIDATION OK: res://models/cosmetics/hats/hat_fit_profiles.gd
+MENU VALIDATION OK: res://models/cosmetics/hats/hat_fit_profiles.tres
+MENU VALIDATION OK: res://models/cosmetics/hats/hat_cosmetic_registry.gd
+MENU VALIDATION OK: res://tools/hat_fitting_tool.gd
+MENU VALIDATION OK: res://tools/hat_fitting_tool.tscn
+MENU VALIDATION OK: res://tools/equipped_cosmetic_visibility_validation.gd
+MENU VALIDATION OK: res://gun.gd
+MENU VALIDATION OK: res://bullet.gd
+MENU VALIDATION OK: res://melee_weapon.gd
+MENU VALIDATION OK: res://match_hud.gd
+MENU VALIDATION OK: res://spectator_controller.gd
+MENU RUNTIME OK: online Player Hub exposes Locker, Prize Counter, and Progression
+MENU RUNTIME OK: home Player Hub exposes profile/loadout/reward services and claims controller focus
+MENU RUNTIME OK: pointer-mode Player Hub clears controller-only highlighting
+MENU RUNTIME OK: Friends orb is controller-focusable and labeled
+MENU RUNTIME OK: lobby invite notification exposes controller Accept / Deny
+MENU RUNTIME OK: Friends overlay claims controller focus
+MENU RUNTIME OK: pointer-mode Friends clears controller-only highlighting
+MENU RUNTIME OK: Player Settings claims controller focus
+MENU RUNTIME OK: Player Settings categories
+MENU RUNTIME OK: Controls exposes Mouse & Keyboard / Controller
+MENU RUNTIME OK: Gameplay exposes separate gamepad X / Y sensitivity
+MENU RUNTIME OK: Ceremony Volume slider is present
+MENU RUNTIME OK: Crosshair Shape / Behavior / Feedback tabs
+MENU RUNTIME OK: dedicated Ceremony bus follows its saved mix control
+MENU RUNTIME OK: ceremony preview pauses and resumes menu music
+ERROR: Menu validation: map sorting modes are incomplete
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _validate (res://tools/menu_systems_validation.gd:387)
+MENU RUNTIME OK: Cancel preserved active preferences
+MENU RUNTIME OK: live key rebind preview and Cancel rollback
+MENU RUNTIME OK: input descriptor supports gamepad axes
+MENU RUNTIME OK: crosshair geometry and reload normalization
+MENU RUNTIME OK: live gun reload progress adapter
+MENU RUNTIME OK: accessibility/crosshair preference migration defaults
+MENU RUNTIME OK: null Display Name migration fallback
+MENU RUNTIME OK: Ceremony Volume defaults/migration schema
+MENU RUNTIME OK: graphics preset schema and version-4 migration
+MENU RUNTIME OK: pending Low viewport settings survive effects preview
+MENU RUNTIME OK: Low effects scaling and High authored-value restoration
+MENU RUNTIME OK: Low lobby retains the live 3D map preview
+MENU RUNTIME OK: Low main menu uses the lightweight live title world
+[MENU] map preview -> res://maps/test/title_bg_map.tscn (grounded=false)
+MENU RUNTIME OK: asynchronous first title world becomes live
+MENU RUNTIME OK: motion blur responds to camera transform deltas
+MENU RUNTIME OK: shake/bob/flash live policy preview
+MENU RUNTIME OK: non-stacking marker elimination precedence
+MENU RUNTIME OK: destructive inline confirmation arm/reset
+MENU RUNTIME OK: local pause cabinet actions and no restart
+MENU RUNTIME OK: local pause/resume semantics
+MENU RUNTIME OK: online host/guest pause authority split

@@ -1,0 +1,12 @@
+{
+  "label": "coordinator_tests",
+  "code": 0,
+  "seconds": 0.4,
+  "errors": [],
+  "markers": [
+    "# Subtest: tampered capabilities and incompatible clients fail closed",
+    "ok 2 - tampered capabilities and incompatible clients fail closed",
+    "# pass 4",
+    "# fail 0"
+  ]
+}

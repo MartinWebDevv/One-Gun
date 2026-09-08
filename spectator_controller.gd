@@ -197,6 +197,11 @@ func is_follow_mode() -> bool:
 	return _mode == Mode.FOLLOW
 
 func _input(event):
+	# Full-screen modal UI must receive mouse/controller events before spectator
+	# camera cycling. _input() runs ahead of GUI dispatch, so marking an LMB/RMB
+	# event handled here otherwise makes visible modal buttons completely inert.
+	if get_tree().get_first_node_in_group("modal_input_owner") != null:
+		return
 	if (_player == null and not pure_online_spectator) or PauseManager.is_pause_open() \
 			or OnlineChat.is_typing():
 		return

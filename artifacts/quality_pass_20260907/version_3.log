@@ -1,0 +1,19 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 3
+[DEDICATED] Listening on UDP 24757 | max players 4 | lobby 'Version-Mismatch-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[ONLINE 2088] peer 1832499367 connected
+[ONLINE 2095] peer 1832499367 rejected | reason network_protocol | client build itch-380e65c
+[ONLINE 2109] peer 1832499367 disconnected
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1263] joining 127.0.0.1:24757 (attempt 2)
+[ONLINE 1281] connected to host as peer 1832499367
+[ONLINE 1284] peer 1 connected
+VERSION_MISMATCH_CLIENT_PASS reason=network_protocol
+
+
+VERSION MISMATCH SMOKE: PASS

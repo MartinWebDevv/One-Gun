@@ -62,7 +62,12 @@ func _net_show(result: Dictionary) -> void:
 	get_tree().current_scene.add_child(_overlay)
 	_overlay.ready_changed.connect(_on_ready_changed)
 	_overlay.force_return_requested.connect(_on_force_return)
-	_overlay.present(presentation_result, viewer_actor_ids, true, NetworkManager.is_host())
+	# In a dedicated session peer 1 is a headless server; the human lobby
+	# controller is the moderator and must receive/route Return All controls.
+	var can_moderate_return := NetworkManager.is_host() \
+		or NetworkManager.can_manage_lobby()
+	_overlay.present(presentation_result, viewer_actor_ids, true,
+		can_moderate_return)
 	_submit_local_reward.call_deferred(result.duplicate(true), viewer_actor_ids)
 
 
@@ -161,6 +166,18 @@ func _net_apply_ready(ready_peer_ids: Array, required_peer_ids: Array) -> void:
 func _on_force_return() -> void:
 	if NetworkManager.is_host():
 		_schedule_return(_minimum_safe_delay(0.75))
+	elif NetworkManager.is_online() and NetworkManager.can_manage_lobby():
+		_request_force_return.rpc_id(1)
+
+
+@rpc("any_peer", "reliable")
+func _request_force_return() -> void:
+	if not multiplayer.is_server() or _result.is_empty() or _returning:
+		return
+	var sender_id := multiplayer.get_remote_sender_id()
+	if not NetworkManager.is_lobby_controller(sender_id):
+		return
+	_schedule_return(_minimum_safe_delay(0.75))
 
 
 func _minimum_safe_delay(requested_seconds: float) -> float:

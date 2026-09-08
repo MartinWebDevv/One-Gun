@@ -1,0 +1,18 @@
+{
+  "label": "optimized_import",
+  "code": 0,
+  "seconds": 24.46,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--editor",
+    "--import",
+    "--quit"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\optimized_import.log"
+}

@@ -1,0 +1,19 @@
+{
+  "label": "client_package_source",
+  "code": 0,
+  "seconds": 14.43,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "CLIENT_PACKAGE_VALIDATION_OK resources=50"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/validate_client_package.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\client_package_source.log"
+}

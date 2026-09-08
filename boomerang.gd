@@ -234,10 +234,10 @@ func _strike(body: Node3D) -> void:
 				else:
 					gun_node.drop()
 				var victim: String = body.get_display_name() if body.has_method("get_display_name") else str(body.name)
-				GameEvents.player_disarmed.emit(victim, killer, null)
+				GameEvents.player_disarmed.emit(victim, killer, "🪃")
 				var victim_actor_id := int(body.get("actor_id")) if body.get("actor_id") != null else -1
 				var disarmer_actor_id := int(_thrower.get("actor_id")) if _thrower != null and _thrower.get("actor_id") != null else -1
-				GameEvents.actor_disarmed.emit(victim_actor_id, disarmer_actor_id, "")
+				GameEvents.actor_disarmed.emit(victim_actor_id, disarmer_actor_id, "🪃")
 			if body.has_method("grant_bullet_immunity"):
 				body.grant_bullet_immunity(1.0)
 	elif body.has_method("apply_knockback"):

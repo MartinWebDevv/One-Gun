@@ -1,0 +1,19 @@
+{
+  "label": "cover_with_feedback",
+  "code": 0,
+  "seconds": 4.07,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "COMBAT_COVER_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/combat_cover_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\cover_with_feedback.log"
+}

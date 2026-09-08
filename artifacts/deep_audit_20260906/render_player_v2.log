@@ -1,0 +1,39 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+PLAYER_V2_RENDER_CAPTURE D:\Godot Projects\one-gun\artifacts\deep_audit_20260906\player_v2_captures/main_menu_launch_release_notes.png
+PLAYER_V2_RENDER_CAPTURE D:\Godot Projects\one-gun\artifacts\deep_audit_20260906\player_v2_captures/main_menu.png
+PLAYER_V2_RENDER_CAPTURE D:\Godot Projects\one-gun\artifacts\deep_audit_20260906\player_v2_captures/main_menu_release_notes.png
+PLAYER_V2_RENDER_CAPTURE D:\Godot Projects\one-gun\artifacts\deep_audit_20260906\player_v2_captures/main_menu_player_hub.png
+PLAYER_V2_RENDER_CAPTURE D:\Godot Projects\one-gun\artifacts\deep_audit_20260906\player_v2_captures/main_menu_customization.png
+ERROR: PlayerV2RenderValidation: returned Player Hub did not restore controller focus
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _capture_main_menu (res://tools/player_v2_render_validation.gd:160)
+       [1] _wait_frames (res://tools/player_v2_render_validation.gd:603)
+ERROR: 34 RID allocations of type 'N10RendererRD14TextureStorage7TextureE' were leaked at exit.
+ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
+ERROR: Parse Error: Failed. [Resource file res://UI/winners_circle_stage_blockout.tscn:25]
+   at: _parse_node_tag (scene/resources/resource_format_text.cpp:293)
+ERROR: Failed loading resource: res://UI/winners_circle_stage_blockout.tscn.
+   at: _load (core/io/resource_loader.cpp:317)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://UI/winners_circle_stage_blockout.tscn".
+   at: GDScript::reload (res://UI/winners_circle.gd:11)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+   at: GDScript::reload (res://winners_circle_coordinator.gd:0)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+   at: GDScript::reload (res://round_manager.gd:0)
+ERROR: Failed to load script "res://round_manager.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .
+   at: _printerr (scene/resources/resource_format_text.cpp:41)
+ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.
+   at: _load (core/io/resource_loader.cpp:317)
+WARNING: 3 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 34 RIDs of type "Texture" were leaked.
+   at: finalize (servers/rendering/rendering_device.cpp:8900)
+WARNING: 92 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

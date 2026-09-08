@@ -1,0 +1,190 @@
+[
+  {
+    "label": "online_match",
+    "code": 1,
+    "seconds": 27.89,
+    "errors": [
+      "ERROR: ONLINE_SMOKE_FAIL host: round reset did not restore gun, melee weapon, and players",
+      "ERROR: ONLINE_SMOKE_FAIL client: online HUD did not restore the living client display"
+    ],
+    "markers": [],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_match.log"
+  },
+  {
+    "label": "online_lobby",
+    "code": 1,
+    "seconds": 26.82,
+    "errors": [
+      "ERROR: 24 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+      "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+      "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+      "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+    ],
+    "markers": [
+      "ONLINE_LOBBY_PASS host",
+      "ONLINE_LOBBY_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_lobby.log"
+  },
+  {
+    "label": "online_named_lobby",
+    "code": 0,
+    "seconds": 5.03,
+    "errors": [],
+    "markers": [
+      "ONLINE_NAMED_LOBBY_PASS host",
+      "ONLINE_NAMED_LOBBY_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_named_lobby.log"
+  },
+  {
+    "label": "online_exit_flow",
+    "code": 1,
+    "seconds": 24.37,
+    "errors": [
+      "ERROR: 39 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+      "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+      "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+      "ERROR: 2 resources still in use at exit (run with --verbose for details).",
+      "ERROR: 39 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+      "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+      "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+      "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+    ],
+    "markers": [
+      "ONLINE_EXIT_FLOW_PASS host",
+      "ONLINE_EXIT_FLOW_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_exit_flow.log"
+  },
+  {
+    "label": "online_client_exit",
+    "code": 1,
+    "seconds": 21.1,
+    "errors": [
+      "ERROR: 35 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+      "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+      "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+      "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+    ],
+    "markers": [
+      "ONLINE_CLIENT_EXIT_PASS host",
+      "ONLINE_CLIENT_EXIT_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_client_exit.log"
+  },
+  {
+    "label": "online_online_bots",
+    "code": 0,
+    "seconds": 19.76,
+    "errors": [],
+    "markers": [
+      "ONLINE_BOTS_PASS host",
+      "ONLINE_BOTS_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_online_bots.log"
+  },
+  {
+    "label": "online_overtime",
+    "code": 0,
+    "seconds": 16.37,
+    "errors": [],
+    "markers": [
+      "ONLINE_OVERTIME_PASS host",
+      "ONLINE_OVERTIME_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_overtime.log"
+  },
+  {
+    "label": "online_one_of_us",
+    "code": 1,
+    "seconds": 24.06,
+    "errors": [
+      "ERROR: 40 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+      "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+      "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+      "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+    ],
+    "markers": [
+      "ONLINE_ONE_OF_US_PASS host",
+      "ONLINE_ONE_OF_US_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_one_of_us.log"
+  },
+  {
+    "label": "online_playpen",
+    "code": 0,
+    "seconds": 24.73,
+    "errors": [],
+    "markers": [
+      "ONLINE_PLAYPEN_PASS host",
+      "ONLINE_PLAYPEN_PASS client"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_playpen.log"
+  },
+  {
+    "label": "online_late_spectator",
+    "code": 0,
+    "seconds": 19.35,
+    "errors": [],
+    "markers": [
+      "ONLINE_LATE_SPECTATOR_PASS host",
+      "ONLINE_LATE_SPECTATOR_PASS client",
+      "ONLINE_LATE_SPECTATOR_PASS spectator"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_late_spectator.log"
+  },
+  {
+    "label": "online_dedicated",
+    "code": 0,
+    "seconds": 28.86,
+    "errors": [],
+    "markers": [
+      "DEDICATED_SERVER_PASS controller",
+      "DEDICATED_MOVEMENT_SYNC_PASS controller",
+      "DEDICATED_INPUT_PICKUP_PASS controller",
+      "DEDICATED_INPUT_FIRE_PASS controller",
+      "DEDICATED_INPUT_DROP_PASS controller",
+      "DEDICATED_MELEE_PICKUP_PASS controller",
+      "DEDICATED_MELEE_SWING_PASS controller",
+      "DEDICATED_MELEE_HIT_PASS controller",
+      "DEDICATED_MELEE_DROP_PASS controller",
+      "DEDICATED_ITEM_PICKUP_PASS controller",
+      "DEDICATED_ITEM_DROP_PASS controller",
+      "DEDICATED_ITEM_THROW_PASS controller",
+      "DEDICATED_RETURN_PASS controller",
+      "DEDICATED_SERVER_PASS guest",
+      "DEDICATED_MOVEMENT_SYNC_PASS guest",
+      "DEDICATED_INPUT_PICKUP_PASS guest",
+      "DEDICATED_INPUT_FIRE_PASS guest",
+      "DEDICATED_INPUT_DROP_PASS guest",
+      "DEDICATED_MELEE_PICKUP_PASS guest",
+      "DEDICATED_MELEE_SWING_PASS guest",
+      "DEDICATED_MELEE_HIT_PASS guest",
+      "DEDICATED_MELEE_DROP_PASS guest",
+      "DEDICATED_ITEM_PICKUP_PASS guest",
+      "DEDICATED_ITEM_DROP_PASS guest",
+      "DEDICATED_ITEM_THROW_PASS guest",
+      "DEDICATED_RETURN_PASS guest"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_dedicated.log"
+  },
+  {
+    "label": "online_version_mismatch",
+    "code": 0,
+    "seconds": 2.96,
+    "errors": [
+      "ERROR: Trying to call an RPC via a multiplayer peer which is not connected."
+    ],
+    "markers": [
+      "VERSION_MISMATCH_CLIENT_PASS reason=network_protocol",
+      "VERSION MISMATCH SMOKE: PASS"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_version_mismatch.log"
+  }
+]

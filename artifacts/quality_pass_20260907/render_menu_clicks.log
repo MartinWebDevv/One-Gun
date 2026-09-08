@@ -1,0 +1,18 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+PASS: Player Hub exposes its Locker button
+PASS: Player Hub preserves controller focus through the pre-GUI mouse press
+PASS: focused Player Hub button receives a real pointer click
+PASS: Prize Counter exposes an unobstructed Back button
+PASS: Prize Counter Back receives a real pointer click
+PASS: Friends exposes its Back button
+PASS: Friends preserves controller focus through the pre-GUI mouse press
+PASS: focused Friends button receives a real pointer click
+PASS: Lobby exposes Match Settings
+PASS: Lobby Match Settings opens from a pointer click
+PASS: Progression exposes both road tabs
+PASS: Progression switches roads from a pointer click
+MENU_POINTER_CLICK_VALIDATION: PASS
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

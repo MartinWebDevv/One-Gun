@@ -1,0 +1,19 @@
+{
+  "label": "bounds",
+  "code": 0,
+  "seconds": 7.05,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "CHARACTER_SIZE_HITBOX_VALIDATION: PASS models=8 shared_capsule=true"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/character_size_hitbox_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\bounds.log"
+}

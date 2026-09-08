@@ -1,0 +1,19 @@
+{
+  "label": "new_game_modes_validation",
+  "code": 0,
+  "seconds": 29.3,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "NEW GAME MODES VALIDATION PASSED"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/new_game_modes_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\new_game_modes_validation.log"
+}

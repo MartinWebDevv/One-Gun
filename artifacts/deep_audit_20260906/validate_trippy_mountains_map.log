@@ -1,0 +1,50 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+ERROR: TRIPPY_MAP_VALIDATION: intro camera begins outside PlayArea: (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: intro camera sweep is 180.0 degrees instead of 40
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint1 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint2 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint3 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint4 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint5 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint6 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint7 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint8 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint9 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)
+ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint10 intro sweep leaves PlayArea at (68.235, -56.269)
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _initialize (res://tools/validate_trippy_mountains_map.gd:92)

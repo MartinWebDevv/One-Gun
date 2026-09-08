@@ -1,0 +1,28 @@
+{
+  "label": "supabase_main_menu_validation",
+  "code": 1,
+  "seconds": 10.55,
+  "timeout": false,
+  "errors": [
+    "ERROR: SUPABASE MAIN MENU VALIDATION FAILED: Newest map order did not place Neon Circuit first",
+    "ERROR: 41 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+    "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ERROR: SUPABASE MAIN MENU VALIDATION FAILED: Newest map order did not place Neon Circuit first",
+    "       [0] _check (res://tools/supabase_main_menu_validation.gd:296)",
+    "       [1] _run (res://tools/supabase_main_menu_validation.gd:275)"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/supabase_main_menu_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\supabase_main_menu_validation.log"
+}

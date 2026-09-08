@@ -1,0 +1,11 @@
+{
+  "label": "online_playpen",
+  "code": 0,
+  "seconds": 24.73,
+  "errors": [],
+  "markers": [
+    "ONLINE_PLAYPEN_PASS host",
+    "ONLINE_PLAYPEN_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_playpen.log"
+}

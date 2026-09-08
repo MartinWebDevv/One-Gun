@@ -1,0 +1,88 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 3
+[DEDICATED] Listening on UDP 24756 | max players 4 | lobby 'Dedicated-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[ONLINE 2376] peer 588955871 connected
+[ONLINE 2659] peer 588955871 admitted | client build itch-380e65c
+[DEDICATED] Peer 588955871 became lobby controller.
+[ONLINE 2728] peer 855653598 connected
+[ONLINE 3011] peer 855653598 admitted | client build itch-380e65c
+[ONLINE 6054] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 6055] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 10648] match 1 ready peer 588955871 (1/2)
+[ONLINE 10856] match 1 ready peer 855653598 (2/2)
+[DEDICATED ACTION] gun pickup requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun fire requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun drop requested by actor 1 (epoch 1)
+[DEDICATED ACTION] melee pickup requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee swing requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee hit confirmed actor 1 -> actor 2 (candidate 0, epoch 1)
+[DEDICATED ACTION] melee drop requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item drop requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 1 (epoch 1)
+[DEDICATED ACTION] item throw requested by actor 1 for item 1 (epoch 1)
+[DEDICATED] Lobby runtime restored; ENet remains active on UDP 24756.
+[ONLINE 27655] peer 588955871 disconnected
+[DEDICATED] Peer 855653598 became lobby controller.
+[ONLINE 27724] peer 855653598 disconnected
+[DEDICATED] Lobby has no controller; waiting for a player.
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1537] joining 127.0.0.1:24756 (attempt 2)
+[ONLINE 1548] connected to host as peer 588955871
+[ONLINE 1550] peer 1 connected
+[ONLINE 1914] peer 855653598 connected
+[ONLINE 5240] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9826] reporting match 1 scene ready
+DEDICATED_SERVER_PASS controller
+DEDICATED_MOVEMENT_SYNC_PASS controller
+DEDICATED_INPUT_PICKUP_PASS controller
+DEDICATED_INPUT_FIRE_PASS controller
+DEDICATED_INPUT_DROP_PASS controller
+DEDICATED_MELEE_PICKUP_PASS controller
+DEDICATED_MELEE_SWING_PASS controller
+DEDICATED_MELEE_HIT_PASS controller
+DEDICATED_MELEE_DROP_PASS controller
+DEDICATED_ITEM_PICKUP_PASS controller
+DEDICATED_ITEM_DROP_PASS controller
+DEDICATED_ITEM_THROW_PASS controller
+DEDICATED_RETURN_PASS controller
+[ONLINE 26830] disconnect requested
+
+ERROR: Ignoring sync data from non-authority or for missing node.
+   at: on_sync_receive (modules/multiplayer/scene_replication_interface.cpp:879)
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1358] joining 127.0.0.1:24756 (attempt 2)
+[ONLINE 1369] connected to host as peer 855653598
+[ONLINE 1371] peer 1 connected
+[ONLINE 1389] peer 588955871 connected
+[ONLINE 4715] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9503] reporting match 1 scene ready
+DEDICATED_SERVER_PASS guest
+DEDICATED_MOVEMENT_SYNC_PASS guest
+DEDICATED_INPUT_PICKUP_PASS guest
+DEDICATED_INPUT_FIRE_PASS guest
+DEDICATED_INPUT_DROP_PASS guest
+DEDICATED_MELEE_PICKUP_PASS guest
+DEDICATED_MELEE_SWING_PASS guest
+DEDICATED_MELEE_HIT_PASS guest
+DEDICATED_MELEE_DROP_PASS guest
+DEDICATED_ITEM_PICKUP_PASS guest
+DEDICATED_ITEM_DROP_PASS guest
+DEDICATED_ITEM_THROW_PASS guest
+DEDICATED_RETURN_PASS guest
+[ONLINE 26316] peer 588955871 disconnected
+[DEDICATED] Peer 855653598 became lobby controller.
+[ONLINE 26371] disconnect requested
+
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+

@@ -1,0 +1,101 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 2
+[DEDICATED] Listening on UDP 24758 | max players 4 | lobby 'Match-Server-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[MATCH SERVER] Assignment accepted | expected players 2 | map res://node_3d.tscn
+[ONLINE 1725] starting match 1 on res://node_3d.tscn for 0 peers
+[ONLINE 1727] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 6730] peer 546647800 connected
+[ONLINE 6738] peer 546647800 rejected | reason match_ticket_invalid | client build itch-380e65c
+[ONLINE 6739] peer 546647800 rejected | reason match_ticket_invalid | client build itch-380e65c
+[ONLINE 6751] peer 546647800 disconnected
+[ONLINE 8538] peer 1502961626 connected
+[ONLINE 8836] peer 1502961626 admitted | client build itch-380e65c
+[ONLINE 8838] match participant admitted (1/2 assigned tickets)
+[ONLINE 9153] peer 599488256 connected
+[ONLINE 9450] peer 599488256 admitted | client build itch-380e65c
+[ONLINE 9452] match participant admitted (2/2 assigned tickets)
+[ONLINE 14397] match 1 ready peer 1502961626 (1/2)
+[ONLINE 14810] match 1 ready peer 599488256 (2/2)
+[DEDICATED ACTION] gun pickup requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun fire requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun drop requested by actor 1 (epoch 1)
+[DEDICATED ACTION] melee pickup requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee swing requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee hit confirmed actor 1 -> actor 2 (candidate 0, epoch 1)
+[DEDICATED ACTION] melee drop requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item drop requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 1 (epoch 1)
+[DEDICATED ACTION] item throw requested by actor 1 for item 1 (epoch 1)
+[ONLINE 26793] peer 599488256 disconnected
+[ONLINE 26951] peer 1502961626 disconnected
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1813] joining 127.0.0.1:24758 (attempt 2)
+[ONLINE 5005] connected to host as peer 546647800
+[ONLINE 5008] peer 1 connected
+MATCH_TICKET_REJECTION_PASS reason=match_ticket_invalid
+
+ERROR: Trying to call an RPC via a multiplayer peer which is not connected.
+   at: rpcp (modules/multiplayer/scene_rpc_interface.cpp:478)
+   GDScript backtrace (most recent call first):
+       [0] set_local_appearance (res://network_manager.gd:995)
+       [1] _apply_local_character_appearance (res://supabase/supabase_manager.gd:745)
+       [2] _restore_session (res://supabase/supabase_manager.gd:530)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1646] joining 127.0.0.1:24758 (attempt 2)
+[ONLINE 1656] connected to host as peer 1502961626
+[ONLINE 1659] peer 1 connected
+[ONLINE 1968] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 7517] reporting match 1 scene ready
+[ONLINE 7612] peer 599488256 connected
+DEDICATED_SERVER_PASS controller
+DEDICATED_MOVEMENT_SYNC_PASS controller
+DEDICATED_INPUT_PICKUP_PASS controller
+DEDICATED_INPUT_FIRE_PASS controller
+DEDICATED_INPUT_DROP_PASS controller
+DEDICATED_MELEE_PICKUP_PASS controller
+DEDICATED_MELEE_SWING_PASS controller
+DEDICATED_MELEE_HIT_PASS controller
+DEDICATED_MELEE_DROP_PASS controller
+DEDICATED_ITEM_PICKUP_PASS controller
+DEDICATED_ITEM_DROP_PASS controller
+DEDICATED_ITEM_ACTION_PASS controller
+MATCH_SERVER_ACTIONS_PASS controller
+[ONLINE 19920] peer 599488256 disconnected
+[ONLINE 20072] disconnect requested
+
+ERROR: Condition "!pinfo.recv_nodes.has(net_id)" is true. Returning: ERR_UNAUTHORIZED
+   at: on_despawn_receive (modules/multiplayer/scene_replication_interface.cpp:663)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1737] joining 127.0.0.1:24758 (attempt 2)
+[ONLINE 1748] connected to host as peer 599488256
+[ONLINE 1750] peer 1 connected
+[ONLINE 1761] peer 1502961626 connected
+[ONLINE 2059] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 7400] reporting match 1 scene ready
+DEDICATED_SERVER_PASS guest
+DEDICATED_MOVEMENT_SYNC_PASS guest
+DEDICATED_INPUT_PICKUP_PASS guest
+DEDICATED_INPUT_FIRE_PASS guest
+DEDICATED_INPUT_DROP_PASS guest
+DEDICATED_MELEE_PICKUP_PASS guest
+DEDICATED_MELEE_SWING_PASS guest
+DEDICATED_MELEE_HIT_PASS guest
+DEDICATED_MELEE_DROP_PASS guest
+DEDICATED_ITEM_PICKUP_PASS guest
+DEDICATED_ITEM_DROP_PASS guest
+DEDICATED_ITEM_ACTION_PASS guest
+MATCH_SERVER_ACTIONS_PASS guest
+[ONLINE 19392] disconnect requested
+
+
+MATCH SERVER SMOKE: PASS

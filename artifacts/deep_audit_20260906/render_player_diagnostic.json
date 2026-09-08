@@ -1,0 +1,27 @@
+{
+  "label": "render_player_diagnostic",
+  "code": 0,
+  "seconds": 22.1,
+  "timeout": false,
+  "errors": [
+    "ERROR: 39 RID allocations of type 'N10RendererRD14TextureStorage7TextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "PLAYER_V2_RENDER_VALIDATION_OK output=D:/Godot Projects/one-gun/artifacts/deep_audit_20260906/player_v2_captures"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/deep_audit_20260906/player_render_diagnostic.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_player_diagnostic.log"
+}

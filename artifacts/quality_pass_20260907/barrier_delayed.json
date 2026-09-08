@@ -1,0 +1,36 @@
+{
+  "label": "barrier_delayed",
+  "code": 1,
+  "seconds": 28.44,
+  "errors": [
+    "ERROR: Ignoring sync data from non-authority or for missing node."
+  ],
+  "markers": [
+    "DEDICATED_SERVER_PASS controller",
+    "DEDICATED_MOVEMENT_SYNC_PASS controller",
+    "DEDICATED_INPUT_PICKUP_PASS controller",
+    "DEDICATED_INPUT_FIRE_PASS controller",
+    "DEDICATED_INPUT_DROP_PASS controller",
+    "DEDICATED_MELEE_PICKUP_PASS controller",
+    "DEDICATED_MELEE_SWING_PASS controller",
+    "DEDICATED_MELEE_HIT_PASS controller",
+    "DEDICATED_MELEE_DROP_PASS controller",
+    "DEDICATED_ITEM_PICKUP_PASS controller",
+    "DEDICATED_ITEM_DROP_PASS controller",
+    "DEDICATED_ITEM_THROW_PASS controller",
+    "DEDICATED_RETURN_PASS controller",
+    "DEDICATED_SERVER_PASS guest",
+    "DEDICATED_MOVEMENT_SYNC_PASS guest",
+    "DEDICATED_INPUT_PICKUP_PASS guest",
+    "DEDICATED_INPUT_FIRE_PASS guest",
+    "DEDICATED_INPUT_DROP_PASS guest",
+    "DEDICATED_MELEE_PICKUP_PASS guest",
+    "DEDICATED_MELEE_SWING_PASS guest",
+    "DEDICATED_MELEE_HIT_PASS guest",
+    "DEDICATED_MELEE_DROP_PASS guest",
+    "DEDICATED_ITEM_PICKUP_PASS guest",
+    "DEDICATED_ITEM_DROP_PASS guest",
+    "DEDICATED_ITEM_THROW_PASS guest",
+    "DEDICATED_RETURN_PASS guest"
+  ]
+}

@@ -41,3 +41,6 @@ signal combat_noise(world_position: Vector3, source_actor_id: int, kind: String,
 # pickup objects do not retain a direct dependency on the local RoundManager.
 signal melee_marker_refill_requested(melee)
 signal item_marker_refill_requested(item)
+
+# Only authoritative projectiles emit; RoundManager relays over its stable path.
+signal online_projectile_retired(shot_id: int, epoch: int, impact_position: Vector3)

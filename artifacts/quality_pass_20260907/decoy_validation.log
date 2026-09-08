@@ -1,0 +1,15 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+DECOY TEST: scene contract
+DECOY TEST: item deployment
+DECOY TEST: gait continuity
+DECOY TEST: automatic movement
+DECOY TEST: scaled-map deployment
+DECOY TEST: toggle control
+DECOY TEST: collision stop
+DECOY TEST: status and hazards
+DECOY TEST: combat pop
+DECOY TEST: owner/lifetime
+DECOY TEST: bot parity
+DECOY TEST: network snapshot
+DECOY VALIDATION: PASS

@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://tools/live_lobby_preview/live_lobby_preview.gd" id="1"]
+[ext_resource type="PackedScene" path="res://tools/live_lobby_preview/station.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://player.tscn" id="3"]
+
+[ext_resource type="Script" path="res://tools/live_lobby_preview/preview_actor.gd" id="4"]
+
+[node name="LiveLobbyPreview" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Station" parent="." instance=ExtResource("2")]
+
+[node name="ArrivalSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 2.29, 35.5)
+
+[node name="Player" parent="." instance=ExtResource("3")]
+position = Vector3(0, 2.29, 35.5)
+input_prefix = "p1"
+script = ExtResource("4")

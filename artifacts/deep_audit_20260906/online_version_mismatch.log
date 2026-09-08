@@ -1,0 +1,25 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 2
+[DEDICATED] Listening on UDP 24757 | max players 4 | lobby 'Version-Mismatch-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[ONLINE 2254] peer 362119607 connected
+[ONLINE 2261] peer 362119607 rejected | reason network_protocol | client build itch-380e65c
+[ONLINE 2268] peer 362119607 disconnected
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1413] joining 127.0.0.1:24757 (attempt 2)
+[ONLINE 1441] connected to host as peer 362119607
+[ONLINE 1445] peer 1 connected
+VERSION_MISMATCH_CLIENT_PASS reason=network_protocol
+
+ERROR: Trying to call an RPC via a multiplayer peer which is not connected.
+   at: rpcp (modules/multiplayer/scene_rpc_interface.cpp:478)
+   GDScript backtrace (most recent call first):
+       [0] set_local_appearance (res://network_manager.gd:995)
+       [1] _apply_local_character_appearance (res://supabase/supabase_manager.gd:745)
+       [2] _restore_session (res://supabase/supabase_manager.gd:530)
+
+VERSION MISMATCH SMOKE: PASS

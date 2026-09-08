@@ -1,0 +1,28 @@
+{
+  "label": "menu_verbose_fixed",
+  "code": 0,
+  "seconds": 6.02,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "Loading resource: res://models/cosmetics/hats/hat_fit_profiles.tres remapped: res://models/cosmetics/hats/hat_fit_profiles.tres",
+    "Loading resource: res://models/cosmetics/hats/hat_fit_profiles.gd remapped: res://models/cosmetics/hats/hat_fit_profiles.gd",
+    "Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.gd' remapped 'res://models/cosmetics/hats/hat_fit_profiles.gd' at thread -1",
+    "Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.tres' remapped 'res://models/cosmetics/hats/hat_fit_profiles.tres' at thread -1",
+    "Loading resource: res://UI/assets/menu_hubs/profile_backdrop.png remapped: res://UI/assets/menu_hubs/profile_backdrop.png",
+    "Loading resource: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex remapped: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex",
+    "Completed load for: 'res://UI/assets/menu_hubs/profile_backdrop.png' remapped 'res://UI/assets/menu_hubs/profile_backdrop.png' at thread -1"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--verbose",
+    "--scene",
+    "res://main_menu.tscn",
+    "--quit-after",
+    "90"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\menu_verbose_fixed.log"
+}

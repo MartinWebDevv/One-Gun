@@ -98,6 +98,7 @@ func _leave_match_to(scene_path: String):
 # ============================================================
 var _player_spawner: MultiplayerSpawner = null
 var online_round_epoch := 1
+var _next_online_shot_id := 0
 var online_combat_live := false
 var online_actor_state: Dictionary = {}
 var online_announcement := "LOADING..."
@@ -387,11 +388,17 @@ func _server_route_online_gun_action(sender_id: int, action: String, epoch: int,
 
 func broadcast_online_gun_action(action: String, data: Dictionary = {}) -> void:
 	if multiplayer.is_server():
+		if action == "fire":
+			_next_online_shot_id += 1
+			data = data.duplicate()
+			data["shot_id"] = _next_online_shot_id
 		NetworkManager.broadcast_match_rpc(self, &"_net_apply_online_gun_action", [action, data])
 
 
 @rpc("authority", "reliable", "call_local")
 func _net_apply_online_gun_action(action: String, data: Dictionary) -> void:
+	if action == "fire" and int(data.get("epoch", -1)) != online_round_epoch:
+		return
 	var holder_actor_id := int(data.get("holder_actor_id", -1))
 	var gun = _online_loose_gun(str(data.get("gun_instance_name", ""))) \
 		if action == "pickup" else _online_loose_gun() \
@@ -403,16 +410,37 @@ func _net_apply_online_gun_action(action: String, data: Dictionary) -> void:
 			print("[DEDICATED ACTION] gun %s apply skipped: matching gun not found" % action)
 		return
 	match action:
+		"blocked": gun._show_cover_feedback()
 		"pickup": gun._net_do_pickup(holder_actor_id)
 		"fire": gun._net_spawn_bullet(
 			data.get("origin", Vector3.ZERO), data.get("direction", Vector3.ZERO),
-			holder_actor_id, int(data.get("epoch", -1)))
+			holder_actor_id, int(data.get("epoch", -1)), int(data.get("shot_id", -1)))
 		"drop": gun._net_do_drop(data.get("position", Vector3.ZERO))
 		"force_disarm": gun._net_do_force_disarm(
 			data.get("position", Vector3.ZERO), holder_actor_id)
 		"force_reload": gun._net_force_full_reload()
 		"set_can_fire": gun._net_set_can_fire(bool(data.get("value", false)))
 		"return_loose": gun._net_return_loose_to_spawn()
+
+
+func _server_retire_online_projectile(shot_id: int, epoch: int,
+		impact_position: Vector3) -> void:
+	if not NetworkManager.is_host() or epoch != online_round_epoch or shot_id < 0:
+		return
+	NetworkManager.broadcast_match_rpc(self, &"_net_retire_online_projectile",
+		[shot_id, epoch, impact_position], false)
+
+
+@rpc("authority", "reliable")
+func _net_retire_online_projectile(shot_id: int, epoch: int,
+		impact_position: Vector3) -> void:
+	if epoch != online_round_epoch or not impact_position.is_finite():
+		return
+	for bullet in get_tree().get_nodes_in_group("online_bullet"):
+		if int(bullet.get("net_shot_id")) == shot_id \
+				and int(bullet.get("net_round_epoch")) == epoch:
+			bullet.retire_at(impact_position)
+			break
 
 
 func _online_melee_weapon():
@@ -2084,7 +2112,7 @@ func _on_online_roster_changed() -> void:
 		_online_reward_last_positions.erase(actor_id)
 		_online_reward_last_aims.erase(actor_id)
 		online_actor_state.erase(actor_id)
-		NetworkManager.broadcast_match_rpc(self, &"_net_remove_online_actor", [actor_id])
+		_server_remove_online_actor(actor_id)
 	_broadcast_online_state()
 	_maybe_finish_online_forfeit()
 
@@ -2157,8 +2185,11 @@ func server_record_online_melee_hit(attacker_id: int, meaningful_hit: bool, did_
 	online_actor_state[attacker_id] = entry
 	_broadcast_online_state()
 
-@rpc("authority", "reliable", "call_local")
-func _net_remove_online_actor(actor_id: int) -> void:
+func _server_remove_online_actor(actor_id: int) -> void:
+	# The host spawner alone owns despawning. Manually freeing client replicas
+	# first removes their receive cache before the authoritative despawn arrives.
+	if not NetworkManager.is_host():
+		return
 	var actor = NetworkManager.find_actor(actor_id)
 	if actor != null:
 		actor.queue_free()
@@ -2354,6 +2385,7 @@ func _apply_one_of_us_environment_grade() -> void:
 
 
 func _ready():
+	GameEvents.online_projectile_retired.connect(_server_retire_online_projectile)
 	_setup_winners_circle_coordinator()
 	_apply_one_of_us_environment_grade()
 	if NetworkManager.is_online():

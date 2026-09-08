@@ -1,0 +1,39 @@
+{
+  "label": "validate_trippy_mountains_map",
+  "code": 1,
+  "seconds": 9.4,
+  "timeout": false,
+  "errors": [
+    "ERROR: TRIPPY_MAP_VALIDATION: intro camera begins outside PlayArea: (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: intro camera sweep is 180.0 degrees instead of 40",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint1 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint2 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint3 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint4 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint5 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint6 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint7 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint8 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint9 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint10 intro sweep leaves PlayArea at (68.235, -56.269)"
+  ],
+  "markers": [
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint3 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint4 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint5 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint6 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint7 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint8 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint9 intro sweep leaves PlayArea at (68.235, -56.269)",
+    "ERROR: TRIPPY_MAP_VALIDATION: SpawnPoint10 intro sweep leaves PlayArea at (68.235, -56.269)"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/validate_trippy_mountains_map.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\validate_trippy_mountains_map.log"
+}

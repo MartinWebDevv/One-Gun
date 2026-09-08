@@ -1,0 +1,10 @@
+{
+  "label": "final_exit_flow",
+  "code": 0,
+  "seconds": 20.99,
+  "errors": [],
+  "markers": [
+    "ONLINE_EXIT_FLOW_PASS host",
+    "ONLINE_EXIT_FLOW_PASS client"
+  ]
+}

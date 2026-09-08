@@ -1,0 +1,30 @@
+{
+  "label": "render_winners_circle",
+  "code": 0,
+  "seconds": 11.58,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PASS: Winners Circle new performer retains hat: spooky_witch",
+    "PASS: Winners Circle new performer loads its podium animation: spooky_witch",
+    "PASS: Winners Circle accepts new character model: eye_wizard",
+    "PASS: Winners Circle accepts new character model: mr_mushroom",
+    "PASS: Winners Circle accepts new character model: mr_poop",
+    "PASS: Winners Circle accepts new character model: mr_salt",
+    "PASS: Winners Circle accepts new character model: spooky_witch",
+    "WINNERS CIRCLE VALIDATION PASSED"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--script",
+    "res://tools/winners_circle_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_winners_circle.log"
+}

@@ -657,6 +657,8 @@ func _on_flight_body_entered(body):
 	if body == player_ref:
 		add_collision_exception_with(body)
 		return
+	if not _swing_has_clear_cover(body):
+		return
 	if body.is_in_group("combat_decoy"):
 		if body.has_method("pop_from_attack"):
 			body.pop_from_attack(player_ref, "thrown_melee")
@@ -867,7 +869,8 @@ func _dedicated_swing_candidates() -> Array:
 	var candidates: Array = []
 	for result in get_world_3d().direct_space_state.intersect_shape(query, 16):
 		var collider = result.get("collider")
-		if collider != null and not candidates.has(collider):
+		if collider is Node3D and not candidates.has(collider) \
+				and _swing_has_clear_cover(collider):
 			candidates.append(collider)
 	return candidates
 
@@ -992,6 +995,19 @@ func _holder_max_hit_distance() -> float:
 		return POWERUP_MELEE_MAX_HIT_DISTANCE
 	return _normal_hitbox_length()
 
+func _swing_has_clear_cover(body: Node3D) -> bool:
+	if not player_ref is Node3D:
+		return false
+	var excluded: Array[RID] = [get_rid()]
+	if player_ref is CollisionObject3D:
+		excluded.append(player_ref.get_rid())
+	if body is CollisionObject3D:
+		excluded.append(body.get_rid())
+	return VisibilityRules.world_segment_clear(self,
+		player_ref.global_position + Vector3.UP * DEDICATED_SWING_ORIGIN_HEIGHT,
+		body.global_position + Vector3.UP * DEDICATED_SWING_ORIGIN_HEIGHT, excluded)
+
+
 func _on_hit_landed(body):
 	if body == player_ref:
 
@@ -1016,6 +1032,8 @@ func _on_hit_landed(body):
 	_resolve_local_hit(body, false)
 
 func _resolve_local_hit(body, is_thrown: bool) -> void:
+	if not is_thrown and not _swing_has_clear_cover(body):
+		return
 	var round_manager = get_tree().current_scene.get_node_or_null("RoundManager")
 	if round_manager != null and round_manager.has_method("try_resolve_one_of_us_melee") \
 			and round_manager.try_resolve_one_of_us_melee(player_ref, body):
@@ -1078,6 +1096,9 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 	var rm = _online_round_manager()
 	if rm == null or not rm.can_accept_online_combat(_online_round_epoch()):
 		return
+	# Cover must be checked before One of Us can convert a target.
+	if not is_thrown and (not is_swinging or not _swing_has_clear_cover(body)):
+		return
 	if rm.has_method("try_resolve_one_of_us_melee") and rm.try_resolve_one_of_us_melee(player_ref, body):
 		return
 	if not is_thrown and not is_swinging:
@@ -1085,7 +1106,7 @@ func _server_resolve_hit(body, is_thrown: bool) -> void:
 	if not body.is_in_group("player") or body.is_eliminated or not GameConfig.can_affect(player_ref, body):
 		return
 	var max_hit_distance := _holder_max_hit_distance()
-	if body.global_position.distance_to(player_ref.global_position) > max_hit_distance:
+	if not is_thrown and body.global_position.distance_to(player_ref.global_position) > max_hit_distance:
 		return
 	var target_id := int(body.actor_id) if "actor_id" in body else -1
 	var attacker_id := _holder_actor_id()

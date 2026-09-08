@@ -1,0 +1,23 @@
+{
+  "label": "lobby_accessibility_final",
+  "code": 0,
+  "seconds": 8.37,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "LOBBY_ACCESSIBILITY_VALIDATION: PASS 720p/125%/large/10-actors/focus-scroll"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/lobby_accessibility_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\lobby_accessibility_final.log"
+}

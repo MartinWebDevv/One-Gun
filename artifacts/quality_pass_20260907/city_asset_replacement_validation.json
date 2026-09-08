@@ -1,0 +1,19 @@
+{
+  "label": "city_asset_replacement_validation",
+  "code": 0,
+  "seconds": 6.2,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "CITY_ASSET_REPLACEMENT_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/city_asset_replacement_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\city_asset_replacement_validation.log"
+}

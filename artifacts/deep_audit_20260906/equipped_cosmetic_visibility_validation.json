@@ -1,0 +1,19 @@
+{
+  "label": "equipped_cosmetic_visibility_validation",
+  "code": 0,
+  "seconds": 4.01,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "EQUIPPED_COSMETIC_VISIBILITY_VALIDATION: PASS gameplay=1 gift-model=1 hat=1 animation=1 live-refresh=1"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/equipped_cosmetic_visibility_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\equipped_cosmetic_visibility_validation.log"
+}

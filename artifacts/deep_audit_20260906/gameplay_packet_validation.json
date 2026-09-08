@@ -1,0 +1,21 @@
+{
+  "label": "gameplay_packet_validation",
+  "code": 0,
+  "seconds": 6.83,
+  "timeout": false,
+  "errors": [
+    "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "GAMEPLAY PACKET VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/gameplay_packet_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\gameplay_packet_validation.log"
+}

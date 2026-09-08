@@ -119,7 +119,7 @@ Whenever map selection/loading changes, verify:
 
 - the previous map is freed and no stale manager/resource reference retains it;
 - full maps do not coexist unnecessarily;
-- threaded requests do not overlap or continue after cancellation;
+- threaded requests have one owner; cancellation suppresses callbacks and queued work, and the owner drains any already-running Godot worker;
 - repeated selection cannot duplicate nodes or grow memory;
 - previews use lightweight images/scenes rather than full playable maps where practical;
 - repeated enter/leave, lobby/playpen/match, and menu transitions do not accumulate RAM/VRAM;
@@ -217,7 +217,23 @@ Do not stop normal feature development for speculative optimization. Performance
 These are profiling targets, not authorization for blind rewrites:
 
 - ForestMap.tscn is the largest authored gameplay scene in the current static audit (about 1,025 scene nodes, 269 mesh/CSG nodes, and nine GPU particle systems). Profile its rendered draw calls, visibility, particle cost, and memory before changing its art structure.
-- models/new guy one gun model orange running.glb is a used legacy bot asset around 24.7 MB, above the normal incoming-asset budget. Its animation/appearance must be backed up and validated before reprocessing.
+- The live bot and bat were optimized in the 2026-09-07 quality pass: 82,214 and 13,394 base triangles, with 1024px textures. Preserve the optimized paths and validate silhouettes, rigs and sockets before further reprocessing.
 - Long WAV source files are imported with Godot compression mode 2 and loaded on demand; source size alone is not evidence of equivalent runtime RAM. Profile decoded/imported memory before converting formats.
 - Main-menu High/Ultra still deliberately preloads the next live map while displaying the current one. Measure peak RAM/VRAM on the laptop before redesigning that approved visual presentation.
-- Synchronous gameplay scene changes warrant repeated-switch memory and stutter profiling before a transition-system refactor.
+- Scene resources now load through SceneLoadManager; final PackedScene instantiation remains main-thread work and needs transition-stutter profiling on the weaker laptop.
+
+## Quality-pass checkpoint — 2026-09-07
+
+Two cycles of six maps with one human and nine expert bots were rendered at a 1920×1080 window, Low (75% 3D scale), Forward+/D3D12 on the RTX 4060 Ti. The first post-optimization warm pass settled to 321.61 MiB tracked rendering memory after every unload, versus 425.80 MiB in the audit; the node baseline is 30 instead of 29 because the owned scene-loader autoload is intentional. No accumulating map nodes appeared. Typical frame times improved in that sample, but randomized bot motion and visibility mean this is not a controlled GPU-speed comparison.
+
+Long frames remain in first-use/combat samples. A second seeded diagnostic records process/physics time, newly added effect/item nodes and rendering pipeline counters around frames above 33ms. This narrows further profiling without claiming that every stall is shader compilation. See the quality-pass report and raw profile results. Stable 60 FPS with no large stalls has **not** been established on weaker hardware.
+
+The optimized bot/bat keep rig nodes, joint relationships, authored node transforms and animation metadata. The bat meets the ~15k/1024px prop budget. Original assets are retained in the local ignored audit backup. Exports exclude developer captures/artifacts and high-resolution Hat source GLBs. Resource loading is serialized; cancelled UI callbacks cannot resurrect old maps. Only client cosmetic bullets add a short world ray each physics tick while alive; impact notification is one reliable event per authoritative projectile. Ping reads ENet's existing statistics once per second. No new gameplay viewport was added.
+
+Before releasing this pass, run the weaker laptop at 1080p Low with repeated lobby → Playpen → match → Winners Circle transitions, ten actors and physical controllers. Keep Hideout outside that live loop.
+
+The final quality pass also repairs the 720p/125%-UI/large-text lobby: left controls and roster use focus-following scroll containers, roster rows still fill taller cabinets, and map details stack at narrow effective widths. Compact labels on Neon are mounted in front of the dressed portals rather than copied behind their columns. Seven fresh viewpoints verify placement.
+
+Return-to-lobby now waits for peer acknowledgements before the existing despawn grace. Suspension removes the normal gameplay visibility filter (which previously re-enabled publication to peer 1), and visibility refresh cannot re-arm a suspended synchronizer. A five-second non-response limit disconnects a stalled peer before actor removal. Standalone Playpen departure suspends only the departing local actor so host-run bots can continue. Three final dedicated combat/return runs, including two with a 600ms client stall, complete without engine errors.
+
+The smoke mask is stored losslessly in `textures/smoke_mask.res`; `tools/generate_smoke_mask.gd` verifies exact RGBA and mipmap bytes on regeneration. This removes the original first-throw GDScript pixel loop. Original particle pre-simulation, opacity, radius and lifetime remain intact. The cold construction sample fell from 87.6ms to 42.8ms, but first-use rendering still stalls; this is a partial CPU improvement, not a stable-frame-pacing sign-off.

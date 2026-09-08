@@ -1,0 +1,12 @@
+{
+  "label": "online_late_spectator",
+  "code": 0,
+  "seconds": 19.35,
+  "errors": [],
+  "markers": [
+    "ONLINE_LATE_SPECTATOR_PASS host",
+    "ONLINE_LATE_SPECTATOR_PASS client",
+    "ONLINE_LATE_SPECTATOR_PASS spectator"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_late_spectator.log"
+}

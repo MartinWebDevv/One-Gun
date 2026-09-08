@@ -1,0 +1,19 @@
+{
+  "label": "female_player_v2_validation",
+  "code": 0,
+  "seconds": 6.02,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "FEMALE_PLAYER_V2_VALIDATION_OK bones=33 animations=19 colors=13 portraits=13 decoy=true customization=true"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/female_player_v2_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\female_player_v2_validation.log"
+}

@@ -62,4 +62,10 @@ if ($serverLog -match "admitted \| client build") { throw "mismatched client was
 if ($serverLog -match "SCRIPT ERROR|disconnect_peer") { throw "server logged an error while removing the rejected peer" }
 if ($clientLog -notmatch "VERSION_MISMATCH_CLIENT_PASS reason=network_protocol") { throw "client did not complete the mismatch flow" }
 
+foreach ($line in (($serverLog + "`n" + $clientLog) -split "`r?`n")) {
+    if ($line -match "^SCRIPT ERROR:" -or ($line -match "^ERROR:" -and $line -notmatch "RID allocations of type|resources still in use at exit")) {
+        throw "Godot reported an actionable error: $line"
+    }
+}
+
 Write-Output "VERSION MISMATCH SMOKE: PASS"

@@ -1,0 +1,19 @@
+{
+  "label": "all_gun_overtime_validation",
+  "code": 0,
+  "seconds": 16.07,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "ALL GUN OVERTIME VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/all_gun_overtime_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\all_gun_overtime_validation.log"
+}

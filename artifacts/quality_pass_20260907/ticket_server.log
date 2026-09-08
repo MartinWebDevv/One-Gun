@@ -1,0 +1,96 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[DEDICATED] One Gun 0.0.7 | build itch-380e65c | protocol 3
+[DEDICATED] Listening on UDP 24758 | max players 4 | lobby 'Match-Server-Smoke'
+[DEDICATED] Initial map: res://node_3d.tscn
+[MATCH SERVER] Assignment accepted | expected players 2 | map res://node_3d.tscn
+[ONLINE 1306] starting match 1 on res://node_3d.tscn for 0 peers
+[ONLINE 1308] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 2182] peer 1121452528 connected
+[ONLINE 2479] peer 1121452528 rejected | reason match_ticket_invalid | client build itch-380e65c
+[ONLINE 2493] peer 1121452528 disconnected
+[ONLINE 4093] peer 1441212292 connected
+[ONLINE 4397] peer 1441212292 admitted | client build itch-380e65c
+[ONLINE 4400] match participant admitted (1/2 assigned tickets)
+[ONLINE 5358] peer 1636730989 connected
+[ONLINE 5649] peer 1636730989 admitted | client build itch-380e65c
+[ONLINE 5650] match participant admitted (2/2 assigned tickets)
+[ONLINE 9015] match 1 ready peer 1441212292 (1/2)
+[ONLINE 10140] match 1 ready peer 1636730989 (2/2)
+[DEDICATED ACTION] gun pickup requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun fire requested by actor 1 (epoch 1)
+[DEDICATED ACTION] gun drop requested by actor 1 (epoch 1)
+[DEDICATED ACTION] melee pickup requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee swing requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] melee hit confirmed actor 1 -> actor 2 (candidate 0, epoch 1)
+[DEDICATED ACTION] melee drop requested by actor 1 for candidate 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item drop requested by actor 1 for item 0 (epoch 1)
+[DEDICATED ACTION] item pickup requested by actor 1 for item 1 (epoch 1)
+[DEDICATED ACTION] item throw requested by actor 1 for item 1 (epoch 1)
+[ONLINE 21894] peer 1636730989 disconnected
+[ONLINE 22086] peer 1441212292 disconnected
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1234] joining 127.0.0.1:24758 (attempt 2)
+[ONLINE 1251] connected to host as peer 1121452528
+[ONLINE 1253] peer 1 connected
+MATCH_TICKET_REJECTION_PASS reason=match_ticket_invalid
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1412] joining 127.0.0.1:24758 (attempt 2)
+[ONLINE 1423] connected to host as peer 1441212292
+[ONLINE 1425] peer 1 connected
+[ONLINE 1741] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 2697] peer 1636730989 connected
+[ONLINE 6347] reporting match 1 scene ready
+DEDICATED_SERVER_PASS controller
+DEDICATED_MOVEMENT_SYNC_PASS controller
+DEDICATED_INPUT_PICKUP_PASS controller
+DEDICATED_INPUT_FIRE_PASS controller
+DEDICATED_INPUT_DROP_PASS controller
+DEDICATED_MELEE_PICKUP_PASS controller
+DEDICATED_MELEE_SWING_PASS controller
+DEDICATED_MELEE_HIT_PASS controller
+DEDICATED_MELEE_DROP_PASS controller
+DEDICATED_ITEM_PICKUP_PASS controller
+DEDICATED_ITEM_DROP_PASS controller
+DEDICATED_ITEM_ACTION_PASS controller
+MATCH_SERVER_ACTIONS_PASS controller
+[ONLINE 19232] peer 1636730989 disconnected
+[ONLINE 19420] disconnect requested
+
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1483] joining 127.0.0.1:24758 (attempt 2)
+[ONLINE 2163] connected to host as peer 1636730989
+[ONLINE 2165] peer 1 connected
+[ONLINE 2177] peer 1441212292 connected
+[ONLINE 2467] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 6948] reporting match 1 scene ready
+DEDICATED_SERVER_PASS guest
+DEDICATED_MOVEMENT_SYNC_PASS guest
+DEDICATED_INPUT_PICKUP_PASS guest
+DEDICATED_INPUT_FIRE_PASS guest
+DEDICATED_INPUT_DROP_PASS guest
+DEDICATED_MELEE_PICKUP_PASS guest
+DEDICATED_MELEE_SWING_PASS guest
+DEDICATED_MELEE_HIT_PASS guest
+DEDICATED_MELEE_DROP_PASS guest
+DEDICATED_ITEM_PICKUP_PASS guest
+DEDICATED_ITEM_DROP_PASS guest
+DEDICATED_ITEM_ACTION_PASS guest
+MATCH_SERVER_ACTIONS_PASS guest
+[ONLINE 18706] disconnect requested
+
+WARNING: 5 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+MATCH SERVER SMOKE: PASS

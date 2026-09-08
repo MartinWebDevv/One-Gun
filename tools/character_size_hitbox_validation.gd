@@ -49,8 +49,8 @@ func _run() -> void:
 			"ensure_animations", ["idle"]) as AnimationPlayer \
 			if visual != null else null
 		if animation_player != null:
-			animation_player.play("idle")
-			animation_player.advance(0.0)
+			animation_player.play("idle", 0.0)
+			animation_player.seek(0.0, true)
 		var skeleton := visual.call("get_skeleton") as Skeleton3D \
 			if visual != null else null
 		if skeleton != null:

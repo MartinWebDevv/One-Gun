@@ -1,0 +1,24 @@
+{
+  "label": "online_diagnostic_client",
+  "code": 0,
+  "seconds": 44.62,
+  "timeout": false,
+  "errors": [
+    "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_SMOKE_PASS client"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://artifacts/deep_audit_20260906/online_diagnostic.tscn",
+    "--",
+    "--role=client",
+    "--mode=match"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_diagnostic_client.log"
+}

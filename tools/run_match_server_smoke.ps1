@@ -110,5 +110,11 @@ foreach ($request in @(
 if ($combined["server"] -notmatch "\[DEDICATED ACTION\] item (throw|photo|activate_shoes) requested") { exit 1 }
 if (($combined.Values -join "`n") -match "Failed to get cached node|Node not found: .*NetSync|Ignoring sync data from non-authority or for missing node") { exit 1 }
 if (($combined.Values -join "`n") -match "MATCH_TICKET_REJECTION_FAIL|DEDICATED_SERVER_FAIL") { exit 1 }
+foreach ($line in (($combined.Values -join "`n") -split "`r?`n")) {
+    if ($line -match "^SCRIPT ERROR:" -or ($line -match "^ERROR:" -and $line -notmatch "RID allocations of type|resources still in use at exit")) {
+        throw "Godot reported an actionable error: $line"
+    }
+}
+
 "MATCH SERVER SMOKE: PASS"
 exit 0

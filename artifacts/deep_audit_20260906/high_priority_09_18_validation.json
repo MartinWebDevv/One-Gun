@@ -1,0 +1,22 @@
+{
+  "label": "high_priority_09_18_validation",
+  "code": 1,
+  "seconds": 9.25,
+  "timeout": false,
+  "errors": [
+    "ERROR: HIGH PRIORITY 09-18 VALIDATION: full-size lobby roster is still too narrow for team controls"
+  ],
+  "markers": [
+    "ERROR: HIGH PRIORITY 09-18 VALIDATION: full-size lobby roster is still too narrow for team controls",
+    "       [0] _ready (res://tools/high_priority_09_18_validation.gd:27)"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/high_priority_09_18_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\high_priority_09_18_validation.log"
+}

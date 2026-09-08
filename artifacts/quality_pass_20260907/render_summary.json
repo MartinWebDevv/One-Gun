@@ -1,0 +1,281 @@
+[
+  {
+    "label": "render_projectile_solo",
+    "code": 0,
+    "seconds": 9.1,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PROJECTILE CROSSHAIR RENDER VALIDATION (SOLO): PASS"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/projectile_crosshair_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_projectile_solo.log"
+  },
+  {
+    "label": "render_projectile_split",
+    "code": 0,
+    "seconds": 9.46,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PROJECTILE CROSSHAIR RENDER VALIDATION (SPLITSCREEN): PASS"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/projectile_crosshair_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_projectile_split.log"
+  },
+  {
+    "label": "render_new_characters",
+    "code": 0,
+    "seconds": 8.49,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "NEW_CHARACTER_RENDER_VALIDATION: PASS models=6 poses=6 output=D:/Godot Projects/one-gun/.godot/new_character_render_validation"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/new_character_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_new_characters.log"
+  },
+  {
+    "label": "render_player_v2",
+    "code": 0,
+    "seconds": 22.9,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PLAYER_V2_RENDER_VALIDATION_OK output=D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\player_v2_captures"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/player_v2_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_player_v2.log"
+  },
+  {
+    "label": "render_ads",
+    "code": 0,
+    "seconds": 5.04,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "ADS_CAMERA_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/ads_camera_validation.png offset=(1.409632, 2.054351, 1.953273) fov=64.50"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/ads_camera_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_ads.log"
+  },
+  {
+    "label": "render_menu_clicks",
+    "code": 0,
+    "seconds": 12.03,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PASS: Friends exposes its Back button",
+      "PASS: Friends preserves controller focus through the pre-GUI mouse press",
+      "PASS: focused Friends button receives a real pointer click",
+      "PASS: Lobby exposes Match Settings",
+      "PASS: Lobby Match Settings opens from a pointer click",
+      "PASS: Progression exposes both road tabs",
+      "PASS: Progression switches roads from a pointer click",
+      "MENU_POINTER_CLICK_VALIDATION: PASS"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--script",
+      "res://tools/menu_pointer_click_validation.gd"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_menu_clicks.log"
+  },
+  {
+    "label": "render_winners_circle",
+    "code": 0,
+    "seconds": 9.01,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PASS: Winners Circle new performer retains hat: spooky_witch",
+      "PASS: Winners Circle new performer loads its podium animation: spooky_witch",
+      "PASS: Winners Circle accepts new character model: eye_wizard",
+      "PASS: Winners Circle accepts new character model: mr_mushroom",
+      "PASS: Winners Circle accepts new character model: mr_poop",
+      "PASS: Winners Circle accepts new character model: mr_salt",
+      "PASS: Winners Circle accepts new character model: spooky_witch",
+      "WINNERS CIRCLE VALIDATION PASSED"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--script",
+      "res://tools/winners_circle_validation.gd"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_winners_circle.log"
+  },
+  {
+    "label": "render_hat_interactions",
+    "code": 0,
+    "seconds": 9.13,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "HAT_PREVIEW_INTERACTION_VALIDATION: PASS hats=12 models=8 angles=4 controller=1"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--script",
+      "res://tools/hat_preview_interaction_validation.gd"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_hat_interactions.log"
+  },
+  {
+    "label": "render_hats",
+    "code": 0,
+    "seconds": 25.1,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "HAT_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/hat_render_validation"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/hat_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_hats.log"
+  },
+  {
+    "label": "render_gameplay_hat_camera",
+    "code": 1,
+    "seconds": 46.58,
+    "timeout": false,
+    "errors": [
+      "ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-673.5869, 429.0731), S: (1477.785, 485.7136)]",
+      "ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-674.0485, 428.7424), S: (1478.142, 485.8438)]",
+      "ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-674.5595, 428.4531), S: (1478.476, 485.8609)]",
+      "ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-675.1121, 428.2004), S: (1478.79, 485.7799)]"
+    ],
+    "markers": [
+      "ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-674.5595, 428.4531), S: (1478.476, 485.8609)]",
+      "       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:291)",
+      "       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:67)",
+      "       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:154)",
+      "ERROR: GAMEPLAY_HAT_CAMERA_VALIDATION: female/hat_cowboy_wide covers the center sight lane at ADS 1: [P: (-675.1121, 428.2004), S: (1478.79, 485.7799)]",
+      "       [0] _finish (res://tools/gameplay_hat_camera_validation.gd:291)",
+      "       [1] _ready (res://tools/gameplay_hat_camera_validation.gd:67)",
+      "       [2] _capture_approved_angles (res://tools/gameplay_hat_camera_validation.gd:154)"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/gameplay_hat_camera_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_gameplay_hat_camera.log"
+  },
+  {
+    "label": "render_customization",
+    "code": 0,
+    "seconds": 7.39,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "LOCKER_VALIDATION_OK colors=13 default-cat-tile=1 owned-only categories=4 public-models=2 gift-models=6 portraits=online-ready"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/character_customization_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_customization.log"
+  }
+]

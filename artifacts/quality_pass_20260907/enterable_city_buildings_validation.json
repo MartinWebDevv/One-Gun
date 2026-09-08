@@ -1,0 +1,23 @@
+{
+  "label": "enterable_city_buildings_validation",
+  "code": 0,
+  "seconds": 5.9,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "       [0] _validate_navigation (res://tools/enterable_city_buildings_validation.gd:178)",
+    "       [1] _run (res://tools/enterable_city_buildings_validation.gd:68)",
+    "       [0] _validate_navigation (res://tools/enterable_city_buildings_validation.gd:178)",
+    "       [1] _run (res://tools/enterable_city_buildings_validation.gd:68)",
+    "ENTERABLE_CITY_BUILDINGS_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/enterable_city_buildings_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\enterable_city_buildings_validation.log"
+}

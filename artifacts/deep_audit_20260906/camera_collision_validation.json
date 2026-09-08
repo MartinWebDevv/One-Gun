@@ -1,0 +1,19 @@
+{
+  "label": "camera_collision_validation",
+  "code": 0,
+  "seconds": 2.71,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "CAMERA COLLISION VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/camera_collision_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\camera_collision_validation.log"
+}

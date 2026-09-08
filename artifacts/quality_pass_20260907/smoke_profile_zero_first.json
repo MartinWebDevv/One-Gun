@@ -1,0 +1,22 @@
+[
+	{
+		"max_ms": 201.514,
+		"p95_ms": 1.623,
+		"preprocess": 0.0
+	},
+	{
+		"max_ms": 46.331,
+		"p95_ms": 1.394,
+		"preprocess": 3.2
+	},
+	{
+		"max_ms": 44.389,
+		"p95_ms": 1.376,
+		"preprocess": 0.0
+	},
+	{
+		"max_ms": 41.905,
+		"p95_ms": 1.413,
+		"preprocess": 3.2
+	}
+]

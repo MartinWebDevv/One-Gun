@@ -1,0 +1,322 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+PREVIEW PASS: scene uses the unchanged real player.tscn
+PREVIEW PASS: saved character and skin load on F6
+PREVIEW PASS: saved cosmetic loadout reaches the walking character
+PREVIEW PASS: F6 does not open an online session
+PREVIEW PASS: multiplayer peer remains offline
+PREVIEW PASS: preview creates no replication nodes
+PREVIEW PASS: contained Play Pen owns the preview combat supplies
+PREVIEW PASS: normal project startup remains app_bootstrap
+PREVIEW PASS: supporting floor at radius 0.0 / y -0.6
+PREVIEW PASS: supporting floor at radius 7.6 / y -0.4
+PREVIEW PASS: supporting floor at radius 8.6 / y -0.2
+PREVIEW PASS: supporting floor at radius 9.6 / y 0.0
+PREVIEW PASS: supporting floor at radius 12.0 / y 0.0
+PREVIEW PASS: supporting floor at radius 24.0 / y 0.0
+PREVIEW PASS: pilot starts inside the recessed hallway behind wall-mounted doors
+PREVIEW MOVE: move_forward at (0.0, 2.29, 30.57569) held true enabled true
+PREVIEW PASS: closed arrival doors hold the pilot in the hallway
+PREVIEW MOVE: move_forward at (-0.0, 0.490871, -1.156132) held true enabled true
+PREVIEW PASS: real controller walks from arrivals down the stairs into the pit
+PREVIEW PASS: normal capsule stands on the sunken floor
+PREVIEW MOVE: move_forward at (0.000006, 1.090527, -10.76091) held true enabled true
+PREVIEW PASS: real controller climbs the concentric steps
+PREVIEW MOVE: move_right at (26.15429, 1.090312, 5.0) held true enabled true
+PREVIEW PASS: outer wall blocks the real controller
+PREVIEW MOVE: dash at (0.0, 0.490312, -3.833333) held true enabled true
+PREVIEW PASS: saved controller dash consumes a charge and moves
+PREVIEW MOVE: move_forward at (27.83331, 1.090312, 0.0) held true enabled true
+PREVIEW PASS: open departure doorway admits the real player
+PREVIEW MOVE: move_forward at (0.0, 2.29, 35.5) held true enabled false
+PREVIEW PASS: preview menu suppresses gameplay movement
+PREVIEW PASS: real character rig and animations: male
+PREVIEW PASS: real character rig and animations: female
+PREVIEW PASS: real character rig and animations: goldfish_bag_man
+PREVIEW PASS: real character rig and animations: eye_wizard
+PREVIEW PASS: real character rig and animations: mr_mushroom
+PREVIEW PASS: real character rig and animations: mr_poop
+PREVIEW PASS: real character rig and animations: mr_salt
+PREVIEW PASS: real character rig and animations: spooky_witch
+PREVIEW PASS: public character color variants work
+PREVIEW MOVE: move_forward at (-16.5, 1.090312, -16.99998) held true enabled true
+PREVIEW PASS: west arcade has an uninterrupted full-length walking lane
+PREVIEW PASS: passing the arcade does not enter service or party zones
+PREVIEW MOVE: move_forward at (-21.83332, 1.090312, 21.9) held true enabled true
+PREVIEW PASS: walking into locker selects only that service
+PREVIEW PASS: full gameplay camera boom fits at locker
+PREVIEW PASS: nearby locker receives an interaction cue
+PREVIEW PASS: saved Interact opens the physical locker bay
+PREVIEW PASS: closing locker preserves position and view
+PREVIEW MOVE: move_forward at (-21.83332, 1.090312, 7.3) held true enabled true
+PREVIEW PASS: walking into prize_counter selects only that service
+PREVIEW PASS: full gameplay camera boom fits at prize_counter
+PREVIEW PASS: nearby prize_counter receives an interaction cue
+PREVIEW PASS: saved Interact opens the physical prize_counter bay
+PREVIEW PASS: closing prize_counter preserves position and view
+PREVIEW MOVE: move_forward at (-21.83332, 1.090312, -7.3) held true enabled true
+PREVIEW PASS: walking into profile selects only that service
+PREVIEW PASS: full gameplay camera boom fits at profile
+PREVIEW PASS: nearby profile receives an interaction cue
+PREVIEW PASS: saved Interact opens the physical profile bay
+PREVIEW PASS: closing profile preserves position and view
+PREVIEW MOVE: move_forward at (-21.83332, 1.090312, -21.9) held true enabled true
+PREVIEW PASS: walking into progression selects only that service
+PREVIEW PASS: full gameplay camera boom fits at progression
+PREVIEW PASS: nearby progression receives an interaction cue
+PREVIEW PASS: saved Interact opens the physical progression bay
+PREVIEW PASS: closing progression preserves position and view
+PREVIEW MOVE: move_forward at (-12.0, 1.090312, -23.7) held true enabled true
+PREVIEW PASS: relocated Party desk has a distinct interaction area beside Events
+PREVIEW PASS: Party desk opens the simulated party controls
+PREVIEW PASS: closing Party returns control beside Events
+PREVIEW MOVE: move_forward at (-23.49998, 1.090312, 21.0) held true enabled true
+PREVIEW PASS: larger existing character reaches the recessed Locker bay
+PREVIEW PASS: Profile display supports the existing fixed-look character portrait
+PREVIEW PASS: Profile display restores the saved character without a preference write
+PREVIEW PASS: service cues clear when leaving the bays
+PREVIEW PASS: physical kiosk opens existing profile screen
+PREVIEW PASS: closing profile returns control to the room
+PREVIEW PASS: physical kiosk opens existing prize_counter screen
+PREVIEW PASS: closing prize_counter returns control to the room
+PREVIEW PASS: physical kiosk opens existing progression screen
+PREVIEW PASS: closing progression returns control to the room
+PREVIEW PASS: physical kiosk opens existing locker screen
+PREVIEW PASS: closing locker returns control to the room
+PREVIEW PASS: Locker opened from H returns to the Player Hub
+PREVIEW PASS: repeated native Locker open/cancel frees owned overlays and preview viewports
+PREVIEW PASS: duplicate rehearsal search is rejected
+PREVIEW PASS: ready works over Locker without automatically launching or discarding selections
+PREVIEW PASS: rehearsal completion keeps the real Locker until it closes
+PREVIEW PASS: closing Locker reveals the return screen
+PREVIEW PASS: stale cancel cannot dismiss the return screen
+PREVIEW PASS: ten demo party members with real character visuals
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: visitor uses an existing character rig
+PREVIEW PASS: full lobby leaves no capacity for bots
+PREVIEW PASS: repeated simulated departures retain the same party
+PREVIEW PASS: no preview departure changes the scene
+PREVIEW PASS: visitor removal releases nodes and animation tweens
+PREVIEW PASS: disabled sparring partner stays out of target scans
+PREVIEW PASS: re-enabling the partner restores target registration
+PREVIEW PASS: Play Pen defines two complete outer armories
+PREVIEW PASS: Play Pen starts with four real guns on the armory floor
+PREVIEW PASS: separate movement area has been removed
+PREVIEW PASS: main side of the barrier is outside combat
+PREVIEW MOVE: move_forward at (17.0, 0.6285, -33.70018) held true enabled true
+PREVIEW PASS: real controller walks through the barrier into Play Pen
+PREVIEW MOVE: move_forward at (17.0, -0.109114, -39.70023) held true enabled true
+PREVIEW PASS: entry hall passes through the north wall and descends to the arena floor
+PREVIEW PASS: walking into Play Pen keeps the same scene and camera
+PREVIEW PASS: Play Pen inventory readout is visible within the viewport
+PREVIEW PASS: actual Play Pen gun enters the real weapon slot
+PREVIEW PASS: enabled items occupy both real inventory slots
+PREVIEW PASS: practice applies enabled powerup: extra_dash
+PREVIEW PASS: practice applies enabled powerup: sticky_hands
+PREVIEW PASS: practice applies enabled powerup: speed_surge
+PREVIEW PASS: practice applies enabled powerup: silent_steps
+PREVIEW PASS: practice applies enabled powerup: extra_life
+PREVIEW PASS: practice applies enabled powerup: reach
+PREVIEW PASS: practice applies enabled powerup: fast_hands
+PREVIEW PASS: grenade can be primed inside Play Pen
+PREVIEW PASS: crossing back clears gun, both item slots, powers and shoes immediately
+PREVIEW PASS: exit destroys carried gear instead of dropping it in the main hall
+PREVIEW PASS: main-hall actor is excluded from practice target scans
+PREVIEW PASS: damage, knockback, slows, traps and flash cannot affect the main hall
+PREVIEW PASS: powerups cannot be collected from outside the boundary
+PREVIEW PASS: real grenade blast inside the line cannot affect a nearby main-hall player
+PREVIEW PASS: outside one-shot effects are rejected before applying damage
+PREVIEW PASS: the permeable player barrier stops an actual outgoing bullet
+PREVIEW PASS: real melee pickup works inside the practice area
+PREVIEW MOVE: move_back at (17.0, 1.090439, -27.93583) held true enabled true
+PREVIEW PASS: ordinary walking over the exit line removes carried melee
+PREVIEW PASS: thrown melee cannot leave the Play Pen
+PREVIEW PASS: script-driven boomerang flight cannot cross into the main hall
+PREVIEW PASS: real gunfire eliminates the sparring actor inside Play Pen
+PREVIEW PASS: eliminated sparring actor returns at the entrance barrier
+PREVIEW PASS: sparring gunfire can kill the real player inside Play Pen
+PREVIEW PASS: practice death keeps the current view rather than creating a match spectator
+PREVIEW PASS: player respawns after two seconds at the barrier line
+PREVIEW PASS: respawn restores walking with no retained practice inventory
+PREVIEW PASS: manual reset cancels a stale Play Pen respawn timer
+PREVIEW PASS: actual marker item deploys its trap inside Play Pen
+PREVIEW PASS: deployed trap retains its normal cleanup lifetime after its source item is freed
+PREVIEW PASS: repeated boundary exit clears state: 1
+PREVIEW PASS: repeated boundary exit clears state: 2
+PREVIEW PASS: repeated boundary exit clears state: 3
+PREVIEW PASS: repeated boundary exit clears state: 4
+PREVIEW PASS: repeated boundary exit clears state: 5
+PREVIEW PASS: repeated boundary exit clears state: 6
+PREVIEW PASS: repeated boundary exit clears state: 7
+PREVIEW PASS: repeated boundary exit clears state: 8
+PREVIEW PASS: fixed armories refill without losing any enabled supply slot
+PREVIEW PASS: repeated use and exits leave no accumulating combat objects
+PREVIEW PASS: combat, deaths and exits stay in this offline F6 scene
+PREVIEW MOVE: move_forward at (-18.0, 1.090312, -27.49997) held true enabled true
+PREVIEW PASS: corner passage remains clear with the Hub reaching the north wall
+PREVIEW PASS: Hub backing extends fully between north/south wall faces and sits against the west wall
+PREVIEW PASS: combined Party/Events backing is against the north wall
+PREVIEW PASS: both wings share the same checker tile materials and grid
+PREVIEW PASS: all old loot podiums and front-hall borrowing stands are removed
+PREVIEW PASS: weapon/item visuals rest on the floor in their original grid coordinates
+PREVIEW MOVE: move_forward at (17.0, 1.090312, -26.99996) held true enabled true
+PREVIEW PASS: main hall stays open up to the wall-aligned Play Pen doorway
+PREVIEW PASS: target sequence matches all requested distances exactly
+PREVIEW PASS: lane 1 target is at 5 metres
+PREVIEW PASS: lane 1 target is at 10 metres
+PREVIEW PASS: lane 1 target is at 15 metres
+PREVIEW PASS: lane 1 target is at 25 metres
+PREVIEW PASS: lane 1 target is at 30 metres
+PREVIEW PASS: lane 1 target is at 40 metres
+PREVIEW PASS: lane 1 target is at 50 metres
+PREVIEW PASS: lane 1 target is at 75 metres
+PREVIEW PASS: lane 1 target is at 90 metres
+PREVIEW PASS: lane 1 target is at 100 metres
+PREVIEW PASS: lane distance wraps to 5 metres without moving its neighbor
+PREVIEW PASS: lane 2 target is at 5 metres
+PREVIEW PASS: lane 2 target is at 10 metres
+PREVIEW PASS: lane 2 target is at 15 metres
+PREVIEW PASS: lane 2 target is at 25 metres
+PREVIEW PASS: lane 2 target is at 30 metres
+PREVIEW PASS: lane 2 target is at 40 metres
+PREVIEW PASS: lane 2 target is at 50 metres
+PREVIEW PASS: lane 2 target is at 75 metres
+PREVIEW PASS: lane 2 target is at 90 metres
+PREVIEW PASS: lane 2 target is at 100 metres
+PREVIEW PASS: lane distance wraps to 5 metres without moving its neighbor
+PREVIEW PASS: lane 3 target is at 5 metres
+PREVIEW PASS: lane 3 target is at 10 metres
+PREVIEW PASS: lane 3 target is at 15 metres
+PREVIEW PASS: lane 3 target is at 25 metres
+PREVIEW PASS: lane 3 target is at 30 metres
+PREVIEW PASS: lane 3 target is at 40 metres
+PREVIEW PASS: lane 3 target is at 50 metres
+PREVIEW PASS: lane 3 target is at 75 metres
+PREVIEW PASS: lane 3 target is at 90 metres
+PREVIEW PASS: lane 3 target is at 100 metres
+PREVIEW PASS: lane distance wraps to 5 metres without moving its neighbor
+PREVIEW MOVE: move_forward at (49.50008, -0.11, -55.0) held true enabled true
+PREVIEW PASS: range side doorway is passable and retains Play Pen membership
+PREVIEW PASS: lane console registers the pilot using its physical interaction area
+PREVIEW PASS: saved Interact cycles the nearby lane target
+PREVIEW PASS: distance settings are available from a controller-focusable menu
+PREVIEW PASS: range menu can directly select 100 metres for a chosen lane
+PREVIEW PASS: real gunfire registers a reusable wooden target hit in lane 1
+PREVIEW PASS: real gunfire registers a reusable wooden target hit in lane 2
+PREVIEW PASS: real gunfire registers a reusable wooden target hit in lane 3
+PREVIEW PASS: real projectile travels 100 metres inside the range and hits its target
+PREVIEW MOVE: move_forward at (-13.50001, -0.11, -70.75) held true enabled true
+PREVIEW PASS: walking backward through the finish door cannot start or complete a trial
+PREVIEW PASS: course navigation reaches (-27.0, -42.25)
+PREVIEW PASS: walking through the single start door starts the flow-course clock
+PREVIEW PASS: finish is rejected until every ordered checkpoint is cleared
+PREVIEW PASS: time-trial clock pauses while movement is paused in a menu
+PREVIEW MOVE: move_forward at (-41.66709, -0.109079, -42.25) held true enabled true
+PREVIEW PASS: normal One Gun jump clears the full-width vault deck
+PREVIEW PASS: gap fall adds two seconds and recovers the last checkpoint
+PREVIEW PASS: course navigation reaches (-43.0, -42.25)
+PREVIEW MOVE: move_forward at (-59.33388, -0.109079, -42.25) held true enabled true
+PREVIEW PASS: unchanged jump arc clears the eight-metre gap onto its wide landing
+PREVIEW PASS: course navigation reaches (-68.0, -42.25)
+PREVIEW PASS: course navigation reaches (-76.0, -45.0)
+PREVIEW PASS: course navigation reaches (-82.0, -51.0)
+PREVIEW PASS: course navigation reaches (-84.0, -57.0)
+PREVIEW PASS: course navigation reaches (-82.0, -64.0)
+PREVIEW PASS: course navigation reaches (-76.0, -70.75)
+PREVIEW PASS: course navigation reaches (-60.0, -70.75)
+PREVIEW PASS: wide sweep advances the turn and return-straight checkpoints
+PREVIEW PASS: course navigation reaches (-57.0, -71.8)
+PREVIEW PASS: course navigation reaches (-48.0, -70.2)
+PREVIEW PASS: course navigation reaches (-37.0, -70.75)
+PREVIEW PASS: broad lines around low cover reach the final checkpoint
+PREVIEW PASS: course navigation reaches (-22.0, -70.75)
+PREVIEW PASS: controller automatically steps over the 0.4 metre flow stairs without a jump input
+PREVIEW MOVE: move_forward at (-15.23678, -0.10909, -70.75195) held true enabled true
+PREVIEW PASS: finish runway accommodates a real six-metre dash burst
+PREVIEW PASS: course navigation reaches (-7.0, -70.75)
+PREVIEW PASS: complete controller-driven flow run records its result at the single exit
+PREVIEW PASS: actual completed run reaches the current viewer's personal record
+PREVIEW PASS: course and finish remain inside this same Play Pen scene
+PREVIEW PASS: board roster starts without invented times
+PREVIEW PASS: records reject unknown runners and invalid times
+PREVIEW PASS: shared lobby standings sort fastest first and preserve each runner's best
+PREVIEW PASS: Your Best resolves separately for each viewing player
+PREVIEW PASS: assisted and standard times stay in separate record categories
+PREVIEW PASS: new course versions cannot inherit incompatible records
+PREVIEW PASS: departed friends disappear and an alias change preserves stable-identity records
+PREVIEW PASS: personal records persist and reload independently across preview sessions
+PREVIEW PASS: a fresh lobby does not import the previous lobby's standings
+PREVIEW PASS: World page stays explicitly unavailable without live services
+PREVIEW PASS: wall board between the course doors has a real interaction area
+PREVIEW PASS: saved Interact opens the physical record board
+PREVIEW PASS: record board renders the personal page
+PREVIEW PASS: record board renders the world page
+PREVIEW PASS: record board renders the lobby page
+PREVIEW PASS: course navigation reaches (-16.0, -42.25)
+PREVIEW PASS: course navigation reaches (-7.0, -42.25)
+PREVIEW PASS: backtracking through the start cancels the run without replacing the best
+PREVIEW PASS: Hideout begins private without a separate hosting step
+PREVIEW PASS: inviting friends releases bot capacity without exceeding ten occupants
+PREVIEW PASS: invited squad friends share the existing Hideout
+PREVIEW PASS: private Hideout refuses a public visitor
+PREVIEW PASS: public visitors do not become traveling squad members
+PREVIEW PASS: browser refuses a lobby without capacity for the entire squad
+PREVIEW PASS: leader can request a lobby with room for everyone
+PREVIEW PASS: local confirmation alone cannot move unconfirmed squad members
+PREVIEW PASS: confirmed squad arrives together and remains distinct from destination occupants
+PREVIEW PASS: visiting squad leader cannot change the destination host's settings
+PREVIEW PASS: visiting squad leader cannot start another host's match
+PREVIEW PASS: match return preserves the visited lobby
+PREVIEW PASS: leaving together brings only the squad home
+PREVIEW PASS: capacity change at commit cancels travel without splitting the squad
+PREVIEW PASS: host cannot launch before all occupants confirm
+PREVIEW PASS: all ready does not automatically launch
+PREVIEW PASS: host explicitly starts a three-second countdown
+PREVIEW PASS: countdown cancellation preserves the squad
+PREVIEW PASS: two outer supply bays leave the central approach clear
+PREVIEW PASS: Scrap foyer and spectator space are noncombat
+PREVIEW PASS: solo F6 test joins player as second caller against a bot
+PREVIEW PASS: first joiner cannot call the coin
+PREVIEW PASS: coin call cannot be changed or rerolled after commitment
+PREVIEW PASS: coin reveal precedes countdown with combat locked
+PREVIEW PASS: Scrap round contains exactly one gun and two melee weapons
+PREVIEW PASS: coin winner receives the gun; other fighter receives melee
+PREVIEW PASS: second player's correct or incorrect call determines complementary equipment
+PREVIEW PASS: Scrap power pool excludes Extra Life and Sticky Hands
+PREVIEW PASS: central cover blocks the opening spawn-to-spawn shot
+PREVIEW PASS: spectator boundary blocks projectiles above the handrail
+PREVIEW PASS: foreign practice gear cannot be adopted by an active duel
+PREVIEW PASS: foreign gear is removed from the ring
+PREVIEW PASS: real Scrap gunfire resolves a lethal hit through the existing projectile
+PREVIEW PASS: one elimination ends the round without Play Pen respawn
+PREVIEW PASS: returning to foyer removes fighters and duel inventory
+PREVIEW PASS: duel gun and loose equipment are released after the round
+PREVIEW PASS: local two-player preview has two cameras in the same live arena
+PREVIEW PASS: second local fighter uses the real P2 controller
+PREVIEW PASS: local P2 moves with the existing p2 input actions
+PREVIEW PASS: each split view has its own centered reticle and inventory HUD
+PREVIEW PASS: leaving split-screen frees views and restores the normal camera
+PREVIEW PASS: watching player cannot receive duel combat damage
+PREVIEW PASS: demo fighters recover the single gun after a forced disarm
+PREVIEW PASS: autonomous spectator duel reaches a one-round winner using real combat
+PREVIEW PASS: repeated duel entry/cancel does not retain fighters
+PREVIEW PASS: central pit toss uses the nearby Interact station
+PREVIEW PASS: soft ball resets and stops processing after its throw
+PREVIEW PASS: a descending ball through a basket scores and resets
+PREVIEW PASS: central toy resets before leaving its social activity area
+PREVIEW PASS: automated previews and cancellation do not change saved preferences
+PREVIEW PASS: rehearsals do not change live match rules
+PREVIEW PASS: all kiosk/rehearsal tests leave networking offline
+PREVIEW PASS: Low preview scales the scene without saving settings
+PREVIEW VALIDATION: {"checks":291,"failures":[],"scope":"Native F6 scene, real controller/skins, shared menus, contained local Play Pen combat and rehearsal lifecycle. No account transactions or live matches tested."}
+WARNING: 2 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

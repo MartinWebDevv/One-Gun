@@ -1,0 +1,23 @@
+{
+  "label": "render_projectile_split",
+  "code": 0,
+  "seconds": 11.84,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PROJECTILE CROSSHAIR RENDER VALIDATION (SPLITSCREEN): PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/projectile_crosshair_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_projectile_split.log"
+}

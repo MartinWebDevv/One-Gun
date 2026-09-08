@@ -1,0 +1,15 @@
+{
+  "label": "online_one_of_us",
+  "code": 0,
+  "seconds": 19.34,
+  "errors": [
+    "ERROR: 40 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_ONE_OF_US_PASS host",
+    "ONLINE_ONE_OF_US_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_one_of_us.log"
+}

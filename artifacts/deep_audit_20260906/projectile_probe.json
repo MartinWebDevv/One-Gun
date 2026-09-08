@@ -1,0 +1,17 @@
+{
+  "label": "projectile_probe",
+  "code": 0,
+  "seconds": 2.09,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://artifacts/deep_audit_20260906/projectile_probe.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\projectile_probe.log"
+}

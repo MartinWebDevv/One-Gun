@@ -1,0 +1,36 @@
+[
+  {
+    "asset": "models/new guy one gun model orange running.glb",
+    "before": {
+      "triangles": 660544,
+      "nodes": 38,
+      "skins": 1,
+      "animations": 1
+    },
+    "after": {
+      "triangles": 82214,
+      "nodes": 38,
+      "skins": 1,
+      "animations": 1
+    },
+    "before_bytes": 25872960,
+    "after_bytes": 2993068
+  },
+  {
+    "asset": "models/weaponModels/baseball_bat.glb",
+    "before": {
+      "triangles": 89296,
+      "nodes": 1,
+      "skins": 0,
+      "animations": 0
+    },
+    "after": {
+      "triangles": 13394,
+      "nodes": 1,
+      "skins": 0,
+      "animations": 0
+    },
+    "before_bytes": 4512508,
+    "after_bytes": 2483376
+  }
+]

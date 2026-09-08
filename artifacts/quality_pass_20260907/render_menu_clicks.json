@@ -1,0 +1,30 @@
+{
+  "label": "render_menu_clicks",
+  "code": 0,
+  "seconds": 10.74,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PASS: Friends exposes its Back button",
+    "PASS: Friends preserves controller focus through the pre-GUI mouse press",
+    "PASS: focused Friends button receives a real pointer click",
+    "PASS: Lobby exposes Match Settings",
+    "PASS: Lobby Match Settings opens from a pointer click",
+    "PASS: Progression exposes both road tabs",
+    "PASS: Progression switches roads from a pointer click",
+    "MENU_POINTER_CLICK_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--script",
+    "res://tools/menu_pointer_click_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_menu_clicks.log"
+}

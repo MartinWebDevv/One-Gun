@@ -1,0 +1,23 @@
+{
+  "label": "render_projectile_solo",
+  "code": 0,
+  "seconds": 7.88,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PROJECTILE CROSSHAIR RENDER VALIDATION (SOLO): PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/projectile_crosshair_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\render_projectile_solo.log"
+}

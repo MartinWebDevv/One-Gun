@@ -1,0 +1,13 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1924] hosting 'Player 1's Lobby' on UDP 24902 as 'Player 1'
+[ONLINE 2478] peer 1910395817 connected
+[ONLINE 2768] peer 1910395817 admitted | client build itch-380e65c
+[ONLINE 2769] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2770] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 8334] match 1 ready peer 1 (1/2)
+[ONLINE 8433] match 1 ready peer 1910395817 (2/2)
+[ONLINE] gun pickup rejected for actor 1: distance 10.01 > 7.00
+[REWARDS] Frozen match 44eccb96c0bc2b6cc8b1058a9d162296 official=false starters=2 finishers=2
+ONLINE_SMOKE_PASS host
+[ONLINE 44941] peer 1910395817 disconnected

@@ -1,0 +1,19 @@
+{
+  "label": "trippy_intro",
+  "code": 0,
+  "seconds": 6.1,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "TRIPPY_MAP_VALIDATION_OK nav_polygons=1555 markers=34 barriers=4"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/validate_trippy_mountains_map.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\trippy_intro.log"
+}

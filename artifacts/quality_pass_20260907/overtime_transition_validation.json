@@ -1,0 +1,23 @@
+{
+  "label": "overtime_transition_validation",
+  "code": 0,
+  "seconds": 11.75,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "OVERTIME TRANSITION VALIDATION: setup",
+    "OVERTIME TRANSITION VALIDATION: arena loaded",
+    "OVERTIME TRANSITION VALIDATION: round state live",
+    "OVERTIME TRANSITION VALIDATION: overtime entered=true",
+    "OVERTIME TRANSITION VALIDATION (STANDARD): PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/overtime_transition_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\overtime_transition_validation.log"
+}

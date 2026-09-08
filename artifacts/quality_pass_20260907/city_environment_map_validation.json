@@ -1,0 +1,19 @@
+{
+  "label": "city_environment_map_validation",
+  "code": 0,
+  "seconds": 5.56,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "CITY_ENVIRONMENT_MAP_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/city_environment_map_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\city_environment_map_validation.log"
+}

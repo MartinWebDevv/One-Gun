@@ -67,7 +67,7 @@ func _ready() -> void:
 	_check(is_equal_approx(arm.spring_length, 2.40),
 		"ADS camera did not use the readable over-shoulder distance")
 	_check(arm.position.is_equal_approx(
-		player.default_spring_position + Vector3(0.75, 0.38, 0.10)),
+		player.default_spring_position + Vector3(0.85, 0.38, 0.10)),
 		"ADS spring arm did not apply the intended shoulder framing")
 	_check(camera.position.is_equal_approx(
 		player._camera_base_position + Vector3(0.0, 0.05, 0.0)),

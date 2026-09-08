@@ -1,0 +1,28 @@
+{
+  "label": "space_station_prototype_validation",
+  "code": 1,
+  "seconds": 7.84,
+  "timeout": false,
+  "errors": [
+    "ERROR: FAIL: color circuits and one-gun vault retain their arena identities"
+  ],
+  "markers": [
+    "       [1] _ready (res://tools/space_station_prototype_validation.gd:100)",
+    "PASS: single-room footprint supports up to ten players",
+    "PASS: prototype navigation bake is non-empty",
+    "PASS: Neon Circuit navigation map synchronizes",
+    "PASS: all ten player spawns sit over baked navigation",
+    "PASS: bots can path between all ten player spawns",
+    "PASS: all rotated spawns keep movement camera-relative",
+    "NEON_CIRCUIT_PROTOTYPE_VALIDATION failures=1"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/space_station_prototype_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\space_station_prototype_validation.log"
+}

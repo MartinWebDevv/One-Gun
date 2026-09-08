@@ -1154,6 +1154,10 @@ func _build_brand_navigation() -> void:
 		_logo_image = logo_tex
 		_title_label = _make_label("", 1, "text")   # placeholders keep responsive code happy
 		_title_label2 = _make_label("", 1, "text")
+		# Responsive placeholders must share the menu lifetime, even when hidden.
+		for placeholder in [_title_label, _title_label2]:
+			placeholder.hide()
+			add_child(placeholder)
 	else:
 		var logo_block := VBoxContainer.new()
 		logo_block.name = "LogoBlock"

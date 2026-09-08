@@ -1,0 +1,19 @@
+{
+  "label": "player_v2_asset_validation",
+  "code": 0,
+  "seconds": 5.37,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PLAYER_V2_VALIDATION_OK bones=33 animations=31 lazy_optional=14 skins=13 decoy=true customization=true bounds=[P: (0.154583, -0.654033, -1.108419), S: (1.945671, 2.978056, 2.314033)]"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/player_v2_asset_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\player_v2_asset_validation.log"
+}

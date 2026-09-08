@@ -1,0 +1,23 @@
+{
+  "label": "supabase_main_menu_validation",
+  "code": 0,
+  "seconds": 7.6,
+  "timeout": false,
+  "errors": [
+    "ERROR: 41 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 3 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "MAIN MENU VALIDATION OK: Play, Player Hub destinations, Friends orb, map sort, and empty online bots"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/supabase_main_menu_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\supabase_main_menu_validation.log"
+}

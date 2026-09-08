@@ -72,6 +72,7 @@ const DEFAULT_SETTINGS := {
 	"reduce_crosshair_motion": false,
 	"crosshair_preview_background": "dark",
 	"hit_marker_enabled": true,
+	"network_status_enabled": true,
 	"hit_marker_style": "x",
 	"hit_marker_color": [1.0, 1.0, 1.0, 1.0],
 	"hit_marker_size": 1.0,
@@ -492,7 +493,7 @@ func _normalize(values: Dictionary) -> Dictionary:
 			"high_contrast_ui", "reduce_flashing", "motion_blur", "reduced_motion", "crosshair_center_dot",
 			"crosshair_outline", "crosshair_glow", "crosshair_movement_expansion", "crosshair_fire_pulse",
 			"crosshair_reload_indicator", "crosshair_pickup_feedback", "crosshair_interactable_feedback",
-			"reduce_crosshair_motion", "hit_marker_enabled", "hit_marker_sound", "elimination_marker_enabled",
+			"reduce_crosshair_motion", "network_status_enabled", "hit_marker_enabled", "hit_marker_sound", "elimination_marker_enabled",
 			"elimination_marker_sound"]:
 		normalized[key] = bool(normalized[key])
 	for key in ["crosshair_color", "crosshair_outline_color", "hit_marker_color", "elimination_marker_color",

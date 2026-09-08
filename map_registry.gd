@@ -77,7 +77,7 @@ const MAPS := [
 		"scene_path": "res://maps/test/SpaceStationPrototype.tscn",
 		"thumbnail_path": "res://UI/map_thumbnails/neon_circuit.png",
 		"description": "A neon orbital tag arena built for fast crossfire, quick cover, and one exposed gun.",
-		"size": "Medium",
+		"size": "Small",
 		"recommended_players": "4–10",
 		"player_capacity": 10,
 		"playstyle": "Fast cover & crossfire",

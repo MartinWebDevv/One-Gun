@@ -151,6 +151,14 @@ func _capture_main_menu() -> void:
 	menu.call("_close_character_customization")
 	await _wait_frames(4)
 	var returned_hub := menu.get("_main_player_hub_overlay") as Control
+	# Pointer mode intentionally has no controller focus. Enter controller mode
+	# before asserting the controller-specific return contract.
+	if returned_hub != null:
+		var navigation := InputEventJoypadButton.new()
+		navigation.button_index = JOY_BUTTON_DPAD_DOWN
+		navigation.pressed = true
+		returned_hub.call("_input", navigation)
+		await _wait_frames(2)
 	var returned_focus := get_viewport().gui_get_focus_owner()
 	if returned_hub == null:
 		push_error("PlayerV2RenderValidation: closing a home destination did not return to Player Hub")

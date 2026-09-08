@@ -1,0 +1,39 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1402] hosting 'Smoke Host's Lobby' on UDP 24646 as 'Smoke Host'
+[ONLINE 2018] peer 1098059606 connected
+[ONLINE 2322] peer 1098059606 admitted | client build itch-380e65c
+[ONLINE 2324] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2326] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 6255] match 1 ready peer 1 (1/2)
+[ONLINE 6319] match 1 ready peer 1098059606 (2/2)
+[ONLINE 15880] peer 1098059606 disconnected
+ONLINE_EXIT_FLOW_PASS host
+ERROR: 38 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
+
+WARNING: 2 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 130 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1452] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1462] connected to host as peer 1098059606
+[ONLINE 1463] peer 1 connected
+[ONLINE 1780] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 5758] reporting match 1 scene ready
+ONLINE_EXIT_FLOW_PASS client
+ERROR: 38 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
+
+WARNING: 2 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 132 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+

@@ -82,8 +82,9 @@ func set_lobby(name_text: String, lobby_privacy: Privacy, current_players: int,
 	_players_label.text = "%d/%d" % [current_players, max_players]
 	match privacy:
 		Privacy.PRIVATE:
-			_privacy_icon.kind = OneGunIcon.Kind.LOCK
-			_privacy_icon.icon_color = OneGunUI.color("red").lightened(0.15)
+			_privacy_icon.kind = OneGunIcon.Kind.GLOBE
+			_privacy_icon.icon_color = OneGunUI.color("muted")
+			_privacy_icon.tooltip_text = "Unlisted: anyone with the code or address can join."
 		Privacy.FRIENDS_ONLY:
 			_privacy_icon.kind = OneGunIcon.Kind.FRIENDS
 			_privacy_icon.icon_color = OneGunUI.color("cyan")

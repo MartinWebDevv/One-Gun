@@ -1,0 +1,27 @@
+{
+  "label": "map_runtime",
+  "code": 4294967295,
+  "seconds": 66.58,
+  "timeout": false,
+  "errors": [
+    "ERROR: Condition \"p_scene && p_scene->get_parent() != root\" is true.",
+    "ERROR: Condition \"p_scene && p_scene->get_parent() != root\" is true.",
+    "ERROR: Condition \"p_scene && p_scene->get_parent() != root\" is true.",
+    "ERROR: Condition \"p_scene && p_scene->get_parent() != root\" is true.",
+    "SCRIPT ERROR: Invalid access to property or key 'global_transform' on a base object of type 'Node (map_runtime.gd)'."
+  ],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://artifacts/deep_audit_20260906/map_runtime.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\map_runtime.log"
+}

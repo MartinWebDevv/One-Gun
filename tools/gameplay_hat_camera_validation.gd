@@ -8,6 +8,10 @@ const HatRegistry = preload(
 const SkinRegistry = preload("res://player_skin_registry.gd")
 const CAPTURE_CASES := [
 	{
+		"model": "female", "hat": "hat_cowboy_wide", "ads": true,
+		"file": "ads_female_wide_cowboy.png",
+	},
+	{
 		"model": "male",
 		"hat": "hat_crown",
 		"ads": false,
@@ -57,8 +61,9 @@ func _ready() -> void:
 	_camera = _player.get_gameplay_camera()
 	_camera.current = true
 
-	_capture_directory = ProjectSettings.globalize_path(
-		"res://artifacts/camera_qa")
+	_capture_directory = OS.get_environment("ONEGUN_GAMEPLAY_CAMERA_CAPTURE_DIR")
+	if _capture_directory.is_empty():
+		_capture_directory = ProjectSettings.globalize_path("res://artifacts/camera_qa")
 	DirAccess.make_dir_recursive_absolute(_capture_directory)
 
 	await _validate_every_hat()
@@ -88,7 +93,11 @@ func _validate_every_hat() -> void:
 				_player._update_aiming(0.0)
 				for _settle_frame in 4:
 					await get_tree().process_frame
-				for _sample in 4:
+				for _sample in 8:
+					# Sample the complete idle cycle deterministically, independent of GPU speed.
+					var idle_player := _player.model_anim_player as AnimationPlayer
+					if idle_player != null and idle_player.has_animation("idle"):
+						idle_player.seek(idle_player.get_animation("idle").length * _sample / 8.0, true)
 					await get_tree().process_frame
 					var bounds := _hat_screen_bounds()
 					var has_visible_bounds := bounds.size.x > 1.0 and bounds.size.y > 1.0
@@ -163,8 +172,9 @@ func _play_idle_pose() -> void:
 		return
 	_player.model_anim_player = animation_player
 	_player._current_anim = "idle"
-	animation_player.play("idle")
-	animation_player.advance(0.35)
+	animation_player.play("idle", 0.0)
+	animation_player.seek(0.35, true)
+	animation_player.speed_scale = 0.0
 
 
 func _hat_screen_bounds() -> Rect2:

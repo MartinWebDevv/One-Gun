@@ -1,0 +1,12 @@
+{
+  "label": "barrier_dedicated_1",
+  "code": 1,
+  "seconds": 92.04,
+  "errors": [
+    "controller timed out after 90000 ms",
+    "+             throw \"$name timed out after $TimeoutMilliseconds ms\"",
+    "    + CategoryInfo          : OperationStopped: (controller timed out after 90000 ms:String) [], RuntimeException",
+    "    + FullyQualifiedErrorId : controller timed out after 90000 ms"
+  ],
+  "markers": []
+}

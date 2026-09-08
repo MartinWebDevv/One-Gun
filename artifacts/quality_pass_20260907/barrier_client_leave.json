@@ -1,0 +1,10 @@
+{
+  "label": "barrier_client_leave",
+  "code": 0,
+  "seconds": 20.7,
+  "errors": [],
+  "markers": [
+    "ONLINE_CLIENT_EXIT_PASS host",
+    "ONLINE_CLIENT_EXIT_PASS client"
+  ]
+}

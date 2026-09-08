@@ -1,0 +1,19 @@
+{
+  "label": "generate_smoke_mask",
+  "code": 0,
+  "seconds": 1.48,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "SMOKE_MASK_GENERATOR: PASS exact RGBA pixels and mipmaps"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/generate_smoke_mask.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\generate_smoke_mask.log"
+}

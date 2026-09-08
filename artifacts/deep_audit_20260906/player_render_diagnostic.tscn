@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://artifacts/deep_audit_20260906/player_render_diagnostic.gd" id="1"]
+[node name="Audit" type="Node"]
+script=ExtResource("1")

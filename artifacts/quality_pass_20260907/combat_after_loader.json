@@ -1,0 +1,19 @@
+{
+  "label": "combat_after_loader",
+  "code": 0,
+  "seconds": 3.69,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "COMBAT_COVER_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/combat_cover_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\combat_after_loader.log"
+}

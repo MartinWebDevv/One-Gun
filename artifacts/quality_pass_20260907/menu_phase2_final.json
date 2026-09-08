@@ -1,0 +1,30 @@
+{
+  "label": "menu_phase2_final",
+  "code": 0,
+  "seconds": 15.41,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PASS: Western Town preview strips SpawnPoints",
+    "PASS: Western Town preview strips ItemSpawnPoints",
+    "PASS: Western Town preview strips gun_spawn_point",
+    "PASS: Western Town preview strips NavigationRegion3D",
+    "PASS: Western Town preview strips ForestAmbience",
+    "PASS: splitscreen clamps bots to the eight-slot capacity",
+    "PASS: splitscreen plus bots still renders ten total roster slots",
+    "PHASE 2 MENU SMOKE: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/menu_phase2_smoke.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\menu_phase2_final.log"
+}

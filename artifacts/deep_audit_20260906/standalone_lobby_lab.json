@@ -1,0 +1,28 @@
+{
+  "label": "standalone_lobby_lab",
+  "code": 0,
+  "seconds": 12.61,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "LAB PASS: ready timeout returns safely home",
+    "LAB PASS: departure countdown can be cancelled",
+    "LAB PASS: light trainer scores an actual line-of-sight target ray",
+    "LAB PASS: 40 departure-return rehearsals retain a stable node count",
+    "LAB PASS: 40 cycles do not retain extra scene objects",
+    "LAB PASS: all simulated visitors and their tween handles can be removed",
+    "LAB PASS: five station create/free cycles release every scene node",
+    "LAB PASS: station create/free memory growth stays below 4 MB after cached resources"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--path",
+    "D:\\Godot Projects\\one-gun\\tools\\live_lobby_lab\\project",
+    "--",
+    "--validate"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\standalone_lobby_lab.log"
+}

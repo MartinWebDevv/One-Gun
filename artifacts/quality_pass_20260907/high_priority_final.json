@@ -1,0 +1,19 @@
+{
+  "label": "high_priority_final",
+  "code": 0,
+  "seconds": 5.72,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "HIGH PRIORITY 09-18 VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/high_priority_09_18_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\high_priority_final.log"
+}

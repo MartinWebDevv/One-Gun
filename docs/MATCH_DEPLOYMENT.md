@@ -1,5 +1,7 @@
 # Dynamic Match Deployment
 
+> 2026-09-07: current source uses network protocol **3**. Re-export matching clients and dedicated servers, then update/deploy the coordinator with `NETWORK_PROTOCOL=3` as one release. Existing protocol-2 examples and successful live gates below describe the previous deployment. This quality pass changed local source/configuration only; it did not publish a server or Worker.
+
 This document defines the Phase 11 security boundary and migration path for per-match One Gun servers. It is intentionally provider-neutral at the game-code boundary. The current persistent development deployment remains the default until every stage below is verified.
 
 ## Current verified flow

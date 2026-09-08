@@ -1,0 +1,133 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+PASS: shared registry exposes all six playable maps
+PASS: every registered map scene is available
+PASS: local roster renders exactly ten slots
+PASS: Play is enabled for a valid selected map
+PASS: selected map resolves to a playable scene
+PASS: controller/keyboard focus starts on the map selector
+PASS: Cat Tower live preview loaded
+PASS: Cat Tower preview strips RoundManager
+PASS: Cat Tower preview strips player1
+PASS: Cat Tower preview strips player2
+PASS: Cat Tower preview strips CanvasLayer
+PASS: Cat Tower preview strips SplitScreenLayer
+PASS: Cat Tower preview strips Gun
+PASS: Cat Tower preview strips MeleeWeaponSpawn
+PASS: Cat Tower preview strips MeleeWeaponSpawnp
+PASS: Cat Tower preview strips Melee Weapons
+PASS: Cat Tower preview strips Power Ups
+PASS: Cat Tower preview strips Powerups
+PASS: Cat Tower preview strips Items
+PASS: Cat Tower preview strips SpawnPoints
+PASS: Cat Tower preview strips ItemSpawnPoints
+PASS: Cat Tower preview strips gun_spawn_point
+PASS: Cat Tower preview strips NavigationRegion3D
+PASS: Cat Tower preview strips ForestAmbience
+PASS: roster cabinet stays inside the 1920x1080 frame
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: roster row stays inside the cabinet
+PASS: Friends orb does not overlap roster at 1280x720
+PASS: all ten roster slots remain built at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster row stays inside the scrollable roster at 1280x720
+PASS: roster cards fill the full usable panel height at 1280x720
+PASS: first and tenth roster cards reach both panel edges at 1280x720
+PASS: all ten roster cards have equal height at 1280x720
+PASS: controller focus scrolls the last roster row into view
+PASS: Friends orb does not overlap roster at 1600x900
+PASS: all ten roster slots remain built at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster row stays inside the scrollable roster at 1600x900
+PASS: roster cards fill the full usable panel height at 1600x900
+PASS: first and tenth roster cards reach both panel edges at 1600x900
+PASS: all ten roster cards have equal height at 1600x900
+PASS: controller focus scrolls the last roster row into view
+PASS: Friends orb does not overlap roster at 1920x1080
+PASS: all ten roster slots remain built at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster row stays inside the scrollable roster at 1920x1080
+PASS: roster cards fill the full usable panel height at 1920x1080
+PASS: first and tenth roster cards reach both panel edges at 1920x1080
+PASS: all ten roster cards have equal height at 1920x1080
+PASS: controller focus scrolls the last roster row into view
+PASS: Random Map selects random rotation
+PASS: Random Map hides the live map preview
+PASS: Random Map explains that the battlefield is hidden
+PASS: rapid carousel input keeps the latest selection
+PASS: rapid carousel input and live preview remain synchronized
+PASS: Maple & 3rd live preview loaded
+PASS: Maple & 3rd preview strips RoundManager
+PASS: Maple & 3rd preview strips player1
+PASS: Maple & 3rd preview strips player2
+PASS: Maple & 3rd preview strips CanvasLayer
+PASS: Maple & 3rd preview strips SplitScreenLayer
+PASS: Maple & 3rd preview strips Gun
+PASS: Maple & 3rd preview strips MeleeWeaponSpawn
+PASS: Maple & 3rd preview strips MeleeWeaponSpawnp
+PASS: Maple & 3rd preview strips Melee Weapons
+PASS: Maple & 3rd preview strips Power Ups
+PASS: Maple & 3rd preview strips Powerups
+PASS: Maple & 3rd preview strips Items
+PASS: Maple & 3rd preview strips SpawnPoints
+PASS: Maple & 3rd preview strips ItemSpawnPoints
+PASS: Maple & 3rd preview strips gun_spawn_point
+PASS: Maple & 3rd preview strips NavigationRegion3D
+PASS: Maple & 3rd preview strips ForestAmbience
+PASS: asynchronous live preview completes its requested swap
+PASS: Western Town live preview loaded
+PASS: Western Town preview strips RoundManager
+PASS: Western Town preview strips player1
+PASS: Western Town preview strips player2
+PASS: Western Town preview strips CanvasLayer
+PASS: Western Town preview strips SplitScreenLayer
+PASS: Western Town preview strips Gun
+PASS: Western Town preview strips MeleeWeaponSpawn
+PASS: Western Town preview strips MeleeWeaponSpawnp
+PASS: Western Town preview strips Melee Weapons
+PASS: Western Town preview strips Power Ups
+PASS: Western Town preview strips Powerups
+PASS: Western Town preview strips Items
+PASS: Western Town preview strips SpawnPoints
+PASS: Western Town preview strips ItemSpawnPoints
+PASS: Western Town preview strips gun_spawn_point
+PASS: Western Town preview strips NavigationRegion3D
+PASS: Western Town preview strips ForestAmbience
+PASS: splitscreen clamps bots to the eight-slot capacity
+PASS: splitscreen plus bots still renders ten total roster slots
+PHASE 2 MENU SMOKE: PASS
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

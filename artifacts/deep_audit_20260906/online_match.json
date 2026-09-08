@@ -1,0 +1,11 @@
+{
+  "label": "online_match",
+  "code": 1,
+  "seconds": 27.89,
+  "errors": [
+    "ERROR: ONLINE_SMOKE_FAIL host: round reset did not restore gun, melee weapon, and players",
+    "ERROR: ONLINE_SMOKE_FAIL client: online HUD did not restore the living client display"
+  ],
+  "markers": [],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\online_match.log"
+}

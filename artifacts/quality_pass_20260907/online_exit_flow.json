@@ -1,0 +1,18 @@
+{
+  "label": "online_exit_flow",
+  "code": 0,
+  "seconds": 17.99,
+  "errors": [
+    "ERROR: 38 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details).",
+    "ERROR: 38 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_EXIT_FLOW_PASS host",
+    "ONLINE_EXIT_FLOW_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_exit_flow.log"
+}

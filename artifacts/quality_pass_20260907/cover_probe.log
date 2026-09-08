@@ -1,0 +1,6 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+AUDIT_BULLET mode=local-authoritative still_exists=false position=<null>
+AUDIT_BULLET mode=client-visual still_exists=false position=<null>
+AUDIT_REMOTE_ORIGIN accepted_count=0 submitted_origin=(0.0, 2.0, -6.5) wall_z=-5 actor=(0.0, 2.0, 0.0)
+AUDIT_MELEE behind_wall_candidate=false obstructed_by=ThinWall:<StaticBody3D#50499421839>

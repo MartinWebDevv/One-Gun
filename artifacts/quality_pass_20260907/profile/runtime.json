@@ -1,0 +1,3115 @@
+[
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 416.0,
+		"after_static_mb": 142.873810768127,
+		"after_video_mb": 272.73046875,
+		"cycle": 0,
+		"draw_calls": 1586.0,
+		"frame_max_ms": 121.731,
+		"frame_median_ms": 8.39,
+		"frame_p95_ms": 11.332,
+		"gun_count": 1,
+		"instantiate_ms": 986.577,
+		"load_ms": 3514.215,
+		"map": "Whispering Woods",
+		"meshes": 640,
+		"nav_polygons": 614,
+		"nodes": 1767,
+		"occluders": 0,
+		"render_primitives": 1046426.0,
+		"resources": 1012.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 121.731,
+				"physics_ms": 5.583,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 2341,
+					"PIPELINE_SOURCE_DRAW": 171405312,
+					"PIPELINE_SOURCE_MAX": 544632832,
+					"PIPELINE_SOURCE_MESH": 1014072,
+					"PIPELINE_SOURCE_SPECIALIZATION": 64407516,
+					"PIPELINE_SOURCE_SURFACE": 1518,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 2,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 43,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 45,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 22
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 2304,
+					"PIPELINE_SOURCE_DRAW": 171405312,
+					"PIPELINE_SOURCE_MAX": 542470144,
+					"PIPELINE_SOURCE_MESH": 1020590,
+					"PIPELINE_SOURCE_SPECIALIZATION": 64301844,
+					"PIPELINE_SOURCE_SURFACE": 1536,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 2,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 43,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 45,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 20
+				},
+				"process_ms": 12.347,
+				"recent": [
+					{
+						"ms": 8134,
+						"name": "@GPUParticles3D@187",
+						"script": "particles"
+					},
+					{
+						"ms": 8134,
+						"name": "@GPUParticles3D@188",
+						"script": "particles"
+					},
+					{
+						"ms": 8135,
+						"name": "@GPUParticles3D@189",
+						"script": "particles"
+					},
+					{
+						"ms": 8135,
+						"name": "@GPUParticles3D@190",
+						"script": "particles"
+					},
+					{
+						"ms": 8135,
+						"name": "@GPUParticles3D@191",
+						"script": "particles"
+					},
+					{
+						"ms": 8135,
+						"name": "@GPUParticles3D@192",
+						"script": "particles"
+					},
+					{
+						"ms": 14560,
+						"name": "@RigidBody3D@179",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 14560,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 14681,
+						"name": "@RigidBody3D@182",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 15634,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 15634,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 16019,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 16237,
+						"name": "@RigidBody3D@176",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 16237,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 17433,
+						"name": "@GPUParticles3D@194",
+						"script": "particles"
+					},
+					{
+						"ms": 17538,
+						"name": "@GPUParticles3D@195",
+						"script": "particles"
+					},
+					{
+						"ms": 17640,
+						"name": "@GPUParticles3D@196",
+						"script": "particles"
+					},
+					{
+						"ms": 17756,
+						"name": "@GPUParticles3D@197",
+						"script": "particles"
+					},
+					{
+						"ms": 18138,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 18139,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			}
+		],
+		"static_mb": 164.431964874268,
+		"video_mb": 525.15234375
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 423.0,
+		"after_static_mb": 157.914698600769,
+		"after_video_mb": 297.35546875,
+		"cycle": 0,
+		"draw_calls": 289.0,
+		"frame_max_ms": 197.99,
+		"frame_median_ms": 5.371,
+		"frame_p95_ms": 8.975,
+		"gun_count": 1,
+		"instantiate_ms": 500.978,
+		"load_ms": 482.058,
+		"map": "Western Town",
+		"meshes": 210,
+		"nav_polygons": 805,
+		"nodes": 1271,
+		"occluders": 0,
+		"render_primitives": 699742.0,
+		"resources": 903.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 197.99,
+				"physics_ms": 4.531,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 443,
+					"PIPELINE_SOURCE_DRAW": 241401856,
+					"PIPELINE_SOURCE_MAX": 601718784,
+					"PIPELINE_SOURCE_MESH": 692496,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504944,
+					"PIPELINE_SOURCE_SURFACE": 266,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 59,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 55,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 24
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 418,
+					"PIPELINE_SOURCE_DRAW": 241401856,
+					"PIPELINE_SOURCE_MAX": 600604672,
+					"PIPELINE_SOURCE_MESH": 716002,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79501320,
+					"PIPELINE_SOURCE_SURFACE": 296,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 59,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 55,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 24
+				},
+				"process_ms": 7.165,
+				"recent": [
+					{
+						"ms": 24436,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 24440,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 24442,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24442,
+						"name": "@Area3D@383",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "@Area3D@384",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "@Area3D@385",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 26722,
+						"name": "@RigidBody3D@386",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 31804,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 32972,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 32972,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 33459,
+						"name": "@RigidBody3D@381",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 33929,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 34633,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 34634,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "@RigidBody3D@381",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 34814,
+						"name": "@GPUParticles3D@392",
+						"script": "particles"
+					}
+				]
+			},
+			{
+				"frame_ms": 106.365,
+				"physics_ms": 4.531,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 471,
+					"PIPELINE_SOURCE_DRAW": 242069504,
+					"PIPELINE_SOURCE_MAX": 605597696,
+					"PIPELINE_SOURCE_MESH": 692656,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79554776,
+					"PIPELINE_SOURCE_SURFACE": 275,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 59,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 55,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 25
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 418,
+					"PIPELINE_SOURCE_DRAW": 241401856,
+					"PIPELINE_SOURCE_MAX": 600604672,
+					"PIPELINE_SOURCE_MESH": 716002,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79501320,
+					"PIPELINE_SOURCE_SURFACE": 296,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 59,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 55,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 24
+				},
+				"process_ms": 7.165,
+				"recent": [
+					{
+						"ms": 24442,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24442,
+						"name": "@Area3D@383",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "@Area3D@384",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "@Area3D@385",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 26722,
+						"name": "@RigidBody3D@386",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 31804,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 32972,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 32972,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 33459,
+						"name": "@RigidBody3D@381",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 33929,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 34633,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 34634,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "@RigidBody3D@381",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 34814,
+						"name": "@GPUParticles3D@392",
+						"script": "particles"
+					},
+					{
+						"ms": 34939,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 34939,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 40.758,
+				"physics_ms": 4.531,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 471,
+					"PIPELINE_SOURCE_DRAW": 242065408,
+					"PIPELINE_SOURCE_MAX": 604151808,
+					"PIPELINE_SOURCE_MESH": 692656,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79536352,
+					"PIPELINE_SOURCE_SURFACE": 275,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 59,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 55,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 25
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 418,
+					"PIPELINE_SOURCE_DRAW": 241401856,
+					"PIPELINE_SOURCE_MAX": 600604672,
+					"PIPELINE_SOURCE_MESH": 716002,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79501320,
+					"PIPELINE_SOURCE_SURFACE": 296,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 59,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 55,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 24
+				},
+				"process_ms": 7.165,
+				"recent": [
+					{
+						"ms": 24442,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24442,
+						"name": "@Area3D@383",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "@Area3D@384",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "@Area3D@385",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 24443,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 26722,
+						"name": "@RigidBody3D@386",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 31804,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 32972,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 32972,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 33459,
+						"name": "@RigidBody3D@381",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 33929,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 34633,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 34634,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 34690,
+						"name": "@RigidBody3D@381",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 34814,
+						"name": "@GPUParticles3D@392",
+						"script": "particles"
+					},
+					{
+						"ms": 34939,
+						"name": "@RigidBody3D@377",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 34939,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					}
+				]
+			}
+		],
+		"static_mb": 178.701958656311,
+		"video_mb": 574.84375
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 428.0,
+		"after_static_mb": 158.129456520081,
+		"after_video_mb": 297.35546875,
+		"cycle": 0,
+		"draw_calls": 170.0,
+		"frame_max_ms": 39.139,
+		"frame_median_ms": 5.243,
+		"frame_p95_ms": 9.021,
+		"gun_count": 1,
+		"instantiate_ms": 204.728,
+		"load_ms": 282.495,
+		"map": "Gun Square",
+		"meshes": 376,
+		"nav_polygons": 370,
+		"nodes": 1601,
+		"occluders": 0,
+		"render_primitives": 644854.0,
+		"resources": 1072.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 39.139,
+				"physics_ms": 3.366,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 299,
+					"PIPELINE_SOURCE_DRAW": 161071104,
+					"PIPELINE_SOURCE_MAX": 554221568,
+					"PIPELINE_SOURCE_MESH": 644310,
+					"PIPELINE_SOURCE_SPECIALIZATION": 64181616,
+					"PIPELINE_SOURCE_SURFACE": 132,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 69,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 70,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 41
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 242,
+					"PIPELINE_SOURCE_DRAW": 161071104,
+					"PIPELINE_SOURCE_MAX": 553107456,
+					"PIPELINE_SOURCE_MESH": 644196,
+					"PIPELINE_SOURCE_SPECIALIZATION": 64177432,
+					"PIPELINE_SOURCE_SURFACE": 130,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 69,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 70,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 41
+				},
+				"process_ms": 4.996,
+				"recent": [
+					{
+						"ms": 40192,
+						"name": "@RigidBody3D@580",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 40194,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40194,
+						"name": "@Area3D@581",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40195,
+						"name": "@Area3D@582",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40195,
+						"name": "@Area3D@583",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40195,
+						"name": "@Area3D@584",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40195,
+						"name": "@Area3D@585",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40195,
+						"name": "@Area3D@586",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40196,
+						"name": "@Area3D@587",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 40196,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 40196,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 46859,
+						"name": "@RigidBody3D@568",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 46859,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 48278,
+						"name": "@RigidBody3D@574",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 48278,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 50117,
+						"name": "@RigidBody3D@568",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 50117,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 50118,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 50119,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 50170,
+						"name": "@GPUParticles3D@589",
+						"script": "particles"
+					}
+				]
+			}
+		],
+		"static_mb": 176.36633682251,
+		"video_mb": 530.7421875
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 430.0,
+		"after_static_mb": 158.820982933044,
+		"after_video_mb": 298.35546875,
+		"cycle": 0,
+		"draw_calls": 812.0,
+		"frame_max_ms": 18.008,
+		"frame_median_ms": 6.456,
+		"frame_p95_ms": 10.926,
+		"gun_count": 1,
+		"instantiate_ms": 128.475,
+		"load_ms": 224.367,
+		"map": "Cat Tower",
+		"meshes": 184,
+		"nav_polygons": 504,
+		"nodes": 1081,
+		"occluders": 0,
+		"render_primitives": 786370.0,
+		"resources": 856.0,
+		"spawns": 10,
+		"spikes": [],
+		"static_mb": 175.590767860413,
+		"video_mb": 517.40625
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 431.0,
+		"after_static_mb": 159.966391563416,
+		"after_video_mb": 299.10546875,
+		"cycle": 0,
+		"draw_calls": 587.0,
+		"frame_max_ms": 20.351,
+		"frame_median_ms": 5.215,
+		"frame_p95_ms": 9.511,
+		"gun_count": 1,
+		"instantiate_ms": 113.295,
+		"load_ms": 155.499,
+		"map": "Neon Circuit",
+		"meshes": 253,
+		"nav_polygons": 611,
+		"nodes": 1223,
+		"occluders": 0,
+		"render_primitives": 628756.0,
+		"resources": 607.0,
+		"spawns": 10,
+		"spikes": [],
+		"static_mb": 175.098602294922,
+		"video_mb": 539.91796875
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 432.0,
+		"after_static_mb": 160.809640884399,
+		"after_video_mb": 299.10546875,
+		"cycle": 0,
+		"draw_calls": 765.0,
+		"frame_max_ms": 52.766,
+		"frame_median_ms": 5.784,
+		"frame_p95_ms": 11.544,
+		"gun_count": 1,
+		"instantiate_ms": 235.909,
+		"load_ms": 1385.347,
+		"map": "Trippy Mountains",
+		"meshes": 392,
+		"nav_polygons": 1555,
+		"nodes": 1038,
+		"occluders": 0,
+		"render_primitives": 716282.0,
+		"resources": 941.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 41.71,
+				"physics_ms": 4.834,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1097,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539963392,
+					"PIPELINE_SOURCE_MESH": 749672,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095488,
+					"PIPELINE_SOURCE_SURFACE": 814,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 114,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1004,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539897856,
+					"PIPELINE_SOURCE_MESH": 725994,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095456,
+					"PIPELINE_SOURCE_SURFACE": 782,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 113,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"process_ms": 6.079,
+				"recent": [
+					{
+						"ms": 88915,
+						"name": "@RigidBody3D@1155",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88916,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "@RigidBody3D@1157",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88944,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88957,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88963,
+						"name": "@RigidBody3D@1158",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88968,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88971,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "@Area3D@1159",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 97397,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 98313,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 98314,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 44.315,
+				"physics_ms": 4.834,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1097,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539963392,
+					"PIPELINE_SOURCE_MESH": 749672,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095488,
+					"PIPELINE_SOURCE_SURFACE": 814,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 114,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1004,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539897856,
+					"PIPELINE_SOURCE_MESH": 725994,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095456,
+					"PIPELINE_SOURCE_SURFACE": 782,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 113,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"process_ms": 6.079,
+				"recent": [
+					{
+						"ms": 88915,
+						"name": "@RigidBody3D@1155",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88916,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "@RigidBody3D@1157",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88944,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88957,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88963,
+						"name": "@RigidBody3D@1158",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88968,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88971,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "@Area3D@1159",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 97397,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 98313,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 98314,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 52.766,
+				"physics_ms": 4.834,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1097,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539963392,
+					"PIPELINE_SOURCE_MESH": 749672,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095488,
+					"PIPELINE_SOURCE_SURFACE": 814,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 114,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1004,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539897856,
+					"PIPELINE_SOURCE_MESH": 725994,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095456,
+					"PIPELINE_SOURCE_SURFACE": 782,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 113,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"process_ms": 6.079,
+				"recent": [
+					{
+						"ms": 88915,
+						"name": "@RigidBody3D@1155",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88916,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "@RigidBody3D@1157",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88944,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88957,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88963,
+						"name": "@RigidBody3D@1158",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88968,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88971,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "@Area3D@1159",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 97397,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 98313,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 98314,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 36.375,
+				"physics_ms": 4.834,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1097,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539963392,
+					"PIPELINE_SOURCE_MESH": 749672,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095488,
+					"PIPELINE_SOURCE_SURFACE": 814,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 114,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1004,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539897856,
+					"PIPELINE_SOURCE_MESH": 725994,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095456,
+					"PIPELINE_SOURCE_SURFACE": 782,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 113,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"process_ms": 6.079,
+				"recent": [
+					{
+						"ms": 88915,
+						"name": "@RigidBody3D@1155",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88916,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88922,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "@RigidBody3D@1157",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 88925,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 88944,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88957,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88963,
+						"name": "@RigidBody3D@1158",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 88968,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 88971,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "@Area3D@1159",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 97397,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 98313,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 98314,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 33.152,
+				"physics_ms": 8.286,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 988,
+					"PIPELINE_SOURCE_DRAW": 150122496,
+					"PIPELINE_SOURCE_MAX": 541110272,
+					"PIPELINE_SOURCE_MESH": 732690,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65553600,
+					"PIPELINE_SOURCE_SURFACE": 766,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 114,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1004,
+					"PIPELINE_SOURCE_DRAW": 150024192,
+					"PIPELINE_SOURCE_MAX": 539897856,
+					"PIPELINE_SOURCE_MESH": 725994,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65095456,
+					"PIPELINE_SOURCE_SURFACE": 782,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 119,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 113,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 55
+				},
+				"process_ms": 7.015,
+				"recent": [
+					{
+						"ms": 88971,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "@Area3D@1159",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 88973,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "@RigidBody3D@1156",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 96871,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 97397,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 98313,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 98314,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 98653,
+						"name": "@RigidBody3D@1155",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 98654,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 98782,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 100621,
+						"name": "@RigidBody3D@1158",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 101656,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 101674,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 101703,
+						"name": "@RigidBody3D@1155",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 101704,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 101715,
+						"name": "@GPUParticles3D@1164",
+						"script": "particles"
+					},
+					{
+						"ms": 101721,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					}
+				]
+			}
+		],
+		"static_mb": 178.823070526123,
+		"video_mb": 517.55078125
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 433.0,
+		"after_static_mb": 160.929105758667,
+		"after_video_mb": 299.10546875,
+		"cycle": 1,
+		"draw_calls": 1967.0,
+		"frame_max_ms": 34.735,
+		"frame_median_ms": 9.587,
+		"frame_p95_ms": 12.51,
+		"gun_count": 1,
+		"instantiate_ms": 222.359,
+		"load_ms": 389.701,
+		"map": "Whispering Woods",
+		"meshes": 646,
+		"nav_polygons": 614,
+		"nodes": 1768,
+		"occluders": 0,
+		"render_primitives": 1232062.0,
+		"resources": 1019.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 34.735,
+				"physics_ms": 5.108,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 3892,
+					"PIPELINE_SOURCE_DRAW": 173174784,
+					"PIPELINE_SOURCE_MAX": 574844928,
+					"PIPELINE_SOURCE_MESH": 1255502,
+					"PIPELINE_SOURCE_SPECIALIZATION": 64684556,
+					"PIPELINE_SOURCE_SURFACE": 1978,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 141,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 133,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 64
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 3760,
+					"PIPELINE_SOURCE_DRAW": 173174784,
+					"PIPELINE_SOURCE_MAX": 567832576,
+					"PIPELINE_SOURCE_MESH": 1185150,
+					"PIPELINE_SOURCE_SPECIALIZATION": 64358776,
+					"PIPELINE_SOURCE_SURFACE": 1858,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 141,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 133,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 64
+				},
+				"process_ms": 11.455,
+				"recent": [
+					{
+						"ms": 114606,
+						"name": "@GPUParticles3D@1366",
+						"script": "particles"
+					},
+					{
+						"ms": 114702,
+						"name": "@GPUParticles3D@1367",
+						"script": "particles"
+					},
+					{
+						"ms": 115096,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 115097,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 115711,
+						"name": "@GPUParticles3D@1368",
+						"script": "particles"
+					},
+					{
+						"ms": 116006,
+						"name": "@GPUParticles3D@1369",
+						"script": "particles"
+					},
+					{
+						"ms": 116189,
+						"name": "@RigidBody3D@1346",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 116189,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 116337,
+						"name": "@GPUParticles3D@1370",
+						"script": "particles"
+					},
+					{
+						"ms": 116492,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 116492,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 117572,
+						"name": "@RigidBody3D@1371",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 117572,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 117642,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 118191,
+						"name": "@RigidBody3D@1372",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 118192,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 118441,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 118520,
+						"name": "@RigidBody3D@1346",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 118520,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 118533,
+						"name": "@GPUParticles3D@1373",
+						"script": "particles"
+					}
+				]
+			}
+		],
+		"static_mb": 182.945675849915,
+		"video_mb": 548.97265625
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 433.0,
+		"after_static_mb": 161.031972885132,
+		"after_video_mb": 299.10546875,
+		"cycle": 1,
+		"draw_calls": 242.0,
+		"frame_max_ms": 49.277,
+		"frame_median_ms": 5.431,
+		"frame_p95_ms": 10.073,
+		"gun_count": 1,
+		"instantiate_ms": 475.034,
+		"load_ms": 448.073,
+		"map": "Western Town",
+		"meshes": 212,
+		"nav_polygons": 805,
+		"nodes": 1276,
+		"occluders": 0,
+		"render_primitives": 921912.0,
+		"resources": 918.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 38.549,
+				"physics_ms": 4.286,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 459,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603947008,
+					"PIPELINE_SOURCE_MESH": 924640,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504380,
+					"PIPELINE_SOURCE_SURFACE": 250,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 436,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603881472,
+					"PIPELINE_SOURCE_MESH": 934378,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504348,
+					"PIPELINE_SOURCE_SURFACE": 282,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"process_ms": 7.314,
+				"recent": [
+					{
+						"ms": 121032,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121039,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121045,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121049,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121054,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121061,
+						"name": "spring_pad",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121072,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121079,
+						"name": "@RigidBody3D@1555",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "@Area3D@1556",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1557",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1558",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 123348,
+						"name": "@RigidBody3D@1559",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 128376,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 131775,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 131776,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 39.732,
+				"physics_ms": 4.286,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 459,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603947008,
+					"PIPELINE_SOURCE_MESH": 924640,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504380,
+					"PIPELINE_SOURCE_SURFACE": 250,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 436,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603881472,
+					"PIPELINE_SOURCE_MESH": 934378,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504348,
+					"PIPELINE_SOURCE_SURFACE": 282,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"process_ms": 7.314,
+				"recent": [
+					{
+						"ms": 121032,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121039,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121045,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121049,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121054,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121061,
+						"name": "spring_pad",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121072,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121079,
+						"name": "@RigidBody3D@1555",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "@Area3D@1556",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1557",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1558",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 123348,
+						"name": "@RigidBody3D@1559",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 128376,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 131775,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 131776,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 39.936,
+				"physics_ms": 4.286,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 459,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603947008,
+					"PIPELINE_SOURCE_MESH": 924640,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504380,
+					"PIPELINE_SOURCE_SURFACE": 250,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 436,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603881472,
+					"PIPELINE_SOURCE_MESH": 934378,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504348,
+					"PIPELINE_SOURCE_SURFACE": 282,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"process_ms": 7.314,
+				"recent": [
+					{
+						"ms": 121032,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121039,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121045,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121049,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121054,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121061,
+						"name": "spring_pad",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121072,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121079,
+						"name": "@RigidBody3D@1555",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "@Area3D@1556",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1557",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1558",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 123348,
+						"name": "@RigidBody3D@1559",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 128376,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 131775,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 131776,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 49.277,
+				"physics_ms": 4.286,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 459,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603947008,
+					"PIPELINE_SOURCE_MESH": 924640,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504380,
+					"PIPELINE_SOURCE_SURFACE": 250,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 436,
+					"PIPELINE_SOURCE_DRAW": 244613120,
+					"PIPELINE_SOURCE_MAX": 603881472,
+					"PIPELINE_SOURCE_MESH": 934378,
+					"PIPELINE_SOURCE_SPECIALIZATION": 79504348,
+					"PIPELINE_SOURCE_SURFACE": 282,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 153,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 140,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 67
+				},
+				"process_ms": 7.314,
+				"recent": [
+					{
+						"ms": 121032,
+						"name": "boomerang",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121039,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121045,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121049,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 121054,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121061,
+						"name": "spring_pad",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 121072,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121079,
+						"name": "@RigidBody3D@1555",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121081,
+						"name": "@Area3D@1556",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1557",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "@Area3D@1558",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 121082,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 123348,
+						"name": "@RigidBody3D@1559",
+						"script": "res://tumbleweed.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 127444,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 128376,
+						"name": "@RigidBody3D@1554",
+						"script": "res://boomerang.gd"
+					},
+					{
+						"ms": 131775,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 131776,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			}
+		],
+		"static_mb": 181.696739196777,
+		"video_mb": 576.71875
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 433.0,
+		"after_static_mb": 160.975900650024,
+		"after_video_mb": 299.10546875,
+		"cycle": 1,
+		"draw_calls": 902.0,
+		"frame_max_ms": 23.725,
+		"frame_median_ms": 8.721,
+		"frame_p95_ms": 12.693,
+		"gun_count": 1,
+		"instantiate_ms": 175.75,
+		"load_ms": 189.357,
+		"map": "Gun Square",
+		"meshes": 382,
+		"nav_polygons": 370,
+		"nodes": 1600,
+		"occluders": 0,
+		"render_primitives": 820692.0,
+		"resources": 1071.0,
+		"spawns": 10,
+		"spikes": [],
+		"static_mb": 178.967725753784,
+		"video_mb": 545.484375
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 431.0,
+		"after_static_mb": 160.720998764038,
+		"after_video_mb": 299.10546875,
+		"cycle": 1,
+		"draw_calls": 362.0,
+		"frame_max_ms": 15.747,
+		"frame_median_ms": 5.051,
+		"frame_p95_ms": 8.797,
+		"gun_count": 1,
+		"instantiate_ms": 125.188,
+		"load_ms": 210.527,
+		"map": "Cat Tower",
+		"meshes": 183,
+		"nav_polygons": 504,
+		"nodes": 1078,
+		"occluders": 0,
+		"render_primitives": 702058.0,
+		"resources": 853.0,
+		"spawns": 10,
+		"spikes": [],
+		"static_mb": 177.30725479126,
+		"video_mb": 518.21875
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 433.0,
+		"after_static_mb": 160.832082748413,
+		"after_video_mb": 299.35546875,
+		"cycle": 1,
+		"draw_calls": 277.0,
+		"frame_max_ms": 198.427,
+		"frame_median_ms": 5.416,
+		"frame_p95_ms": 9.933,
+		"gun_count": 1,
+		"instantiate_ms": 109.941,
+		"load_ms": 154.495,
+		"map": "Neon Circuit",
+		"meshes": 252,
+		"nav_polygons": 611,
+		"nodes": 1223,
+		"occluders": 0,
+		"render_primitives": 448918.0,
+		"resources": 622.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 198.427,
+				"physics_ms": 10.055,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 461,
+					"PIPELINE_SOURCE_DRAW": 213757952,
+					"PIPELINE_SOURCE_MAX": 576499712,
+					"PIPELINE_SOURCE_MESH": 448872,
+					"PIPELINE_SOURCE_SPECIALIZATION": 63327092,
+					"PIPELINE_SOURCE_SURFACE": 270,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 201,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 177,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 94
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 404,
+					"PIPELINE_SOURCE_DRAW": 213495808,
+					"PIPELINE_SOURCE_MAX": 570142720,
+					"PIPELINE_SOURCE_MESH": 448758,
+					"PIPELINE_SOURCE_SPECIALIZATION": 63219928,
+					"PIPELINE_SOURCE_SURFACE": 268,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 201,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 177,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 89
+				},
+				"process_ms": 12.164,
+				"recent": [
+					{
+						"ms": 167460,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 167463,
+						"name": "@RigidBody3D@2111",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 167468,
+						"name": "grenade",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 167470,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 167470,
+						"name": "@Area3D@2112",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 167471,
+						"name": "@Area3D@2113",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 167471,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 167471,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 173534,
+						"name": "spring_pad",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 173535,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 174130,
+						"name": "@RigidBody3D@2111",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 174762,
+						"name": "@RigidBody3D@2106",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 174762,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 174778,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 174778,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 176560,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 176561,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 176739,
+						"name": "@RigidBody3D@2111",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 177934,
+						"name": "SmokeCloud",
+						"script": "res://smoke_cloud.gd"
+					},
+					{
+						"ms": 177996,
+						"name": "MovingSmokeWisps",
+						"script": "particles"
+					}
+				]
+			},
+			{
+				"frame_ms": 34.625,
+				"physics_ms": 6.377,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 404,
+					"PIPELINE_SOURCE_DRAW": 213757952,
+					"PIPELINE_SOURCE_MAX": 579842048,
+					"PIPELINE_SOURCE_MESH": 448758,
+					"PIPELINE_SOURCE_SPECIALIZATION": 63574032,
+					"PIPELINE_SOURCE_SURFACE": 268,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 201,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 177,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 94
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 404,
+					"PIPELINE_SOURCE_DRAW": 213495808,
+					"PIPELINE_SOURCE_MAX": 570142720,
+					"PIPELINE_SOURCE_MESH": 448758,
+					"PIPELINE_SOURCE_SPECIALIZATION": 63219928,
+					"PIPELINE_SOURCE_SURFACE": 268,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 201,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 177,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 89
+				},
+				"process_ms": 8.329,
+				"recent": [
+					{
+						"ms": 174778,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 174778,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 176560,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 176561,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 176739,
+						"name": "@RigidBody3D@2111",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 177934,
+						"name": "SmokeCloud",
+						"script": "res://smoke_cloud.gd"
+					},
+					{
+						"ms": 177996,
+						"name": "MovingSmokeWisps",
+						"script": "particles"
+					},
+					{
+						"ms": 178704,
+						"name": "smoke_bomb",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 178977,
+						"name": "@RigidBody3D@2107",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 178977,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 179789,
+						"name": "RoundMelee",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 179790,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 179812,
+						"name": "@RigidBody3D@2115",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 179812,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 179908,
+						"name": "@Node3D@2116",
+						"script": "res://smoke_cloud.gd"
+					},
+					{
+						"ms": 179912,
+						"name": "MovingSmokeWisps",
+						"script": "particles"
+					},
+					{
+						"ms": 181033,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					},
+					{
+						"ms": 181084,
+						"name": "@RigidBody3D@2117",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 181085,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 181099,
+						"name": "@GPUParticles3D@2118",
+						"script": "particles"
+					}
+				]
+			}
+		],
+		"static_mb": 177.620621681213,
+		"video_mb": 553.55078125
+	},
+	{
+		"actors": 10,
+		"after_nodes": 30.0,
+		"after_resources": 433.0,
+		"after_static_mb": 161.105638504028,
+		"after_video_mb": 299.35546875,
+		"cycle": 1,
+		"draw_calls": 797.0,
+		"frame_max_ms": 56.211,
+		"frame_median_ms": 6.349,
+		"frame_p95_ms": 11.684,
+		"gun_count": 1,
+		"instantiate_ms": 260.549,
+		"load_ms": 1386.608,
+		"map": "Trippy Mountains",
+		"meshes": 387,
+		"nav_polygons": 1555,
+		"nodes": 1031,
+		"occluders": 0,
+		"render_primitives": 703746.0,
+		"resources": 940.0,
+		"spawns": 10,
+		"spikes": [
+			{
+				"frame_ms": 41.936,
+				"physics_ms": 4.613,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1121,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542720000,
+					"PIPELINE_SOURCE_MESH": 734004,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117120,
+					"PIPELINE_SOURCE_SURFACE": 846,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1030,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542654464,
+					"PIPELINE_SOURCE_MESH": 707402,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117088,
+					"PIPELINE_SOURCE_SURFACE": 810,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"process_ms": 10.239,
+				"recent": [
+					{
+						"ms": 184152,
+						"name": "@RigidBody3D@2292",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184152,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184161,
+						"name": "@RigidBody3D@2294",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184162,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184174,
+						"name": "grenade",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184181,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184187,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184202,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 184208,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "@Area3D@2295",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 192530,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 193554,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 193555,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 40.723,
+				"physics_ms": 4.613,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1121,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542720000,
+					"PIPELINE_SOURCE_MESH": 734004,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117120,
+					"PIPELINE_SOURCE_SURFACE": 846,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1030,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542654464,
+					"PIPELINE_SOURCE_MESH": 707402,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117088,
+					"PIPELINE_SOURCE_SURFACE": 810,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"process_ms": 10.239,
+				"recent": [
+					{
+						"ms": 184152,
+						"name": "@RigidBody3D@2292",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184152,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184161,
+						"name": "@RigidBody3D@2294",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184162,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184174,
+						"name": "grenade",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184181,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184187,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184202,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 184208,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "@Area3D@2295",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 192530,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 193554,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 193555,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 56.211,
+				"physics_ms": 4.613,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1123,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542720000,
+					"PIPELINE_SOURCE_MESH": 742452,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117120,
+					"PIPELINE_SOURCE_SURFACE": 848,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1030,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542654464,
+					"PIPELINE_SOURCE_MESH": 707402,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117088,
+					"PIPELINE_SOURCE_SURFACE": 810,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"process_ms": 10.239,
+				"recent": [
+					{
+						"ms": 184152,
+						"name": "@RigidBody3D@2292",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184152,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184161,
+						"name": "@RigidBody3D@2294",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184162,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184174,
+						"name": "grenade",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184181,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184187,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184202,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 184208,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "@Area3D@2295",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 192530,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 193554,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 193555,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			},
+			{
+				"frame_ms": 39.056,
+				"physics_ms": 4.613,
+				"pipelines": {
+					"PIPELINE_SOURCE_CANVAS": 1117,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542720000,
+					"PIPELINE_SOURCE_MESH": 717108,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117120,
+					"PIPELINE_SOURCE_SURFACE": 842,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"pipelines_at_sample_start": {
+					"PIPELINE_SOURCE_CANVAS": 1030,
+					"PIPELINE_SOURCE_DRAW": 149569536,
+					"PIPELINE_SOURCE_MAX": 542654464,
+					"PIPELINE_SOURCE_MESH": 707402,
+					"PIPELINE_SOURCE_SPECIALIZATION": 65117088,
+					"PIPELINE_SOURCE_SURFACE": 810,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS": 3,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW": 0,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_MESH": 212,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION": 184,
+					"RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE": 100
+				},
+				"process_ms": 10.239,
+				"recent": [
+					{
+						"ms": 184152,
+						"name": "@RigidBody3D@2292",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184152,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184157,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184161,
+						"name": "@RigidBody3D@2294",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 184162,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 184174,
+						"name": "grenade",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184181,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184187,
+						"name": "item",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184202,
+						"name": "DoubleJumpShoes",
+						"script": "res://double_jump_shoes_item.gd"
+					},
+					{
+						"ms": 184208,
+						"name": "decoy",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "powerup",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "@Area3D@2295",
+						"script": "res://powerup.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 184210,
+						"name": "HitMarker",
+						"script": "res://hit_marker.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "@RigidBody3D@2293",
+						"script": "res://melee_weapon.gd"
+					},
+					{
+						"ms": 192117,
+						"name": "MeleeHitboxDebug",
+						"script": "res://hitbox_debug_visual.gd"
+					},
+					{
+						"ms": 192530,
+						"name": "bear_trap",
+						"script": "res://item.gd"
+					},
+					{
+						"ms": 193554,
+						"name": "Gun",
+						"script": "res://gun.gd"
+					},
+					{
+						"ms": 193555,
+						"name": "Bullet",
+						"script": "res://bullet.gd"
+					}
+				]
+			}
+		],
+		"static_mb": 179.142234802246,
+		"video_mb": 517.8359375
+	}
+]

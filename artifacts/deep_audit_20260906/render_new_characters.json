@@ -1,0 +1,23 @@
+{
+  "label": "render_new_characters",
+  "code": 0,
+  "seconds": 9.81,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "NEW_CHARACTER_RENDER_VALIDATION: PASS models=6 poses=6 output=D:/Godot Projects/one-gun/.godot/new_character_render_validation"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/new_character_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_new_characters.log"
+}

@@ -272,8 +272,8 @@ func _run() -> void:
 	_check(alphabetical_names == expected_names,
 		"default map order was not alphabetical")
 	var newest := MapRegistry.sorted_indices("newest")
-	_check(not newest.is_empty() 			and str(MapRegistry.MAPS[newest[0]].get("name", "")) == "Neon Circuit",
-		"Newest map order did not place Neon Circuit first")
+	_check(not newest.is_empty() 			and int(MapRegistry.MAPS[newest[0]].get("added_order", 0)) == int(MapRegistry.MAPS.map(func(entry): return int(entry.get("added_order", 0))).max()),
+		"Newest map order did not place the latest registry entry first")
 
 	backend.loadout = saved_loadout
 	prefs.settings["character_model_id"] = saved_model_id

@@ -1,0 +1,23 @@
+{
+  "label": "render_ads",
+  "code": 0,
+  "seconds": 5.34,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "ADS_CAMERA_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/ads_camera_validation.png offset=(1.409632, 2.054351, 1.953273) fov=64.50"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/ads_camera_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_ads.log"
+}

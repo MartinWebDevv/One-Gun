@@ -1,0 +1,28 @@
+{
+  "label": "menu_systems_validation",
+  "code": 1,
+  "seconds": 11.07,
+  "timeout": false,
+  "errors": [
+    "ERROR: Menu validation: map sorting modes are incomplete"
+  ],
+  "markers": [
+    "MENU VALIDATION OK: res://gun.gd",
+    "MENU VALIDATION OK: res://bullet.gd",
+    "MENU VALIDATION OK: res://melee_weapon.gd",
+    "MENU VALIDATION OK: res://match_hud.gd",
+    "MENU VALIDATION OK: res://spectator_controller.gd",
+    "MENU RUNTIME OK: home Player Hub exposes profile/loadout/reward services and claims controller focus",
+    "ERROR: Menu validation: map sorting modes are incomplete",
+    "       [0] _validate (res://tools/menu_systems_validation.gd:387)"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/menu_systems_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\menu_systems_validation.log"
+}

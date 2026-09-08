@@ -1,0 +1,19 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+PREVIEW CAPTURE: 50_warm_hideout
+PREVIEW CAPTURE: 51_game_board
+PREVIEW CAPTURE: 52_private_by_default
+PREVIEW CAPTURE: 53_join_together
+PREVIEW CAPTURE: 54_scrap_yard_entrance
+PREVIEW CAPTURE: 55_scrap_yard_stands
+PREVIEW CAPTURE: 56_coin_call
+PREVIEW CAPTURE: 57_coin_flip
+PREVIEW CAPTURE: 58_scrap_round
+PREVIEW CAPTURE: 59_local_split_screen
+PREVIEW CAPTURE: 61_shared_coin
+PREVIEW CAPTURE: 62_split_combat
+PREVIEW RENDER PROFILE: {"active_3d_views":2,"adapter":"NVIDIA GeForce RTX 4060 Ti","character_nodes":5,"draw_calls":128.0,"frame_ms_max":11.022,"frame_ms_median":6.016,"frame_ms_p95":8.5,"frames":949,"nodes":3918,"practice_supplies":46,"preset":"Low preview","primitives":171468.0,"range_targets":3,"render_scale":0.75,"renderer":"forward_plus","sample_seconds":6,"scope":"Six-second development GPU sample of the stated view and roster. Does not establish weaker-laptop, sustained combat, live-network or full map-transition performance.","scrap_state":4,"static_memory_bytes":201847844.0,"video_memory_bytes":796454912.0,"view":"_scrap_split","window_pixels":"(1920, 1080)","worst_frame_cpu":{"physics_ms":2.605,"process_ms":8.596}}
+PREVIEW CAPTURE: 60_trickshot_toss
+PREVIEW RENDER PROFILE: {"active_3d_views":1,"adapter":"NVIDIA GeForce RTX 4060 Ti","character_nodes":11,"draw_calls":337.0,"frame_ms_max":9.322,"frame_ms_median":5.93,"frame_ms_p95":7.73,"frames":992,"nodes":3933,"practice_supplies":46,"preset":"Low preview","primitives":242001.0,"range_targets":3,"render_scale":0.75,"renderer":"forward_plus","sample_seconds":6,"scope":"Six-second development GPU sample of the stated view and roster. Does not establish weaker-laptop, sustained combat, live-network or full map-transition performance.","scrap_state":0,"static_memory_bytes":199956117.0,"video_memory_bytes":796651520.0,"view":"_hideout_revision","window_pixels":"(1920, 1080)","worst_frame_cpu":{"physics_ms":1.908,"process_ms":9.096}}
+PREVIEW RENDER PROFILE: {"active_3d_views":1,"adapter":"NVIDIA GeForce RTX 4060 Ti","character_nodes":13,"draw_calls":102.0,"frame_ms_max":229.551,"frame_ms_median":6.429,"frame_ms_p95":9.347,"frames":860,"nodes":3980,"practice_supplies":46,"preset":"Low preview","primitives":163108.0,"range_targets":3,"render_scale":0.75,"renderer":"forward_plus","sample_seconds":6,"scope":"Six-second development GPU sample of the stated view and roster. Does not establish weaker-laptop, sustained combat, live-network or full map-transition performance.","scrap_state":5,"static_memory_bytes":201132281.0,"video_memory_bytes":808972288.0,"view":"_scrap_spectating","window_pixels":"(1920, 1080)","worst_frame_cpu":{"physics_ms":2.823,"process_ms":8.116}}

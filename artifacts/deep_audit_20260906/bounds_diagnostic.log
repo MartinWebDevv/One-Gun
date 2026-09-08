@@ -1,0 +1,12 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+CHARACTER_SIZE model=male bounds=[P: (-0.907078, -1.137486, -0.788687), S: (1.619221, 2.860248, 1.883151)] bottom=-1.1375 top=1.7228
+CHARACTER_SIZE model=female bounds=[P: (-1.188729, -1.020815, -1.11599), S: (2.419612, 2.430753, 1.779222)] bottom=-1.0208 top=1.4099
+CHARACTER_SIZE model=goldfish_bag_man bounds=[P: (-0.678555, -1.090001, -1.220641), S: (1.989955, 2.645326, 2.157654)] bottom=-1.0900 top=1.5553
+CHARACTER_SIZE model=eye_wizard bounds=[P: (-0.83232, -1.09, -1.649048), S: (2.500241, 2.645324, 2.860105)] bottom=-1.0900 top=1.5553
+CHARACTER_SIZE model=mr_mushroom bounds=[P: (-0.436067, -1.09, -1.374768), S: (1.873342, 2.645325, 2.129819)] bottom=-1.0900 top=1.5553
+CHARACTER_SIZE model=mr_poop bounds=[P: (-1.449689, -1.09, -1.9537), S: (3.481275, 2.645324, 3.669706)] bottom=-1.0900 top=1.5553
+CHARACTER_SIZE model=mr_salt bounds=[P: (-0.85972, -1.09, -1.557373), S: (2.601444, 2.645323, 2.740955)] bottom=-1.0900 top=1.5553
+CHARACTER_SIZE model=spooky_witch bounds=[P: (-0.586478, -1.09, -1.229976), S: (1.894192, 2.645324, 2.178293)] bottom=-1.0900 top=1.5553
+CHARACTER_SIZE_BASELINE height=2.6455 bottom=-1.0792 capsule_bottom=-1.0900 capsule_top=1.2367
+CHARACTER_SIZE_HITBOX_VALIDATION: PASS models=8 shared_capsule=true

@@ -1,0 +1,288 @@
+[
+  {
+    "label": "render_projectile_solo",
+    "code": 0,
+    "seconds": 12.21,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PROJECTILE CROSSHAIR RENDER VALIDATION (SOLO): PASS"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/projectile_crosshair_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_projectile_solo.log"
+  },
+  {
+    "label": "render_projectile_split",
+    "code": 0,
+    "seconds": 11.84,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PROJECTILE CROSSHAIR RENDER VALIDATION (SPLITSCREEN): PASS"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/projectile_crosshair_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_projectile_split.log"
+  },
+  {
+    "label": "render_new_characters",
+    "code": 0,
+    "seconds": 9.81,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "NEW_CHARACTER_RENDER_VALIDATION: PASS models=6 poses=6 output=D:/Godot Projects/one-gun/.godot/new_character_render_validation"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/new_character_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_new_characters.log"
+  },
+  {
+    "label": "render_player_v2",
+    "code": 1,
+    "seconds": 13.84,
+    "timeout": false,
+    "errors": [
+      "ERROR: PlayerV2RenderValidation: returned Player Hub did not restore controller focus",
+      "ERROR: 34 RID allocations of type 'N10RendererRD14TextureStorage7TextureE' were leaked at exit.",
+      "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+      "ERROR: Parse Error: Failed. [Resource file res://UI/winners_circle_stage_blockout.tscn:25]",
+      "ERROR: Failed loading resource: res://UI/winners_circle_stage_blockout.tscn.",
+      "SCRIPT ERROR: Parse Error: Could not preload resource file \"res://UI/winners_circle_stage_blockout.tscn\".",
+      "SCRIPT ERROR: Compile Error: Failed to compile depended scripts.",
+      "SCRIPT ERROR: Compile Error: Failed to compile depended scripts.",
+      "ERROR: Failed to load script \"res://round_manager.gd\" with error \"Compilation failed\".",
+      "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+      "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+      "ERROR: 4 resources still in use at exit (run with --verbose for details)."
+    ],
+    "markers": [
+      "       [0] _capture_main_menu (res://tools/player_v2_render_validation.gd:160)",
+      "       [1] _wait_frames (res://tools/player_v2_render_validation.gd:603)"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/player_v2_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_player_v2.log"
+  },
+  {
+    "label": "render_ads",
+    "code": 0,
+    "seconds": 5.34,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "ADS_CAMERA_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/ads_camera_validation.png offset=(1.409632, 2.054351, 1.953273) fov=64.50"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/ads_camera_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_ads.log"
+  },
+  {
+    "label": "render_menu_clicks",
+    "code": 0,
+    "seconds": 11.89,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PASS: Friends exposes its Back button",
+      "PASS: Friends preserves controller focus through the pre-GUI mouse press",
+      "PASS: focused Friends button receives a real pointer click",
+      "PASS: Lobby exposes Match Settings",
+      "PASS: Lobby Match Settings opens from a pointer click",
+      "PASS: Progression exposes both road tabs",
+      "PASS: Progression switches roads from a pointer click",
+      "MENU_POINTER_CLICK_VALIDATION: PASS"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--script",
+      "res://tools/menu_pointer_click_validation.gd"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_menu_clicks.log"
+  },
+  {
+    "label": "render_winners_circle",
+    "code": 0,
+    "seconds": 11.58,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PASS: Winners Circle new performer retains hat: spooky_witch",
+      "PASS: Winners Circle new performer loads its podium animation: spooky_witch",
+      "PASS: Winners Circle accepts new character model: eye_wizard",
+      "PASS: Winners Circle accepts new character model: mr_mushroom",
+      "PASS: Winners Circle accepts new character model: mr_poop",
+      "PASS: Winners Circle accepts new character model: mr_salt",
+      "PASS: Winners Circle accepts new character model: spooky_witch",
+      "WINNERS CIRCLE VALIDATION PASSED"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--script",
+      "res://tools/winners_circle_validation.gd"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_winners_circle.log"
+  },
+  {
+    "label": "render_hat_interactions",
+    "code": 0,
+    "seconds": 12.39,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "HAT_PREVIEW_INTERACTION_VALIDATION: PASS hats=12 models=8 angles=4 controller=1"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--script",
+      "res://tools/hat_preview_interaction_validation.gd"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_hat_interactions.log"
+  },
+  {
+    "label": "render_hats",
+    "code": 0,
+    "seconds": 24.12,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "HAT_RENDER_VALIDATION: PASS output=D:/Godot Projects/one-gun/.godot/hat_render_validation"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/hat_render_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_hats.log"
+  },
+  {
+    "label": "render_gameplay_hat_camera",
+    "code": 0,
+    "seconds": 26.09,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "GAMEPLAY_HAT_CAMERA_VALIDATION: PASS hats=12 models=8 modes=2 captures=4"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/gameplay_hat_camera_validation.tscn"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_gameplay_hat_camera.log"
+  },
+  {
+    "label": "render_hideout",
+    "code": 0,
+    "seconds": 68.99,
+    "timeout": false,
+    "errors": [],
+    "markers": [
+      "PREVIEW RENDER PROFILE: {\"active_3d_views\":2,\"adapter\":\"NVIDIA GeForce RTX 4060 Ti\",\"character_nodes\":5,\"draw_calls\":128.0,\"frame_ms_max\":11.022,\"frame_ms_median\":6.016,\"frame_ms_p95\":8.5,\"frames\":949,\"nodes\":3918,\"practice_supplies\":46,\"preset\":\"Low preview\",\"primitives\":171468.0,\"range_targets\":3,\"render_scale\":0.75,\"renderer\":\"forward_plus\",\"sample_seconds\":6,\"scope\":\"Six-second development GPU sample of the stated view and roster. Does not establish weaker-laptop, sustained combat, live-network or full map-transition performance.\",\"scrap_state\":4,\"static_memory_bytes\":201847844.0,\"video_memory_bytes\":796454912.0,\"view\":\"_scrap_split\",\"window_pixels\":\"(1920, 1080)\",\"worst_frame_cpu\":{\"physics_ms\":2.605,\"process_ms\":8.596}}",
+      "PREVIEW RENDER PROFILE: {\"active_3d_views\":1,\"adapter\":\"NVIDIA GeForce RTX 4060 Ti\",\"character_nodes\":11,\"draw_calls\":337.0,\"frame_ms_max\":9.322,\"frame_ms_median\":5.93,\"frame_ms_p95\":7.73,\"frames\":992,\"nodes\":3933,\"practice_supplies\":46,\"preset\":\"Low preview\",\"primitives\":242001.0,\"range_targets\":3,\"render_scale\":0.75,\"renderer\":\"forward_plus\",\"sample_seconds\":6,\"scope\":\"Six-second development GPU sample of the stated view and roster. Does not establish weaker-laptop, sustained combat, live-network or full map-transition performance.\",\"scrap_state\":0,\"static_memory_bytes\":199956117.0,\"video_memory_bytes\":796651520.0,\"view\":\"_hideout_revision\",\"window_pixels\":\"(1920, 1080)\",\"worst_frame_cpu\":{\"physics_ms\":1.908,\"process_ms\":9.096}}",
+      "PREVIEW RENDER PROFILE: {\"active_3d_views\":1,\"adapter\":\"NVIDIA GeForce RTX 4060 Ti\",\"character_nodes\":13,\"draw_calls\":102.0,\"frame_ms_max\":229.551,\"frame_ms_median\":6.429,\"frame_ms_p95\":9.347,\"frames\":860,\"nodes\":3980,\"practice_supplies\":46,\"preset\":\"Low preview\",\"primitives\":163108.0,\"range_targets\":3,\"render_scale\":0.75,\"renderer\":\"forward_plus\",\"sample_seconds\":6,\"scope\":\"Six-second development GPU sample of the stated view and roster. Does not establish weaker-laptop, sustained combat, live-network or full map-transition performance.\",\"scrap_state\":5,\"static_memory_bytes\":201132281.0,\"video_memory_bytes\":808972288.0,\"view\":\"_scrap_spectating\",\"window_pixels\":\"(1920, 1080)\",\"worst_frame_cpu\":{\"physics_ms\":2.823,\"process_ms\":8.116}}"
+    ],
+    "command": [
+      "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+      "--path",
+      "D:\\Godot Projects\\one-gun",
+      "--windowed",
+      "--resolution",
+      "1600x900",
+      "--position",
+      "-3000,-3000",
+      "--scene",
+      "res://tools/live_lobby_preview/live_lobby_preview.tscn",
+      "--",
+      "--live-lobby-capture",
+      "--hideout-revision"
+    ],
+    "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_hideout.log"
+  }
+]

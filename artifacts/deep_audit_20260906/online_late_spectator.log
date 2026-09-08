@@ -1,0 +1,46 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 2293] hosting 'Player 1's Lobby' on UDP 24646 as 'Player 1'
+[ONLINE 2750] peer 119670156 connected
+[ONLINE 3061] peer 119670156 admitted | client build itch-380e65c
+[ONLINE 3065] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 3069] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 7744] match 1 ready peer 1 (1/2)
+[ONLINE 7810] match 1 ready peer 119670156 (2/2)
+[ONLINE 10560] peer 1893498316 connected
+[ONLINE 10849] peer 1893498316 admitted | client build itch-380e65c
+[ONLINE 13458] accepted spectator request from peer 1893498316 for match 1
+[ONLINE 13603] spectator start sent to peer 1893498316 attempt 1
+[ONLINE 14212] spectator start sent to peer 1893498316 attempt 2
+[ONLINE 14818] spectator start sent to peer 1893498316 attempt 3
+[ONLINE 17460] spectator peer 1893498316 ready for match 1
+ONLINE_LATE_SPECTATOR_PASS host
+[ONLINE 17847] peer 1893498316 disconnected
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 2143] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 2154] connected to host as peer 119670156
+[ONLINE 2156] peer 1 connected
+[ONLINE 2485] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 7080] reporting match 1 scene ready
+[ONLINE 9975] peer 1893498316 connected
+ONLINE_LATE_SPECTATOR_PASS client
+[ONLINE 17262] peer 1893498316 disconnected
+
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1445] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1456] connected to host as peer 1893498316
+[ONLINE 1458] peer 1 connected
+[ONLINE 1476] peer 119670156 connected
+[ONLINE 4360] requesting spectator entry for match 0
+[ONLINE 4516] received match scene start (match=1, spectator=true, map=res://node_3d.tscn)
+[ONLINE 8366] reporting spectator scene ready for match 1
+[ONLINE 8377] ignored duplicate spectator start for match 1
+[ONLINE 8379] ignored duplicate spectator start for match 1
+ONLINE_LATE_SPECTATOR_PASS spectator
+
+

@@ -1,0 +1,19 @@
+{
+  "label": "lobby_authority_client",
+  "code": 0,
+  "seconds": 2.81,
+  "timeout": false,
+  "errors": [],
+  "markers": [],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/lobby_network_validation.gd",
+    "--",
+    "--role=client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\lobby_authority_client.log"
+}

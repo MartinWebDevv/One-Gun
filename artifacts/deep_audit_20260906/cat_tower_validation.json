@@ -1,0 +1,19 @@
+{
+  "label": "cat_tower_validation",
+  "code": 0,
+  "seconds": 18.41,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "CAT TOWER VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/cat_tower_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\cat_tower_validation.log"
+}

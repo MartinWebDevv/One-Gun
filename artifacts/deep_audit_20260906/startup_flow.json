@@ -1,0 +1,21 @@
+{
+  "label": "startup_flow",
+  "code": 0,
+  "seconds": 9.07,
+  "timeout": false,
+  "errors": [
+    "ERROR: 1 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "STARTUP_PRODUCTION_FLOW_VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/startup_production_flow_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\startup_flow.log"
+}

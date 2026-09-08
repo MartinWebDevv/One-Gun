@@ -2130,3 +2130,64 @@ render_target_update_mode = 4
 
 [node name="ViewportCamera2" type="Camera3D" parent="SplitScreenLayer/ViewportRow/SubViewportContainer2/SubViewport2" unique_id=669031379]
 current = true
+
+[node name="ZoneLabels" type="Node3D" parent="." unique_id=1124969328]
+
+[node name="ObservationLabel" type="Label3D" parent="ZoneLabels" unique_id=956598384]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -8.5)
+pixel_size = 0.006
+modulate = Color(0.25, 0.8, 1, 1)
+text = "BLUE CIRCUIT"
+font_size = 64
+outline_size = 10
+
+[node name="ResearchLabel" type="Label3D" parent="ZoneLabels" unique_id=1452367706]
+transform = Transform3D(-3.6199901e-06, 0, 1, 0, 1, 0, -1, 0, -3.6199901e-06, -9.4, 5, 0)
+pixel_size = 0.006
+modulate = Color(0.2, 1, 0.55, 1)
+text = "GREEN CIRCUIT"
+font_size = 64
+outline_size = 10
+
+[node name="ZeroGLabel" type="Label3D" parent="ZoneLabels" unique_id=1239738833]
+transform = Transform3D(-3.6199901e-06, 0, -1, 0, 1, 0, 1, 0, -3.6199901e-06, 9.4, 5, 0)
+pixel_size = 0.006
+modulate = Color(0.72, 0.35, 1, 1)
+text = "VIOLET CIRCUIT"
+font_size = 64
+outline_size = 10
+
+[node name="EngineLabel" type="Label3D" parent="ZoneLabels" unique_id=1988855361]
+transform = Transform3D(-1, 0, 2.5351817e-06, 0, 1, 0, -2.5351817e-06, 0, -1, 0, 5, 8.6)
+pixel_size = 0.006
+modulate = Color(1, 0.3, 0.12, 1)
+text = "RED CIRCUIT"
+font_size = 64
+outline_size = 10
+
+[node name="DeckHeaderLabel" type="Label3D" parent="ZoneLabels" unique_id=1015342887]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 3.8, -15.2)
+pixel_size = 0.006
+modulate = Color(0.3, 0.88, 1, 1)
+text = "NEON CIRCUIT"
+font_size = 40
+outline_size = 10
+
+[node name="ArenaCapacityLabel" type="Label3D" parent="ZoneLabels" unique_id=1888391590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 3.8, -15.2)
+pixel_size = 0.006
+modulate = Color(0.62, 0.82, 1, 1)
+text = "10 PLAYERS
+SYSTEM LIVE"
+font_size = 40
+outline_size = 10
+
+[node name="CoreStatusLabel" type="Label3D" parent="ZoneLabels" unique_id=1930645761]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 2.2)
+pixel_size = 0.006
+billboard = 1
+modulate = Color(1, 0.68, 0.12, 1)
+text = "ONE GUN
+LIVE VAULT"
+font_size = 40
+outline_size = 10

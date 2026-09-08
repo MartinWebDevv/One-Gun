@@ -1,0 +1,131 @@
+WorkerThreadPool: 16 threads, 4 max low-priority.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+Loading resource: res://one_gun_theme.tres remapped: res://one_gun_theme.tres
+Loading resource: res://fonts/Fredoka-VariableFont_wdth,wght.ttf remapped: res://fonts/Fredoka-VariableFont_wdth,wght.ttf
+Loading resource: res://.godot/imported/Fredoka-VariableFont_wdth,wght.ttf-738020177dd543c76cbf97a78c18b720.fontdata remapped: res://.godot/imported/Fredoka-VariableFont_wdth,wght.ttf-738020177dd543c76cbf97a78c18b720.fontdata
+Completed load for: 'res://fonts/Fredoka-VariableFont_wdth,wght.ttf' remapped 'res://fonts/Fredoka-VariableFont_wdth,wght.ttf' at thread -1
+Completed load for: 'res://one_gun_theme.tres' remapped 'res://one_gun_theme.tres' at thread -1
+CORE API HASH: 3769296884
+EDITOR API HASH: 3146738256
+SceneTreeFTI: traversal method DEFAULT
+Loading resource: res://game_events.gd remapped: res://game_events.gd
+Completed load for: 'res://game_events.gd' remapped 'res://game_events.gd' at thread -1
+Loading resource: res://game_config.gd remapped: res://game_config.gd
+Completed load for: 'res://game_config.gd' remapped 'res://game_config.gd' at thread -1
+Loading resource: res://player_prefs.gd remapped: res://player_prefs.gd
+Completed load for: 'res://player_prefs.gd' remapped 'res://player_prefs.gd' at thread -1
+Loading resource: res://supabase/supabase_manager.gd remapped: res://supabase/supabase_manager.gd
+Loading resource: res://models/cosmetics/hats/hat_fit_profiles.tres remapped: res://models/cosmetics/hats/hat_fit_profiles.tres
+Loading resource: res://models/cosmetics/hats/hat_fit_profiles.gd remapped: res://models/cosmetics/hats/hat_fit_profiles.gd
+Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.gd' remapped 'res://models/cosmetics/hats/hat_fit_profiles.gd' at thread -1
+Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.tres' remapped 'res://models/cosmetics/hats/hat_fit_profiles.tres' at thread -1
+Completed load for: 'res://supabase/supabase_manager.gd' remapped 'res://supabase/supabase_manager.gd' at thread -1
+Loading resource: res://supabase/progression_manager.gd remapped: res://supabase/progression_manager.gd
+Completed load for: 'res://supabase/progression_manager.gd' remapped 'res://supabase/progression_manager.gd' at thread -1
+Loading resource: res://graphics_quality_manager.gd remapped: res://graphics_quality_manager.gd
+Completed load for: 'res://graphics_quality_manager.gd' remapped 'res://graphics_quality_manager.gd' at thread -1
+Loading resource: res://pause_manager.gd remapped: res://pause_manager.gd
+Completed load for: 'res://pause_manager.gd' remapped 'res://pause_manager.gd' at thread -1
+Loading resource: res://melee_weapon_registry.gd remapped: res://melee_weapon_registry.gd
+Completed load for: 'res://melee_weapon_registry.gd' remapped 'res://melee_weapon_registry.gd' at thread -1
+Loading resource: res://theme_manager.gd remapped: res://theme_manager.gd
+Completed load for: 'res://theme_manager.gd' remapped 'res://theme_manager.gd' at thread -1
+Loading resource: res://UI/accessibility_manager.gd remapped: res://UI/accessibility_manager.gd
+Completed load for: 'res://UI/accessibility_manager.gd' remapped 'res://UI/accessibility_manager.gd' at thread -1
+Loading resource: res://supabase/social_manager.gd remapped: res://supabase/social_manager.gd
+Completed load for: 'res://supabase/social_manager.gd' remapped 'res://supabase/social_manager.gd' at thread -1
+Loading resource: res://supabase/reward_identity_manager.gd remapped: res://supabase/reward_identity_manager.gd
+Completed load for: 'res://supabase/reward_identity_manager.gd' remapped 'res://supabase/reward_identity_manager.gd' at thread -1
+Loading resource: res://online_chat.gd remapped: res://online_chat.gd
+Completed load for: 'res://online_chat.gd' remapped 'res://online_chat.gd' at thread -1
+Loaded system CA certificates
+Loading resource: res://main_menu.tscn remapped: res://main_menu.tscn
+Loading resource: res://main_menu.gd remapped: res://main_menu.gd
+Loading resource: res://player_settings.tscn remapped: res://player_settings.tscn
+Loading resource: res://player_settings.gd remapped: res://player_settings.gd
+Completed load for: 'res://player_settings.gd' remapped 'res://player_settings.gd' at thread -1
+Completed load for: 'res://player_settings.tscn' remapped 'res://player_settings.tscn' at thread -1
+Loading resource: res://UI/assets/menu_hubs/profile_backdrop.png remapped: res://UI/assets/menu_hubs/profile_backdrop.png
+Loading resource: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex remapped: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex
+Completed load for: 'res://UI/assets/menu_hubs/profile_backdrop.png' remapped 'res://UI/assets/menu_hubs/profile_backdrop.png' at thread -1
+Loading resource: res://UI/assets/menu_hubs/prize_counter_backdrop.png remapped: res://UI/assets/menu_hubs/prize_counter_backdrop.png
+Loading resource: res://.godot/imported/prize_counter_backdrop.png-86c5cb64a8302f1e4524dd97f2fe0896.ctex remapped: res://.godot/imported/prize_counter_backdrop.png-86c5cb64a8302f1e4524dd97f2fe0896.ctex
+Completed load for: 'res://UI/assets/menu_hubs/prize_counter_backdrop.png' remapped 'res://UI/assets/menu_hubs/prize_counter_backdrop.png' at thread -1
+Loading resource: res://UI/assets/menu_hubs/locker_backdrop.png remapped: res://UI/assets/menu_hubs/locker_backdrop.png
+Loading resource: res://.godot/imported/locker_backdrop.png-7308c473e64d3071eadd12d005f631de.ctex remapped: res://.godot/imported/locker_backdrop.png-7308c473e64d3071eadd12d005f631de.ctex
+Completed load for: 'res://UI/assets/menu_hubs/locker_backdrop.png' remapped 'res://UI/assets/menu_hubs/locker_backdrop.png' at thread -1
+Completed load for: 'res://main_menu.gd' remapped 'res://main_menu.gd' at thread -1
+Completed load for: 'res://main_menu.tscn' remapped 'res://main_menu.tscn' at thread -1
+Loading resource: res://menu_map_cycler.gd remapped: res://menu_map_cycler.gd
+Loading resource: res://UI/MainMenu/OneGunLogoV1.png remapped: res://UI/MainMenu/OneGunLogoV1.png
+Loading resource: res://.godot/imported/OneGunLogoV1.png-6b8b7e92d683988037228dd504849e30.ctex remapped: res://.godot/imported/OneGunLogoV1.png-6b8b7e92d683988037228dd504849e30.ctex
+Completed load for: 'res://UI/MainMenu/OneGunLogoV1.png' remapped 'res://UI/MainMenu/OneGunLogoV1.png' at thread -1
+Completed load for: 'res://menu_map_cycler.gd' remapped 'res://menu_map_cycler.gd' at thread -1
+Loading resource: res://models/menu/TrophyPedestal.glb remapped: res://models/menu/TrophyPedestal.glb
+Loading resource: res://.godot/imported/TrophyPedestal.glb-9bfe63cc45af190def1732af1a645ac7.scn remapped: res://.godot/imported/TrophyPedestal.glb-9bfe63cc45af190def1732af1a645ac7.scn
+Completed load for: 'res://models/menu/TrophyPedestal.glb' remapped 'res://models/menu/TrophyPedestal.glb' at thread -1
+Loading resource: res://player.tscn remapped: res://player.tscn
+Loading resource: res://character_body_3d.gd remapped: res://character_body_3d.gd
+Completed load for: 'res://character_body_3d.gd' remapped 'res://character_body_3d.gd' at thread -1
+Loading resource: res://models/player_v2/player_v2_visual.tscn remapped: res://models/player_v2/player_v2_visual.tscn
+Loading resource: res://models/player_v2/player_v2_visual.gd remapped: res://models/player_v2/player_v2_visual.gd
+Completed load for: 'res://models/player_v2/player_v2_visual.gd' remapped 'res://models/player_v2/player_v2_visual.gd' at thread -1
+Loading resource: res://models/player_v2/animations/Idle.fbx remapped: res://models/player_v2/animations/Idle.fbx
+Loading resource: res://.godot/imported/Idle.fbx-30d7b7480fbc6e1ecf11d003b83fcc8c.scn remapped: res://.godot/imported/Idle.fbx-30d7b7480fbc6e1ecf11d003b83fcc8c.scn
+Completed load for: 'res://models/player_v2/animations/Idle.fbx' remapped 'res://models/player_v2/animations/Idle.fbx' at thread -1
+Completed load for: 'res://models/player_v2/player_v2_visual.tscn' remapped 'res://models/player_v2/player_v2_visual.tscn' at thread -1
+Completed load for: 'res://player.tscn' remapped 'res://player.tscn' at thread -1
+Loading resource: res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png remapped: res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png
+Loading resource: res://.godot/imported/OGCatModelV2_Rigged_OGcat color blue.png-f6e467b52ec39a101206faf0b3c96c68.s3tc.ctex remapped: res://.godot/imported/OGCatModelV2_Rigged_OGcat color blue.png-f6e467b52ec39a101206faf0b3c96c68.s3tc.ctex
+Completed load for: 'res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png' remapped 'res://models/player_v2/OGCatModelV2_Rigged_OGcat color blue.png' at thread -1
+Loading resource: res://UI/MainMenu/OneGunLogoV2.png remapped: res://UI/MainMenu/OneGunLogoV2.png
+Loading resource: res://.godot/imported/OneGunLogoV2.png-efa48b1b00499878603d39c76fc407ce.ctex remapped: res://.godot/imported/OneGunLogoV2.png-efa48b1b00499878603d39c76fc407ce.ctex
+Completed load for: 'res://UI/MainMenu/OneGunLogoV2.png' remapped 'res://UI/MainMenu/OneGunLogoV2.png' at thread -1
+Loading resource: res://UI/MainMenu/TaglineRibbon.png remapped: res://UI/MainMenu/TaglineRibbon.png
+Loading resource: res://.godot/imported/TaglineRibbon.png-ea0594446aa33a2fd6e8d2eece120f37.ctex remapped: res://.godot/imported/TaglineRibbon.png-ea0594446aa33a2fd6e8d2eece120f37.ctex
+Completed load for: 'res://UI/MainMenu/TaglineRibbon.png' remapped 'res://UI/MainMenu/TaglineRibbon.png' at thread -1
+Loading resource: res://UI/assets/character_portraits/blue.png remapped: res://UI/assets/character_portraits/blue.png
+Loading resource: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex remapped: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex
+Completed load for: 'res://UI/assets/character_portraits/blue.png' remapped 'res://UI/assets/character_portraits/blue.png' at thread -1
+Loading resource: res://audio/MainMenu.wav remapped: res://audio/MainMenu.wav
+Loading resource: res://.godot/imported/MainMenu.wav-8cebfcf8c97581b115aa18b0a4e288fd.sample remapped: res://.godot/imported/MainMenu.wav-8cebfcf8c97581b115aa18b0a4e288fd.sample
+Completed load for: 'res://audio/MainMenu.wav' remapped 'res://audio/MainMenu.wav' at thread -1
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+getaddrinfo failed! Cannot resolve hostname.
+XR: Clearing primary interface
+XR: Removed interface "Native mobile"
+XR: Removed interface "OpenXR"
+Leaked instance: AudioStreamWAV:9223372208250817187 - Reference count: 1
+Leaked instance: AudioStreamPlaybackWAV:9223372208267594405 - Reference count: 1
+Hint: Leaked instances typically happen when nodes are removed from the scene tree (with `remove_child()`) but not freed (with `free()` or `queue_free()`).
+Orphan StringName: Master (static: 0, total: 2)
+StringName: 1 unclaimed string names at exit.
+WARNING: 2 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

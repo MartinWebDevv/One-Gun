@@ -1,0 +1,4 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+SMOKE_SPAWN_PROFILE [{"construction_ms":87.623,"max_ms":241.839,"p95_ms":2.176,"preprocess":3.2},{"construction_ms":26.36,"max_ms":51.555,"p95_ms":1.811,"preprocess":0.0},{"construction_ms":23.748,"max_ms":46.881,"p95_ms":1.659,"preprocess":3.2},{"construction_ms":26.674,"max_ms":48.627,"p95_ms":1.71,"preprocess":0.0}]

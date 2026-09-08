@@ -1,0 +1,19 @@
+{
+  "label": "decoy_validation",
+  "code": 0,
+  "seconds": 11.72,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "DECOY VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/decoy_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\decoy_validation.log"
+}

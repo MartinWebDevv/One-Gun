@@ -1,0 +1,27 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1770] hosting 'Smoke Host's Lobby' on UDP 24646 as 'Smoke Host'
+[ONLINE 2579] peer 14074680 connected
+[ONLINE 2883] peer 14074680 admitted | client build itch-380e65c
+[ONLINE 2885] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2886] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 9411] match 1 ready peer 1 (1/2)
+[ONLINE 9518] match 1 ready peer 14074680 (2/2)
+[ONLINE 15934] peer 14074680 disconnected
+ONLINE_CLIENT_EXIT_PASS host
+
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1987] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1997] connected to host as peer 14074680
+[ONLINE 1998] peer 1 connected
+[ONLINE 2315] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 8778] reporting match 1 scene ready
+ONLINE_CLIENT_EXIT_PASS client
+
+WARNING: 6 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+

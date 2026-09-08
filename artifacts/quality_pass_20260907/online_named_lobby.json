@@ -1,0 +1,11 @@
+{
+  "label": "online_named_lobby",
+  "code": 0,
+  "seconds": 3.9,
+  "errors": [],
+  "markers": [
+    "ONLINE_NAMED_LOBBY_PASS host",
+    "ONLINE_NAMED_LOBBY_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_named_lobby.log"
+}

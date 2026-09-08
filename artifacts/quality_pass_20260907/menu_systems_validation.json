@@ -1,0 +1,26 @@
+{
+  "label": "menu_systems_validation",
+  "code": 0,
+  "seconds": 8.31,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "MENU VALIDATION OK: res://tools/equipped_cosmetic_visibility_validation.gd",
+    "MENU VALIDATION OK: res://gun.gd",
+    "MENU VALIDATION OK: res://bullet.gd",
+    "MENU VALIDATION OK: res://melee_weapon.gd",
+    "MENU VALIDATION OK: res://match_hud.gd",
+    "MENU VALIDATION OK: res://spectator_controller.gd",
+    "MENU RUNTIME OK: home Player Hub exposes profile/loadout/reward services and claims controller focus",
+    "MENU SYSTEMS VALIDATION: PASS"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/menu_systems_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\menu_systems_validation.log"
+}

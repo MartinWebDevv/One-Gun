@@ -1,0 +1,19 @@
+{
+  "label": "progression_catalog_validation",
+  "code": 0,
+  "seconds": 1.82,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PROGRESSION_CATALOG_VALIDATION_OK"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--script",
+    "res://tools/progression_catalog_validation.gd"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\progression_catalog_validation.log"
+}

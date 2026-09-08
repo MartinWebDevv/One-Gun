@@ -1,0 +1,183 @@
+WorkerThreadPool: 16 threads, 4 max low-priority.
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+Loading resource: res://one_gun_theme.tres remapped: res://one_gun_theme.tres
+Loading resource: res://fonts/Fredoka-VariableFont_wdth,wght.ttf remapped: res://fonts/Fredoka-VariableFont_wdth,wght.ttf
+Loading resource: res://.godot/imported/Fredoka-VariableFont_wdth,wght.ttf-738020177dd543c76cbf97a78c18b720.fontdata remapped: res://.godot/imported/Fredoka-VariableFont_wdth,wght.ttf-738020177dd543c76cbf97a78c18b720.fontdata
+Completed load for: 'res://fonts/Fredoka-VariableFont_wdth,wght.ttf' remapped 'res://fonts/Fredoka-VariableFont_wdth,wght.ttf' at thread -1
+Completed load for: 'res://one_gun_theme.tres' remapped 'res://one_gun_theme.tres' at thread -1
+CORE API HASH: 3769296884
+EDITOR API HASH: 3146738256
+SceneTreeFTI: traversal method DEFAULT
+Loading resource: res://game_events.gd remapped: res://game_events.gd
+Completed load for: 'res://game_events.gd' remapped 'res://game_events.gd' at thread -1
+Loading resource: res://game_config.gd remapped: res://game_config.gd
+Completed load for: 'res://game_config.gd' remapped 'res://game_config.gd' at thread -1
+Loading resource: res://player_prefs.gd remapped: res://player_prefs.gd
+Completed load for: 'res://player_prefs.gd' remapped 'res://player_prefs.gd' at thread -1
+Loading resource: res://supabase/supabase_manager.gd remapped: res://supabase/supabase_manager.gd
+Loading resource: res://models/cosmetics/hats/hat_fit_profiles.tres remapped: res://models/cosmetics/hats/hat_fit_profiles.tres
+Loading resource: res://models/cosmetics/hats/hat_fit_profiles.gd remapped: res://models/cosmetics/hats/hat_fit_profiles.gd
+Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.gd' remapped 'res://models/cosmetics/hats/hat_fit_profiles.gd' at thread -1
+Completed load for: 'res://models/cosmetics/hats/hat_fit_profiles.tres' remapped 'res://models/cosmetics/hats/hat_fit_profiles.tres' at thread -1
+Completed load for: 'res://supabase/supabase_manager.gd' remapped 'res://supabase/supabase_manager.gd' at thread -1
+Loading resource: res://supabase/progression_manager.gd remapped: res://supabase/progression_manager.gd
+Completed load for: 'res://supabase/progression_manager.gd' remapped 'res://supabase/progression_manager.gd' at thread -1
+Loading resource: res://graphics_quality_manager.gd remapped: res://graphics_quality_manager.gd
+Completed load for: 'res://graphics_quality_manager.gd' remapped 'res://graphics_quality_manager.gd' at thread -1
+Loading resource: res://pause_manager.gd remapped: res://pause_manager.gd
+Completed load for: 'res://pause_manager.gd' remapped 'res://pause_manager.gd' at thread -1
+Loading resource: res://melee_weapon_registry.gd remapped: res://melee_weapon_registry.gd
+Completed load for: 'res://melee_weapon_registry.gd' remapped 'res://melee_weapon_registry.gd' at thread -1
+Loading resource: res://theme_manager.gd remapped: res://theme_manager.gd
+Completed load for: 'res://theme_manager.gd' remapped 'res://theme_manager.gd' at thread -1
+Loading resource: res://UI/accessibility_manager.gd remapped: res://UI/accessibility_manager.gd
+Completed load for: 'res://UI/accessibility_manager.gd' remapped 'res://UI/accessibility_manager.gd' at thread -1
+Loading resource: res://supabase/social_manager.gd remapped: res://supabase/social_manager.gd
+Completed load for: 'res://supabase/social_manager.gd' remapped 'res://supabase/social_manager.gd' at thread -1
+Loading resource: res://supabase/reward_identity_manager.gd remapped: res://supabase/reward_identity_manager.gd
+Completed load for: 'res://supabase/reward_identity_manager.gd' remapped 'res://supabase/reward_identity_manager.gd' at thread -1
+Loading resource: res://online_chat.gd remapped: res://online_chat.gd
+Completed load for: 'res://online_chat.gd' remapped 'res://online_chat.gd' at thread -1
+Loaded system CA certificates
+Loading resource: res://artifacts/quality_pass_20260907/lobby_cleanup.tscn remapped: res://artifacts/quality_pass_20260907/lobby_cleanup.tscn
+Loading resource: res://artifacts/quality_pass_20260907/lobby_cleanup.gd remapped: res://artifacts/quality_pass_20260907/lobby_cleanup.gd
+Loading resource: res://game_setup.tscn remapped: res://game_setup.tscn
+Loading resource: res://game_setup.gd remapped: res://game_setup.gd
+Loading resource: res://UI/MainMenu/OneGunLogoV1.png remapped: res://UI/MainMenu/OneGunLogoV1.png
+Loading resource: res://.godot/imported/OneGunLogoV1.png-6b8b7e92d683988037228dd504849e30.ctex remapped: res://.godot/imported/OneGunLogoV1.png-6b8b7e92d683988037228dd504849e30.ctex
+Completed load for: 'res://UI/MainMenu/OneGunLogoV1.png' remapped 'res://UI/MainMenu/OneGunLogoV1.png' at thread -1
+Loading resource: res://player_settings.tscn remapped: res://player_settings.tscn
+Loading resource: res://player_settings.gd remapped: res://player_settings.gd
+Completed load for: 'res://player_settings.gd' remapped 'res://player_settings.gd' at thread -1
+Completed load for: 'res://player_settings.tscn' remapped 'res://player_settings.tscn' at thread -1
+Loading resource: res://UI/assets/menu_hubs/profile_backdrop.png remapped: res://UI/assets/menu_hubs/profile_backdrop.png
+Loading resource: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex remapped: res://.godot/imported/profile_backdrop.png-956c5e37cdf456617a4c9bc49345fd44.ctex
+Completed load for: 'res://UI/assets/menu_hubs/profile_backdrop.png' remapped 'res://UI/assets/menu_hubs/profile_backdrop.png' at thread -1
+Loading resource: res://UI/assets/menu_hubs/prize_counter_backdrop.png remapped: res://UI/assets/menu_hubs/prize_counter_backdrop.png
+Loading resource: res://.godot/imported/prize_counter_backdrop.png-86c5cb64a8302f1e4524dd97f2fe0896.ctex remapped: res://.godot/imported/prize_counter_backdrop.png-86c5cb64a8302f1e4524dd97f2fe0896.ctex
+Completed load for: 'res://UI/assets/menu_hubs/prize_counter_backdrop.png' remapped 'res://UI/assets/menu_hubs/prize_counter_backdrop.png' at thread -1
+Loading resource: res://UI/assets/menu_hubs/locker_backdrop.png remapped: res://UI/assets/menu_hubs/locker_backdrop.png
+Loading resource: res://.godot/imported/locker_backdrop.png-7308c473e64d3071eadd12d005f631de.ctex remapped: res://.godot/imported/locker_backdrop.png-7308c473e64d3071eadd12d005f631de.ctex
+Completed load for: 'res://UI/assets/menu_hubs/locker_backdrop.png' remapped 'res://UI/assets/menu_hubs/locker_backdrop.png' at thread -1
+Completed load for: 'res://game_setup.gd' remapped 'res://game_setup.gd' at thread -1
+Completed load for: 'res://game_setup.tscn' remapped 'res://game_setup.tscn' at thread -1
+Completed load for: 'res://artifacts/quality_pass_20260907/lobby_cleanup.gd' remapped 'res://artifacts/quality_pass_20260907/lobby_cleanup.gd' at thread -1
+Completed load for: 'res://artifacts/quality_pass_20260907/lobby_cleanup.tscn' remapped 'res://artifacts/quality_pass_20260907/lobby_cleanup.tscn' at thread -1
+Loading resource: res://UI/map_thumbnails/cat_tower.png remapped: res://UI/map_thumbnails/cat_tower.png
+Loading resource: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex remapped: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex
+Completed load for: 'res://UI/map_thumbnails/cat_tower.png' remapped 'res://UI/map_thumbnails/cat_tower.png' at thread -1
+Loading resource: res://UI/map_thumbnails/maple_and_3rd.png remapped: res://UI/map_thumbnails/maple_and_3rd.png
+Loading resource: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex remapped: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex
+Completed load for: 'res://UI/map_thumbnails/maple_and_3rd.png' remapped 'res://UI/map_thumbnails/maple_and_3rd.png' at thread -1
+Loading resource: res://UI/map_thumbnails/neon_circuit.png remapped: res://UI/map_thumbnails/neon_circuit.png
+Loading resource: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex remapped: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex
+Completed load for: 'res://UI/map_thumbnails/neon_circuit.png' remapped 'res://UI/map_thumbnails/neon_circuit.png' at thread -1
+Loading resource: res://UI/map_thumbnails/trippy_mountains.png remapped: res://UI/map_thumbnails/trippy_mountains.png
+Loading resource: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex remapped: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex
+Completed load for: 'res://UI/map_thumbnails/trippy_mountains.png' remapped 'res://UI/map_thumbnails/trippy_mountains.png' at thread -1
+Loading resource: res://UI/map_thumbnails/western_town.png remapped: res://UI/map_thumbnails/western_town.png
+Loading resource: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex remapped: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex
+Completed load for: 'res://UI/map_thumbnails/western_town.png' remapped 'res://UI/map_thumbnails/western_town.png' at thread -1
+Loading resource: res://UI/map_thumbnails/whispering_woods.png remapped: res://UI/map_thumbnails/whispering_woods.png
+Loading resource: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex remapped: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex
+Completed load for: 'res://UI/map_thumbnails/whispering_woods.png' remapped 'res://UI/map_thumbnails/whispering_woods.png' at thread -1
+Loading resource: res://UI/assets/character_portraits/blue.png remapped: res://UI/assets/character_portraits/blue.png
+Loading resource: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex remapped: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex
+Completed load for: 'res://UI/assets/character_portraits/blue.png' remapped 'res://UI/assets/character_portraits/blue.png' at thread -1
+LOBBY_CLEANUP 0 nodes=30.0 orphans=0.0 resources=90.0
+Loading resource: res://UI/map_thumbnails/cat_tower.png remapped: res://UI/map_thumbnails/cat_tower.png
+Loading resource: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex remapped: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex
+Completed load for: 'res://UI/map_thumbnails/cat_tower.png' remapped 'res://UI/map_thumbnails/cat_tower.png' at thread -1
+Loading resource: res://UI/map_thumbnails/maple_and_3rd.png remapped: res://UI/map_thumbnails/maple_and_3rd.png
+Loading resource: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex remapped: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex
+Completed load for: 'res://UI/map_thumbnails/maple_and_3rd.png' remapped 'res://UI/map_thumbnails/maple_and_3rd.png' at thread -1
+Loading resource: res://UI/map_thumbnails/neon_circuit.png remapped: res://UI/map_thumbnails/neon_circuit.png
+Loading resource: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex remapped: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex
+Completed load for: 'res://UI/map_thumbnails/neon_circuit.png' remapped 'res://UI/map_thumbnails/neon_circuit.png' at thread -1
+Loading resource: res://UI/map_thumbnails/trippy_mountains.png remapped: res://UI/map_thumbnails/trippy_mountains.png
+Loading resource: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex remapped: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex
+Completed load for: 'res://UI/map_thumbnails/trippy_mountains.png' remapped 'res://UI/map_thumbnails/trippy_mountains.png' at thread -1
+Loading resource: res://UI/map_thumbnails/western_town.png remapped: res://UI/map_thumbnails/western_town.png
+Loading resource: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex remapped: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex
+Completed load for: 'res://UI/map_thumbnails/western_town.png' remapped 'res://UI/map_thumbnails/western_town.png' at thread -1
+Loading resource: res://UI/map_thumbnails/whispering_woods.png remapped: res://UI/map_thumbnails/whispering_woods.png
+Loading resource: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex remapped: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex
+Completed load for: 'res://UI/map_thumbnails/whispering_woods.png' remapped 'res://UI/map_thumbnails/whispering_woods.png' at thread -1
+Loading resource: res://UI/assets/character_portraits/blue.png remapped: res://UI/assets/character_portraits/blue.png
+Loading resource: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex remapped: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex
+Completed load for: 'res://UI/assets/character_portraits/blue.png' remapped 'res://UI/assets/character_portraits/blue.png' at thread -1
+LOBBY_CLEANUP 1 nodes=30.0 orphans=0.0 resources=90.0
+Loading resource: res://UI/map_thumbnails/cat_tower.png remapped: res://UI/map_thumbnails/cat_tower.png
+Loading resource: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex remapped: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex
+Completed load for: 'res://UI/map_thumbnails/cat_tower.png' remapped 'res://UI/map_thumbnails/cat_tower.png' at thread -1
+Loading resource: res://UI/map_thumbnails/maple_and_3rd.png remapped: res://UI/map_thumbnails/maple_and_3rd.png
+Loading resource: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex remapped: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex
+Completed load for: 'res://UI/map_thumbnails/maple_and_3rd.png' remapped 'res://UI/map_thumbnails/maple_and_3rd.png' at thread -1
+Loading resource: res://UI/map_thumbnails/neon_circuit.png remapped: res://UI/map_thumbnails/neon_circuit.png
+Loading resource: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex remapped: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex
+Completed load for: 'res://UI/map_thumbnails/neon_circuit.png' remapped 'res://UI/map_thumbnails/neon_circuit.png' at thread -1
+Loading resource: res://UI/map_thumbnails/trippy_mountains.png remapped: res://UI/map_thumbnails/trippy_mountains.png
+Loading resource: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex remapped: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex
+Completed load for: 'res://UI/map_thumbnails/trippy_mountains.png' remapped 'res://UI/map_thumbnails/trippy_mountains.png' at thread -1
+Loading resource: res://UI/map_thumbnails/western_town.png remapped: res://UI/map_thumbnails/western_town.png
+Loading resource: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex remapped: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex
+Completed load for: 'res://UI/map_thumbnails/western_town.png' remapped 'res://UI/map_thumbnails/western_town.png' at thread -1
+Loading resource: res://UI/map_thumbnails/whispering_woods.png remapped: res://UI/map_thumbnails/whispering_woods.png
+Loading resource: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex remapped: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex
+Completed load for: 'res://UI/map_thumbnails/whispering_woods.png' remapped 'res://UI/map_thumbnails/whispering_woods.png' at thread -1
+Loading resource: res://UI/assets/character_portraits/blue.png remapped: res://UI/assets/character_portraits/blue.png
+Loading resource: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex remapped: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex
+Completed load for: 'res://UI/assets/character_portraits/blue.png' remapped 'res://UI/assets/character_portraits/blue.png' at thread -1
+LOBBY_CLEANUP 2 nodes=30.0 orphans=0.0 resources=90.0
+Loading resource: res://UI/map_thumbnails/cat_tower.png remapped: res://UI/map_thumbnails/cat_tower.png
+Loading resource: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex remapped: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex
+Completed load for: 'res://UI/map_thumbnails/cat_tower.png' remapped 'res://UI/map_thumbnails/cat_tower.png' at thread -1
+Loading resource: res://UI/map_thumbnails/maple_and_3rd.png remapped: res://UI/map_thumbnails/maple_and_3rd.png
+Loading resource: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex remapped: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex
+Completed load for: 'res://UI/map_thumbnails/maple_and_3rd.png' remapped 'res://UI/map_thumbnails/maple_and_3rd.png' at thread -1
+Loading resource: res://UI/map_thumbnails/neon_circuit.png remapped: res://UI/map_thumbnails/neon_circuit.png
+Loading resource: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex remapped: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex
+Completed load for: 'res://UI/map_thumbnails/neon_circuit.png' remapped 'res://UI/map_thumbnails/neon_circuit.png' at thread -1
+Loading resource: res://UI/map_thumbnails/trippy_mountains.png remapped: res://UI/map_thumbnails/trippy_mountains.png
+Loading resource: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex remapped: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex
+Completed load for: 'res://UI/map_thumbnails/trippy_mountains.png' remapped 'res://UI/map_thumbnails/trippy_mountains.png' at thread -1
+Loading resource: res://UI/map_thumbnails/western_town.png remapped: res://UI/map_thumbnails/western_town.png
+Loading resource: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex remapped: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex
+Completed load for: 'res://UI/map_thumbnails/western_town.png' remapped 'res://UI/map_thumbnails/western_town.png' at thread -1
+Loading resource: res://UI/map_thumbnails/whispering_woods.png remapped: res://UI/map_thumbnails/whispering_woods.png
+Loading resource: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex remapped: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex
+Completed load for: 'res://UI/map_thumbnails/whispering_woods.png' remapped 'res://UI/map_thumbnails/whispering_woods.png' at thread -1
+Loading resource: res://UI/assets/character_portraits/blue.png remapped: res://UI/assets/character_portraits/blue.png
+Loading resource: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex remapped: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex
+Completed load for: 'res://UI/assets/character_portraits/blue.png' remapped 'res://UI/assets/character_portraits/blue.png' at thread -1
+LOBBY_CLEANUP 3 nodes=30.0 orphans=0.0 resources=90.0
+Loading resource: res://UI/map_thumbnails/cat_tower.png remapped: res://UI/map_thumbnails/cat_tower.png
+Loading resource: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex remapped: res://.godot/imported/cat_tower.png-e528f8e476a7f440cce8385888231153.ctex
+Completed load for: 'res://UI/map_thumbnails/cat_tower.png' remapped 'res://UI/map_thumbnails/cat_tower.png' at thread -1
+Loading resource: res://UI/map_thumbnails/maple_and_3rd.png remapped: res://UI/map_thumbnails/maple_and_3rd.png
+Loading resource: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex remapped: res://.godot/imported/maple_and_3rd.png-76906eec0425fa5dab3ca60e083502e7.ctex
+Completed load for: 'res://UI/map_thumbnails/maple_and_3rd.png' remapped 'res://UI/map_thumbnails/maple_and_3rd.png' at thread -1
+Loading resource: res://UI/map_thumbnails/neon_circuit.png remapped: res://UI/map_thumbnails/neon_circuit.png
+Loading resource: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex remapped: res://.godot/imported/neon_circuit.png-c955f93b8d0e1fb3fc825176c05c6373.ctex
+Completed load for: 'res://UI/map_thumbnails/neon_circuit.png' remapped 'res://UI/map_thumbnails/neon_circuit.png' at thread -1
+Loading resource: res://UI/map_thumbnails/trippy_mountains.png remapped: res://UI/map_thumbnails/trippy_mountains.png
+Loading resource: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex remapped: res://.godot/imported/trippy_mountains.png-e9de1c788ba18384ca83ef9df729994a.ctex
+Completed load for: 'res://UI/map_thumbnails/trippy_mountains.png' remapped 'res://UI/map_thumbnails/trippy_mountains.png' at thread -1
+Loading resource: res://UI/map_thumbnails/western_town.png remapped: res://UI/map_thumbnails/western_town.png
+Loading resource: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex remapped: res://.godot/imported/western_town.png-8ed8e63c4cd762180cb4d1ef56677977.ctex
+Completed load for: 'res://UI/map_thumbnails/western_town.png' remapped 'res://UI/map_thumbnails/western_town.png' at thread -1
+Loading resource: res://UI/map_thumbnails/whispering_woods.png remapped: res://UI/map_thumbnails/whispering_woods.png
+Loading resource: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex remapped: res://.godot/imported/whispering_woods.png-83ec045887b585b9afa2d573db2fc10b.ctex
+Completed load for: 'res://UI/map_thumbnails/whispering_woods.png' remapped 'res://UI/map_thumbnails/whispering_woods.png' at thread -1
+Loading resource: res://UI/assets/character_portraits/blue.png remapped: res://UI/assets/character_portraits/blue.png
+Loading resource: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex remapped: res://.godot/imported/blue.png-c2bef4102e47b2375ce45b6213e8045f.s3tc.ctex
+Completed load for: 'res://UI/assets/character_portraits/blue.png' remapped 'res://UI/assets/character_portraits/blue.png' at thread -1
+LOBBY_CLEANUP 4 nodes=30.0 orphans=0.0 resources=90.0
+XR: Clearing primary interface
+XR: Removed interface "Native mobile"
+XR: Removed interface "OpenXR"

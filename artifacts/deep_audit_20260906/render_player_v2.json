@@ -1,0 +1,37 @@
+{
+  "label": "render_player_v2",
+  "code": 1,
+  "seconds": 13.84,
+  "timeout": false,
+  "errors": [
+    "ERROR: PlayerV2RenderValidation: returned Player Hub did not restore controller focus",
+    "ERROR: 34 RID allocations of type 'N10RendererRD14TextureStorage7TextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: Parse Error: Failed. [Resource file res://UI/winners_circle_stage_blockout.tscn:25]",
+    "ERROR: Failed loading resource: res://UI/winners_circle_stage_blockout.tscn.",
+    "SCRIPT ERROR: Parse Error: Could not preload resource file \"res://UI/winners_circle_stage_blockout.tscn\".",
+    "SCRIPT ERROR: Compile Error: Failed to compile depended scripts.",
+    "SCRIPT ERROR: Compile Error: Failed to compile depended scripts.",
+    "ERROR: Failed to load script \"res://round_manager.gd\" with error \"Compilation failed\".",
+    "ERROR: res://maps/test/ForestMap.tscn:1139 - Parse Error: .",
+    "ERROR: Failed loading resource: res://maps/test/ForestMap.tscn.",
+    "ERROR: 4 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "       [0] _capture_main_menu (res://tools/player_v2_render_validation.gd:160)",
+    "       [1] _wait_frames (res://tools/player_v2_render_validation.gd:603)"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/player_v2_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\render_player_v2.log"
+}

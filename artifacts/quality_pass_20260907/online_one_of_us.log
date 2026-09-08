@@ -1,0 +1,34 @@
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1629] hosting 'Smoke Host's Lobby' on UDP 24646 as 'Smoke Host'
+[ONLINE 2168] peer 1671227529 connected
+[ONLINE 2465] peer 1671227529 admitted | client build itch-380e65c
+[ONLINE 2472] starting match 1 on res://node_3d.tscn for 2 peers
+[ONLINE 2474] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 7121] match 1 ready peer 1 (1/2)
+[ONLINE 7186] match 1 ready peer 1671227529 (2/2)
+ONLINE_ONE_OF_US_PASS host
+
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+
+Godot Engine v4.7.1.stable.official.a13da4feb - https://godotengine.org
+
+[ONLINE 1599] joining 127.0.0.1:24646 (attempt 2)
+[ONLINE 1608] connected to host as peer 1671227529
+[ONLINE 1609] peer 1 connected
+[ONLINE 1926] received match scene start (match=1, spectator=false, map=res://node_3d.tscn)
+[ONLINE 6528] reporting match 1 scene ready
+ONLINE_ONE_OF_US_PASS client
+[ONLINE 14825] peer 1 disconnected
+[ONLINE 14826] host disconnected
+ERROR: 40 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
+
+WARNING: 2 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 137 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+

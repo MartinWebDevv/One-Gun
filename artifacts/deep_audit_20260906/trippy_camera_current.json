@@ -1,0 +1,19 @@
+{
+  "label": "trippy_camera_current",
+  "code": 0,
+  "seconds": 4.54,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "TRIPPY_CAMERA_PRESENTATION_VALIDATION_OK"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/trippy_camera_presentation_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\deep_audit_20260906\\trippy_camera_current.log"
+}

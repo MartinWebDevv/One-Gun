@@ -5,7 +5,8 @@ const VisibilityRules = preload("res://combat_visibility.gd")
 const BulletScene = preload("res://bullet.tscn")
 const ONLINE_PICKUP_MAX_DISTANCE := 2.75
 const ONLINE_FIRE_MIN_AIM_DOT := 0.25
-const ONLINE_FIRE_MAX_ORIGIN_DISTANCE_FROM_HOLDER := 7.0
+# Includes the approved shoulder/lift offsets and a small replication margin.
+const ONLINE_FIRE_MAX_ORIGIN_DISTANCE_FROM_HOLDER := 3.25
 
 @export var HELD_SCALE := 1.0
 @export var projectile_speed := 200.0
@@ -144,6 +145,9 @@ func _server_try_fire(sender_id: int, dir: Vector3, epoch: int,
 	else:
 		# Server-owned bots have no camera and intentionally fire from the muzzle.
 		origin = _calculate_fire_origin(shot_dir)
+	if not _fire_origin_has_clear_cover(origin):
+		rm.broadcast_online_gun_action("blocked", {"holder_actor_id": _holder_actor_id()})
+		return
 	rm.broadcast_online_gun_action("fire", {
 		"holder_actor_id": _holder_actor_id(),
 		"origin": origin,
@@ -152,7 +156,8 @@ func _server_try_fire(sender_id: int, dir: Vector3, epoch: int,
 	})
 
 @rpc("authority", "reliable", "call_local")
-func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: int) -> void:
+func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: int,
+		shot_id: int = -1) -> void:
 	can_fire = false
 	$ReloadTimer.start()
 	var bullet = BulletScene.instantiate()
@@ -160,6 +165,7 @@ func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: in
 	bullet.set("net_shooter_id", shooter_id)
 	bullet.set("is_server_bullet", multiplayer.is_server())
 	bullet.set("net_round_epoch", epoch)
+	bullet.set("net_shot_id", shot_id)
 	_launch_bullet_instance(bullet, origin, dir, NetworkManager.find_actor(shooter_id))
 	AudioManager.play_sfx("gun_shot")
 	GameEvents.combat_noise.emit(origin, shooter_id, "gunshot", 30.0)
@@ -297,8 +303,11 @@ func _net_do_force_disarm(drop_pos: Vector3, holder_actor_id: int) -> void:
 	disarm_lock_timer = GameConfig.disarm_lock_time
 
 func fire():
-	can_fire = false
 	var fire_ray := _calculate_fire_ray()
+	if not _fire_origin_has_clear_cover(fire_ray["origin"]):
+		_show_cover_feedback()
+		return
+	can_fire = false
 	var fire_direction: Vector3 = fire_ray["direction"]
 	var bullet = BulletScene.instantiate()
 	bullet.set("projectile_speed", projectile_speed)
@@ -380,6 +389,28 @@ func _calculate_fire_origin(direction: Vector3,
 	# project_position is the inverse of unproject_position and guarantees that
 	# this first world point maps to the exact crosshair pixel at the chosen depth.
 	return cam.project_position(crosshair_position, spawn_depth)
+
+
+func _show_cover_feedback() -> void:
+	if not is_instance_valid(player_ref):
+		return
+	if NetworkManager.is_online() and (not player_ref.has_method("is_locally_controlled")
+			or not player_ref.is_locally_controlled()):
+		return
+	GameEvents.actor_combat_feedback.emit(_holder_actor_id(), "gun_obstructed")
+
+
+func _fire_origin_has_clear_cover(origin: Vector3) -> bool:
+	if not player_ref is Node3D:
+		return false
+	var reference: Vector3 = player_ref.global_position
+	var aim_pivot := player_ref.get_node_or_null("AimPivot") as Node3D
+	if aim_pivot != null:
+		reference = aim_pivot.global_position
+	var excluded: Array[RID] = [get_rid()]
+	if player_ref is CollisionObject3D:
+		excluded.append(player_ref.get_rid())
+	return VisibilityRules.world_segment_clear(self, reference, origin, excluded)
 
 
 func _calculate_fire_ray() -> Dictionary:

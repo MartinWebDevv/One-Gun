@@ -115,6 +115,10 @@ func is_window_open() -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	# Do not let the persistent chat layer claim Enter/T while a full-screen
+	# modal such as the Winners Circle owns input and controller focus.
+	if get_tree().get_first_node_in_group("modal_input_owner") != null:
+		return
 	if not NetworkManager.is_online() or NetworkManager.is_dedicated_server():
 		return
 	if not event is InputEventKey or not event.pressed or event.echo:

@@ -157,7 +157,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 114.154495, 0.1, -74.28029)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.154501, 0.1, -74.28029)
 
 [node name="RoundIntroCameraPoint" type="Marker3D" parent="." unique_id=188640724 groups=["round_intro_camera_point"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 68.235, 50.6, -56.269005)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 68.235, 50.6, -118.369)
+metadata/intro_orbit_angle_radians = 0.6981317
 
 [node name="Gun" parent="." unique_id=1257422070 instance=ExtResource("3_6cks5")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 65.50029, 0.45, -123.6406)

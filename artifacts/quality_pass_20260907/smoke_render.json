@@ -1,0 +1,23 @@
+{
+  "label": "smoke_render",
+  "code": 0,
+  "seconds": 3.65,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "SMOKE_RENDER_VALIDATION_OK output=D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\smoke_after.png"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--windowed",
+    "--resolution",
+    "1600x900",
+    "--position",
+    "-3000,-3000",
+    "--scene",
+    "res://tools/smoke_cloud_render_validation.tscn"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\smoke_render.log"
+}

@@ -1,0 +1,28 @@
+{
+  "label": "hideout_shared_regression",
+  "code": 0,
+  "seconds": 113.91,
+  "timeout": false,
+  "errors": [],
+  "markers": [
+    "PREVIEW PASS: soft ball resets and stops processing after its throw",
+    "PREVIEW PASS: a descending ball through a basket scores and resets",
+    "PREVIEW PASS: central toy resets before leaving its social activity area",
+    "PREVIEW PASS: automated previews and cancellation do not change saved preferences",
+    "PREVIEW PASS: rehearsals do not change live match rules",
+    "PREVIEW PASS: all kiosk/rehearsal tests leave networking offline",
+    "PREVIEW PASS: Low preview scales the scene without saving settings",
+    "PREVIEW VALIDATION: {\"checks\":291,\"failures\":[],\"scope\":\"Native F6 scene, real controller/skins, shared menus, contained local Play Pen combat and rehearsal lifecycle. No account transactions or live matches tested.\"}"
+  ],
+  "command": [
+    "D:\\Godot Projects\\one-gun\\Godot_v4.7.1-stable_win64.exe",
+    "--path",
+    "D:\\Godot Projects\\one-gun",
+    "--headless",
+    "--scene",
+    "res://tools/live_lobby_preview/live_lobby_preview.tscn",
+    "--",
+    "--live-lobby-validate"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\hideout_shared_regression.log"
+}

@@ -1,0 +1,15 @@
+{
+  "label": "online_client_exit",
+  "code": 0,
+  "seconds": 18.53,
+  "errors": [
+    "ERROR: 36 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: 2 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.",
+    "ERROR: 2 resources still in use at exit (run with --verbose for details)."
+  ],
+  "markers": [
+    "ONLINE_CLIENT_EXIT_PASS host",
+    "ONLINE_CLIENT_EXIT_PASS client"
+  ],
+  "log": "D:\\Godot Projects\\one-gun\\artifacts\\quality_pass_20260907\\online_client_exit.log"
+}

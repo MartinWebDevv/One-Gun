@@ -1,5 +1,7 @@
 # One Gun Deployment
 
+> 2026-09-07: current source uses network protocol **3**. Re-export matching clients and dedicated servers, then update/deploy the coordinator with `NETWORK_PROTOCOL=3` as one release. Existing protocol-2 examples and successful live gates below describe the previous deployment. This quality pass changed local source/configuration only; it did not publish a server or Worker.
+
 This document records the deployment pipeline as each layer is verified. Phases 1–7 established the Godot 4.7.1 dedicated-server runtime, Linux export, Docker image, build metadata, GHCR publication, public Edgegap UDP deployment, and automatic development-server replacement. Phase 8 verified restricted itch.io distribution and Butler updates. Phase 9 verified automatic Windows-client export, package validation, and itch.io publishing from GitHub Actions.
 
 ## Local dedicated server

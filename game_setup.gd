@@ -60,7 +60,7 @@ var _banner_name: Label
 var _banner_desc: Label
 var _info_labels := {}          # stat key -> value Label
 var _roster_title: Label
-var _roster_viewport: MarginContainer
+var _roster_viewport: ScrollContainer
 var _roster_list: VBoxContainer
 var _map_cards: Array = []      # OneGunMapCard per map
 var _map_order: Array[int] = []
@@ -83,7 +83,9 @@ var _social_join_pending := false
 var _settings_target_position := Vector2.ZERO
 var _settings_tween: Tween
 var _left_cabinet: OneGunCabinet
-var _top_strip: HBoxContainer
+var _top_strip: BoxContainer
+var _map_details_scroll: ScrollContainer
+var _left_scroll: ScrollContainer
 var _info_card: OneGunCabinet
 var _roster_cabinet: OneGunCabinet
 var _carousel_cabinet: OneGunCabinet
@@ -91,15 +93,17 @@ var _cards_row: HBoxContainer
 var _lobby_code_label: Label
 var _privacy_dropdown: OptionButton
 var _lobby_notice_label: Label
+var _local_load_ticket := 0
+var _local_loading_overlay: Control = null
 
 const LAYOUT_MARGIN := 24.0
 const LAYOUT_GAP := 20.0
 const COMPACT_MARGIN := 16.0
 const COMPACT_GAP := 12.0
 const LEFT_WIDTH := 360.0
-const RIGHT_WIDTH := 380.0
+const RIGHT_WIDTH := 400.0
 const COMPACT_LEFT_WIDTH := 310.0
-const COMPACT_RIGHT_WIDTH := 350.0
+const COMPACT_RIGHT_WIDTH := 400.0
 const TOP_STRIP_HEIGHT := 190.0
 const CAROUSEL_HEIGHT := 148.0
 const PLAY_HEIGHT := 84.0
@@ -128,6 +132,7 @@ func _ready():
 
 
 func _exit_tree() -> void:
+	SceneLoadManager.cancel(_local_load_ticket)
 	if not _is_net():
 		return
 	SocialManager.set_foreground_ui_active(false)
@@ -323,9 +328,14 @@ func _build_left_cabinet() -> void:
 	_left_cabinet.anchor_bottom = 1.0
 	add_child(_left_cabinet)
 
+	_left_scroll = ScrollContainer.new()
+	_left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_left_scroll.follow_focus = true
+	_left_cabinet.get_content().add_child(_left_scroll)
 	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", OneGunUI.SPACE_M)
-	_left_cabinet.get_content().add_child(column)
+	_left_scroll.add_child(column)
 
 	var logo := TextureRect.new()
 	# The source logo is intentionally padded for the main-menu composition.
@@ -456,7 +466,7 @@ func _build_online_session_controls(column: VBoxContainer) -> void:
 	var privacy_row := HBoxContainer.new()
 	privacy_row.add_theme_constant_override("separation", OneGunUI.SPACE_S)
 	privacy_row.add_child(OneGunUI.make_label("PRIVACY", OneGunUI.TEXT_XS, "muted", true))
-	_privacy_dropdown = OneGunUI.make_dropdown(PackedStringArray(["PUBLIC", "PRIVATE"]))
+	_privacy_dropdown = OneGunUI.make_dropdown(PackedStringArray(["PUBLIC", "UNLISTED"]))
 	_privacy_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_privacy_dropdown.disabled = not NetworkManager.can_manage_lobby()
 	_privacy_dropdown.item_selected.connect(_on_privacy_selected)
@@ -577,14 +587,17 @@ func _make_cabinet_button(text: String) -> OneGunButton:
 
 
 func _build_top_strip() -> void:
-	# Banner + stat card share one anchored strip so narrow viewports shrink
-	# the banner instead of letting the two panels overlap.
-	_top_strip = HBoxContainer.new()
+	# Stack details at narrow effective widths; scrolling preserves large text.
+	_map_details_scroll = ScrollContainer.new()
+	_map_details_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_map_details_scroll.follow_focus = true
+	_map_details_scroll.anchor_right = 1.0
+	add_child(_map_details_scroll)
+	_top_strip = BoxContainer.new()
+	_top_strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_top_strip.name = "TopStrip"
 	_top_strip.add_theme_constant_override("separation", 16)
-	_top_strip.anchor_left = 0.0
-	_top_strip.anchor_right = 1.0
-	add_child(_top_strip)
+	_map_details_scroll.add_child(_top_strip)
 
 	var banner := OneGunCabinet.new()
 	banner.name = "MapBanner"
@@ -609,7 +622,7 @@ func _build_top_strip() -> void:
 	_info_card.variant = OneGunCabinet.Variant.SECTION
 	_info_card.content_padding = OneGunUI.SPACE_M
 	_info_card.custom_minimum_size = Vector2(230, 0)
-	_info_card.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_info_card.size_flags_horizontal = Control.SIZE_FILL
 	_top_strip.add_child(_info_card)
 
 	var rows := VBoxContainer.new()
@@ -621,6 +634,7 @@ func _build_top_strip() -> void:
 		row.add_theme_constant_override("separation", 0)
 		row.add_child(OneGunUI.make_label(stat[1], OneGunUI.TEXT_XS, "muted", true))
 		var value := OneGunUI.make_label("", OneGunUI.TEXT_M, "gold", true)
+		value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_info_labels[stat[0]] = value
 		row.add_child(value)
 		rows.add_child(row)
@@ -646,10 +660,10 @@ func _build_roster_panel() -> void:
 	_roster_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_roster_title)
 
-	# This lobby always renders exactly ten slots. A non-scrolling holder lets
-	# the VBox receive the full remaining cabinet height, then divide it evenly
-	# among all ten rows instead of packing fixed-height cards at the top.
-	_roster_viewport = MarginContainer.new()
+	# Keep all ten rows reachable when UI/text scale exceeds the available height.
+	_roster_viewport = ScrollContainer.new()
+	_roster_viewport.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_roster_viewport.follow_focus = true
 	_roster_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_roster_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_roster_viewport)
@@ -659,6 +673,8 @@ func _build_roster_panel() -> void:
 	_roster_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_roster_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_roster_viewport.add_child(_roster_list)
+	_roster_viewport.resized.connect(func():
+		_roster_list.custom_minimum_size.y = _roster_viewport.size.y)
 
 
 func _build_carousel() -> void:
@@ -794,12 +810,15 @@ func _apply_responsive_layout() -> void:
 		_settings_slideout.size = Vector2(slideout_width, layout_size.y - margin * 2.0)
 		_settings_target_position = _settings_slideout.position
 
-	_top_strip.offset_left = center_left
-	_top_strip.offset_top = margin
-	_top_strip.offset_right = -(layout_size.x - center_right)
-	_top_strip.offset_bottom = margin + TOP_STRIP_HEIGHT
+	var stacked_details := center_right - center_left < 520.0
+	_top_strip.vertical = stacked_details
+	_map_details_scroll.offset_left = center_left
+	_map_details_scroll.offset_top = margin
+	_map_details_scroll.offset_right = -(layout_size.x - center_right)
+	_map_details_scroll.offset_bottom = layout_size.y - margin - CAROUSEL_HEIGHT - gap \
+		if stacked_details else margin + TOP_STRIP_HEIGHT
 	_top_strip.add_theme_constant_override("separation", gap)
-	_info_card.custom_minimum_size.x = 208.0 if compact else 230.0
+	_info_card.custom_minimum_size.x = 0.0 if stacked_details else (208.0 if compact else 230.0)
 
 	_roster_cabinet.offset_left = -(layout_size.x - (right_edge - right_width))
 	var friends_reserve := 0.0
@@ -2179,6 +2198,8 @@ func _reset_force_start_confirmation() -> void:
 
 
 func _launch_match():
+	if _local_load_ticket > 0:
+		return
 	var unavailable_reason := _selection_unavailable_reason()
 	if unavailable_reason != "":
 		if _lobby_notice_label != null:
@@ -2196,12 +2217,66 @@ func _launch_match():
 	if _is_net():
 		if NetworkManager.can_manage_lobby():
 			NetworkManager.begin_prelaunch(map_path)
-			return   # clients never launch directly
-	AudioManager.stop_music(0.8)
-	get_tree().change_scene_to_file(map_path)
+		return   # clients never launch directly
+	_show_local_loading()
+	_local_load_ticket = SceneLoadManager.request_scene(map_path, _finish_local_load)
 
+
+func _show_local_loading() -> void:
+	_local_loading_overlay = Control.new()
+	_local_loading_overlay.name = "LocalLoadingOverlay"
+	_local_loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_local_loading_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_local_loading_overlay)
+	var veil := ColorRect.new()
+	veil.color = Color(0.025, 0.03, 0.08, 0.94)
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_local_loading_overlay.add_child(veil)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_local_loading_overlay.add_child(center)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 20)
+	center.add_child(column)
+	column.add_child(OneGunUI.make_heading("LOADING MATCH", OneGunUI.TEXT_TITLE, "gold"))
+	var cancel := OneGunButton.new()
+	cancel.text = "CANCEL"
+	cancel.variant = "navy"
+	cancel.pressed.connect(_cancel_local_load)
+	column.add_child(cancel)
+	# Keep Tab/D-pad focus on the modal instead of its covered lobby controls.
+	for property in ["focus_neighbor_top", "focus_neighbor_bottom", "focus_neighbor_left", "focus_neighbor_right", "focus_next", "focus_previous"]:
+		cancel.set(property, NodePath("."))
+	cancel.grab_focus()
+
+func _cancel_local_load() -> void:
+	SceneLoadManager.cancel(_local_load_ticket)
+	_local_load_ticket = 0
+	if is_instance_valid(_local_loading_overlay):
+		_local_loading_overlay.queue_free()
+	_local_loading_overlay = null
+	if is_instance_valid(_play_button):
+		_play_button.grab_focus()
+
+func _finish_local_load(packed: PackedScene) -> void:
+	_local_load_ticket = 0
+	if packed == null:
+		_cancel_local_load()
+		if _lobby_notice_label != null:
+			_lobby_notice_label.text = "Map loading failed. Choose another map or try again."
+		return
+	AudioManager.stop_music(0.8)
+	var error := get_tree().change_scene_to_packed(packed)
+	if error != OK:
+		_cancel_local_load()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _local_load_ticket > 0:
+		if event.is_action_pressed("ui_cancel"):
+			_cancel_local_load()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_cancel"):
 		if _player_settings_overlay != null:
 			# Route keyboard Escape and controller B/Circle through the same
