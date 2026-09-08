@@ -258,7 +258,7 @@ func _apply_client_lock():
 
 func _on_net_host_left():
 	# Host disappeared — bail back to the main menu.
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 # ============================================================
@@ -1459,7 +1459,7 @@ func _on_social_join_failed() -> void:
 	if NetworkManager.connection_succeeded.is_connected(_on_social_join_ok):
 		NetworkManager.connection_succeeded.disconnect(_on_social_join_ok)
 	NetworkManager.disconnect_net()
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _return_from_player_hub_destination() -> void:
@@ -2104,7 +2104,7 @@ func _on_back_button_pressed():
 		return
 	if NetworkManager.is_online():
 		NetworkManager.disconnect_net()
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _on_play_button_pressed():

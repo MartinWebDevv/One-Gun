@@ -10,6 +10,6 @@ caption_font = ExtResource("2_font")
 caption_font_size = 94
 caption_word_spacing = 16
 apply_caption_font_to_all_labels = true
-handoff_scene_path = "res://main_menu.tscn"
+handoff_scene_path = "res://maps/hideout/hideout.tscn"
 allow_replay_input = false
 escape_quits_preview = false

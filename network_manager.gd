@@ -71,6 +71,7 @@ var _match_scene_generation := 0
 var _return_barrier_id := 0
 var _return_barrier_pending: Dictionary = {}
 var _returning_to_lobby := false
+var _leaving_hideout := false
 var pending_match_id := 0
 var _online := false
 var _match_ready_peers: Dictionary = {}
@@ -631,6 +632,12 @@ func host_return_everyone_to_lobby() -> void:
 
 
 func _return_everyone_to_lobby_after_despawn() -> void:
+	if not await _suspend_scene_actors(): return
+	_returning_to_lobby = false
+	_net_return_everyone_to_lobby.rpc()
+
+
+func _suspend_scene_actors() -> bool:
 	# A fixed sleep can expire before a busy client even handles suspension.
 	# Wait for each connected peer to stop its owned movement synchronizers.
 	_return_barrier_id += 1
@@ -643,20 +650,20 @@ func _return_everyone_to_lobby_after_despawn() -> void:
 	var deadline := Time.get_ticks_msec() + 5000
 	while not _return_barrier_pending.is_empty() and Time.get_ticks_msec() < deadline:
 		if connection != _connection_attempt or not is_host():
-			return
+			return false
 		for peer_id in _return_barrier_pending.keys():
 			if peer_id not in multiplayer.get_peers():
 				_return_barrier_pending.erase(peer_id)
 		await get_tree().process_frame
 	if connection != _connection_attempt or not is_host():
-		return
+		return false
 	# A non-responsive peer must not keep sending into actors being removed.
 	for peer_id in _return_barrier_pending.keys():
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 	_return_barrier_pending.clear()
 	await get_tree().create_timer(0.15).timeout
 	if connection != _connection_attempt or not is_host():
-		return
+		return false
 	# Let MultiplayerSpawner send valid despawns while every peer still has
 	# the match scene and its replication cache. The lobby-change RPC follows
 	# on the next frame, after queued actors have left the tree.
@@ -666,8 +673,7 @@ func _return_everyone_to_lobby_after_despawn() -> void:
 		for actor in net_players.get_children():
 			actor.free()
 		await get_tree().process_frame
-	_returning_to_lobby = false
-	_net_return_everyone_to_lobby.rpc()
+	return true
 
 
 @rpc("authority", "reliable", "call_local")
@@ -695,7 +701,7 @@ func _net_suspend_match_replication(barrier: int = -1) -> void:
 
 @rpc("any_peer", "reliable")
 func _confirm_replication_suspended(barrier: int) -> void:
-	if is_host() and _returning_to_lobby and barrier == _return_barrier_id:
+	if is_host() and (_returning_to_lobby or _leaving_hideout) and barrier == _return_barrier_id:
 		_return_barrier_pending.erase(multiplayer.get_remote_sender_id())
 
 @rpc("any_peer", "reliable")
@@ -705,6 +711,7 @@ func _request_controller_return_to_lobby() -> void:
 
 @rpc("authority", "reliable", "call_local")
 func _net_return_everyone_to_lobby() -> void:
+	_playpen_ready_peers.clear()
 	_cancel_match_scene_load()
 	lobby_in_progress = false
 	local_match_role = "server" if is_dedicated_server() else "lobby"
@@ -715,12 +722,12 @@ func _net_return_everyone_to_lobby() -> void:
 	PauseManager.reset_pause_state()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_music(0.5)
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 func leave_online_to_main_menu() -> void:
 	if not is_online():
 		PauseManager.reset_pause_state()
-		get_tree().change_scene_to_file("res://main_menu.tscn")
+		get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 		return
 	if is_host():
 		# Tell clients first, then give the reliable packet a brief opportunity to
@@ -744,10 +751,13 @@ func _return_local_to_main_menu() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_music(0.5)
 	_reset_session(true)
-	get_tree().change_scene_to_file("res://main_menu.tscn")
+	HideoutSession.restore_home()
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 func _reset_session(emit_change: bool) -> void:
+	HideoutSession.course_lobby_times.clear()
 	_returning_to_lobby = false
+	_leaving_hideout = false
 	_return_barrier_pending.clear()
 	_cancel_match_scene_load()
 	_connection_attempt += 1
@@ -1377,7 +1387,7 @@ func _close_playpen_for_everyone() -> void:
 	local_match_role = "lobby"
 	_broadcast_lobby_state("The Playpen was closed by the host")
 	playpen_members_changed.emit()
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 @rpc("authority", "reliable")
@@ -1388,7 +1398,7 @@ func _net_leave_playpen() -> void:
 	# while the Playpen replication nodes still exist on the departing peer.
 	await get_tree().create_timer(0.12).timeout
 	if local_match_role == "lobby":
-		get_tree().change_scene_to_file("res://game_setup.tscn")
+		get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 @rpc("authority", "reliable")
@@ -2095,8 +2105,15 @@ func _net_prelaunch_state(active: bool, seconds: int, reason: String) -> void:
 
 
 func start_game(map_path: String) -> void:
-	if not is_host():
+	if not is_host() or lobby_in_progress or _leaving_hideout:
 		return
+	var scene := get_tree().current_scene
+	if scene != null and scene.scene_file_path == HideoutSession.SCENE:
+		_leaving_hideout = true
+		_hideout_departing.rpc()
+		if not await _suspend_scene_actors(): return
+		_leaving_hideout = false
+		_playpen_ready_peers.clear()
 	pending_map_path = map_path
 	lobby_in_progress = true
 	pending_match_id += 1
@@ -2320,7 +2337,7 @@ func _remaining_match_is_valid(remaining_human_peers: Array) -> bool:
 func _remove_from_active_match(reason: String) -> void:
 	local_match_role = "waiting"
 	lobby_notice.emit(reason)
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func request_spectate_current_match() -> void:
@@ -2407,7 +2424,7 @@ func return_spectator_to_waiting_room() -> void:
 	local_match_role = "waiting"
 	if not is_host():
 		_set_waiting_role.rpc_id(1)
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 @rpc("any_peer", "reliable")
@@ -2438,3 +2455,36 @@ func _broadcast_match_load_status() -> void:
 func _apply_match_load_status(status: Dictionary) -> void:
 	match_load_status = status.duplicate(true)
 	match_load_status_changed.emit()
+
+
+# The Hideout uses the established practice replication context for the whole
+# shared world. Entering a room no longer changes scenes or ENet membership.
+func report_hideout_scene_ready() -> void:
+	if not is_online() or lobby_in_progress: return
+	if is_host(): _mark_hideout_scene_ready(1, pending_match_id)
+	else: _report_hideout_scene_ready.rpc_id(1, pending_match_id)
+
+@rpc("any_peer", "reliable")
+func _report_hideout_scene_ready(epoch: int) -> void:
+	if is_host(): _mark_hideout_scene_ready(multiplayer.get_remote_sender_id(),epoch)
+
+func _mark_hideout_scene_ready(peer_id: int, epoch: int) -> void:
+	if not is_host() or lobby_in_progress or epoch != pending_match_id or not peers.has(peer_id): return
+	var scene := get_tree().current_scene
+	if scene == null or scene.scene_file_path != "res://maps/hideout/hideout.tscn": return
+	var manager := scene.get_node_or_null("RoundManager")
+	if manager == null or not manager.has_method("server_sync_hideout"): return
+	if _playpen_ready_peers.has(peer_id): return
+	if peer_id != local_id(): manager.server_sync_hideout(peer_id)
+	peers[peer_id]["role"] = "playpen"
+	_playpen_ready_peers[peer_id] = true
+	if peer_id == local_id(): local_match_role = "playpen"
+	_broadcast_lobby_state()
+	playpen_members_changed.emit()
+
+
+@rpc("authority", "reliable", "call_local")
+func _hideout_departing() -> void:
+	var scene := get_tree().current_scene
+	if scene != null and scene.has_method("prepare_for_match"):
+		scene.prepare_for_match()

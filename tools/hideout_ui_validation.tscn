@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://tools/hideout_ui_validation.gd" id="1"]
+[node name="HideoutUIValidation" type="Node"]
+[node name="Driver" type="Node" parent="."]
+script = ExtResource("1")

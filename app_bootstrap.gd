@@ -5,7 +5,7 @@ const MatchServerContext = preload("res://match_server_context.gd")
 
 const CLIENT_INTRO_SCENE := \
 	"res://cinematics/startup/startup_intro_preview_five_word_shot_barlow_condensed.tscn"
-const CLIENT_MAIN_SCENE := "res://main_menu.tscn"
+const CLIENT_MAIN_SCENE := "res://maps/hideout/hideout.tscn"
 const DEFAULT_SERVER_MAP := "res://maps/test/ForestMap.tscn"
 
 
@@ -18,7 +18,7 @@ func _route_startup() -> void:
 	if not arguments.has("--server"):
 		var client_scene := CLIENT_INTRO_SCENE
 		if not ResourceLoader.exists(client_scene):
-			push_warning("Startup intro is unavailable; continuing to the main menu.")
+			push_warning("Startup intro is unavailable; continuing to the Hideout.")
 			client_scene = CLIENT_MAIN_SCENE
 		get_tree().change_scene_to_file(client_scene)
 		return
@@ -32,6 +32,7 @@ func _route_startup() -> void:
 			return
 		print("[DEDICATED] Lobby runtime restored; ENet remains active on UDP %d." \
 			% NetworkManager.listening_port())
+		get_tree().change_scene_to_file(CLIENT_MAIN_SCENE)
 		return
 
 	var port := _int_argument(arguments, "--port=", NetworkManager.DEFAULT_PORT)
@@ -70,6 +71,8 @@ func _route_startup() -> void:
 		return
 	if bool(match_context.get("active", false)):
 		NetworkManager.start_game(map_path)
+	else:
+		get_tree().change_scene_to_file(CLIENT_MAIN_SCENE)
 
 
 func _int_argument(arguments: PackedStringArray, prefix: String, fallback: int) -> int:

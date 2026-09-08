@@ -13,6 +13,7 @@ const ProtectionIconFactory = preload("res://protection_icon_factory.gd")
 # Online (set by round_manager's networked spawn function). Local play leaves
 # these at defaults and none of the online paths run.
 var is_online := false
+var external_input_blocked := false
 var net_authority_id := 1
 var actor_id := 1
 var owner_peer_id := 1
@@ -525,7 +526,7 @@ func _input(event):
 	if _one_of_us_intro_input_locked:
 		return
 	if use_gamepad_look or not _is_local_online or PauseManager.is_pause_open() \
-			or OnlineChat.is_typing():
+			or external_input_blocked or OnlineChat.is_typing():
 		return
 	if event is InputEventMouseMotion:
 		var sens = MOUSE_LOOK_BASE * mouse_look_sensitivity
@@ -595,7 +596,7 @@ func _physics_process(delta):
 		return
 
 	if is_online and _is_local_online \
-			and (PauseManager.is_pause_open() or OnlineChat.is_typing()):
+			and (PauseManager.is_pause_open() or external_input_blocked or OnlineChat.is_typing()):
 		velocity.x = move_toward(velocity.x, 0.0, SPEED * delta)
 		velocity.z = move_toward(velocity.z, 0.0, SPEED * delta)
 		if not is_on_floor():

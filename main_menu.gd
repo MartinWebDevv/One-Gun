@@ -2045,7 +2045,7 @@ func _close_online_overlay() -> void:
 
 func _on_online_session_started() -> void:
 	_prepare_online_lobby_defaults()
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _prepare_online_lobby_defaults() -> void:
@@ -2532,10 +2532,10 @@ func _bootstrap_lobby_capture() -> void:
 		GameConfig.set_bot_count(2)
 		if NetworkManager.host_game(NetworkManager.DEFAULT_PORT, "Sundown Showdown",
 				{"privacy": "public", "share_code": "SUN555", "max_players": 10}):
-			get_tree().change_scene_to_file("res://game_setup.tscn")
+			get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 	elif state == "lobby_guest":
 		if NetworkManager.join_game("127.0.0.1", NetworkManager.DEFAULT_PORT):
-			get_tree().change_scene_to_file("res://game_setup.tscn")
+			get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _build_text() -> String:
@@ -2687,7 +2687,7 @@ func _on_single_pressed() -> void:
 	if not GameConfig.lobby_settings_dirty:
 		GameConfig.reset_match_settings_to_defaults()
 	GameConfig.split_screen_enabled = false
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _on_local_pressed() -> void:
@@ -2695,7 +2695,7 @@ func _on_local_pressed() -> void:
 	if not GameConfig.lobby_settings_dirty:
 		GameConfig.reset_match_settings_to_defaults()
 	GameConfig.split_screen_enabled = true
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _on_player_settings_pressed() -> void:
@@ -3018,7 +3018,7 @@ func _on_host_pressed() -> void:
 	if not GameConfig.lobby_settings_dirty:
 		GameConfig.reset_match_settings_to_defaults()
 	GameConfig.split_screen_enabled = false
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _on_join_pressed() -> void:
@@ -3053,7 +3053,7 @@ func _on_join_ok() -> void:
 	if NetworkManager.lobby_discovery_failed.is_connected(_on_lobby_discovery_fail):
 		NetworkManager.lobby_discovery_failed.disconnect(_on_lobby_discovery_fail)
 	GameConfig.split_screen_enabled = false
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func _on_join_fail() -> void:

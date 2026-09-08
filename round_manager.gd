@@ -85,6 +85,7 @@ var stat_runner_up_finishes := {}
 var stat_third_place_finishes := {}
 
 func _leave_match_to(scene_path: String):
+	if scene_path in ["res://game_setup.tscn","res://main_menu.tscn"]: scene_path = "res://maps/hideout/hideout.tscn"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_music(0.5)
 	get_tree().change_scene_to_file(scene_path)
@@ -282,7 +283,7 @@ func _net_spawn_player(data: Dictionary) -> Node:
 		bot.set_multiplayer_authority(1)
 		return bot
 	var peer_id := int(data.get("owner_peer_id", actor_spawn_id))
-	var p = preload("res://player.tscn").instantiate()
+	var p = _create_online_human()
 	p.name = "NP%d" % actor_spawn_id
 	p.position = data["pos"]
 	# Human movement is camera-relative and keeps all yaw on AimPivot. Putting
@@ -308,6 +309,9 @@ func _net_spawn_player(data: Dictionary) -> Node:
 	# NetSync child is assigned to peer_id inside character_body_3d.gd.
 	p.set_multiplayer_authority(1)
 	return p
+
+func _create_online_human() -> Node:
+	return preload("res://player.tscn").instantiate()
 
 func can_accept_online_combat(epoch: int) -> bool:
 	return (
@@ -2094,7 +2098,7 @@ func _net_return_online_lobby() -> void:
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_music(0.5)
-	get_tree().change_scene_to_file("res://game_setup.tscn")
+	get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 func _on_online_roster_changed() -> void:
 	if not NetworkManager.is_host() or online_actor_state.is_empty():
@@ -2199,7 +2203,7 @@ func _on_online_host_left() -> void:
 		return
 	var tree := get_tree()
 	if tree != null:
-		tree.change_scene_to_file("res://main_menu.tscn")
+		tree.change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 # ---- online combat: eliminations (host-authoritative) ---------------------
 # Death is permanent for the rest of the round: the victim drops the gun and

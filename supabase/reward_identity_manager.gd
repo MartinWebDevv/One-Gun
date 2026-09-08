@@ -80,7 +80,8 @@ func _sync_with_host(generation: int) -> void:
 	for attempt in 5:
 		if generation != _sync_generation or not NetworkManager.is_online():
 			return
-		_submit_claim_hash.rpc_id(1, local_claim_hash())
+		if multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and NetworkManager.peers.has(NetworkManager.local_id()):
+			_submit_claim_hash.rpc_id(1, local_claim_hash())
 		await get_tree().create_timer(0.5, true, false, true).timeout
 
 

@@ -237,3 +237,10 @@ The final quality pass also repairs the 720p/125%-UI/large-text lobby: left cont
 Return-to-lobby now waits for peer acknowledgements before the existing despawn grace. Suspension removes the normal gameplay visibility filter (which previously re-enabled publication to peer 1), and visibility refresh cannot re-arm a suspended synchronizer. A five-second non-response limit disconnects a stalled peer before actor removal. Standalone Playpen departure suspends only the departing local actor so host-run bots can continue. Three final dedicated combat/return runs, including two with a 600ms client stall, complete without engine errors.
 
 The smoke mask is stored losslessly in `textures/smoke_mask.res`; `tools/generate_smoke_mask.gd` verifies exact RGBA and mipmap bytes on regeneration. This removes the original first-throw GDScript pixel loop. Original particle pre-simulation, opacity, radius and lifetime remain intact. The cold construction sample fell from 87.6ms to 42.8ms, but first-use rendering still stalls; this is a partial CPU improvement, not a stable-frame-pacing sign-off.
+
+
+## Hideout checkpoint (2026-09-07)
+
+Production hosting/joining keeps the room architecture resident and replaces local actors/controllers, avoiding another synchronous room build during ENet admission. Full-screen native menus disable root 3D rendering while retaining the active authority and the menu preview viewport. Static meshes retain the prototype room/material batching and occlusion; no renderer change or new heavy model was introduced. Course/roster pages refresh on record changes rather than at movement snapshot frequency. Weak references are removed when transient practice objects leave the tree.
+
+Forward+ 1080p Low room/menu render samples and two repeated network match-return cycles were checked on the development machine; see [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md). These samples do not establish laptop 60 FPS or maximum-party frame pacing. Test the exported matching build on the weaker laptop, including simultaneous practice effects and repeated host/join/leave/map transitions.

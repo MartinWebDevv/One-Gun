@@ -2,7 +2,7 @@ extends Node
 
 const TEST_PORT := 24756
 const TEST_MAP := "res://node_3d.tscn"
-const TIMEOUT_MSEC := 65000
+const TIMEOUT_MSEC := 120000
 
 var role := ""
 var deadline := 0
@@ -30,12 +30,26 @@ func _ready() -> void:
 func _detach_and_run() -> void:
 	reparent(get_tree().root)
 	deadline = Time.get_ticks_msec() + TIMEOUT_MSEC
+	if not match_server_test:
+		get_tree().change_scene_to_file(HideoutSession.SCENE)
+		if not await _wait_until(func():
+			var scene:=get_tree().current_scene
+			return scene!=null and scene.get("activities_ready")==true):
+			_fail("local Hideout did not load before joining"); return
+		if role=="guest": await get_tree().create_timer(1.0).timeout
 	if not NetworkManager.join_game("127.0.0.1", test_port, match_ticket_id):
 		_fail("join_game failed")
 		return
 	if not await _wait_until(func(): return NetworkManager.peers.size() == 2):
 		_fail("two-client roster was not synchronized")
 		return
+	if not match_server_test:
+		get_tree().current_scene._session_started()
+		if not await _wait_until(func():
+			var scene:=get_tree().current_scene
+			return scene.has_node("NetPlayers") and scene.get_node("NetPlayers").get_child_count()==2):
+			_fail("dedicated shared Hideout actors were not established"); return
+		print("DEDICATED_HIDEOUT_PASS "+role)
 	if not NetworkManager.is_dedicated_session():
 		_fail("server did not advertise a dedicated session")
 		return
@@ -189,8 +203,8 @@ func _match_is_live() -> bool:
 
 func _returned_to_lobby() -> bool:
 	var scene := get_tree().current_scene
-	return scene != null and scene.scene_file_path == "res://game_setup.tscn" \
-		and NetworkManager.is_online()
+	return scene != null and scene.scene_file_path == HideoutSession.SCENE \
+		and NetworkManager.is_online() and scene.get("activities_ready")==true
 
 
 func _verify_client_owned_movement_sync() -> bool:

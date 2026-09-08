@@ -67,7 +67,7 @@ func _build_ui() -> void:
 		remove.pressed.connect(_remove_failed)
 		actions.add_child(remove)
 		var back := OneGunButton.new()
-		back.text = "RETURN TO LOBBY"
+		back.text = "RETURN TO HIDEOUT"
 		back.variant = "navy"
 		back.set_meta("action_id", "return_lobby")
 		back.pressed.connect(NetworkManager.host_return_everyone_to_lobby)

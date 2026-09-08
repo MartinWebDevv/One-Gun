@@ -232,6 +232,8 @@ func enabled_melee_weapon_count() -> int:
 # enabled, both have a valid matching team_id, friendly fire is off, and
 # they are not the same player.
 func can_affect(attacker, target) -> bool:
+	if is_instance_valid(attacker) and attacker.has_method("shares_combat_space_with"):
+		return attacker.shares_combat_space_with(target)
 	if attacker == target:
 		return true
 	if not teams_enabled:

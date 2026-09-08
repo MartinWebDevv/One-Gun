@@ -915,7 +915,7 @@ func _finish_close() -> void:
 	if is_overlay:
 		settings_closed.emit()
 	else:
-		get_tree().change_scene_to_file("res://main_menu.tscn")
+		get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn")
 
 
 func request_cancel_close() -> void:

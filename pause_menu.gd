@@ -103,13 +103,12 @@ func _build_ui() -> void:
 				else ("START MATCH" if NetworkManager.are_all_lobby_guests_ready() else "FORCE START MATCH")
 			_add_action(column, start_label, _start_playpen_match, "start_match")
 	elif not _is_online_view():
-		_add_destructive(column, "RETURN TO LOBBY", "CONFIRM RETURN", "res://game_setup.tscn")
-		_add_destructive(column, "RETURN TO MAIN MENU", "CONFIRM LEAVE", "res://main_menu.tscn")
+		_add_destructive(column, "RETURN TO HIDEOUT", "CONFIRM RETURN", "res://game_setup.tscn")
 	elif NetworkManager.local_match_role == "spectator":
-		_add_action(column, "RETURN TO WAITING ROOM", _return_spectator_to_waiting_room, "return_waiting_room")
+		_add_action(column, "RETURN TO HIDEOUT", _return_spectator_to_waiting_room, "return_waiting_room")
 		_add_destructive(column, "LEAVE MATCH", "CONFIRM LEAVE", "res://main_menu.tscn")
 	elif _is_host_view():
-		_add_destructive(column, "RETURN TO LOBBY  •  HOST ONLY", "CONFIRM FOR ALL", "res://game_setup.tscn")
+		_add_destructive(column, "RETURN TO HIDEOUT  •  HOST ONLY", "CONFIRM FOR ALL", "res://game_setup.tscn")
 		_add_destructive(column, "LEAVE MATCH", "CONFIRM LEAVE", "res://main_menu.tscn")
 	else:
 		_add_destructive(column, "LEAVE MATCH", "CONFIRM LEAVE", "res://main_menu.tscn")
@@ -230,4 +229,4 @@ func _commit_exit(target_scene: String) -> void:
 			NetworkManager.leave_online_to_main_menu()
 	else:
 		PauseManager.reset_pause_state()
-		get_tree().change_scene_to_file(target_scene)
+		get_tree().change_scene_to_file("res://maps/hideout/hideout.tscn" if target_scene in ["res://game_setup.tscn","res://main_menu.tscn"] else target_scene)
