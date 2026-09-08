@@ -5,6 +5,7 @@ const TOTAL_WIDTH := 200.0
 const PIP_HEIGHT := 14.0
 
 var player = null
+var show_hearts := true
 var _prev_charges := -1
 var _style_on: StyleBoxFlat = null
 var _style_off: StyleBoxFlat = null
@@ -61,7 +62,7 @@ func _build_hearts_label() -> void:
 func _update_hearts() -> void:
 	if _hearts_label == null:
 		return
-	_hearts_label.visible = GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
+	_hearts_label.visible = show_hearts and GameConfig.game_mode == GameConfig.MODE_ALL_GUN \
 		and player != null and "all_gun_hearts" in player
 	if not _hearts_label.visible:
 		return

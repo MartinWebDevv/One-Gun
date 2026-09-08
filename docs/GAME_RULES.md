@@ -318,3 +318,14 @@ Online tracers have per-shot identities and retire at predicted world impacts or
 Local map loading offers Cancel/Escape before scene handoff. Online loading retains existing peer readiness/retry/return controls while resources load asynchronously. Unlisted lobby wording reflects discovery-only privacy; Friends Only admission has not been added. The production Hideout is now the home/shared-room destination; atomic Squad travel and authenticated access remain follow-up work. See [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md).
 
 A coordinated return waits for clients to stop movement replication; a peer that fails to acknowledge within five seconds is disconnected so it cannot block the lobby or send into removed actors. At small effective resolutions, roster/settings scrolling follows keyboard/controller focus and map details stack. Boomerang disarms now include their icon in the combat feed.
+
+### Hideout agility run modes (2026-09-07)
+
+Standard and Power-Up Run are selected at the two entrance buttons. Both clear
+pre-existing powers at selection and again at the start line, with full base
+stamina/dashes for a fair start. Standard grants no powers. Power-Up Run grants
+normal Speed Surge (5s, 1.4x movement) and one normally consumed Extra Dash;
+bonuses do not last the whole course or refill automatically. Records stay in
+the selected category even after the bonuses expire. Finish/cancellation clears
+remaining course bonuses. Standard history is retained; Power-Up records use a
+separate bucket from legacy arbitrary assisted runs.

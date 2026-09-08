@@ -147,7 +147,7 @@ func _ready() -> void:
 	_hit_marker.set_script(load("res://hit_marker.gd"))
 	marker_holder.add_child(_hit_marker)   # self-subscribes; filter empty = all
 
-func _make_inventory_slot(slot_name: String) -> Control:
+static func _make_inventory_slot(slot_name: String) -> Control:
 	var slot := Control.new()
 	slot.name = slot_name
 	slot.custom_minimum_size = Vector2(80, 80)

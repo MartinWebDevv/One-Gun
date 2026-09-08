@@ -12,6 +12,7 @@ var training: Node
 var scrap: Node
 var toss: Node
 var ui: CanvasLayer
+var player_hud: CanvasLayer
 var hub_layer: CanvasLayer
 var native_overlay: Control
 var native_page := ""
@@ -114,6 +115,11 @@ func _bind_online_pilot(actor: CharacterBody3D) -> void:
 	_finish_arrival()
 
 func _finish_arrival() -> void:
+	if not is_instance_valid(player_hud):
+		player_hud=preload("res://maps/hideout/player_hud.gd").new()
+		player_hud.name="PlayerHUD"
+		add_child(player_hud)
+	player_hud.bind_player(pilot)
 	pilot.get_gameplay_camera().make_current()
 	station.open_arrivals()
 	_update_identity()
@@ -129,7 +135,8 @@ func _process(delta: float) -> void:
 	if controls_enabled and not nearby.is_empty():
 		var id: String = nearby.back()
 		hint = "%s / %s" % [_interaction_hint(), str(id).replace("_", " ").to_upper()]
-		if id == "departure": hint = "MATCH STATUS / OPEN THE GAME BOARD"
+		if id == "scrap": hint = _interaction_hint()+" / JOIN THE SCRAP"
+		elif id == "departure": hint = "MATCH STATUS / OPEN THE GAME BOARD"
 		elif str(id).begins_with("range_") and activities_ready: hint = _interaction_hint()+" / "+training.range_hint(int(str(id).get_slice("_", 1)))
 	ui.context.text = hint
 	station.set_active_service(nearby.back() if controls_enabled and not nearby.is_empty() else "")
@@ -163,6 +170,7 @@ func _input(event: InputEvent) -> void:
 		var id: String = nearby.back()
 		if id == "toss" and activities_ready: toss.throw_ball()
 		elif str(id).begins_with("range_") and activities_ready: training.cycle_distance(int(str(id).get_slice("_",1)))
+		elif id in ["course_standard","course_powerup"] and activities_ready: training.select_mode(id=="course_powerup")
 		elif id == "departure": _open("events")
 		else: _open(id)
 	else: used = false
@@ -301,6 +309,8 @@ func _sync_controls() -> void:
 		if pilot.is_online: pilot.external_input_blocked = not controls_enabled
 		else: pilot.set_physics_process(controls_enabled)
 		pilot.set_process_input(controls_enabled and not automation)
+	if is_instance_valid(player_hud):
+		player_hud.set_room_visible(not departing and ui.page.is_empty() and not is_instance_valid(native_overlay))
 	ui.shell.visible = not is_instance_valid(native_overlay)
 	get_viewport().disable_3d = previous_disable_3d or is_instance_valid(native_overlay)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if controls_enabled and not automation and not PlayerPrefs.is_using_controller() else Input.MOUSE_MODE_VISIBLE
@@ -377,6 +387,7 @@ func _upgrade_to_network() -> void:
 	scrap=null
 	toss=null
 	nearby.clear()
+	player_hud=null
 	await get_tree().process_frame
 	playpen=load("res://maps/hideout/network_practice.gd").new()
 	playpen.name="RoundManager"

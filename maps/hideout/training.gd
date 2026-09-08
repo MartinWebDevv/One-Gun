@@ -3,15 +3,20 @@ extends Node
 const Space = preload("res://maps/hideout/training_space.gd")
 const Target = preload("res://maps/hideout/range_target.gd")
 const G = preload("res://maps/hideout/geometry.gd")
+const Loadout = preload("res://maps/hideout/course_loadout.gd")
 const Records = preload("res://maps/hideout/course_records.gd")
 var records: RefCounted
 var board_tab := "lobby"
 var board_assisted := false
 var board_leader: Label3D
 var board_rows: Label3D
+var board_footer: Label3D
 var runner_id := ""
 var run_rules := ""
 var assisted := false
+var selected_powerup := false
+var board_tick := 0.0
+var last_finish_text := ""
 var lab: Node3D
 var targets: Array[StaticBody3D]=[]
 var range_indices := [0,0,0]
@@ -58,6 +63,7 @@ func setup(preview: Node3D) -> void:
 	hud.add_theme_color_override("font_color",G.GREEN)
 	board_leader=lab.station.find_child("CourseBoardLeader",true,false)
 	board_rows=lab.station.find_child("CourseBoardRows",true,false)
+	board_footer=lab.station.find_child("CourseBoardFooter",true,false)
 	var local := Records.new()
 	local.configure("" if lab.automation or NetworkManager.is_online() else "user://hideout/course_records.json")
 	set_records_provider(local)
@@ -102,9 +108,10 @@ func _gate_entered(body: Node3D, index: int) -> void:
 		if best<0 or last_time<best: best=last_time
 		show_result=12
 		status="FINISHED / "+format_time(last_time)
-		assisted=assisted or _movement_assisted()
-		records.submit_completed_run(run_rules+("/assisted" if assisted else "/standard"),runner_id,roundi(last_time*1000))
-		lab.ui.show_toast("AGILITY / %s / %d falls / %s run" % [format_time(last_time),falls,"Assisted" if assisted else "Standard"])
+		last_finish_text="%s / %s / %s" % [lab.session.alias_name,"POWER-UP" if assisted else "STANDARD",format_time(last_time)]
+		records.submit_completed_run(run_rules+("/powerup" if assisted else "/standard"),runner_id,roundi(last_time*1000),falls)
+		Loadout.clear(lab.pilot)
+		lab.ui.show_toast("AGILITY / %s / %d falls / %s run" % [format_time(last_time),falls,"Power-Up" if assisted else "Standard"])
 	else:
 		recovery=Space.RECOVERY[index]
 		next_gate+=1
@@ -113,7 +120,8 @@ func start_trial() -> void:
 	refresh_roster()
 	runner_id=viewer_id()
 	run_rules=movement_key()
-	assisted=_movement_assisted()
+	assisted=selected_powerup
+	Loadout.start(lab.pilot,assisted)
 	running=true
 	elapsed=0
 	next_gate=1
@@ -127,6 +135,18 @@ func cancel_trial(message := "RUN CANCELLED") -> void:
 		running=false
 		status=message
 		show_result=5
+		Loadout.clear(lab.pilot)
+
+func can_select_mode(actor: Node3D, powered: bool) -> bool:
+	var at: Vector3=Space.Course.MODE_BUTTONS[1 if powered else 0]
+	return is_instance_valid(actor) and not actor.is_eliminated and absf(actor.position.x-at.x)<3.2 and absf(actor.position.z-at.z)<1.65
+
+func select_mode(powered: bool) -> void:
+	if not can_select_mode(lab.pilot,powered): return
+	cancel_trial()
+	selected_powerup=powered
+	Loadout.clear(lab.pilot)
+	lab.ui.show_toast(("POWER-UP RUN" if powered else "STANDARD RUN")+" READY / CROSS THE START LINE")
 
 func restart_trial() -> void:
 	cancel_trial()
@@ -144,7 +164,6 @@ func _physics_process(delta: float) -> void:
 	var actor: CharacterBody3D=lab.pilot
 	if actor.is_eliminated: cancel_trial("DEATH / RUN CANCELLED")
 	elif running:
-		assisted=assisted or _movement_assisted()
 		# Only the marked finish may complete a run. Backtracking cannot submit a time.
 		if viewer_id()!=runner_id or movement_key()!=run_rules or (not Space.in_course(actor.position) and not (actor.position.x< -7 and actor.position.z< -67.5 and actor.position.z> -74)): cancel_trial()
 		elif lab.controls_enabled: elapsed+=delta
@@ -156,13 +175,18 @@ func _physics_process(delta: float) -> void:
 		actor.velocity=Vector3.ZERO
 		actor.reset_physics_interpolation()
 		lab.ui.show_toast("AGILITY / Fall +2s / Returned to checkpoint" if running else "AGILITY / Returned to entry")
+	board_tick-=delta
+	if board_tick<=0:
+		board_tick=0.2
+		_render_wall_records()
+		preload("res://maps/hideout/course_board_ui.gd").refresh_live(lab.ui,self)
 	hud_left-=delta
 	if hud_left<=0:
 		hud_left=0.05
 		hud.visible=lab.ui.page.is_empty() and (running or show_result>0 or Space.in_course(actor.position))
 		hud.text="AGILITY / "+(format_time(elapsed) if running else status)
 		if running: hud.text+="\nCHECKPOINT %d / 5   |   FALLS %d" % [next_gate-1,falls]
-		if running and assisted: hud.text+=" / ASSISTED"
+		if running: hud.text+=" / "+("POWER-UP" if assisted else "STANDARD")
 		var personal: int=records.personal_best(records_bucket(assisted),viewer_id())
 		if personal>=0: hud.text+="\nYOUR BEST / "+format_time(personal/1000.0)
 
@@ -192,7 +216,7 @@ func movement_key() -> String:
 	return "%s/dash%d/sprint%d/jump%.3f" % [Space.Course.COURSE_ID,GameConfig.max_dash_charges,int(GameConfig.sprinting_enabled),lab.pilot.jump_velocity]
 
 func records_bucket(with_assists: bool) -> String:
-	return movement_key()+("/assisted" if with_assists else "/standard")
+	return movement_key()+("/powerup" if with_assists else "/standard")
 
 func rules_caption() -> String:
 	return "%d DASHES / SPRINT %s / JUMP %.1f" % [GameConfig.max_dash_charges,"ON" if GameConfig.sprinting_enabled else "OFF",lab.pilot.jump_velocity]
@@ -201,16 +225,29 @@ func _movement_assisted() -> bool:
 	var actor: CharacterBody3D=lab.pilot
 	return actor.speed_surge_timer>0 or actor.double_jump_shoes_active or actor.extra_dash_charge>0 or not is_equal_approx(actor.slow_multiplier_value,1.0) or actor._spring_air_active or actor._directional_launch_active
 
+func live_status(id: String, powered: bool) -> String:
+	if running and id==runner_id and powered==assisted:
+		return "RUNNING %s / CP %d / %d FALLS" % [format_time(elapsed),next_gate-1,falls]
+	return ""
+
+func _render_wall_records() -> void:
+	if not is_instance_valid(board_leader): return
+	for powered in [false,true]:
+		var lines: PackedStringArray=["POWER-UP RUN" if powered else "STANDARD"]
+		var rows: Array=records.lobby_rows(records_bucket(powered))
+		for i in mini(rows.size(),10):
+			var row: Dictionary=rows[i]
+			var value: String=format_time(row.time_ms/1000.0) if row.time_ms>=0 else "NO FINISH"
+			var live:=live_status(str(row.id),powered)
+			if not live.is_empty(): value=live.get_slice(" / ",0)
+			lines.append("%02d  %s  %s" % [i+1,str(row.name).left(16),value])
+		if rows.is_empty(): lines.append("WAITING FOR RUNNERS")
+		var target: Label3D=board_rows if powered else board_leader
+		var text: String="\n".join(lines)
+		if target.text!=text: target.text=text
+	if board_footer:
+		board_footer.text="LAST FINISH / "+last_finish_text if not last_finish_text.is_empty() else "%d PLAYERS / INTERACT FOR BEST, LAST RUN & FINISHES" % records.members.size()
+
 func _refresh_records() -> void:
-	var rows: Array=records.lobby_rows(records_bucket(false))
-	if board_leader:
-		board_leader.text="SET THE FIRST TIME"
-		board_rows.text="STANDARD RUNS / "+rules_caption()+"\nINTERACT TO VIEW EVERYONE"
-		if not rows.is_empty() and rows[0].time_ms>=0:
-			board_leader.text="%s / %s" % [str(rows[0].name).left(18),format_time(rows[0].time_ms/1000.0)]
-			var lines: PackedStringArray=[]
-			for i in range(1,mini(rows.size(),4)):
-				if rows[i].time_ms>=0: lines.append("%02d  %s  /  %s" % [i+1,str(rows[i].name).left(18),format_time(rows[i].time_ms/1000.0)])
-			lines.append("STANDARD RUNS / "+rules_caption())
-			board_rows.text="\n".join(lines)
-	if lab.ui.page=="course_board": lab.ui.show_page("course_board")
+	_render_wall_records()
+	if lab.ui.page=="course_board": preload("res://maps/hideout/course_board_ui.gd").refresh_live(lab.ui,self)

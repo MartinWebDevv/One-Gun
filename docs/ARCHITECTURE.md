@@ -265,4 +265,16 @@ The smoke mask is stored losslessly in `textures/smoke_mask.res`; `tools/generat
 
 ## Hideout front end (2026-09-07)
 
-Normal client startup and match-return routing now use `maps/hideout/hideout.tscn`. `HideoutSession` retains selection and restores personal home rules after leaving a remote session. `match_board.gd` reuses the existing lobby implementation as a closeable overlay. `network_practice.gd` subclasses Playpen/RoundManager for authoritative shared activities; `network_training.gd`, `network_scrap.gd` and `network_toss.gd` own their state. `NetworkManager` gates scene readiness and acknowledges actor suspension before departure/return. The original tools F6 scene is unchanged. Protocol 4 requires matching clients/servers. See [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md) for exact coverage, tests and outstanding Squad/access/backend work.
+Normal client startup and match-return routing now use `maps/hideout/hideout.tscn`. `HideoutSession` retains selection and restores personal home rules after leaving a remote session. `match_board.gd` reuses the existing lobby implementation as a closeable overlay. `network_practice.gd` subclasses Playpen/RoundManager for authoritative shared activities; `network_training.gd`, `network_scrap.gd` and `network_toss.gd` own their state. `NetworkManager` gates scene readiness and acknowledges actor suspension before departure/return. The original tools F6 scene is unchanged. Protocol 5 requires matching clients/servers. See [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md) for exact coverage, tests and outstanding Squad/access/backend work.
+
+Hideout Scrap signup uses the existing action/snapshot RPC envelope for
+owner-acknowledged placement, closes its menu before coin/countdown combat, and
+admits players at the standing arena terminal. The room player HUD reuses the
+match widgets bound only to the local actor, suspends under menus, and rebinds on
+session upgrade/return. See the repair notes in `HIDEOUT_MIGRATION.md`.
+
+Course entrance selection and loadout application are host-authoritative. Both
+modes clear old powers at selection/start; the powered mode grants normal pickups.
+`course_records.gd` retains bests plus last-run/finish-count/fall details. Timer-only
+snapshots omit record history; accepted finishes publish immediately and update
+existing board rows. The wall shows Standard and Power-Up columns simultaneously.

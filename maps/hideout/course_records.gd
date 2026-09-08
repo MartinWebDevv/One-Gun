@@ -5,6 +5,7 @@ signal changed
 var members: Dictionary = {}
 var lobby_times: Dictionary = {}
 var personal_times: Dictionary = {}
+var lobby_details: Dictionary = {}
 var storage_path := ""
 var save_error := OK
 
@@ -32,10 +33,13 @@ func set_members(roster: Array) -> void:
 	members=next
 	changed.emit()
 
-func submit_completed_run(bucket: String, actor_id: String, time_ms: int) -> bool:
+func submit_completed_run(bucket: String, actor_id: String, time_ms: int, falls := 0) -> bool:
 	# Called only after the course controller has accepted every checkpoint.
 	# A future online provider must accept host-validated finishes, not client times.
 	if bucket.is_empty() or not members.has(actor_id) or not _valid_time(time_ms): return false
+	if not lobby_details.has(bucket): lobby_details[bucket]={}
+	var previous: Dictionary=lobby_details[bucket].get(actor_id,{})
+	lobby_details[bucket][actor_id]={"last_ms":time_ms,"falls":falls,"finishes":int(previous.get("finishes",0))+1}
 	if not lobby_times.has(bucket): lobby_times[bucket]={}
 	if not personal_times.has(bucket): personal_times[bucket]={}
 	var lobby: Dictionary=lobby_times[bucket]
@@ -50,7 +54,9 @@ func submit_completed_run(bucket: String, actor_id: String, time_ms: int) -> boo
 func lobby_rows(bucket: String) -> Array:
 	var rows: Array=[]
 	var times: Dictionary=lobby_times.get(bucket,{})
-	for id in members: rows.append({"id":id,"name":members[id],"time_ms":int(times.get(id,-1))})
+	for id in members:
+		var detail: Dictionary=lobby_details.get(bucket,{}).get(id,{})
+		rows.append({"id":id,"name":members[id],"time_ms":int(times.get(id,-1)),"last_ms":int(detail.get("last_ms",-1)),"falls":int(detail.get("falls",0)),"finishes":int(detail.get("finishes",0))})
 	rows.sort_custom(func(a,b):
 		if a.time_ms!=b.time_ms:
 			if a.time_ms<0: return false

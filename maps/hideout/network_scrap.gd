@@ -21,6 +21,9 @@ var rng := RandomNumberGenerator.new()
 var update_left := 0.0
 var presented_state := -1
 var presented_fighters: Array = []
+var presented_positioning := false
+var pending_arrivals: Dictionary = {}
+var positioning := false
 
 func setup(preview: Node3D) -> void:
 	lab = preview
@@ -56,7 +59,7 @@ func pilot_locked() -> bool:
 	return is_fighter_id(NetworkManager.local_actor_id()) and state in [State.CALLING,State.FLIPPING,State.COUNTDOWN,State.RESULT]
 
 func can_call(id: int) -> bool:
-	return state==State.CALLING and fighter_ids.size()==2 and fighter_ids[1]==id
+	return state==State.CALLING and fighter_ids.size()==2 and fighter_ids[1]==id and not positioning
 
 func join_round(_which: String) -> bool:
 	_request("join","",epoch)
@@ -80,13 +83,16 @@ func _request_action(action: String, value: String, request_epoch: int) -> void:
 		_accept(NetworkManager.actor_id_for_peer(multiplayer.get_remote_sender_id()),action,value,request_epoch)
 
 func _accept(id: int, action: String, value: String, request_epoch: int) -> void:
-	if request_epoch != epoch or NetworkManager._prelaunch_active: return
+	if NetworkManager._prelaunch_active: return
+	# Two guests may click the idle board before the first signup reaches them.
+	var concurrent_join := action=="join" and state==State.CALLING and fighter_ids.size()==1 and request_epoch==epoch-1
+	if request_epoch != epoch and not concurrent_join: return
 	var actor = NetworkManager.find_actor(id)
 	if actor == null or actor.is_eliminated: return
 	if action=="join":
 		if state not in [State.IDLE,State.CALLING] or fighter_ids.size()>=2 or id in fighter_ids: return
-		if not Space.in_room(actor.position):
-			_notice(id,"Enter the Scrap Yard to join a duel.")
+		if not Space.at_terminal(actor.global_position):
+			_notice(id,"Use the Join the Scrap screen in front of the arena.")
 			return
 		if state==State.IDLE:
 			epoch += 1
@@ -100,8 +106,11 @@ func _accept(id: int, action: String, value: String, request_epoch: int) -> void
 		manager.training.cancel_runner(id)
 		manager.memberships[id]="scrap"
 		time_left=45.0
-		NetworkManager.broadcast_match_rpc(manager,&"_net_recover_playpen_actor",[id,Space.STARTS[fighter_ids.size()-1],-PI/2 if fighter_ids.size()==1 else PI/2])
+		pending_arrivals[id] = Time.get_ticks_msec()+12000
+		positioning = true
 		_publish()
+	elif action=="arrived":
+		_accept_arrival(id,request_epoch)
 	elif action=="call":
 		if not can_call(id) or value not in ["heads","tails"]: return
 		call_side=value
@@ -111,6 +120,23 @@ func _accept(id: int, action: String, value: String, request_epoch: int) -> void
 		time_left=2.0
 		_publish()
 	elif action=="leave" and is_fighter_id(id): cancel_round("FIGHTER LEFT")
+
+func _position_fighter(id: int, duel_epoch: int, index: int) -> void:
+	if duel_epoch!=epoch or not is_fighter_id(id) or index<0 or index>=Space.STARTS.size(): return
+	var actor = NetworkManager.find_actor(id)
+	if actor==null: return
+	actor.recover_from_invalid_position(Space.STARTS[index],-PI/2 if index==0 else PI/2)
+	if id!=NetworkManager.local_actor_id(): return
+	# The owning client must apply the teleport before the host proceeds.
+	await get_tree().physics_frame
+	if not is_inside_tree() or duel_epoch!=epoch or state!=State.CALLING: return
+	_request("arrived","",duel_epoch)
+
+func _accept_arrival(id: int, duel_epoch: int) -> void:
+	if duel_epoch!=epoch or state!=State.CALLING or not pending_arrivals.has(id): return
+	pending_arrivals.erase(id)
+	positioning = not pending_arrivals.is_empty()
+	_publish()
 
 func _notice(id: int, message: String) -> void:
 	var peer := NetworkManager.peer_id_for_actor(id)
@@ -129,9 +155,15 @@ func _process(delta: float) -> void:
 			if state in [State.CALLING,State.FLIPPING,State.COUNTDOWN,State.ACTIVE]:
 				for id in fighter_ids:
 					var actor = NetworkManager.find_actor(int(id))
-					if actor==null or not Space.in_ring(actor.position):
+					# Client-owned transforms can briefly replay the pre-teleport position.
+					# Enforce ring bounds once placement, coin and countdown have completed.
+					if actor==null or not NetworkManager.peers.has(actor.owner_peer_id) or (state==State.ACTIVE and not Space.in_ring(actor.position)):
 						cancel_round("DUEL CANCELLED / FIGHTER LEFT")
 						break
+			for id in pending_arrivals:
+				if Time.get_ticks_msec()>int(pending_arrivals[id]):
+					cancel_round("DUEL CANCELLED / PLAYER DID NOT ARRIVE")
+					break
 			if time_left<=0:
 				match state:
 					State.CALLING: cancel_round("NO CHALLENGER / CALL TIMED OUT")
@@ -148,6 +180,11 @@ func _process(delta: float) -> void:
 		coin_visual.show_coin(local_fighter and state in [State.FLIPPING,State.COUNTDOWN],state==State.FLIPPING,time_left,coin_side)
 
 func _begin_combat() -> void:
+	for id in fighter_ids:
+		var actor = NetworkManager.find_actor(int(id))
+		if actor==null or not Space.in_ring(actor.global_position):
+			cancel_round("DUEL CANCELLED / PLAYER DID NOT ARRIVE")
+			return
 	state=State.ACTIVE
 	time_left=0
 	_publish()
@@ -165,16 +202,19 @@ func cancel_round(message: String) -> void:
 	_finish()
 
 func _finish() -> void:
+	pending_arrivals.clear()
+	positioning=false
 	state=State.RESULT
 	time_left=6.0
 	manager.clear_duel_gear(epoch,fighter_ids)
 	_publish()
 
 func _return_fighters() -> void:
-	for id in fighter_ids:
-		var actor = NetworkManager.find_actor(int(id))
+	for index in fighter_ids.size():
+		var id: int=int(fighter_ids[index])
+		var actor = NetworkManager.find_actor(id)
 		if actor == null: continue
-		NetworkManager.broadcast_match_rpc(manager,&"_net_respawn",[id,Space.FOYER+Vector3(0,0,1),0.0])
+		NetworkManager.broadcast_match_rpc(manager,&"_net_respawn",[id,Space.TERMINAL_USE+Vector3(-1.5 if index==0 else 1.5,0,1),0.0])
 		if manager.online_actor_state.has(id): manager.online_actor_state[id]["alive"]=true
 	manager._broadcast_online_state()
 	fighter_ids.clear()
@@ -184,7 +224,7 @@ func _return_fighters() -> void:
 func status_text() -> String:
 	match state:
 		State.IDLE: return "JOIN THE SCRAP / ONE ROUND"
-		State.CALLING: return "WAITING FOR A CHALLENGER" if fighter_ids.size()<2 else "SECOND PLAYER / HEADS OR TAILS?"
+		State.CALLING: return "GETTING FIGHTERS READY" if positioning else "WAITING FOR A CHALLENGER" if fighter_ids.size()<2 else "SECOND PLAYER / HEADS OR TAILS?"
 		State.FLIPPING: return "CALL: "+call_side.to_upper()+" / FLIPPING"
 		State.COUNTDOWN: return coin_side.to_upper()+" / STARTING IN %d" % ceili(time_left)
 		State.ACTIVE: return "SCRAP! / ONE ROUND"
@@ -192,7 +232,7 @@ func status_text() -> String:
 	return ""
 
 func _snapshot() -> Dictionary:
-	return {"state":state,"fighters":fighter_ids,"epoch":epoch,"remaining":time_left,"call":call_side,"coin":coin_side,"gun":gun_index,"result":result_text}
+	return {"state":state,"fighters":fighter_ids,"epoch":epoch,"remaining":time_left,"call":call_side,"coin":coin_side,"gun":gun_index,"result":result_text,"positioning":positioning}
 
 func _publish() -> void:
 	NetworkManager.broadcast_match_rpc(self,&"_receive",[_snapshot()])
@@ -202,7 +242,10 @@ func send_snapshot(peer: int) -> void:
 
 @rpc("authority","reliable","call_local")
 func _receive(data: Dictionary) -> void:
-	var changed: bool = presented_state!=int(data.state) or presented_fighters!=data.fighters
+	var changed: bool = presented_state!=int(data.state) or presented_fighters!=data.fighters or presented_positioning!=bool(data.get("positioning",false))
+	var was_fighter := NetworkManager.local_actor_id() in presented_fighters
+	var previous_fighters := presented_fighters.duplicate()
+	presented_positioning=bool(data.get("positioning",false))
 	presented_state=int(data.state)
 	presented_fighters=data.fighters.duplicate()
 	state=int(data.state)
@@ -213,7 +256,19 @@ func _receive(data: Dictionary) -> void:
 	coin_side=str(data.coin)
 	gun_index=int(data.gun)
 	result_text=str(data.result)
-	if changed and lab.ui.page=="scrap": lab.ui.show_page("scrap")
+	positioning=bool(data.get("positioning",false))
+	if changed:
+		var local_fighter := is_fighter_id(NetworkManager.local_actor_id())
+		if local_fighter and state==State.CALLING:
+			lab._open("scrap")
+		elif (local_fighter or was_fighter) and lab.ui.page=="scrap":
+			# Signup must release input before combat and reveal the shared coin.
+			lab._open("")
+		elif lab.ui.page=="scrap": lab.ui.show_page("scrap")
+		if state==State.CALLING:
+			for index in fighter_ids.size():
+				if fighter_ids[index] not in previous_fighters:
+					_position_fighter(int(fighter_ids[index]),epoch,index)
 	lab._sync_controls()
 	round_changed.emit()
 

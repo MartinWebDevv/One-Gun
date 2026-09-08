@@ -2,6 +2,7 @@ extends RefCounted
 ## Run/dash/jump circuit, sized for the unchanged 10 m/s controller.
 const G = preload("res://maps/hideout/geometry.gd")
 const COURSE_ID := "flow_circuit_v2"
+const MODE_BUTTONS := [Vector3(-9.35,0.3,-38.2),Vector3(-9.35,0.3,-46.3)]
 const COURSE_GATES := [Vector3(-12.5,0,-42.25),Vector3(-40,0,-42.25),Vector3(-60,0,-42.25),Vector3(-82,0,-57),Vector3(-62,0,-70.75),Vector3(-37,0,-70.75),Vector3(-8.5,0,-70.75)]
 const RECOVERY := [Vector3(-16,-0.11,-42.25),Vector3(-41,-0.11,-42.25),Vector3(-62,-0.11,-42.25),Vector3(-82,-0.11,-60),Vector3(-60,-0.11,-70.75),Vector3(-36,-0.11,-70.75),Vector3(-8.5,-0.11,-70.75)]
 
@@ -57,6 +58,18 @@ static func build(station: Node3D, kit: RefCounted) -> void:
 	_door(root,"AGILITY / FINISH",-70.75,G.ORANGE,kit)
 	var rules := G.label(root,"CourseRules","RUN / JUMP / DASH",Vector3(-9.55,4.2,-42.25),40,G.PAPER,0.009)
 	rules.rotation.y=PI/2
+	for index in range(2):
+		var button := Node3D.new()
+		button.name="CourseModeButton%d" % index
+		root.add_child(button)
+		button.position=MODE_BUTTONS[index]
+		button.rotation.y=PI/2
+		var color: Color=G.GREEN if index==0 else G.ORANGE
+		G.box(button,"ButtonCase",Vector3.ZERO,Vector3(2.4,1.9,0.25),kit.ink,true)
+		G.cylinder(button,"PushButton",Vector3(0,-0.35,0.25),0.32,0.16,G.material("course_button_"+str(index),color)).rotation.x=PI/2
+		G.label(button,"ModeTitle","STANDARD" if index==0 else "POWER-UP RUN",Vector3(0,0.55,0.2),36,color,0.006)
+		G.label(button,"ModeInfo","NO POWERS" if index==0 else "SURGE + EXTRA DASH",Vector3(0,0.12,0.2),24,G.PAPER,0.006)
+		station._zone("course_standard" if index==0 else "course_powerup",MODE_BUTTONS[index]+Vector3(1.3,0,0),Vector3(3.2,4,2.7))
 	for i in range(COURSE_GATES.size()):
 		var at: Vector3=COURSE_GATES[i]
 		var area := Area3D.new()
@@ -83,15 +96,15 @@ static func _board(station: Node3D, root: Node3D, kit: RefCounted) -> void:
 	var board := Node3D.new()
 	board.name="CourseRecordBoard"
 	root.add_child(board)
-	board.position=Vector3(-9.47,2.2,-56.5)
+	board.position=Vector3(-9.47,2.5,-56.5)
 	board.rotation.y=PI/2
-	G.box(board,"BoardFrame",Vector3.ZERO,Vector3(16,5.4,0.2),kit.timber)
-	G.box(board,"BoardFace",Vector3(0,0,0.13),Vector3(15.6,5,0.1),kit.ink)
-	G.label(board,"BoardTitle","AGILITY / LOBBY BEST",Vector3(0,1.96,0.2),92,G.GREEN,0.008)
-	G.box(board,"BoardRule",Vector3(0,1.45,0.22),Vector3(14.4,0.05,0.03),kit.brass)
-	G.label(board,"CourseBoardLeader","SET THE FIRST TIME",Vector3(0,0.68,0.24),96,G.PAPER,0.009)
-	G.label(board,"CourseBoardRows","NO COMPLETED RUNS",Vector3(0,-0.55,0.24),52,G.PAPER,0.008)
-	G.label(board,"CourseBoardFooter","INTERACT / LOBBY  |  YOUR BEST  |  WORLD",Vector3(0,-2,0.24),40,G.CYAN,0.008)
+	G.box(board,"BoardFrame",Vector3.ZERO,Vector3(16,6.6,0.2),kit.timber)
+	G.box(board,"BoardFace",Vector3(0,0,0.13),Vector3(15.6,6.2,0.1),kit.ink)
+	G.label(board,"BoardTitle","CIRCUIT / LIVE STANDINGS",Vector3(0,2.6,0.2),92,G.GREEN,0.008)
+	G.box(board,"BoardRule",Vector3(0,2.1,0.22),Vector3(14.4,0.05,0.03),kit.brass)
+	G.label(board,"CourseBoardLeader","STANDARD",Vector3(-3.8,1.7,0.24),50,G.PAPER,0.006).vertical_alignment=VERTICAL_ALIGNMENT_TOP
+	G.label(board,"CourseBoardRows","POWER-UP RUN",Vector3(3.8,1.7,0.24),50,G.PAPER,0.006).vertical_alignment=VERTICAL_ALIGNMENT_TOP
+	G.label(board,"CourseBoardFooter","PLAYER BESTS / LIVE RUNS / INTERACT FOR DETAILS",Vector3(0,-2.8,0.24),40,G.CYAN,0.008)
 	station._zone("course_board",Vector3(-6.8,1,-56.5),Vector3(4.5,4,14))
 	var approach := Marker3D.new()
 	approach.name="CourseBoardApproach"

@@ -12,7 +12,12 @@ const MELEE_SPAWN := Vector3(17,-0.8,-122)
 const ITEM_SPAWN := Vector3(9,-0.7,-104)
 const POWER_SPAWN := Vector3(25,-0.7,-116)
 const FOYER := Vector3(17,-0.11,-84)
+const TERMINAL := Vector3(17,-1.2,-91.5)
+const TERMINAL_USE := Vector3(17,-0.11,-89.8)
 const STARTS := [Vector3(6,-0.11,-110),Vector3(28,-0.11,-110)]
+
+static func at_terminal(p: Vector3) -> bool:
+	return p.is_finite() and absf(p.x-TERMINAL_USE.x)<=2.5 and absf(p.z-TERMINAL_USE.z)<=2.0 and absf(p.y-TERMINAL_USE.y)<=2.0
 
 static func in_room(p: Vector3) -> bool:
 	return PenSpace.contains_scrap(p)
@@ -39,10 +44,19 @@ static func build(station: Node3D) -> void:
 	G.box(root,"ScrapFoyerRoof",Vector3(17,6.75,-82),Vector3(8,0.3,6),kit.cream,true)
 	G.panel(root,"ScrapEntrance","THE SCRAP YARD",Vector3(17,4.7,-78.55),Vector2(14.4,1.1),G.ORANGE)
 	G.label(root,"ScrapEntranceInfo","QUICK 1V1 / JOIN OR WATCH",Vector3(17,3.6,-78.5),58,G.PAPER,0.008)
-	var join_sign:=G.panel(root,"ScrapJoinBoard","JOIN THE SCRAP",Vector3(13.28,2,-82),Vector2(4.6,0.8),G.GOLD)
-	join_sign.rotation.y=PI/2
+	# Freestanding terminal faces arrivals, clear of both routes to the stands.
+	var terminal := Node3D.new()
+	terminal.name = "ScrapJoinTerminal"
+	root.add_child(terminal)
+	terminal.position = TERMINAL
+	G.box(terminal,"Base",Vector3(0,0.1,0),Vector3(1.8,0.2,1.1),kit.brass,true)
+	G.box(terminal,"Pedestal",Vector3(0,0.85,0),Vector3(0.5,1.5,0.2),kit.painted,true)
+	G.box(terminal,"ScreenCase",Vector3(0,1.85,0),Vector3(2.8,1.5,0.3),coral,true)
+	G.box(terminal,"Screen",Vector3(0,1.85,0.17),Vector3(2.55,1.25,0.05),G.material("scrap_terminal_screen",Color("142f36")))
+	G.label(terminal,"JoinTitle","JOIN THE SCRAP",Vector3(0,2.04,0.21),42,G.GOLD,0.006)
+	G.label(terminal,"JoinDetail","1V1 / ONE ROUND",Vector3(0,1.68,0.21),28,G.PAPER,0.006)
 	G.label(root,"ScrapFoyerRoute","STANDS  <    >  STANDS",Vector3(17,4.3,-85.45),48,G.CYAN,0.007)
-	station._zone("scrap",FOYER,Vector3(7.3,4,7))
+	station._zone("scrap",TERMINAL_USE,Vector3(5,4,4))
 	G.panel(root,"ScrapScoreboard","THE SCRAP YARD",Vector3(17,6.8,ROOM_BACK_Z+0.5),Vector2(23,1.5),G.GOLD)
 	G.label(root,"ScrapStatus","ONE ROUND / COIN FLIP START",Vector3(17,5.2,ROOM_BACK_Z+0.55),72,G.PAPER,0.013)
 	G.ring(root,"RingLine",RADIUS-0.45,RADIUS-0.2,-1.17,kit.brass).position=Vector3(CENTER.x,0,CENTER.z)

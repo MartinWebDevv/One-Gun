@@ -7,6 +7,7 @@ var peer_ready := false
 var remote_phase := ""
 var host_done := false
 var effect_seeded := false
+var live_list_id := 0
 
 func _ready() -> void:
 	call_deferred("_run")
@@ -138,15 +139,26 @@ func _exercise_host() -> void:
 		for gate in range(1,training.Space.COURSE_GATES.size()): training._gate_entered(actor,gate)
 	_check(training.records.lobby_rows(training.movement_key()+"/standard").filter(func(row): return row.time_ms>=1000).size()==2,"both players receive host-validated course records")
 	await _verify_remote("course")
-	_teleport(host_actor.actor_id,scene.scrap.Space.FOYER)
-	_teleport(client_id,scene.scrap.Space.FOYER+Vector3(1,0,0))
+	await _exercise_course_modes(scene,host_actor,guest)
+	_teleport(host_actor.actor_id,scene.scrap.Space.TERMINAL_USE)
+	_teleport(client_id,scene.scrap.Space.TERMINAL_USE+Vector3(1,0,0))
 	await get_tree().create_timer(0.5).timeout
-	scene.scrap._accept(host_actor.actor_id,"join","",scene.scrap.epoch)
-	scene.scrap._accept(client_id,"join","",scene.scrap.epoch)
-	_check(scene.scrap.fighter_ids.size()==2,"two players registered as fighters")
+	scene._open("scrap")
+	_press_scrap("JOIN THE SCRAP")
+	await _verify_remote("join_duel")
+	if not await _wait_for(func(): return scene.scrap.fighter_ids.size()==2 and not scene.scrap.positioning,"two fighters placed"): return
+	_check(scene.scrap.fighter_ids.size()==2,"two players registered through the terminal UI")
+	# Reproduce an older movement packet arriving after the host's teleport.
+	var placed: Vector3=guest.position
+	guest.position=scene.scrap.Space.TERMINAL_USE
+	scene.scrap._process(0.016)
+	_check(scene.scrap.state==scene.scrap.State.CALLING,"pre-teleport movement packet does not cancel signup")
+	guest.position=placed
 	await _verify_remote("coin_call")
 	if not await _wait_for(func(): return is_instance_valid(scene) and scene.scrap.state==scene.scrap.State.ACTIVE,"authoritative coin flip"): return
 	_check(scene.scrap.coin_side in ["heads","tails"],"host selected one coin result")
+	_check(scene.ui.page.is_empty() and scene.controls_enabled and not host_actor.external_input_blocked,"host signup closes and combat input unlocks")
+	_check(scene.player_hud.player==host_actor and scene.player_hud.visible,"host HUD follows the local fighter")
 	var duel_guns:=0
 	var duel_melee:=0
 	for entry in manager.cleanup.objects.values():
@@ -160,7 +172,25 @@ func _exercise_host() -> void:
 	_check(scene.scrap.state==scene.scrap.State.RESULT,"one elimination ends the duel")
 	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.IDLE,"duel reset"): return
 	_check(not guest.is_eliminated and not host_actor.holding_gun,"duel returns both players without gear")
+	_check(guest.position.distance_to(host_actor.position)>2.0,"fighters return to separate terminal positions")
 	_check(get_tree().get_nodes_in_group("online_powerup").all(func(obj): return int(obj.get_meta("scrap_epoch",-1))<0),"duel power spawn retires with the round")
+	await _verify_remote("duel_reset")
+	_teleport(host_actor.actor_id,scene.scrap.Space.TERMINAL_USE)
+	_teleport(client_id,scene.scrap.Space.TERMINAL_USE+Vector3(1,0,0))
+	await get_tree().create_timer(0.4).timeout
+	await _verify_remote("join_duel")
+	if not await _wait_for(func(): return scene.scrap.fighter_ids.size()==1,"guest joins first"): return
+	scene._open("scrap")
+	_press_scrap("JOIN THE SCRAP")
+	if not await _wait_for(func(): return scene.scrap.can_call(host_actor.actor_id),"host joins second"): return
+	_check(not scene.scrap.can_call(client_id),"first player cannot choose the coin")
+	_press_scrap("TAILS")
+	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.ACTIVE,"reverse-order duel starts"): return
+	_check(scene.controls_enabled and scene.ui.page.is_empty(),"host can call tails as second fighter and play")
+	await _verify_remote("duel")
+	scene.scrap.leave()
+	_check(scene.scrap.state==scene.scrap.State.RESULT,"fighter leave cancels the duel")
+	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.IDLE,"cancelled duel resets"): return
 	await _verify_remote("duel_reset")
 	for cycle in range(2):
 		print("HIDEOUT_LAUNCH ",cycle)
@@ -183,7 +213,9 @@ func _exercise_host() -> void:
 	await get_tree().create_timer(0.3).timeout
 	pen.server_eliminate(victim_id,NetworkManager.local_actor_id(),pen.online_round_epoch)
 	_check(NetworkManager.find_actor(victim_id).is_eliminated,"practice death is authoritative")
-	if not await _wait_for(func(): return not NetworkManager.find_actor(victim_id).is_eliminated,"practice respawn"): return
+	# The host's alive flag changes before the owner's new transform arrives.
+	# Assert completed recovery, not the intermediate replication frame.
+	if not await _wait_for(func(): return not NetworkManager.find_actor(victim_id).is_eliminated and not pen.contains_actor(NetworkManager.find_actor(victim_id)),"practice respawn outside the barrier"): return
 	_check(not pen.contains_actor(NetworkManager.find_actor(victim_id)),"practice death respawns outside the barrier")
 	_finish.rpc()
 	if not await _wait_for(func(): return NetworkManager.peers.size()==1,"guest leaves independently"): return
@@ -224,11 +256,42 @@ func _verify(phase: String) -> void:
 				_check(scene.training.records.lobby_rows(scene.training.movement_key()+"/standard").filter(func(row): return row.time_ms>=1000).size()==2,"shared board contains both runners")
 				_check(scene.training.records.personal_best(scene.training.movement_key()+"/standard",str(NetworkManager.local_actor_id()))>=1000,"personal page contains the viewing player record")
 			"range": _check(scene.training.range_indices[1]==9 and scene.training.hits[1]==1,"range distance and hit count replicated")
+			"course_live":
+				scene.training.board_assisted=true
+				scene._open("course_board")
+				await get_tree().create_timer(0.3).timeout
+				var list=scene.ui.contents.get_node("CourseLiveRows")
+				live_list_id=list.get_instance_id()
+				_check(list.get_children().any(func(label): return "RUNNING" in label.text),"guest sees live host run in the open scoreboard")
+			"course_finished_live":
+				var list=scene.ui.contents.get_node("CourseLiveRows")
+				if not await _wait_for(func(): return list.get_children().any(func(label): return "1 FINISHES" in label.text),"live finish update"): return
+				_check(list.get_instance_id()==live_list_id,"finish updates player rows without rebuilding the open menu")
+				_check("RUNNING" not in scene.training.board_rows.text,"wall board replaces live timer with completed Power-Up record")
+				scene._open("")
+			"course_choose_power":
+				scene.training.select_mode(true)
+			"course_guest_grant":
+				if not await _wait_for(func(): return scene.pilot.speed_surge_timer>0,"guest receives start loadout"): return
+				_check(scene.pilot.extra_dash_charge==1,"owning guest receives its extra dash")
+			"course_cancelled":
+				if not await _wait_for(func(): return scene.pilot.speed_surge_timer<=0,"cancelled run clears bonuses"): return
+			"join_duel":
+				scene._open("scrap")
+				_press_scrap("JOIN THE SCRAP")
 			"coin_call":
-				_check(scene.scrap.can_call(NetworkManager.local_actor_id()),"second player owns heads/tails selection")
-				scene.scrap.choose("heads",NetworkManager.local_actor_id())
+				if not await _wait_for(func(): return scene.scrap.can_call(NetworkManager.local_actor_id()),"coin call UI ready"): return
+				_check(scene.ui.page=="scrap","second player sees coin controls")
+				_press_scrap("HEADS")
 			"duel":
 				_check(scene.scrap.state==scene.scrap.State.ACTIVE,"client received duel start")
+				_check(scene.ui.page.is_empty() and scene.controls_enabled and not scene.pilot.external_input_blocked,"client signup closes and combat input unlocks")
+				_check(scene.player_hud.player==scene.pilot and scene.player_hud.visible,"client HUD binds its own fighter")
+				var before: Vector3=scene.pilot.position
+				Input.action_press("p1_move_forward")
+				await get_tree().create_timer(0.25).timeout
+				Input.action_release("p1_move_forward")
+				_check(scene.pilot.position.distance_to(before)>0.3,"guest can actually move after the coin countdown")
 				_check(scene.pilot.holding_gun or is_instance_valid(scene.pilot.held_melee_weapon),"client received its coin-assigned weapon")
 			"duel_reset": _check(not scene.pilot.is_eliminated and not scene.pilot.holding_gun and not is_instance_valid(scene.pilot.held_melee_weapon),"client duel reset cleared inventory")
 	print("PASS: remote ",phase)
@@ -255,3 +318,60 @@ func _seed_join_effect() -> void:
 func _own_home_ready() -> bool:
 	var scene:=get_tree().current_scene
 	return not NetworkManager.is_online() and scene!=null and scene.scene_file_path==HideoutSession.SCENE and is_instance_valid(scene.pilot) and not scene.pilot.is_online and scene.activities_ready
+
+func _press_scrap(text: String) -> void:
+	var ui=get_tree().current_scene.ui
+	for button in ui.contents.find_children("*","Button",true,false):
+		if button.text==text:
+			button.pressed.emit()
+			return
+	_fail("Missing Scrap UI button: "+text)
+
+func _exercise_course_modes(scene: Node3D, actor: CharacterBody3D, guest: CharacterBody3D) -> void:
+	var t=scene.training
+	_teleport(actor.actor_id,t.Space.Course.MODE_BUTTONS[0]+Vector3(1.4,0,0))
+	await get_tree().create_timer(0.3).timeout
+	actor.apply_powerup("extra_life",5.0)
+	actor.apply_powerup("speed_surge",5.0)
+	actor.activate_double_jump_shoes()
+	t.select_mode(false)
+	_check(not actor.second_wind_ready and actor.speed_surge_timer<=0 and not actor.double_jump_shoes_active,"Standard button clears carried powers and activated shoes")
+	actor.apply_powerup("speed_surge",5.0)
+	_teleport(actor.actor_id,t.Space.RECOVERY[0])
+	await get_tree().create_timer(0.3).timeout
+	t._gate_entered(actor,0)
+	_check(actor.speed_surge_timer<=0 and not t.runners[actor.actor_id].assisted,"Standard starting line clears powers acquired after selection")
+	t.cancel_runner(actor.actor_id)
+	_teleport(actor.actor_id,t.Space.Course.MODE_BUTTONS[1]+Vector3(1.4,0,0))
+	await get_tree().create_timer(0.3).timeout
+	t.select_mode(true)
+	_check(actor.speed_surge_timer<=0 and actor.extra_dash_charge==0,"Power-Up button arms the run without granting early bonuses")
+	_teleport(actor.actor_id,t.Space.RECOVERY[0])
+	await get_tree().create_timer(0.3).timeout
+	t._gate_entered(actor,0)
+	_check(actor.speed_surge_timer>4.5 and actor.speed_surge_timer<=5 and actor.extra_dash_charge==1,"starting line grants normal Speed Surge and Extra Dash")
+	await _verify_remote("course_live")
+	actor.dash_charges=0
+	actor._start_dash()
+	_check(actor.extra_dash_charge==0,"course Extra Dash is consumed by the real dash action")
+	await get_tree().create_timer(5.2).timeout
+	_check(actor.speed_surge_timer<=0 and t.runners[actor.actor_id].assisted,"normal Surge expires while the run stays in Power-Up standings")
+	t.board_assisted=true
+	t.board_tab="personal"
+	scene._open("course_board")
+	var personal_label=scene.ui.contents.get_node("PersonalLiveBest")
+	for gate in range(1,t.Space.COURSE_GATES.size()): t._gate_entered(actor,gate)
+	_check(personal_label.text!="SET YOUR FIRST TIME","host personal best updates in the already-open panel")
+	_check(t.records.lobby_details[t.records_bucket(true)][str(actor.actor_id)].finishes==1,"completed run records latest time and finish count")
+	await _verify_remote("course_finished_live")
+	scene._open("")
+	_teleport(guest.actor_id,t.Space.Course.MODE_BUTTONS[1]+Vector3(1.4,0,0))
+	await get_tree().create_timer(0.3).timeout
+	await _verify_remote("course_choose_power")
+	if not await _wait_for(func(): return bool(t.selected_modes.get(guest.actor_id,false)),"guest run selection accepted"): return
+	_teleport(guest.actor_id,t.Space.RECOVERY[0])
+	await get_tree().create_timer(0.3).timeout
+	t._gate_entered(guest,0)
+	await _verify_remote("course_guest_grant")
+	t.cancel_runner(guest.actor_id)
+	await _verify_remote("course_cancelled")

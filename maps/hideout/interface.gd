@@ -67,8 +67,8 @@ func _ready() -> void:
 	context.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	context.offset_left = -560
 	context.offset_right = 560
-	context.offset_top = -122
-	context.offset_bottom = -82
+	context.offset_top = -207
+	context.offset_bottom = -167
 	context.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var footer := PanelContainer.new()
 	shell.add_child(footer)
@@ -108,8 +108,8 @@ func _ready() -> void:
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	toast.offset_left = -660
 	toast.offset_right = 660
-	toast.offset_top = -167
-	toast.offset_bottom = -128
+	toast.offset_top = -250
+	toast.offset_bottom = -210
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel = PanelContainer.new()
@@ -292,13 +292,13 @@ func show_toast(message: String) -> void:
 	toast.text = message
 	toast_left = 5
 
-func update_readouts(delta: float, fps: int, charges: int, _low: bool) -> void:
+func update_readouts(delta: float, fps: int, _charges: int, _low: bool) -> void:
 	toast_left = maxf(0,toast_left-delta)
 	toast.visible = toast_left > 0
 	status.text = session.alias_name + (" / IN HIDEOUT" if NetworkManager.is_online() else " / AT HOME")
 	subtitle.text = "%s / %d HERE / %s" % [session.access.to_upper(),session.member_count(),session.destination.to_upper()]
-	stats.text = "%d FPS / DASH %d" % [fps,charges]
-	ready_panel.visible = shell.visible and NetworkManager.is_online() and not NetworkManager.lobby_in_progress
+	stats.text = "%d FPS" % fps
+	ready_panel.visible = shell.visible and NetworkManager.is_online() and not NetworkManager.lobby_in_progress and not (is_instance_valid(training) and training.running)
 	ready_accept.visible = not NetworkManager._prelaunch_active
 	ready_accept.text = "GAME BOARD" if NetworkManager.can_manage_lobby() else ("NOT READY" if session.local_ready else "READY UP")
 	ready_cancel.visible = NetworkManager._prelaunch_active and NetworkManager.can_manage_lobby()
@@ -313,8 +313,8 @@ func _build_online_scrap() -> void:
 	_copy("One round. One gun. Two melee. One item and one power spawn.",21)
 	if scrap == null: return
 	_copy(scrap.result_text if scrap.state == scrap.State.RESULT else scrap.status_text(),25)
-	if scrap.state == scrap.State.IDLE or (scrap.state == scrap.State.CALLING and scrap.fighter_ids.size() < 2):
-		_button(contents,"JOIN THE NEXT DUEL","scrap_join","online")
+	if not scrap.is_fighter_id(NetworkManager.local_actor_id()) and (scrap.state == scrap.State.IDLE or (scrap.state == scrap.State.CALLING and scrap.fighter_ids.size() < 2)):
+		_button(contents,"JOIN THE SCRAP","scrap_join","online")
 	if scrap.can_call(NetworkManager.local_actor_id()):
 		_button(contents,"HEADS","scrap_coin","heads",G.CYAN)
 		_button(contents,"TAILS","scrap_coin","tails",G.ORANGE)

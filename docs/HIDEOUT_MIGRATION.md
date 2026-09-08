@@ -73,7 +73,7 @@ separate party/backend rollout:
   silently disconnected to perform a single-player join.
 - The existing hosted transport and configured matchmaking services are reused.
   No service, coordinator, server deployment or public build was published.
-- Network protocol is **4**. Both clients and the server need this revision.
+- Network protocol is **5**. Both clients and the server need this revision.
   Existing hosted services must be rebuilt/updated before live-service testing.
 - While the host is in a match, a late visitor has a local waiting Hideout and
   can spectate via the Game Board. A concurrently simulated waiting world while
@@ -110,3 +110,70 @@ Manual first test: run matching copies, open Game Board → Host a Hideout on on
 then Find a Lobby or enter its code/address on the other. Walk independently,
 test the room activities, ready/start a match, return, then have the guest leave.
 Also repeat on the weaker laptop at 1080p Low.
+
+## Scrap Yard multiplayer repair and player HUD — 2026-09-07
+
+The Join the Scrap terminal now stands at the front of the arena inside the room,
+clear of the entrance hallway and both routes to the stands. Its interaction
+volume and host admission check use the same terminal bounds. Fighters return to
+two separate positions by the screen, avoiding overlapping respawn capsules.
+
+Online signup previously left the Scrap panel open through ACTIVE, keeping both
+players' input blocked; the original harness called controller methods directly
+and missed that UI path. Signup now presents the second player's coin choices,
+then dismisses the panel for the flip/countdown/combat. The host waits for each
+movement owner's placement acknowledgement using the existing action RPC. Older
+pre-teleport movement packets cannot cancel preparation. Arrivals have a 12-second
+recovery timeout, and ring bounds remain enforced during combat. Concurrent clicks
+from the idle board can claim the two available places. One elimination or a
+fighter leaving ends the duel and clears its gear; the existing one-round rules
+and allowed powerups are unchanged. All testers should use the updated revision.
+
+`maps/hideout/player_hud.gd` binds the existing stamina, dash/recharge, three
+inventory slots, powerups, reload and item-feedback widgets to the local actor in
+both offline and shared Hideouts. It creates no extra viewport or match scoreboard.
+It hides/suspends under menus and is recreated/rebound when home upgrades into an
+online room. Inventory slot construction is shared with the online match HUD;
+normal match behavior is unchanged. Match-only All Gun hearts are hidden here.
+
+The regression now uses the actual signup/heads/tails button handlers, tests both
+join orders, replays a stale movement position during preparation, checks actual
+guest movement after the countdown, one-round cleanup and explicit cancellation.
+It also verifies match/Hideout return cycles. The UI harness checks local HUD
+binding, live stamina/dash values, menu visibility, and captures the terminal at
+1080p Low/Forward+. Multi-machine latency and weaker-laptop playtests remain needed.
+
+Production station authoring can be rebuilt with:
+`Godot_v4.7.1-stable_win64.exe --headless --path . --script res://tools/build_hideout_station.gd -- --bake-live-lobby`.
+
+## Selected course runs and live standings — 2026-09-07
+
+Two physical buttons flank the start doorway: Standard and Power-Up Run. Both
+clear carried powers (including active shoes), refill normal movement resources,
+and arm the selected mode. Crossing the start line clears powers again; Standard
+grants none, while Power-Up grants the normal pickup's five-second Speed Surge
+and one consumable Extra Dash. The bonuses are not refreshed during the run.
+Finish/cancel/death/exit removes course bonuses. No selection defaults to Standard.
+
+Mode is selected explicitly, so an expired Surge does not move a Power-Up finish
+into Standard standings. Existing Standard records retain their course bucket;
+the controlled Power-Up category is separate from historical arbitrary assisted
+runs. Old saved records are not deleted.
+
+Both categories appear on the front wall with player names, ranked bests and live
+running times. The open scoreboard updates its existing rows with personal best,
+last finish, completed-run count, falls and checkpoint progress. Host acceptance
+immediately publishes completed records, including each viewer's personal receipt.
+Record details survive a match return with the lobby. Live clock snapshots omit
+full record history; display refreshes at 5 Hz, with no per-frame world-tree scan.
+
+Protocol 5 adds course selection/loadout messages. Host/server and every client
+must use the updated revision. The coordinator's checked-in protocol setting is
+also 5; deployment of that service is separate from client/server build publishing
+and was not performed here.
+
+Validation covers physical offline buttons, late-acquired power stripping, normal
+Surge expiry, real Extra Dash consumption, owning-client grants/cancel cleanup,
+open host personal-best and guest lobby panels updating without reconstruction,
+and the existing Scrap/match-return suite. The 1080p Low render harness includes
+entrance-button and ten-player wall-board captures.

@@ -1,6 +1,6 @@
 # One Gun — TODO / Known Gaps
 
-- **Hideout entry and multiplayer return (2026-09-07):** production home, reused menus, shared practice, host course/duel/toss authority and acknowledged match transitions are implemented. [Scope and verification](HIDEOUT_MIGRATION.md). Follow-ups: atomic Squad travel/reservations, authenticated access policies, world records, coordinated protocol-4 service/client rollout, real multi-machine latency and weaker-laptop stress. The isolated F6 rehearsal remains available.
+- **Hideout entry and multiplayer return (2026-09-07):** production home, reused menus, shared practice, host course/duel/toss authority and acknowledged match transitions are implemented. [Scope and verification](HIDEOUT_MIGRATION.md). Follow-ups: atomic Squad travel/reservations, authenticated access policies, world records, coordinated protocol-5 service/client rollout, real multi-machine latency and weaker-laptop stress. The isolated F6 rehearsal remains available.
 
 > Originally compiled from a full read-through and updated through 2026-08-26. Items are grouped by kind, not by priority — see the "Recommended Priorities" section at the bottom for suggested order.
 

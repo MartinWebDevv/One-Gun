@@ -9,7 +9,7 @@
     "MATCHMAKER_PROFILE": "simple-example",
     "MATCHMAKER_BEACONS": "{\"Montreal\":12.3,\"Toronto\":45.6,\"Quebec\":78.9}",
     "GAME_VERSION": "0.0.4",
-    "NETWORK_PROTOCOL": "3",
+    "NETWORK_PROTOCOL": "5",
     "GAME_PORT": "24545"
   },
   "secrets": {
