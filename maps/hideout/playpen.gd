@@ -381,20 +381,9 @@ func tick_sparring(actor: CharacterBody3D, delta: float) -> void:
 
 func _update_hud() -> void:
 	if hud==null: return
-	if is_instance_valid(lab.scrap) and lab.scrap.Space.in_room(lab.pilot.position): hud.hide(); return
-	var actor: CharacterBody3D=lab.pilot
-	hud.visible=lab.ui.page.is_empty() and (contains_actor(actor) or actor.is_eliminated)
-	if actor.is_eliminated:
-		hud.text="PLAY PEN\nRESPAWNING AT ENTRANCE LINE"
-		return
-	var weapon := "EMPTY"
-	if actor.holding_gun: weapon="GUN"
-	elif is_instance_valid(actor.held_melee_weapon): weapon=actor.held_melee_weapon.get_display_name()
-	var first: String = actor.held_item_1.get_display_name() if is_instance_valid(actor.held_item_1) else "EMPTY"
-	var second: String = actor.held_item_2.get_display_name() if is_instance_valid(actor.held_item_2) else "EMPTY"
-	var powers: Array=actor.get_active_powerups_for_display().map(func(entry):return str(entry.type).replace("_"," ").to_upper())
-	if actor.double_jump_shoes_active: powers.append("DOUBLE JUMP SHOES")
-	hud.text="PLAY PEN / GEAR STAYS INSIDE\nWEAPON: %s\nITEM 1: %s  /  ITEM 2: %s\n%s" % [weapon.to_upper(),first.to_upper(),second.to_upper()," / ".join(powers)]
+	# Inventory and powerups already have the real player widgets; avoid a second
+	# text HUD competing with the compact Friends/shortcut controls.
+	hud.hide()
 
 func _exit_tree() -> void:
 	closing=true

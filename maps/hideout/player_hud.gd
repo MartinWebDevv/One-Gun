@@ -43,8 +43,8 @@ func _add_widget(widget: Control, bottom := false) -> void:
 	shell.add_child(widget)
 	widget.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	if bottom:
-		widget.offset_top-=64
-		widget.offset_bottom-=64
+		widget.offset_top-=12
+		widget.offset_bottom-=12
 	widgets.append(widget)
 
 func bind_player(actor: CharacterBody3D) -> void:

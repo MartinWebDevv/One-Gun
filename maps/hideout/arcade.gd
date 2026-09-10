@@ -5,12 +5,12 @@ const SERVICES = ["locker", "prize_counter", "profile", "progression"]
 const CENTERS = [-21.9, -7.3, 7.3, 21.9]
 var station: Node3D
 var arcade: Node3D
-var ink := G.material("arcade_ink", Color("245e63"), 0, 0.3)
-var painted := G.material("arcade_green", Color("36a7a5"), 0, 0.2)
-var mortar := G.material("arcade_mortar", Color("adad98"))
-var stone := G.material("arcade_stone", Color("cce2d5"))
-var cream := G.material("arcade_cream", Color("f0dec0"))
-var brass := G.material("arcade_brass", Color("efbf65"), 0, 0.55)
+var ink := G.material("arcade_ink", Color("352c49"), 0, 0.3)
+var painted := G.material("arcade_green", Color("705b87"), 0, 0.2)
+var mortar := G.material("arcade_mortar", Color("ab9bac"))
+var stone := G.material("arcade_stone", Color("e4d5c4"))
+var cream := G.material("arcade_cream", Color("f4e5d2"))
+var brass := G.material("arcade_brass", Color("f3aa7c"), 0, 0.55)
 var timber := G.material("arcade_timber", Color("a26f4b"))
 var timber_light := G.material("arcade_timber_light", Color("be9164"))
 var lamp_mat := G.material("arcade_lamp", Color("ffe2af"), 1.1)
@@ -25,7 +25,7 @@ func build(target: Node3D) -> void:
 	# Local +Z faces the room; +X follows the west wall towards Events.
 	G.box(arcade,"ServiceBacking",Vector3(0,2.4,-0.12),Vector3(59.3,4.8,0.28),ink,true)
 	G.box(arcade,"ArcadeSoffit",Vector3(0,4.97,1.72),Vector3(59.3,0.24,3.9),ink)
-	G.box(arcade,"CanopyFascia",Vector3(0,5.26,3.65),Vector3(59.4,0.64,0.25),G.material("hub_coral",Color("e9806b")))
+	G.box(arcade,"CanopyFascia",Vector3(0,5.26,3.65),Vector3(59.4,0.64,0.25),G.material("hub_coral",Color("705b87")))
 	G.box(arcade,"CanopyCap",Vector3(0,5.64,1.75),Vector3(59.5,0.15,4.18),brass)
 	G.box(arcade,"CanopyLip",Vector3(0,4.96,3.86),Vector3(59.4,0.09,0.08),brass)
 	for x in [-29.4,-14.6,0.0,14.6,29.4]:

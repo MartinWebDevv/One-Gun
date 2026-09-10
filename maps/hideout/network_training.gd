@@ -11,6 +11,7 @@ var state_dirty := false
 var selected_modes: Dictionary = {}
 var live_times: Dictionary = {}
 var received_at := 0
+var personal_bests_shared := false
 
 func setup(preview: Node3D) -> void:
 	manager = get_parent()
@@ -20,11 +21,41 @@ func setup(preview: Node3D) -> void:
 	records.lobby_times = HideoutSession.course_lobby_times.duplicate(true)
 	records.lobby_details = HideoutSession.course_lobby_details.duplicate(true)
 	personal_store = Records.new()
-	personal_store.configure("" if lab.automation else "user://hideout/online_course_records.json")
+	if not NetworkManager.is_dedicated_server(): personal_store.configure_profile(lab.automation)
 	var account := SupabaseManager.current_user_id()
 	personal_key = "account:"+account.sha256_text() if account != "" else "local:profile"
 	personal_store.set_members([{"id":personal_key,"name":NetworkManager.local_name()}])
 	_refresh_records()
+	if NetworkManager.is_host():
+		selected_modes[NetworkManager.local_actor_id()]=selected_powerup
+		_share_personal_bests()
+
+func _share_personal_bests() -> void:
+	if personal_bests_shared or personal_store==null or NetworkManager.is_dedicated_server(): return
+	personal_bests_shared=true
+	var bests: Dictionary=personal_store.saved_bests(personal_key)
+	if NetworkManager.is_host(): _accept_personal_bests(NetworkManager.local_id(),bests)
+	else: _report_personal_bests.rpc_id(1,bests,selected_powerup)
+
+@rpc("any_peer","reliable")
+func _report_personal_bests(bests: Dictionary, powered: bool) -> void:
+	if not NetworkManager.is_host(): return
+	var peer:=multiplayer.get_remote_sender_id()
+	if not NetworkManager.peer_ids_sorted().has(peer): return
+	selected_modes[NetworkManager.actor_id_for_peer(peer)]=powered
+	if _accept_personal_bests(peer,bests): _publish()
+
+func _accept_personal_bests(peer: int, bests: Dictionary) -> bool:
+	# Bind the upload to the sender's roster slot; never transmit account identifiers.
+	if not NetworkManager.peer_ids_sorted().has(peer) or bests.size()>128: return false
+	var accepted := {}
+	var bucket_pattern := RegEx.new()
+	bucket_pattern.compile("^"+Space.Course.COURSE_ID+"/dash[0-9]+/sprint[01]/jump[0-9]+\\.[0-9]{3}/(standard|powerup)$")
+	for bucket in bests:
+		if bucket is String and bucket.length()<=128 and bucket_pattern.search(bucket)!=null:
+			accepted[bucket]=bests[bucket]
+	refresh_roster()
+	return records.share_saved_bests(str(NetworkManager.actor_id_for_peer(peer)),accepted)
 
 func movement_key() -> String:
 	var jump := 7.0 if not is_instance_valid(lab.pilot) else float(lab.pilot.jump_velocity)
@@ -98,8 +129,9 @@ func _course_loadout(id: int, powered: bool, start: bool) -> void:
 	if actor==null: return
 	if start: Loadout.start(actor,powered)
 	else: Loadout.clear(actor)
+	if id==NetworkManager.local_actor_id():
+		remember_mode(powered)
 	if id==NetworkManager.local_actor_id() and not start:
-		selected_powerup=powered
 		lab.ui.show_toast(("POWER-UP RUN" if powered else "STANDARD RUN")+" READY / CROSS THE START LINE")
 
 func _gate_entered(body: Node3D, index: int) -> void:
@@ -212,6 +244,8 @@ func _receive(data: Dictionary) -> void:
 	last_finish_text=str(data.get("last_finish",""))
 	displayed_time = float(data.times.get(NetworkManager.local_actor_id(),0))/1000.0
 	if records_changed: _refresh_records()
+	# A full snapshot is sent only after this peer has loaded the Hideout RPC nodes.
+	if data.has("records"): _share_personal_bests()
 
 @rpc("authority","reliable","call_local")
 func _finished(id: int, bucket: String, time_ms: int) -> void:
@@ -229,6 +263,7 @@ func _finished(id: int, bucket: String, time_ms: int) -> void:
 
 func _refresh_records() -> void:
 	if personal_store != null and records != null:
+		records.save_error=personal_store.save_error
 		for bucket in personal_store.personal_times:
 			records.personal_times[bucket] = {viewer_id():personal_store.personal_best(bucket,personal_key)}
 	super._refresh_records()

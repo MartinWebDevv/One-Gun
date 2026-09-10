@@ -17,6 +17,8 @@ var result_text:=""
 var mode:="solo"
 var items: Array[WeakRef]=[]
 var saved_sparring:="target"
+const Standings=preload("res://maps/hideout/scrap_standings.gd")
+var wins_board: Label3D
 var board: Label3D
 var banner: Label
 var split_layer: CanvasLayer
@@ -37,6 +39,8 @@ func setup(preview: Node3D) -> void:
 	lab=preview
 	rng.randomize()
 	board=lab.station.find_child("ScrapStatus",true,false)
+	wins_board=lab.station.find_child("ScrapWinsRows",true,false)
+	Standings.render(wins_board,false)
 	banner=lab.ui._label("",27,lab.ui.G.GOLD)
 	lab.ui.shell.add_child(banner)
 	banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -229,7 +233,11 @@ func _eliminated(id: int, _killer: int, _icon: String) -> void:
 	if state!=State.ACTIVE: return
 	for i in range(fighters.size()):
 		if fighters[i].actor_id==id:
-			finish(fighters[1-i].get_display_name()+" WINS")
+			var winner:=fighters[1-i]
+			if not winner.is_bot and mode!="watch":
+				Standings.award("local:"+str(winner.actor_id),winner.get_display_name())
+				Standings.render(wins_board,false)
+			finish(winner.get_display_name()+" WINS")
 			return
 
 func finish(message: String) -> void:
@@ -414,7 +422,7 @@ func _start_split() -> void:
 		hud.add_theme_constant_override("shadow_offset_x",2)
 		hud.add_theme_constant_override("shadow_offset_y",2)
 		split_huds.append(hud)
-	for node in [lab.ui.reticle,lab.ui.status,lab.ui.stats]: node.hide()
+	for node in [lab.ui.reticle]: node.hide()
 	apply_quality()
 	lab.get_viewport().disable_3d=true
 	_route_p2()
@@ -443,7 +451,7 @@ func _stop_split() -> void:
 		split_coins.clear()
 		split_huds.clear()
 		split_reticles.clear()
-		for node in [lab.ui.reticle,lab.ui.status,lab.ui.stats]: node.show()
+		for node in [lab.ui.reticle]: node.show()
 		lab.get_viewport().disable_3d=default_disable_3d
 		PlayerPrefs.refresh_input_devices()
 

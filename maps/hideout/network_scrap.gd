@@ -14,6 +14,8 @@ var call_side := ""
 var coin_side := ""
 var gun_index := -1
 var result_text := ""
+const Standings=preload("res://maps/hideout/scrap_standings.gd")
+var wins_board: Label3D
 var board: Label3D
 var banner: Label
 var coin_visual: Control
@@ -24,12 +26,17 @@ var presented_fighters: Array = []
 var presented_positioning := false
 var pending_arrivals: Dictionary = {}
 var positioning := false
+var pending_equipment: Dictionary = {}
+var equipment_waiting := false
 
 func setup(preview: Node3D) -> void:
 	lab = preview
 	manager = get_parent()
 	rng.randomize()
 	board = lab.station.find_child("ScrapStatus",true,false)
+	wins_board=lab.station.find_child("ScrapWinsRows",true,false)
+	NetworkManager.lobby_changed.connect(_refresh_standings)
+	_refresh_standings()
 	banner = lab.ui._label("",27,lab.ui.G.GOLD)
 	lab.ui.shell.add_child(banner)
 	banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -111,6 +118,12 @@ func _accept(id: int, action: String, value: String, request_epoch: int) -> void
 		_publish()
 	elif action=="arrived":
 		_accept_arrival(id,request_epoch)
+	elif action=="equipped" and state==State.COUNTDOWN and pending_equipment.has(id):
+		pending_equipment.erase(id)
+		if pending_equipment.is_empty():
+			equipment_waiting=false
+			time_left=3.0
+			_publish()
 	elif action=="call":
 		if not can_call(id) or value not in ["heads","tails"]: return
 		call_side=value
@@ -150,7 +163,7 @@ func _receive_notice(message: String) -> void:
 func _process(delta: float) -> void:
 	if lab == null: return
 	if state!=State.IDLE:
-		time_left=maxf(0,time_left-delta)
+		if not equipment_waiting: time_left=maxf(0,time_left-delta)
 		if NetworkManager.is_host():
 			if state in [State.CALLING,State.FLIPPING,State.COUNTDOWN,State.ACTIVE]:
 				for id in fighter_ids:
@@ -164,20 +177,39 @@ func _process(delta: float) -> void:
 				if Time.get_ticks_msec()>int(pending_arrivals[id]):
 					cancel_round("DUEL CANCELLED / PLAYER DID NOT ARRIVE")
 					break
-			if time_left<=0:
+			for id in pending_equipment:
+				if Time.get_ticks_msec()>int(pending_equipment[id]):
+					cancel_round("DUEL CANCELLED / EQUIPMENT NOT READY")
+					break
+			if time_left<=0 and not equipment_waiting:
 				match state:
 					State.CALLING: cancel_round("NO CHALLENGER / CALL TIMED OUT")
-					State.FLIPPING: state=State.COUNTDOWN; time_left=3.0; _publish()
+					State.FLIPPING: _prepare_countdown()
 					State.COUNTDOWN: _begin_combat()
 					State.RESULT: _return_fighters()
 	update_left-=delta
 	if update_left<=0:
 		update_left=0.1
-		board.text=status_text()
+		var next_text:=status_text()
+		if board.text!=next_text: board.text=next_text
 		var local_fighter := is_fighter_id(NetworkManager.local_actor_id())
 		banner.visible=local_fighter
-		banner.text=status_text()
+		if banner.text!=next_text: banner.text=next_text
 		coin_visual.show_coin(local_fighter and state in [State.FLIPPING,State.COUNTDOWN],state==State.FLIPPING,time_left,coin_side)
+
+func _prepare_countdown() -> void:
+	state=State.COUNTDOWN
+	time_left=3.0
+	equipment_waiting=true
+	for id in fighter_ids: pending_equipment[id]=Time.get_ticks_msec()+12000
+	_publish()
+	# Instantiate/attach gear while input is locked, before the three-second count.
+	# Each movement owner acknowledges its local gear before combat may unlock.
+	manager.spawn_duel_gear(epoch,fighter_ids,gun_index)
+
+func equipment_prepared(duel_epoch: int) -> void:
+	if duel_epoch!=epoch or state!=State.COUNTDOWN: return
+	if is_fighter_id(NetworkManager.local_actor_id()): _request("equipped","",duel_epoch)
 
 func _begin_combat() -> void:
 	for id in fighter_ids:
@@ -188,11 +220,11 @@ func _begin_combat() -> void:
 	state=State.ACTIVE
 	time_left=0
 	_publish()
-	manager.spawn_duel_gear(epoch,fighter_ids,gun_index)
 
 func finish_elimination(victim: int) -> void:
 	if not NetworkManager.is_host() or state!=State.ACTIVE or not is_fighter_id(victim): return
 	var winner: int = fighter_ids[1] if fighter_ids[0]==victim else fighter_ids[0]
+	Standings.award(str(winner),NetworkManager.peer_name(NetworkManager.peer_id_for_actor(winner)))
 	result_text = NetworkManager.peer_name(NetworkManager.peer_id_for_actor(winner))+" WINS"
 	_finish()
 
@@ -203,6 +235,8 @@ func cancel_round(message: String) -> void:
 
 func _finish() -> void:
 	pending_arrivals.clear()
+	pending_equipment.clear()
+	equipment_waiting=false
 	positioning=false
 	state=State.RESULT
 	time_left=6.0
@@ -226,13 +260,13 @@ func status_text() -> String:
 		State.IDLE: return "JOIN THE SCRAP / ONE ROUND"
 		State.CALLING: return "GETTING FIGHTERS READY" if positioning else "WAITING FOR A CHALLENGER" if fighter_ids.size()<2 else "SECOND PLAYER / HEADS OR TAILS?"
 		State.FLIPPING: return "CALL: "+call_side.to_upper()+" / FLIPPING"
-		State.COUNTDOWN: return coin_side.to_upper()+" / STARTING IN %d" % ceili(time_left)
+		State.COUNTDOWN: return coin_side.to_upper()+" / PREPARING GEAR" if equipment_waiting else coin_side.to_upper()+" / STARTING IN %d" % ceili(time_left)
 		State.ACTIVE: return "SCRAP! / ONE ROUND"
 		State.RESULT: return result_text
 	return ""
 
 func _snapshot() -> Dictionary:
-	return {"state":state,"fighters":fighter_ids,"epoch":epoch,"remaining":time_left,"call":call_side,"coin":coin_side,"gun":gun_index,"result":result_text,"positioning":positioning}
+	return {"state":state,"fighters":fighter_ids,"epoch":epoch,"remaining":time_left,"call":call_side,"coin":coin_side,"gun":gun_index,"result":result_text,"positioning":positioning,"equipment_waiting":equipment_waiting,"wins":HideoutSession.scrap_lobby_wins}
 
 func _publish() -> void:
 	NetworkManager.broadcast_match_rpc(self,&"_receive",[_snapshot()])
@@ -257,6 +291,9 @@ func _receive(data: Dictionary) -> void:
 	gun_index=int(data.gun)
 	result_text=str(data.result)
 	positioning=bool(data.get("positioning",false))
+	equipment_waiting=bool(data.get("equipment_waiting",false))
+	HideoutSession.scrap_lobby_wins=data.get("wins",{}).duplicate(true)
+	_refresh_standings()
 	if changed:
 		var local_fighter := is_fighter_id(NetworkManager.local_actor_id())
 		if local_fighter and state==State.CALLING:
@@ -271,6 +308,9 @@ func _receive(data: Dictionary) -> void:
 					_position_fighter(int(fighter_ids[index]),epoch,index)
 	lab._sync_controls()
 	round_changed.emit()
+
+func _refresh_standings() -> void:
+	Standings.render(wins_board,true)
 
 func apply_quality() -> void:
 	pass

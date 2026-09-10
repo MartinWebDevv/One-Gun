@@ -119,7 +119,9 @@ func _build_shell() -> void:
 	body.add_child(nav)
 	for category in CATEGORIES:
 		var button := OneGunButton.new()
-		button.text = str(category).to_upper()
+		button.text = str(category).capitalize()
+		button.icon = preload("res://UI/menu_icons.gd").get_icon(str(category))
+		button.add_theme_constant_override("h_separation",14)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size = Vector2(0, 52)
 		button.pressed.connect(_select_category.bind(str(category)))
@@ -195,7 +197,7 @@ func _rebuild_page() -> void:
 		child.queue_free()
 	_page_title.text = "PLAYER SETTINGS / %s" % _category.to_upper()
 	for category in _category_buttons:
-		_category_buttons[category].variant = "purple" if category == _category else "navy"
+		_category_buttons[category].variant = "gold" if category == _category else "navy"
 	match _category:
 		"Audio": _build_audio_page()
 		"Gameplay": _build_gameplay_page()
@@ -254,7 +256,8 @@ func _page_column(intro: String) -> VBoxContainer:
 
 
 func _build_audio_page() -> void:
-	var column := _page_column("Changes preview live and restore when you go Back.")
+	var column := _page_column("")
+	column.add_theme_constant_override("separation",24)
 	_add_section(column, "VOLUME")
 	_add_slider(column, "Master Volume", "master_volume", 0.0, 1.0, 0.01, true, true)
 	_add_slider(column, "Music Volume", "music_volume", 0.0, 1.0, 0.01, true, true)
@@ -335,7 +338,7 @@ func _build_controls_page() -> void:
 	for data in [["KEYBOARD & MOUSE", "keyboard_mouse"], ["CONTROLLER", "gamepad"]]:
 		var tab := OneGunButton.new()
 		tab.text = data[0]
-		tab.variant = "purple" if _controls_group == data[1] else "navy"
+		tab.variant = "gold" if _controls_group == data[1] else "navy"
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.pressed.connect(_set_controls_group.bind(str(data[1])))
 		tabs.add_child(tab)
@@ -427,7 +430,7 @@ func _build_crosshair_editor() -> void:
 	for tab_name in ["shape", "behavior", "feedback"]:
 		var tab := OneGunButton.new()
 		tab.text = tab_name.to_upper()
-		tab.variant = "purple" if tab_name == _crosshair_tab else "navy"
+		tab.variant = "gold" if tab_name == _crosshair_tab else "navy"
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.pressed.connect(func(): _crosshair_tab = tab_name; _rebuild_page())
 		top.add_child(tab)

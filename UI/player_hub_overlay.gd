@@ -1702,7 +1702,7 @@ func _panel_column(panel: PanelContainer, padding: int) -> VBoxContainer:
 
 func _glass_style(background: Color, border: Color, radius: int,
 		border_width: int, shadow_size: int) -> StyleBoxFlat:
-	return OneGunUI.style_box(background, border, radius, border_width,
+	return OneGunUI.style_box(Color(OneGunUI.color("face"), background.a), border, mini(radius,10), mini(border_width,1),
 		shadow_size, 0.0, Color(0.0, 0.0, 0.0, 0.55))
 
 

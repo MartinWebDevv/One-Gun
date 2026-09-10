@@ -61,7 +61,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_ui() -> void:
 	var scrim := ColorRect.new()
 	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scrim.color = Color(0.001, 0.004, 0.014, 1.0)
+	scrim.color = Color(OneGunUI.color("face"), 1.0)
 	scrim.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(scrim)
 
@@ -77,7 +77,7 @@ func _build_ui() -> void:
 	var shade := ColorRect.new()
 	shade.position = Vector2.ZERO
 	shade.size = BASE_SIZE
-	shade.color = Color(0.004, 0.009, 0.026, 0.54)
+	shade.color = Color(OneGunUI.color("face"), 0.54)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_canvas.add_child(shade)
 
@@ -125,7 +125,7 @@ func _build_ui() -> void:
 	_xp_bar.custom_minimum_size = Vector2(0.0, 28.0)
 	_xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_xp_bar.add_theme_stylebox_override("background", OneGunUI.style_box(
-		Color(0.006, 0.016, 0.04), Color(OneGunUI.color("border"), 0.6), 12, 1))
+		Color(OneGunUI.color("face"), 1.0), Color(OneGunUI.color("border"), 0.6), 12, 1))
 	_xp_bar.add_theme_stylebox_override("fill", OneGunUI.style_box(
 		Color(OneGunUI.color("green"), 0.88), OneGunUI.color("green"), 12, 1))
 	xp_column.add_child(_xp_bar)
@@ -170,7 +170,7 @@ func _make_summary_tile(title: String, value: String, role: String) -> PanelCont
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(230.0, 88.0)
 	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		Color(0.008, 0.022, 0.052, 0.94), Color(OneGunUI.color(role), 0.48),
+		Color(OneGunUI.color("face"), 0.94), Color(OneGunUI.color(role), 0.48),
 		12, 1, 2, 10.0))
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -301,7 +301,7 @@ func _make_milestone_card(milestone: Dictionary, current: int,
 	var item_id := SupabaseCosmeticRegistry.sanitize_item_id(
 		str(milestone.get("item_id", "")))
 	var border := Color(OneGunUI.color(role), 0.62)
-	var base_style := OneGunUI.style_box(Color(0.008, 0.021, 0.052, 0.96),
+	var base_style := OneGunUI.style_box(Color(OneGunUI.color("face"), 0.96),
 		border, 14, 2 if reached else 1, 3, 14.0)
 	var shell: Control
 	if item_id != "":
@@ -314,10 +314,10 @@ func _make_milestone_card(milestone: Dictionary, current: int,
 			"display_name", "cosmetic reward"))
 		button.add_theme_stylebox_override("normal", base_style)
 		button.add_theme_stylebox_override("hover", OneGunUI.style_box(
-			Color(0.016, 0.042, 0.090, 0.98), border.lightened(0.16),
+			Color(OneGunUI.color("face"), 0.98), border.lightened(0.16),
 			14, 2, 5, 14.0))
 		button.add_theme_stylebox_override("pressed", OneGunUI.style_box(
-			Color(0.004, 0.012, 0.030, 0.98), border, 14, 2, 0, 14.0))
+			Color(OneGunUI.color("face"), 0.98), border, 14, 2, 0, 14.0))
 		button.add_theme_stylebox_override("focus", OneGunUI.focus_ring(base_style))
 		button.mouse_entered.connect(func() -> void: AudioManager.play_hover())
 		button.pressed.connect(_open_cosmetic_preview.bind(
@@ -453,7 +453,7 @@ func _make_empty_road_card(unit: String) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(560.0, 240.0)
 	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		Color(0.008, 0.018, 0.042), Color(OneGunUI.color("border"), 0.5), 14, 1, 0, 18.0))
+		Color(OneGunUI.color("face"), 1.0), Color(OneGunUI.color("border"), 0.5), 14, 1, 0, 18.0))
 	var label := OneGunUI.make_label(
 		"SIGN IN TO LOAD THE %s ROAD" % unit, OneGunUI.TEXT_L, "muted", true)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

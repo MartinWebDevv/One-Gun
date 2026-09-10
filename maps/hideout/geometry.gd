@@ -1,12 +1,12 @@
 extends RefCounted
 
-const GOLD = Color("d8d23e")
-const CYAN = Color("58c9db")
-const PINK = Color("e080b9")
-const ORANGE = Color("e69850")
-const GREEN = Color("9edc6b")
-const INK = Color("152328")
-const PAPER = Color("e5dfc6")
+const GOLD = Color("f3aa7c")
+const CYAN = Color("9bcbb3")
+const PINK = Color("f3aa7c")
+const ORANGE = Color("f3aa7c")
+const GREEN = Color("9bcbb3")
+const INK = Color("352c49")
+const PAPER = Color("f4e5d2")
 static var mats: Dictionary = {}
 static var boxes: Dictionary = {}
 static var heading: Font
@@ -102,9 +102,14 @@ static func panel(parent: Node3D, title: String, text: String, pos: Vector3,
 	p.name = title
 	parent.add_child(p)
 	p.position = pos
-	box(p, "Backplate", Vector3.ZERO, Vector3(size.x, size.y, 0.12), material("ink", INK))
+	var plaque := title in ["PlayerHubSign","PlayPenHeader","ScrapEntrance","ArrivalSign","InsideWelcome","DepartureSign","FiringRange"]
+	var backplate := material("wayfinding_apricot", ORANGE) if plaque else material("ink", INK)
+	if plaque:
+		# Keep major directions readable when Low disables local-light shadows/effects.
+		backplate.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	box(p, "Backplate", Vector3.ZERO, Vector3(size.x, size.y, 0.12), backplate)
 	box(p, "Rule", Vector3(0, -size.y*0.5+0.055, 0.08), Vector3(size.x, 0.05, 0.03), material(str(color), color, 0.5))
-	label(p, "Title", text, Vector3(0, 0.02, 0.08), 84, color, minf(size.x / maxf(text.length()*45.0, 1.0), 0.009))
+	label(p, "Title", text, Vector3(0, 0.02, 0.08), 84, INK if plaque else color, minf(size.x / maxf(text.length()*45.0, 1.0), 0.009))
 	return p
 
 static func lamp(parent: Node3D, pos: Vector3, color: Color, energy: float, reach: float) -> OmniLight3D:

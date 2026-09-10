@@ -24,9 +24,9 @@ func _ready():
 	add_theme_constant_override("separation", 12)
 
 	# Kit card styles: gold-bordered when active, subtle when owned, faint when empty.
-	_style_active = ThemeManager.panel(Color(0.14, 0.16, 0.27, 0.92), ThemeManager.ACCENT_GOLD, 10, 2)
-	_style_owned = ThemeManager.panel(Color(0.10, 0.11, 0.19, 0.85), ThemeManager.BORDER, 10, 1)
-	_style_empty = ThemeManager.panel(Color(0.05, 0.06, 0.10, 0.45), Color(ThemeManager.BORDER.r, ThemeManager.BORDER.g, ThemeManager.BORDER.b, 0.35), 10, 1)
+	_style_active = ThemeManager.panel(Color(ThemeManager.BG_PANEL,0.92), ThemeManager.ACCENT_GOLD, 10, 2)
+	_style_owned = ThemeManager.panel(Color(ThemeManager.BG_INPUT,0.85), ThemeManager.BORDER, 10, 1)
+	_style_empty = ThemeManager.panel(Color(ThemeManager.BG_INPUT,0.65), Color(ThemeManager.BORDER.r, ThemeManager.BORDER.g, ThemeManager.BORDER.b, 0.35), 10, 1)
 
 	for slot in [$WeaponSlot, $ItemSlot, $ItemSlot2]:
 		slot.get_node("Icon").visible = false

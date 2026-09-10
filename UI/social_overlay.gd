@@ -84,7 +84,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_ui() -> void:
 	var scrim := ColorRect.new()
 	scrim.name = "SocialScrim"
-	scrim.color = Color(0.001, 0.006, 0.018, 0.96)
+	scrim.color = Color(OneGunUI.color("canvas"),0.96)
 	scrim.mouse_filter = Control.MOUSE_FILTER_STOP
 	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(scrim)
@@ -436,7 +436,7 @@ func _row_panel(role: String) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 66.0
 	panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		Color(0.006, 0.018, 0.038), Color(OneGunUI.color(role), 0.75), 9, 1, 0, 10.0))
+		OneGunUI.color("well"), Color(OneGunUI.color(role), 0.75), 9, 1, 0, 10.0))
 	return panel
 
 

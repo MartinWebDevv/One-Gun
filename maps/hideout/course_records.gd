@@ -1,6 +1,8 @@
 extends RefCounted
-## Local provider for the course board. Replace the provider, not the board UI,
-## when host-authoritative lobby records and world-service records are connected.
+## Saved personal bests plus the current lobby roster and session run details.
+## Shared saved times are player receipts; new online finishes are host-validated.
+const PROFILE_PATH := "user://hideout/course_records.json"
+const LEGACY_ONLINE_PATH := "user://hideout/online_course_records.json"
 signal changed
 var members: Dictionary = {}
 var lobby_times: Dictionary = {}
@@ -23,6 +25,52 @@ func configure(path := "") -> void:
 			var time: Variant=buckets[bucket][id]
 			if _valid_time(time): records[str(id)]=int(time)
 		personal_times[str(bucket)]=records
+
+func configure_profile(automation := false) -> void:
+	if automation:
+		# Isolated integration fixtures never read or replace a player's real records.
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--course-records-file=res://artifacts/hideout_migration/"):
+				configure(arg.trim_prefix("--course-records-file="))
+				return
+		configure("")
+		return
+	configure(PROFILE_PATH)
+	merge_history(LEGACY_ONLINE_PATH)
+
+func merge_history(path: String) -> void:
+	if not FileAccess.file_exists(path): return
+	var previous = get_script().new()
+	previous.configure(path)
+	var improved := false
+	for bucket in previous.personal_times:
+		if not personal_times.has(bucket): personal_times[bucket]={}
+		for id in previous.personal_times[bucket]:
+			var time_ms: int=previous.personal_times[bucket][id]
+			if time_ms<int(personal_times[bucket].get(id,3600001)):
+				personal_times[bucket][id]=time_ms
+				improved=true
+	if improved: _save()
+
+func saved_bests(id: String) -> Dictionary:
+	var result := {}
+	for bucket in personal_times:
+		var time_ms := personal_best(bucket,id)
+		if _valid_time(time_ms): result[bucket]=time_ms
+	return result
+
+func share_saved_bests(actor_id: String, bests: Dictionary) -> bool:
+	# Importing history is not a completed run: no last-run/falls/finish-count change.
+	if not members.has(actor_id): return false
+	var improved := false
+	for bucket in bests:
+		if not bucket is String or not _valid_time(bests[bucket]): continue
+		if not lobby_times.has(bucket): lobby_times[bucket]={}
+		if int(bests[bucket])<int(lobby_times[bucket].get(actor_id,3600001)):
+			lobby_times[bucket][actor_id]=int(bests[bucket])
+			improved=true
+	if improved: changed.emit()
+	return improved
 
 func set_members(roster: Array) -> void:
 	var next := {}
@@ -56,7 +104,7 @@ func lobby_rows(bucket: String) -> Array:
 	var times: Dictionary=lobby_times.get(bucket,{})
 	for id in members:
 		var detail: Dictionary=lobby_details.get(bucket,{}).get(id,{})
-		rows.append({"id":id,"name":members[id],"time_ms":int(times.get(id,-1)),"last_ms":int(detail.get("last_ms",-1)),"falls":int(detail.get("falls",0)),"finishes":int(detail.get("finishes",0))})
+		rows.append({"id":id,"name":members[id],"time_ms":_row_best(bucket,id,times),"last_ms":int(detail.get("last_ms",-1)),"falls":int(detail.get("falls",0)),"finishes":int(detail.get("finishes",0))})
 	rows.sort_custom(func(a,b):
 		if a.time_ms!=b.time_ms:
 			if a.time_ms<0: return false
@@ -64,6 +112,11 @@ func lobby_rows(bucket: String) -> Array:
 			return a.time_ms<b.time_ms
 		return str(a.id)<str(b.id))
 	return rows
+
+func _row_best(bucket: String, id: String, times: Dictionary) -> int:
+	var saved := personal_best(bucket,id)
+	var shared := int(times.get(id,-1))
+	return shared if saved<0 else (saved if shared<0 else mini(saved,shared))
 
 func personal_best(bucket: String, viewer_id: String) -> int:
 	return int(personal_times.get(bucket,{}).get(viewer_id,-1))

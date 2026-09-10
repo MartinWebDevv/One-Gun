@@ -8,16 +8,15 @@ var scrap: Node
 var shell: Control
 var panel: PanelContainer
 var contents: VBoxContainer
-var subtitle: Label
-var status: Label
 var context: Label
 var toast: Label
 var ready_panel: PanelContainer
 var ready_label: Label
 var ready_accept: Button
 var ready_cancel: Button
-var stats: Label
-var help: Label
+var friends_orb: Button
+var friend_hint: Label
+var menu_hint: Label
 var page := ""
 var toast_left := 0.0
 var ui_font: Font
@@ -36,21 +35,29 @@ func _ready() -> void:
 	var theme := Theme.new()
 	theme.default_font_size = 20
 	shell.theme = theme
-	var head := PanelContainer.new()
-	shell.add_child(head)
-	head.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	head.offset_bottom = 72
-	head.add_theme_stylebox_override("panel",_style(Color("122126"),Color("435254"),0))
-	var row := HBoxContainer.new()
-	head.add_child(row)
-	row.add_theme_constant_override("separation",24)
-	var brand := _label("ONE GUN  /  THE HIDEOUT",30,G.GOLD)
-	brand.custom_minimum_size.x = 420
-	row.add_child(brand)
-	subtitle = _label("ONLY ME",20,G.PAPER)
-	subtitle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(subtitle)
-	row.add_child(_label("WELCOME HOME",21,G.CYAN))
+	friends_orb=preload("res://UI/components/friends_quick_access_orb.gd").new()
+	shell.add_child(friends_orb)
+	friends_orb.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	friends_orb.offset_left=-126
+	friends_orb.offset_right=-22
+	friends_orb.offset_top=22
+	friends_orb.offset_bottom=126
+	friends_orb.pressed.connect(func(): action.emit("page","friends"))
+	SocialManager.social_updated.connect(friends_orb.refresh_counts)
+	friend_hint=_label("F1 / FRIENDS",17,G.CYAN)
+	shell.add_child(friend_hint)
+	friend_hint.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	friend_hint.offset_left=-138
+	friend_hint.offset_right=-10
+	friend_hint.offset_top=132
+	friend_hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	menu_hint=_label("ESC / MENU    ALT / CURSOR",17,G.PAPER)
+	shell.add_child(menu_hint)
+	menu_hint.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	menu_hint.offset_left=-255
+	menu_hint.offset_right=-22
+	menu_hint.offset_top=158
+	menu_hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
 	reticle = _label("+",28,G.PAPER)
 	shell.add_child(reticle)
 	reticle.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -59,28 +66,14 @@ func _ready() -> void:
 	reticle.offset_top = -20
 	reticle.offset_bottom = 20
 	reticle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status = _label("",24,G.PAPER)
-	shell.add_child(status)
-	status.position = Vector2(34,100)
 	context = _label("",25,G.GOLD)
 	shell.add_child(context)
 	context.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	context.offset_left = -560
 	context.offset_right = 560
-	context.offset_top = -207
-	context.offset_bottom = -167
+	context.offset_top = -157
+	context.offset_bottom = -117
 	context.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var footer := PanelContainer.new()
-	shell.add_child(footer)
-	footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	footer.offset_top = -64
-	footer.add_theme_stylebox_override("panel",_style(Color("122126"),Color("435254"),0))
-	help = _label("SAVED MOVEMENT CONTROLS     E  KIOSK     TAB  GAME BOARD     H  PLAYER HUB     P  SQUAD     L  LOCKER     ESC  MENU",19,G.PAPER)
-	footer.add_child(help)
-	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stats = _label("",18,G.PAPER)
-	shell.add_child(stats)
-	stats.position = Vector2(34,137)
 	var ready_layer := CanvasLayer.new()
 	ready_layer.layer = 60
 	add_child(ready_layer)
@@ -108,8 +101,8 @@ func _ready() -> void:
 	toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	toast.offset_left = -660
 	toast.offset_right = 660
-	toast.offset_top = -250
-	toast.offset_bottom = -210
+	toast.offset_top = -200
+	toast.offset_bottom = -160
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel = PanelContainer.new()
@@ -119,7 +112,7 @@ func _ready() -> void:
 	panel.offset_right = -30
 	panel.offset_top = 93
 	panel.offset_bottom = -83
-	panel.add_theme_stylebox_override("panel",_style(Color(0.055,0.105,0.12,0.98),Color("72765e"),1))
+	panel.add_theme_stylebox_override("panel",_style(Color("352c49"),Color("705b87"),1))
 	var scroll := ScrollContainer.new()
 	panel.add_child(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -144,6 +137,7 @@ func _style(bg: Color, border: Color, width: int) -> StyleBoxFlat:
 	s.bg_color = bg
 	s.border_color = border
 	s.set_border_width_all(width)
+	s.set_corner_radius_all(8)
 	s.content_margin_left = 20
 	s.content_margin_right = 20
 	s.content_margin_top = 12
@@ -153,7 +147,7 @@ func _style(bg: Color, border: Color, width: int) -> StyleBoxFlat:
 func _label(text: String, size: int, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_override("font",ui_font)
+	l.add_theme_font_override("font",ui_font if size>=30 else ThemeManager.font_med)
 	l.add_theme_font_size_override("font_size",size)
 	l.add_theme_color_override("font_color",color)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -168,15 +162,23 @@ func _copy(text: String, size := 19, color := G.PAPER) -> Label:
 func _button(parent: Node, text: String, id: String, value: Variant = null, color := G.GOLD) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size.y = 49
+	b.custom_minimum_size.y = 54
+	b.alignment=HORIZONTAL_ALIGNMENT_LEFT
+	b.add_theme_constant_override("h_separation",18)
+	var icon_id: String=str(value) if id=="page" else id
+	if icon_id in ["respawn","settings","release_notes","quit","leave"]:
+		b.icon=preload("res://UI/menu_icons.gd").get_icon(icon_id)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.add_theme_font_override("font",ui_font)
 	b.add_theme_font_size_override("font_size",24)
-	b.add_theme_color_override("font_color",color)
-	b.add_theme_color_override("font_hover_color",G.PAPER)
-	b.add_theme_stylebox_override("normal",_style(Color("26363a"),Color("475553"),1))
-	b.add_theme_stylebox_override("hover",_style(Color("394745"),color,2))
-	b.add_theme_stylebox_override("pressed",_style(Color("4a5143"),color,2))
+	b.add_theme_color_override("icon_hover_color",G.INK)
+	b.add_theme_color_override("icon_pressed_color",G.INK)
+	b.add_theme_color_override("font_color",G.PAPER)
+	b.add_theme_color_override("font_hover_color",G.INK)
+	b.add_theme_color_override("font_pressed_color",G.INK)
+	b.add_theme_stylebox_override("normal",_style(Color("2c243c"),Color("554560"),1))
+	b.add_theme_stylebox_override("hover",_style(G.ORANGE,G.ORANGE,2))
+	b.add_theme_stylebox_override("pressed",_style(G.ORANGE.darkened(0.12),G.ORANGE,2))
 	b.add_theme_stylebox_override("focus",_style(Color(0,0,0,0),color,2))
 	parent.add_child(b)
 	b.pressed.connect(func(): action.emit(id,value))
@@ -184,6 +186,9 @@ func _button(parent: Node, text: String, id: String, value: Variant = null, colo
 
 func show_page(which: String) -> void:
 	page = which
+	friends_orb.visible=which.is_empty()
+	friend_hint.visible=which.is_empty()
+	menu_hint.visible=which.is_empty()
 	for child in contents.get_children():
 		contents.remove_child(child)
 		child.queue_free()
@@ -249,21 +254,23 @@ func show_page(which: String) -> void:
 			_button(contents,"LOBBY TIMES / YOUR BEST","page","course_board",G.CYAN)
 			_button(contents,"RETURN TO START DOOR","course_restart",null,G.GREEN)
 		"pause":
-			_copy("TAKE A BREATHER",43,G.GOLD)
-			_button(contents,"BACK TO THE ROOM","close")
-			_button(contents,"GAME BOARD","page","events")
-			_button(contents,"YOUR SQUAD","page","party",G.CYAN)
-			_button(contents,"PLAYER HUB","page","hub",G.PINK)
-			_button(contents,"THE SCRAP YARD / 1V1","page","scrap",G.ORANGE)
-			_button(contents,"PLAY PEN / SPARRING","page","sparring",G.CYAN)
-			_button(contents,"FIRING RANGE / DISTANCES","page","range_settings",G.CYAN)
-			_button(contents,"AGILITY / TIME TRIAL","page","agility",G.GREEN)
-			_button(contents,"COURSE RECORD BOARD","page","course_board",G.CYAN)
-			_button(contents,"RESPAWN AT ARRIVALS","respawn",null,G.PAPER)
-			_button(contents,"PLAYER SETTINGS","page","settings",G.PAPER)
-			_button(contents,"RELEASE NOTES","page","release_notes",G.PAPER)
-			if NetworkManager.is_online(): _button(contents,"LEAVE HIDEOUT","leave",null,G.ORANGE)
-			_button(contents,"QUIT GAME","quit",null,G.ORANGE)
+			_copy("MENU",38,G.PAPER)
+			_button(contents,"Respawn at Arrivals","respawn",null,G.PAPER)
+			_button(contents,"Player Settings","page","settings",G.PAPER)
+			_button(contents,"Release Notes","page","release_notes",G.PAPER)
+			_button(contents,"Quit Game","quit",null,G.ORANGE)
+			if NetworkManager.is_online(): _button(contents,"Leave Hideout","leave",null,G.ORANGE)
+			var shortcuts:=GridContainer.new()
+			shortcuts.name="PauseShortcuts"
+			shortcuts.columns=2
+			shortcuts.add_theme_constant_override("h_separation",24)
+			shortcuts.add_theme_constant_override("v_separation",5)
+			contents.add_child(shortcuts)
+			for text in ["TAB  Game Board","H  Player Hub","P  Squad","L  Locker","F1  Friends","F2  Scrap Yard","F3  Play Pen","F4  Firing Range","F5  Agility","F6  Course Records"]:
+				var hint:=_label(text,18,Color("c3b6cc"))
+				hint.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+				shortcuts.add_child(hint)
+			_copy("ESC  Back to the room",17,Color("c3b6cc"))
 		"confirm_leave":
 			_copy("LEAVE THIS HIDEOUT?",38,G.ORANGE)
 			_copy("Hosting ends this session for everyone." if NetworkManager.is_host() else "You will return to your own Hideout.",22)
@@ -276,8 +283,11 @@ func show_page(which: String) -> void:
 		_button(contents,"BACK TO THE ROOM / ESC","close",null,G.PAPER)
 	for child in contents.get_children():
 		if child is Button and not child.disabled:
-			child.grab_focus()
-			break
+			if which=="pause":
+				child.focus_mode=Control.FOCUS_NONE
+			else:
+				child.grab_focus()
+				break
 
 func _option(title: String, values: Array, selected: int, id: String) -> void:
 	_copy(title,19,G.PAPER)
@@ -292,13 +302,10 @@ func show_toast(message: String) -> void:
 	toast.text = message
 	toast_left = 5
 
-func update_readouts(delta: float, fps: int, _charges: int, _low: bool) -> void:
+func update_readouts(delta: float, _fps: int, _charges: int, _low: bool) -> void:
 	toast_left = maxf(0,toast_left-delta)
 	toast.visible = toast_left > 0
-	status.text = session.alias_name + (" / IN HIDEOUT" if NetworkManager.is_online() else " / AT HOME")
-	subtitle.text = "%s / %d HERE / %s" % [session.access.to_upper(),session.member_count(),session.destination.to_upper()]
-	stats.text = "%d FPS" % fps
-	ready_panel.visible = shell.visible and NetworkManager.is_online() and not NetworkManager.lobby_in_progress and not (is_instance_valid(training) and training.running)
+	ready_panel.visible = shell.visible and NetworkManager.is_online() and NetworkManager._prelaunch_active
 	ready_accept.visible = not NetworkManager._prelaunch_active
 	ready_accept.text = "GAME BOARD" if NetworkManager.can_manage_lobby() else ("NOT READY" if session.local_ready else "READY UP")
 	ready_cancel.visible = NetworkManager._prelaunch_active and NetworkManager.can_manage_lobby()

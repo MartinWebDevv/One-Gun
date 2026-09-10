@@ -43,7 +43,7 @@ func _build_backdrop() -> void:
 	inner_grade.name = "LockerReadabilityGrade"
 	inner_grade.position = Vector2.ZERO
 	inner_grade.size = BASE_SIZE
-	inner_grade.color = Color(0.004, 0.012, 0.036, 0.30)
+	inner_grade.color = Color(OneGunUI.color("face"), 0.3)
 	inner_grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_canvas.add_child(inner_grade)
 
@@ -100,7 +100,7 @@ func _build_selection_panel() -> void:
 	loadout_panel.name = "ActiveLoadoutStrip"
 	loadout_panel.custom_minimum_size.y = 48.0
 	loadout_panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		Color(0.008, 0.036, 0.075, 0.92), Color(OneGunUI.color("cyan"), 0.42),
+		Color(OneGunUI.color("face"), 0.92), Color(OneGunUI.color("cyan"), 0.42),
 		10, 1, 0, 10.0))
 	_loadout_summary_label = OneGunUI.make_label("ACTIVE LOADOUT", OneGunUI.TEXT_S, "cyan", true)
 	_loadout_summary_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -120,8 +120,8 @@ func _build_preview_world(container: SubViewportContainer) -> void:
 		return
 	var environment := world.get_node_or_null("WorldEnvironment") as WorldEnvironment
 	if environment != null and environment.environment != null:
-		environment.environment.background_color = Color(0.004, 0.018, 0.055)
-		environment.environment.ambient_light_color = Color(0.30, 0.50, 0.92)
+		environment.environment.background_color = Color(OneGunUI.color("face"), 1.0)
+		environment.environment.ambient_light_color = Color("f4e5d2")
 		environment.environment.ambient_light_energy = 0.72
 	_build_armory_preview_set(world)
 
@@ -134,7 +134,7 @@ func _build_armory_preview_set(world: Node3D) -> void:
 	back_wall.mesh = wall_mesh
 	back_wall.position = Vector3(0.0, 2.7, -1.85)
 	var wall_material := StandardMaterial3D.new()
-	wall_material.albedo_color = Color(0.012, 0.035, 0.095)
+	wall_material.albedo_color = Color(OneGunUI.color("face"), 1.0)
 	wall_material.metallic = 0.62
 	wall_material.roughness = 0.30
 	back_wall.material_override = wall_material
@@ -147,9 +147,9 @@ func _build_armory_preview_set(world: Node3D) -> void:
 		strip.mesh = strip_mesh
 		strip.position = Vector3(x, 2.7, -1.72)
 		var strip_material := StandardMaterial3D.new()
-		strip_material.albedo_color = Color(0.02, 0.22, 0.72)
+		strip_material.albedo_color = Color("705b87")
 		strip_material.emission_enabled = true
-		strip_material.emission = Color(0.01, 0.24, 0.95)
+		strip_material.emission = Color("f3aa7c")
 		strip_material.emission_energy_multiplier = 1.8
 		strip.material_override = strip_material
 		world.add_child(strip)
@@ -169,7 +169,7 @@ func _make_owned_locker_row(entry: Dictionary) -> Control:
 	var row := PanelContainer.new()
 	row.custom_minimum_size.y = 102.0
 	row.add_theme_stylebox_override("panel", OneGunUI.style_box(
-		Color(0.012, 0.026, 0.065, 0.96), Color(OneGunUI.color("cyan"), 0.30),
+		Color(OneGunUI.color("face"), 0.96), Color(OneGunUI.color("cyan"), 0.30),
 		12, 1, 3, 12.0))
 	var horizontal := HBoxContainer.new()
 	horizontal.add_theme_constant_override("separation", 10)
@@ -185,7 +185,7 @@ func _make_owned_locker_row(entry: Dictionary) -> Control:
 		var icon_panel := PanelContainer.new()
 		icon_panel.custom_minimum_size = Vector2(64.0, 68.0)
 		icon_panel.add_theme_stylebox_override("panel", OneGunUI.style_box(
-			Color(0.01, 0.04, 0.10), Color(OneGunUI.color("gold"), 0.48), 10, 1))
+			Color(OneGunUI.color("face"), 1.0), Color(OneGunUI.color("gold"), 0.48), 10, 1))
 		horizontal.add_child(icon_panel)
 		var icon := OneGunUI.make_heading(_locker_icon_for_slot(visual_slot), 29,
 			"cyan" if slot == "ceremony_theme" else "gold")

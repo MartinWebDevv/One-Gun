@@ -28,10 +28,10 @@ func _ready() -> void:
 	if has_node("Architecture"):
 		_bind_baked_scene()
 		return
-	concrete = G.material("hall_cream",Color("eee0c8"))
-	tile = G.material("hall_aqua",Color("60b9b3"))
-	steel = G.material("steel", Color("287f83"), 0, 0.55)
-	dark = G.material("dark", Color("192a2d"))
+	concrete = G.material("hall_cream",Color("f4e5d2"))
+	tile = G.material("hall_aqua",Color("705b87"))
+	steel = G.material("steel", Color("51415f"), 0, 0.55)
+	dark = G.material("dark", Color("352c49"))
 	gold = G.material("paint_gold", G.GOLD)
 	warm = G.material("warm_glass", Color("ffd99a"), 1.4)
 	root_geo = Node3D.new()
@@ -45,6 +45,7 @@ func _ready() -> void:
 	preload("res://maps/hideout/scrap_space.gd").build(self)
 	_build_arrivals()
 	_build_departure()
+	preload("res://maps/hideout/clubhouse_decor.gd").build(self)
 	_build_lighting()
 	_bind_service_visuals()
 	if not OS.get_cmdline_user_args().has("--bake-live-lobby"):
@@ -52,7 +53,7 @@ func _ready() -> void:
 
 func _build_shell() -> void:
 	G.box(root_geo,"Foundation",Vector3(0,-0.95,0),Vector3(55,0.7,61),concrete,true)
-	preload("res://maps/hideout/bounded_concourse.gd").build(root_geo,G.material("concourse_cream",Color("e7d4b6")))
+	preload("res://maps/hideout/bounded_concourse.gd").build(root_geo,G.material("concourse_cream",Color("e5d7c5")))
 	G.box(root_geo,"NorthWallWest",Vector3(-8.6,5.2,-30),Vector3(36.8,10.4,0.7),tile,true)
 	G.box(root_geo,"NorthWallEast",Vector3(25.6,5.2,-30),Vector3(2.8,10.4,0.7),tile,true)
 	G.box(root_geo,"PlayPenLintel",Vector3(17,8.8,-30),Vector3(14.4,3.2,0.7),concrete,true)
@@ -101,7 +102,7 @@ func _build_pit() -> void:
 	for i in range(3):
 		var radius := 7.2 + i*1.0
 		var y := -0.4+i*0.2
-		G.ring(root_geo,"PitStep",radius,radius+1.0,y,G.material("pit_tread",Color("d7c4a5")),true)
+		G.ring(root_geo,"PitStep",radius,radius+1.0,y,G.material("pit_tread",Color("d9c5b4")),true)
 		G.ring(root_geo,"StepNosing",radius,radius+0.19,y+0.027,gold)
 	var seal := G.box(root_geo,"PaintedOneGunSeal",Vector3(0,-0.587,0),Vector3(7.4,0.02,7.4),G.textured("floor_seal",Color.WHITE))
 	# A PlaneMesh keeps the seal on top with undistorted UVs.
@@ -116,7 +117,7 @@ func _build_pit() -> void:
 			root_geo.add_child(bench)
 			bench.position = pos
 			bench.rotation.y = angle
-			G.box(bench,"BenchSeat",Vector3(0,0.58,0),Vector3(1.8,0.16,0.65),G.material("seat",Color("b1a0d3")),true)
+			G.box(bench,"BenchSeat",Vector3(0,0.58,0),Vector3(1.8,0.16,0.65),G.material("seat",Color("705b87")),true)
 			G.box(bench,"BenchBack",Vector3(0,1.0,0.3),Vector3(1.8,0.65,0.1),steel)
 			for x in [-0.65,0.65]:
 				G.box(bench,"BenchFoot",Vector3(x,0.25,0),Vector3(0.1,0.5,0.5),steel)
@@ -177,7 +178,7 @@ func _build_lighting() -> void:
 	we.environment = environment
 	add_child(we)
 	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("1c2729")
+	environment.background_color = Color("352c49")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("fff5e4")
 	environment.ambient_light_energy = 0.85

@@ -73,13 +73,15 @@ separate party/backend rollout:
   silently disconnected to perform a single-player join.
 - The existing hosted transport and configured matchmaking services are reused.
   No service, coordinator, server deployment or public build was published.
-- Network protocol is **5**. Both clients and the server need this revision.
+- Network protocol is **7**. Both clients and the server need this revision.
   Existing hosted services must be rebuilt/updated before live-service testing.
 - While the host is in a match, a late visitor has a local waiting Hideout and
   can spectate via the Game Board. A concurrently simulated waiting world while
   its owner plays elsewhere needs a separate persistent-world server.
-- Course personal bests are device-local receipts of host-accepted runs, not
-  globally authenticated records. World/verified record storage remains future.
+- Course personal bests are account-keyed, device-local saved times shared with
+  the current lobby on entry. New online finishes are host-accepted; imported
+  history also includes solo runs and is not globally verified. Cross-device
+  cloud sync and World/verified record storage remain future.
 - Human feel, maximum-party stress, adverse latency/reconnect and weaker-laptop
   frame pacing still require real playtesting.
 
@@ -177,3 +179,106 @@ Surge expiry, real Extra Dash consumption, owning-client grants/cancel cleanup,
 open host personal-best and guest lobby panels updating without reconstruction,
 and the existing Scrap/match-return suite. The 1080p Low render harness includes
 entrance-button and ten-player wall-board captures.
+
+## Persistent personal bests on lobby entry — 2026-09-08
+
+The wall and Lobby page rank each present player's personal best for the current
+course, movement settings and Standard/Power-Up category. Saved bests stay visible
+on the wall during a run (an asterisk marks active runners); the opened board
+also shows live progress. Last run, falls and finish counts describe this lobby,
+not a lifetime total. Importing saved history does not invent new finishes.
+
+Solo and online play now share `user://hideout/course_records.json`, keyed by the
+hashed signed-in account ID (or the existing offline local profile). On load,
+legacy `online_course_records.json` is merged by taking the faster time in each
+identity/category bucket; the legacy file is preserved. A faster accepted finish
+replaces the saved best; slower finishes cannot replace it. Records survive a
+restart, leaving a lobby and changing the session actor ID. They are saved on this
+PC, not cloud-synced or independently verified world rankings.
+
+After the full scene-ready snapshot, each client uploads its own saved times once.
+The host binds that upload to the sender's actor ID, validates course buckets and
+time bounds, merges faster times and immediately broadcasts the shared standings.
+The host imports its own saved times before sending join snapshots. No account ID
+is sent to other players; no per-frame file I/O or history upload is added. Protocol
+6 adds this RPC, requiring matching clients, server and coordinator configuration.
+
+Verification: `tools/hideout_persistence_validation.gd` exercises disk reload,
+legacy migration, account/category isolation, invalid data and faster-only updates.
+`tools/run_hideout_network.py` uses separate fixture files for host and guest to
+exercise saved PBs on join, improvement/save/broadcast, a slower subsequent run,
+match returns and loading the saved best back in the player's own home.
+
+## Compact room UI, course selection and Scrap wins — 2026-09-08
+
+Full-width top/bottom bars and the alias/FPS room labels are removed. The original
+Friends orb returns at top right with live social badges; F1 opens Friends directly,
+and holding Alt releases the cursor to click it. Escape opens the menu containing
+all shortcuts. The real stamina/dash/inventory widgets remain, moved toward the
+bottom edge. The redundant text inventory HUD is hidden, and the ready banner
+appears only for an actual launch countdown. Normal match HUDs are unchanged.
+
+The last course selection remains armed for retries and survives scene/match
+returns in `HideoutSession.course_powerup_selected`. A joining client sends its
+preferred mode along with its saved PB upload. Host-selected runs still clear
+powers and grant the usual pickups only at the starting line. Wall controls are
+flush panels at readable height; START and FINISH titles, trim and underlines use
+green for Standard or orange for Power-Up, on the viewing client's instance only.
+These accent meshes are excluded from static batching. Old AGILITY prefixes and
+RUN / JUMP / DASH signage are removed; course geometry and record keys are intact.
+
+`ScrapWinsBoard` faces the arena from the front wall. Online eliminations award one
+host-authoritative win, then the normal reliable duel snapshot updates every board.
+`HideoutSession.scrap_lobby_wins` survives normal match returns; NetworkManager's
+session teardown clears it on leaving/joining a different Hideout. It is never
+saved to disk. Local human wins count; demonstration bots and cancellations do
+not. A repeated elimination in RESULT cannot award another win.
+
+Online gear creation/attachment now occurs during the locked preparation phase,
+not the frame combat unlocks. Both fighters acknowledge equipment readiness before
+the three-second countdown advances; a stalled participant cancels after 12 seconds.
+Coin results and the one-gun/two-melee rules are unchanged. Late join still uses the
+existing complete-world snapshot. This improves the start transition without
+claiming to fix network latency or every possible source of low FPS. Protocol 7
+requires matching exported clients, server and coordinator configuration.
+
+`tools/hideout_scrap_profile.tscn` provides repeatable 1080p Low entry/ring/stand and
+local duel frame samples (`--hideout-test --profile-label=before`). On the development
+RTX 4060 Ti, steady medians were about 6.1 ms, with a 28.4 ms maximum during the
+coin/countdown/combat interval and a 93.9 ms local demo actor creation call. These
+samples do not reproduce another PC's online latency and are not a weakest-machine
+guarantee. Verify combat transitions with friends and on the weaker laptop.
+
+### Minimal Escape menu
+
+Escape now contains only Respawn at Arrivals, Player Settings, Release Notes,
+Quit Game, and Leave Hideout when online. A muted, non-interactive two-column
+shortcut list replaces the destination buttons: Tab Game Board, H Player Hub,
+P Squad, L Locker, F1 Friends, F2 Scrap Yard, F3 Play Pen, F4 Firing Range,
+F5 Agility, F6 Course Records. These shortcuts work directly in the room or
+from the Escape menu. Escape returns to the room; existing quit/leave confirmation
+behavior is retained. No extra navigation page was added.
+
+While Escape is open, the local player can still walk, sprint, jump and dash.
+The cursor stays visible and mouse/controller look is suppressed. Combat, pickup,
+slot and aim input is suppressed while interacting with the menu; its buttons
+accept pointer clicks without keyboard focus stealing movement or jump input.
+Closing Escape restores normal look. All shortcut/kiosk menus and their destination overlays share this movement-only policy. Typing in a text field or capturing a new input binding temporarily reserves movement input for that control; gravity continues. Course timing continues while moving through menus. Opaque native menus still suspend hidden room rendering for performance, independently of actor movement.
+
+## Approved purple clubhouse presentation — 2026-09-09
+
+The shared frontend theme now uses plum #352C49, violet #705B87, apricot #F3AA7C, ivory #F4E5D2 and mint #9BCBB3. ThemeManager retains its existing semantic API so older home/setup menus, detailed destinations, standard controls and HUD accents inherit the same palette. OneGunUI uses the existing bundled Barlow Condensed ExtraBold for headings, Fredoka medium for body copy, thin non-glowing borders and compact matte panels. No gameplay-map resources are edited.
+
+The Player Hub portal uses a skin/model-aware portrait on the left and a two-column destination grid on the right, with illustrated closet rack, logo-inspired gold star and ascending-step art. The original destination signals, account/status data and Back handling are retained; focus neighbors follow the grid. Portraits reflect model and color, using the existing static registry (they do not render equipped hats). New icons are 512px runtime imports; their source prompts are recorded in UI/assets/hideout/README.md. No additional portrait SubViewport or runtime image generation is used.
+
+Escape preserves its five contextual actions, quiet shortcuts and movement-only input behavior. Its icons use a cached SVG set. Player Settings retains its transactional settings and preview/cancel contracts with apricot selected navigation and mint sliders. Returning from an overlay re-registers a removed cursor shortcut before checking incoming input.
+
+Production Hideout authoring and station.tscn are recolored together, including the practice wings and matching service floors. Major wayfinding signs are apricot plaques. Small planters and seat upholstery are baked/batched cosmetic meshes with no extra colliders, lights, network messages or frame updates. Course geometry, record keys, gates and duel rules remain unchanged. This is an implementation of the approved palette and layouts, not a replacement of every prop with the concept illustration's invented architecture.
+
+Validation for this presentation pass: headless editor import, frontend theme bake and production station bake passed. Rendered UI validation passed at 1280x720 and 1920x1080, including all four Hub routes/Back, menu cancellation preserving preferences, texture budgets, course controls and HUD restoration. The two-process host/client test completed both match/Hideout returns and Scrap/course checks. The external social service emitted a timeout warning during that test; it is not proof of internet friend-service availability.
+
+The 1080p Low Scrap sample on the development RTX 4060 Ti remained near the prior baseline: duel median 6.042 ms versus 6.037 ms, p95 7.501 ms versus 7.328 ms, with about 129 draw calls in both samples. Transitions still have isolated spikes (33.724 ms maximum during countdown/start; local demo actor creation call 116.468 ms). These are single-run local measurements, not a claim that all hitches or online latency are fixed. A weaker-laptop and friends playtest remains required. Major direction plaques use an unshaded surface for legibility at every lighting tier.
+
+Shortcut-menu input is reserved before UI dispatch by maps/hideout/menu_input.gd. It follows the player input prefix and saved movement bindings so jump/arrow/stick input cannot also activate a focused button. Pointer navigation stays active, and camera look/combat remain blocked until all menus close. Prelaunch, elimination and Scrap placement/countdown locks still take priority.
+
+Validation of shared menu movement: rendered UI checks pass for all ten shortcuts, actual locomotion, fixed camera, jump-vs-button focus, text entry, rebinding and restoration on close. Host and guest checks pass after preserving menu_input during the local-to-host upgrade; two match/return cycles, duels, course records and disconnect cleanup complete without engine errors. No new rendering, physics-query or network synchronization work was added; the input guard checks only the active focus/capture state.

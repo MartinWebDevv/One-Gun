@@ -13,7 +13,7 @@ const VARIANTS := ["gold", "navy", "purple", "blue", "green", "red"]
 		variant = value
 		if is_inside_tree():
 			_apply_styles()
-@export var font_size: int = OneGunUI.TEXT_M
+@export var font_size: int = OneGunUI.TEXT_L
 @export var play_sounds: bool = true
 
 var _rest_scale := Vector2.ONE
@@ -53,17 +53,17 @@ func _apply_styles() -> void:
 	# Every semantic color shares one idle construction. Hue communicates the
 	# action family; opacity, border weight, depth, and label contrast no longer
 	# jump between filled, blacked-out, and washed-out buttons.
-	var tint_strength := 0.10 if variant == "navy" else 0.30
-	var bg := OneGunUI.color("face_raised").lerp(accent, tint_strength)
-	var border := Color(accent, 0.86)
-	var text_color := OneGunUI.color("text_bright")
-	var text_hover := OneGunUI.color("text_bright")
+	var primary := variant == "gold"
+	var bg := OneGunUI.color("gold") if primary else OneGunUI.color("well")
+	var border := OneGunUI.color("border").darkened(0.25)
+	var text_color := OneGunUI.color("ink") if primary else OneGunUI.color("text")
+	var text_hover := OneGunUI.color("ink")
 
 	var radius := OneGunUI.RADIUS_BUTTON
 	var margin := 14.0
-	var normal := OneGunUI.style_box(bg, border, radius, OneGunUI.BORDER_THIN, 4, margin)
-	var hover := OneGunUI.style_box(bg.lightened(0.12), border.lightened(0.1), radius, OneGunUI.BORDER_THIN, 5, margin)
-	var pressed_style := OneGunUI.style_box(bg.darkened(0.18), border, radius, OneGunUI.BORDER_THIN, 0, margin)
+	var normal := OneGunUI.style_box(bg, border, radius, OneGunUI.BORDER_THIN, 0, margin)
+	var hover := OneGunUI.style_box(OneGunUI.color("gold"), OneGunUI.color("gold"), radius, OneGunUI.BORDER_THIN, 0, margin)
+	var pressed_style := OneGunUI.style_box(OneGunUI.color("gold").darkened(0.12), border, radius, OneGunUI.BORDER_THIN, 0, margin)
 	pressed_style.content_margin_top = margin + 2.0
 	pressed_style.content_margin_bottom = margin - 2.0
 	var disabled := OneGunUI.style_box(
@@ -76,9 +76,12 @@ func _apply_styles() -> void:
 	add_theme_stylebox_override("focus", OneGunUI.focus_ring(normal))
 	add_theme_stylebox_override("disabled", disabled)
 
+	add_theme_color_override("icon_normal_color",text_color)
+	add_theme_color_override("icon_hover_color",OneGunUI.color("ink"))
+	add_theme_color_override("icon_pressed_color",OneGunUI.color("ink"))
 	add_theme_color_override("font_color", text_color)
 	add_theme_color_override("font_hover_color", text_hover)
-	add_theme_color_override("font_pressed_color", text_color.darkened(0.15))
+	add_theme_color_override("font_pressed_color", OneGunUI.color("ink"))
 	add_theme_color_override("font_focus_color", text_color)
 	add_theme_color_override("font_hover_pressed_color", text_color)
 	add_theme_color_override("font_disabled_color", OneGunUI.color("muted"))

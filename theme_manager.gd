@@ -6,33 +6,26 @@ extends Node
 # Every scene that uses standard Control nodes picks this up
 # automatically once set as the project default theme.
 #
-# Palette:
-#   BG_DARK      Deep navy       #1A1F2E — panel backgrounds
-#   BG_PANEL     Semi-dark navy  #232845 — card/section backgrounds
-#   ACCENT_GOLD  Yellow-orange   #FFB700 — primary highlight, scores
-#   ACCENT_CYAN  Electric cyan   #00E5FF — secondary, notifications
-#   DANGER       Coral red       #FF4B4B — death, danger
-#   POSITIVE     Lime green      #7AFF6E — alive, ready
-#   TEXT_WHITE   White           #FFFFFF — general text
-#   TEXT_DIM     Muted lavender  #9BA3C2 — secondary text
+# Shared Hideout / frontend palette: plum, violet, apricot, ivory and mint.
+# Legacy semantic names remain API-compatible for existing UI callers.
 # ============================================================
 
-const BG_DARK    = Color(0.102, 0.122, 0.180)
-const BG_PANEL   = Color(0.137, 0.157, 0.271)
-const BG_INPUT   = Color(0.082, 0.098, 0.157)
-const ACCENT_GOLD  = Color(1.000, 0.718, 0.000)
-const ACCENT_CYAN  = Color(0.000, 0.898, 1.000)
-const DANGER       = Color(1.000, 0.294, 0.294)
-const POSITIVE     = Color(0.478, 1.000, 0.431)
-const TEXT_WHITE   = Color(1.000, 1.000, 1.000)
-const TEXT_DIM     = Color(0.608, 0.639, 0.761)
-const BORDER       = Color(0.200, 0.220, 0.380)
+const BG_DARK = Color("292236")
+const BG_PANEL = Color("352c49")
+const BG_INPUT = Color("2c243c")
+const ACCENT_GOLD = Color("f3aa7c")
+const ACCENT_CYAN = Color("9bcbb3")
+const DANGER = Color("ed827e")
+const POSITIVE = Color("9bcbb3")
+const TEXT_WHITE = Color("f4e5d2")
+const TEXT_DIM = Color("c3b6cc")
+const BORDER = Color("705b87")
 
 # Menu-redesign semantic colors (docs/design/menu_redesign concepts).
-const ACCENT_PURPLE = Color(0.541, 0.310, 0.847)  # secondary selection / Player Settings
-const INFO_BLUE     = Color(0.180, 0.435, 0.816)  # informational / network states
-const TEXT_CREAM    = Color(0.953, 0.914, 0.812)  # primary text on cabinet faces
-const GOLD_EDGE     = Color(0.478, 0.322, 0.000)  # dark edge of layered gold rims
+const ACCENT_PURPLE = Color("705b87")
+const INFO_BLUE = Color("b3a1d2")
+const TEXT_CREAM = Color("f4e5d2")
+const GOLD_EDGE = Color("705b87")
 
 var game_theme: Theme = null
 
@@ -60,8 +53,9 @@ func _build_fonts():
 	font_med = FontVariation.new()
 	font_med.base_font = base
 	font_med.variation_opentype = {"wght": 500}
+	font_med.variation_embolden = 0.3
 	font_bold = FontVariation.new()
-	font_bold.base_font = base
+	font_bold.base_font = preload("res://fonts/cinematic/barlow_condensed/BarlowCondensed-ExtraBold.ttf")
 	font_bold.variation_opentype = {"wght": 700}
 
 func _build_theme() -> Theme:
@@ -74,8 +68,8 @@ func _build_theme() -> Theme:
 	# ---- Label ----
 	t.set_color("font_color",        "Label", TEXT_WHITE)
 	t.set_color("font_shadow_color", "Label", Color(0, 0, 0, 0.4))
-	t.set_constant("shadow_offset_x", "Label", 1)
-	t.set_constant("shadow_offset_y", "Label", 1)
+	t.set_constant("shadow_offset_x", "Label", 0)
+	t.set_constant("shadow_offset_y", "Label", 0)
 
 	# ---- Button ---- (chunky playful-arcade: bigger radius, brighter hover)
 	var btn_normal   = _make_stylebox_flat(BG_PANEL,                  BORDER,      10, 2)
@@ -173,11 +167,11 @@ func _make_stylebox_flat(bg: Color, border: Color, corner_radius: int, border_wi
 	s.content_margin_bottom = 6
 	return s
 
-static func gold()     -> Color: return Color(1.000, 0.718, 0.000)
-static func cyan()     -> Color: return Color(0.000, 0.898, 1.000)
-static func danger()   -> Color: return Color(1.000, 0.294, 0.294)
-static func positive() -> Color: return Color(0.478, 1.000, 0.431)
-static func dim()      -> Color: return Color(0.608, 0.639, 0.761)
+static func gold() -> Color: return ACCENT_GOLD
+static func cyan() -> Color: return ACCENT_CYAN
+static func danger() -> Color: return DANGER
+static func positive() -> Color: return POSITIVE
+static func dim() -> Color: return TEXT_DIM
 
 # ============================================================
 # UI kit — the shared building blocks every HUD widget and menu

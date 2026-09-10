@@ -14,7 +14,7 @@ static func build(ui: CanvasLayer, training: Node) -> void:
 	var bucket: String=training.records_bucket(training.board_assisted)
 	match training.board_tab:
 		"lobby":
-			ui._copy("THIS LOBBY",27)
+			ui._copy("LOBBY PLAYERS / PERSONAL BESTS",27)
 			var list := VBoxContainer.new()
 			list.name="CourseLiveRows"
 			list.add_theme_constant_override("separation",14)
@@ -27,7 +27,7 @@ static func build(ui: CanvasLayer, training: Node) -> void:
 			ui._copy(training.format_time(best/1000.0) if best>=0 else "SET YOUR FIRST TIME",42,ui.G.GREEN)
 			ui.contents.get_child(ui.contents.get_child_count()-1).name="PersonalLiveBest"
 			ui._copy("YOUR BEST EVER ON THIS COURSE",23)
-			ui._copy("Your completed personal best is kept on this PC for this course and movement setup.",20)
+			ui._copy("Your personal best is saved on this PC and shared when you join a Hideout. Standard and Power-Up times stay separate for each movement setup.",20)
 		"world":
 			ui._copy("WORLD TIMES",30)
 			if not training.records.world_available():
@@ -61,7 +61,7 @@ static func refresh_live(ui: CanvasLayer, training: Node) -> void:
 		var best: String=training.format_time(row.time_ms/1000.0) if row.time_ms>=0 else "NO FINISH"
 		var last: String=training.format_time(row.last_ms/1000.0) if row.last_ms>=0 else "—"
 		var live: String=training.live_status(str(row.id),training.board_assisted)
-		var text: String="%02d / %s%s\nBEST %s / LAST %s\n%d FINISHES / LAST RUN: %d FALLS" % [i+1,row.name," / YOU" if row.id==training.viewer_id() else "",best,last,row.finishes,row.falls]
+		var text: String="%02d / %s%s\nPERSONAL BEST %s / LAST %s\nTHIS LOBBY: %d FINISHES / LAST RUN: %d FALLS" % [i+1,row.name," / YOU" if row.id==training.viewer_id() else "",best,last,row.finishes,row.falls]
 		if not live.is_empty(): text+="\n"+live
 		list.get_child(i).text=text
 		list.get_child(i).add_theme_color_override("font_color",ui.G.GREEN if row.id==training.viewer_id() else ui.G.PAPER)

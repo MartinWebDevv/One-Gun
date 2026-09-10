@@ -313,7 +313,7 @@ Tracked per actor ID for the whole match: kills, deaths, disarms, gun pickups, m
 
 Shots retain the viewport-center origin/direction pair. Local and server fire now reject an origin separated from the actor/aim pivot by solid world cover; blocked fire consumes no reload and can show a short amber COVER cue. The server origin envelope is 3.25m instead of 7m. Smoke remains visual obstruction, not physical cover. Held melee uses the same world-cover policy, including dedicated and One of Us resolution; thrown weapons resolve real collisions independently of the holder's swing distance.
 
-Online tracers have per-shot identities and retire at predicted world impacts or authoritative impact messages, without client damage authority. Network protocol 3 requires matching client/server builds. The online HUD's optional Connection Status/Ping setting shows host status or measured ENet round-trip time.
+Online tracers have per-shot identities and retire at predicted world impacts or authoritative impact messages, without client damage authority. Network protocol 7 requires matching client/server builds. The online HUD's optional Connection Status/Ping setting shows host status or measured ENet round-trip time.
 
 Local map loading offers Cancel/Escape before scene handoff. Online loading retains existing peer readiness/retry/return controls while resources load asynchronously. Unlisted lobby wording reflects discovery-only privacy; Friends Only admission has not been added. The production Hideout is now the home/shared-room destination; atomic Squad travel and authenticated access remain follow-up work. See [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md).
 
@@ -329,3 +329,16 @@ bonuses do not last the whole course or refill automatically. Records stay in
 the selected category even after the bonuses expire. Finish/cancellation clears
 remaining course bonuses. Standard history is retained; Power-Up records use a
 separate bucket from legacy arbitrary assisted runs.
+
+The Hideout course board shows the personal best of every current lobby member,
+including their saved time before they run in this lobby. A faster finish becomes
+their new saved best; a slower finish only updates their latest-run details.
+Standard/Power-Up, course versions and movement configurations stay separate.
+Personal bests persist on the player's PC across sessions, using their signed-in
+account identity when available, and are shared when joining another Hideout.
+
+Agility retries reuse the player's last chosen mode; green START/FINISH decoration
+means Standard and orange means Power-Up, visible only to that player. Match
+returns retain the choice. The Scrap Yard win board counts one win per completed
+1v1, retains wins through normal matches in the same Hideout, and resets on leaving
+that lobby or restarting the game. Cancelled rounds and demo bots do not earn wins.

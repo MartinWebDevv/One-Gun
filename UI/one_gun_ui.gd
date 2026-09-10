@@ -21,9 +21,9 @@ const TIME_CONFIRM_RESET := 5.0
 const HOVER_SCALE := 1.015
 
 # ---- Corner radii ----
-const RADIUS_CABINET := 22
-const RADIUS_SECTION := 14
-const RADIUS_BUTTON := 12
+const RADIUS_CABINET := 12
+const RADIUS_SECTION := 8
+const RADIUS_BUTTON := 8
 const RADIUS_INPUT := 10
 const RADIUS_CHIP := 999
 
@@ -35,9 +35,9 @@ const SPACE_L := 20
 const SPACE_XL := 32
 
 # ---- Border widths ----
-const BORDER_THIN := 2
+const BORDER_THIN := 1
 const BORDER_THICK := 3
-const CABINET_RIM := 5
+const CABINET_RIM := 1
 
 # ---- Font sizes ----
 const TEXT_XS := 12
@@ -59,7 +59,7 @@ static func color(role: String) -> Color:
 		"gold_edge":     return TM.GOLD_EDGE
 		"cyan":          return TM.ACCENT_CYAN
 		"blue":          return TM.INFO_BLUE
-		"purple":        return TM.ACCENT_PURPLE
+		"purple":        return TM.ACCENT_PURPLE.lightened(0.35)
 		"green":         return TM.POSITIVE
 		"red":           return TM.DANGER
 		"text":          return TM.TEXT_CREAM
@@ -125,9 +125,9 @@ static func well_style(radius: int = RADIUS_INPUT) -> StyleBoxFlat:
 static func focus_ring(base: StyleBoxFlat) -> StyleBoxFlat:
 	var style := base.duplicate() as StyleBoxFlat
 	style.border_color = color("cyan")
-	style.set_border_width_all(BORDER_THICK + 1)
+	style.set_border_width_all(2)
 	style.shadow_color = Color(color("cyan"), 0.35)
-	style.shadow_size = 7
+	style.shadow_size = 0
 	style.shadow_offset = Vector2.ZERO
 	return style
 
@@ -143,11 +143,11 @@ static func make_label(text: String, size: int = TEXT_M, color_role := "text", b
 	return label
 
 
-static func make_heading(text: String, size: int = TEXT_L, color_role := "gold") -> Label:
+static func make_heading(text: String, size: int = TEXT_L, color_role := "text") -> Label:
 	var label := make_label(text, size, color_role, true)
 	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	label.add_theme_constant_override("shadow_offset_x", 2)
-	label.add_theme_constant_override("shadow_offset_y", 2)
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
 	return label
 
 
@@ -213,7 +213,7 @@ static func make_slider(min_value: float, max_value: float, step: float, value: 
 	track.content_margin_top = 5
 	track.content_margin_bottom = 5
 	slider.add_theme_stylebox_override("slider", track)
-	var fill := style_box(color("gold"), Color.TRANSPARENT, 6, 0)
+	var fill := style_box(color("green"), Color.TRANSPARENT, 6, 0)
 	slider.add_theme_stylebox_override("grabber_area", fill)
 	slider.add_theme_stylebox_override("grabber_area_highlight", fill)
 	return slider

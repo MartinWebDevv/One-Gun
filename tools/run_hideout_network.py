@@ -1,5 +1,5 @@
 from pathlib import Path
-import subprocess,time,sys
+import subprocess,time,sys,json
 root=Path(__file__).resolve().parent.parent
 out=root/'artifacts/hideout_migration'
 out.mkdir(exist_ok=True)
@@ -10,9 +10,16 @@ startup.wShowWindow=0
 procs=[]
 for role in ("host","client"):
     (out/(role+".log")).write_text("")
+    # Distinct disks model two PCs with previously saved records, before any run.
+    standard=45000 if role=="host" else 42000
+    powered=33000 if role=="host" else 30000
+    prefix="flow_circuit_v2/dash3/sprint0/jump7.000/"
+    (out/(role+"_records.json")).write_text(json.dumps({"version":1,"personal":{
+        prefix+"standard":{"local:profile":standard,"account:someone_else":1001},
+        prefix+"powerup":{"local:profile":powered}}}))
 try:
     for role in ('host','client'):
-        command=[str(root/'Godot_v4.7.1-stable_win64.exe'),'--headless','--path',str(root),'--log-file',str(out/(role+'.log')),'res://tools/hideout_network_validation.tscn','--','--hideout-test','--hideout-'+role]
+        command=[str(root/'Godot_v4.7.1-stable_win64.exe'),'--headless','--path',str(root),'--log-file',str(out/(role+'.log')),'res://tools/hideout_network_validation.tscn','--','--hideout-test','--hideout-'+role,'--course-records-file=res://artifacts/hideout_migration/'+role+'_records.json']
         procs.append(subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,startupinfo=startup))
         if role=='host':
             deadline=time.monotonic()+60

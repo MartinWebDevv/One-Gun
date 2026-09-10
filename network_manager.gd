@@ -757,6 +757,7 @@ func _return_local_to_main_menu() -> void:
 func _reset_session(emit_change: bool) -> void:
 	HideoutSession.course_lobby_times.clear()
 	HideoutSession.course_lobby_details.clear()
+	HideoutSession.scrap_lobby_wins.clear()
 	_returning_to_lobby = false
 	_leaving_hideout = false
 	_return_barrier_pending.clear()

@@ -408,6 +408,8 @@ func _spawn_duel_equipment(plan: Dictionary) -> void:
 			actor.dash_charges=actor.max_dash_charges
 			actor.stamina=actor.MAX_STAMINA
 
+	scrap.equipment_prepared(int(plan.epoch))
+
 func clear_duel_gear(epoch: int, fighters: Array) -> void:
 	if NetworkManager.is_host(): NetworkManager.broadcast_match_rpc(self,&"_clear_duel",[epoch,fighters])
 

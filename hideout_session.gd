@@ -7,6 +7,8 @@ var home_rules: Dictionary = {}
 var home_map := ""
 var course_lobby_times: Dictionary = {}
 var course_lobby_details: Dictionary = {}
+var course_powerup_selected := false
+var scrap_lobby_wins: Dictionary = {}
 
 func _ready() -> void:
 	if not MapRegistry.MAPS.is_empty(): selected_map = str(MapRegistry.MAPS[0].get("scene_path", ""))

@@ -36,6 +36,8 @@ var waiting_for_match := false
 var departing := false
 var invite_notification: Control
 var joining_friend := false
+var cursor_released := false
+var menu_input: Node
 
 func _ready() -> void:
 	automation = OS.get_cmdline_user_args().has("--hideout-test")
@@ -54,6 +56,9 @@ func _ready() -> void:
 	hub_layer.layer = 40
 	add_child(hub_layer)
 	_register_shortcuts()
+	menu_input = preload("res://maps/hideout/menu_input.gd").new()
+	menu_input.world = self
+	add_child(menu_input)
 	station.station_entered.connect(func(id):
 		if not nearby.has(id): nearby.append(id))
 	station.station_exited.connect(func(id): nearby.erase(id))
@@ -132,18 +137,18 @@ func _process(delta: float) -> void:
 	ui.update_readouts(0.1, Engine.get_frames_per_second(), pilot.dash_charges if is_instance_valid(pilot) else 0, false)
 	if not is_instance_valid(pilot): return
 	var hint := ""
-	if controls_enabled and not nearby.is_empty():
+	if controls_enabled and not _menu_is_open() and not nearby.is_empty():
 		var id: String = nearby.back()
 		hint = "%s / %s" % [_interaction_hint(), str(id).replace("_", " ").to_upper()]
 		if id == "scrap": hint = _interaction_hint()+" / JOIN THE SCRAP"
 		elif id == "departure": hint = "MATCH STATUS / OPEN THE GAME BOARD"
 		elif str(id).begins_with("range_") and activities_ready: hint = _interaction_hint()+" / "+training.range_hint(int(str(id).get_slice("_", 1)))
 	ui.context.text = hint
-	station.set_active_service(nearby.back() if controls_enabled and not nearby.is_empty() else "")
+	station.set_active_service(nearby.back() if controls_enabled and not _menu_is_open() and not nearby.is_empty() else "")
 	if not NetworkManager.is_online() and pilot.position.y < -8: _reset_position()
 
 func _register_shortcuts() -> void:
-	for entry in [["lobby_events",KEY_TAB],["lobby_hub",KEY_H],["lobby_party",KEY_P],["lobby_locker",KEY_L],["lobby_accept",KEY_R]]:
+	for entry in [["lobby_events",KEY_TAB],["lobby_hub",KEY_H],["lobby_party",KEY_P],["lobby_locker",KEY_L],["lobby_accept",KEY_R],["lobby_friends",KEY_F1],["lobby_scrap",KEY_F2],["lobby_playpen",KEY_F3],["lobby_range",KEY_F4],["lobby_agility",KEY_F5],["lobby_records",KEY_F6],["lobby_cursor",KEY_ALT]]:
 		var id := StringName("p1_"+str(entry[0]))
 		if InputMap.has_action(id): continue
 		InputMap.add_action(id)
@@ -157,16 +162,28 @@ func _pressed(event: InputEvent, suffix: String) -> bool:
 	return event.is_action_pressed("p1_"+suffix) and not event.is_echo()
 
 func _input(event: InputEvent) -> void:
+	if not InputMap.has_action("p1_lobby_cursor"): _register_shortcuts()
+	if event.is_action("p1_lobby_cursor") and not event.is_echo():
+		cursor_released=event.is_pressed() and ui.page.is_empty() and not is_instance_valid(native_overlay)
+		_sync_controls()
+		get_viewport().set_input_as_handled()
+		return
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit or OnlineChat.is_typing(): return
 	if is_instance_valid(native_overlay) or not is_instance_valid(pilot): return
 	var used := true
-	if _pressed(event,"lobby_events"): _open("events")
+	if _pressed(event,"lobby_friends"): _open("friends")
+	elif _pressed(event,"lobby_events"): _open("events")
 	elif _pressed(event,"lobby_party"): _open("party")
 	elif _pressed(event,"lobby_hub"): _open("hub")
 	elif _pressed(event,"lobby_locker"): _open("locker")
+	elif _pressed(event,"lobby_scrap"): _open("scrap")
+	elif _pressed(event,"lobby_playpen"): _open("sparring")
+	elif _pressed(event,"lobby_range"): _open("range_settings")
+	elif _pressed(event,"lobby_agility"): _open("agility")
+	elif _pressed(event,"lobby_records"): _open("course_board")
 	elif _pressed(event,"lobby_accept"): _action("ready",null)
-	elif _pressed(event,"interact") and controls_enabled and not nearby.is_empty():
+	elif _pressed(event,"interact") and controls_enabled and ui.page.is_empty() and not nearby.is_empty():
 		var id: String = nearby.back()
 		if id == "toss" and activities_ready: toss.throw_ball()
 		elif str(id).begins_with("range_") and activities_ready: training.cycle_distance(int(str(id).get_slice("_",1)))
@@ -234,6 +251,7 @@ func _action(id: String, value: Variant) -> void:
 			if NetworkManager.can_manage_lobby(): NetworkManager.set_lobby_privacy(str(value))
 
 func _open(page: String) -> void:
+	cursor_released=false
 	if page in HUB_PAGES or page in ["settings","friends","match_setup","release_notes"]:
 		_open_native(page)
 		return
@@ -280,6 +298,8 @@ func _open_native(page: String, from_hub := false, online_page := "") -> void:
 		_: return
 	if native_overlay.has_signal("closed"): native_overlay.closed.connect(_native_closed)
 	hub_layer.add_child(native_overlay)
+	# Input dispatch traverses the tree backwards: reserve movement before menus.
+	move_child(menu_input, -1)
 	native_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if page == "online": native_overlay.open(online_page)
 	_sync_controls()
@@ -303,9 +323,22 @@ func _hub_destination(destination: String) -> void:
 	_native_closed()
 	_open_native(destination,true)
 
+func _menu_is_open() -> bool:
+	return not ui.page.is_empty() or is_instance_valid(native_overlay)
+
+func _menu_captures_input() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit or OnlineChat.is_typing(): return true
+	var settings: Node = native_overlay if native_page == "settings" else null
+	if native_page == "match_setup" and is_instance_valid(native_overlay):
+		settings = native_overlay._player_settings_overlay
+	return is_instance_valid(settings) and not str(settings._capture_action).is_empty()
+
 func _sync_controls() -> void:
-	controls_enabled = not departing and (activities_ready or waiting_for_match) and ui.page.is_empty() and not is_instance_valid(native_overlay) and not NetworkManager._prelaunch_active and is_instance_valid(pilot) and not pilot.is_eliminated and (not is_instance_valid(scrap) or not scrap.pilot_locked())
+	controls_enabled = not cursor_released and not departing and (activities_ready or waiting_for_match) and not NetworkManager._prelaunch_active and is_instance_valid(pilot) and not pilot.is_eliminated and (not is_instance_valid(scrap) or not scrap.pilot_locked())
 	if is_instance_valid(pilot):
+		pilot.menu_movement_only = _menu_is_open()
+		pilot.menu_text_input_active = _menu_captures_input()
 		if pilot.is_online: pilot.external_input_blocked = not controls_enabled
 		else: pilot.set_physics_process(controls_enabled)
 		pilot.set_process_input(controls_enabled and not automation)
@@ -313,7 +346,7 @@ func _sync_controls() -> void:
 		player_hud.set_room_visible(not departing and ui.page.is_empty() and not is_instance_valid(native_overlay))
 	ui.shell.visible = not is_instance_valid(native_overlay)
 	get_viewport().disable_3d = previous_disable_3d or is_instance_valid(native_overlay)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if controls_enabled and not automation and not PlayerPrefs.is_using_controller() else Input.MOUSE_MODE_VISIBLE
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if controls_enabled and not _menu_is_open() and not automation and not PlayerPrefs.is_using_controller() else Input.MOUSE_MODE_VISIBLE
 
 func _refresh() -> void:
 	if not is_instance_valid(ui): return
@@ -333,7 +366,6 @@ func _prelaunch_changed(_active: bool, _seconds: int) -> void:
 func _update_identity() -> void:
 	if not is_instance_valid(pilot): return
 	_register_shortcuts()
-	ui.help.text = "SAVED MOVEMENT CONTROLS    "+_interaction_hint()+"    TAB GAME BOARD    H PLAYER HUB    P SQUAD    L LOCKER    ESC MENU"
 	var model := str(PlayerPrefs.get_setting("character_model_id"))
 	var skin := str(PlayerPrefs.get_setting("character_skin_id"))
 	if not NetworkManager.is_online(): pilot.set_character_appearance(model,skin)
@@ -379,7 +411,7 @@ func _upgrade_to_network() -> void:
 	# Keep the authored world resident. Opening hosting must not block ENet
 	# behind another complete scene build.
 	for node in get_children():
-		if node in [station,spawn,ui,hub_layer]: continue
+		if node in [station,spawn,ui,hub_layer,menu_input]: continue
 		remove_child(node)
 		node.queue_free()
 	pilot=null

@@ -13,7 +13,7 @@ enum Variant { CABINET, SECTION, WELL }
 
 @export var variant: Variant = Variant.CABINET
 @export var content_padding: int = OneGunUI.SPACE_L
-@export var show_bolts: bool = true
+@export var show_bolts: bool = false
 
 var _content: MarginContainer
 var _face: PanelContainer
@@ -38,9 +38,9 @@ func _build() -> void:
 		Variant.CABINET:
 			# Outer rim: gold panel whose padding forms the visible metal edge.
 			var rim := OneGunUI.style_box(
-				OneGunUI.color("gold").darkened(0.06),
+				OneGunUI.color("border"),
 				OneGunUI.color("gold_edge"),
-				OneGunUI.RADIUS_CABINET, OneGunUI.BORDER_THIN, 14)
+				OneGunUI.RADIUS_CABINET, OneGunUI.BORDER_THIN, 6)
 			rim.set_content_margin_all(OneGunUI.CABINET_RIM)
 			add_theme_stylebox_override("panel", rim)
 
@@ -48,7 +48,7 @@ func _build() -> void:
 			_face = PanelContainer.new()
 			_face.name = "Face"
 			var face_style := OneGunUI.style_box(
-				OneGunUI.color("face").darkened(0.12),
+				OneGunUI.color("face"),
 				Color(1.0, 0.92, 0.75, 0.16),
 				OneGunUI.RADIUS_CABINET - 5, 1)
 			_face.add_theme_stylebox_override("panel", face_style)
@@ -57,7 +57,7 @@ func _build() -> void:
 		Variant.SECTION:
 			var section := OneGunUI.style_box(
 				OneGunUI.color("face_raised"),
-				OneGunUI.color("gold").darkened(0.25),
+				OneGunUI.color("border"),
 				OneGunUI.RADIUS_SECTION, OneGunUI.BORDER_THIN, 4)
 			add_theme_stylebox_override("panel", section)
 			add_child(_content)

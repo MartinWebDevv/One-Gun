@@ -265,7 +265,7 @@ The smoke mask is stored losslessly in `textures/smoke_mask.res`; `tools/generat
 
 ## Hideout front end (2026-09-07)
 
-Normal client startup and match-return routing now use `maps/hideout/hideout.tscn`. `HideoutSession` retains selection and restores personal home rules after leaving a remote session. `match_board.gd` reuses the existing lobby implementation as a closeable overlay. `network_practice.gd` subclasses Playpen/RoundManager for authoritative shared activities; `network_training.gd`, `network_scrap.gd` and `network_toss.gd` own their state. `NetworkManager` gates scene readiness and acknowledges actor suspension before departure/return. The original tools F6 scene is unchanged. Protocol 5 requires matching clients/servers. See [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md) for exact coverage, tests and outstanding Squad/access/backend work.
+Normal client startup and match-return routing now use `maps/hideout/hideout.tscn`. `HideoutSession` retains selection and restores personal home rules after leaving a remote session. `match_board.gd` reuses the existing lobby implementation as a closeable overlay. `network_practice.gd` subclasses Playpen/RoundManager for authoritative shared activities; `network_training.gd`, `network_scrap.gd` and `network_toss.gd` own their state. `NetworkManager` gates scene readiness and acknowledges actor suspension before departure/return. The original tools F6 scene is unchanged. Protocol 7 requires matching clients/servers. See [HIDEOUT_MIGRATION.md](HIDEOUT_MIGRATION.md) for exact coverage, tests and outstanding Squad/access/backend work.
 
 Hideout Scrap signup uses the existing action/snapshot RPC envelope for
 owner-acknowledged placement, closes its menu before coin/countdown combat, and
@@ -278,3 +278,22 @@ modes clear old powers at selection/start; the powered mode grants normal pickup
 `course_records.gd` retains bests plus last-run/finish-count/fall details. Timer-only
 snapshots omit record history; accepted finishes publish immediately and update
 existing board rows. The wall shows Standard and Power-Up columns simultaneously.
+
+Production Hideout course records use one account-keyed device file for solo and
+online PBs, with a faster-only migration of legacy online history. On the first
+full scene snapshot the client uploads its saved PBs; the host binds them to that
+peer's actor ID and broadcasts standings. Imported PBs do not increment session
+finish counters. Protocol 6 adds this upload. See `HIDEOUT_MIGRATION.md` for storage,
+validation and the separate future cloud/world scope.
+
+Hideout session state also retains local course selection and Scrap wins across
+match returns. Wins are server-owned snapshot data cleared on session teardown;
+course preference is client-local and reported when entering the network scene.
+Door accents remain unbatched for per-viewer recoloring. The original Friends orb
+and compact shortcut hints replace full-width room bars; real player HUD widgets
+remain. Duel equipment is prepared while locked and acknowledged by both owners
+before the countdown advances. See `HIDEOUT_MIGRATION.md` for protocol 7 coverage.
+
+The September 9 Hideout visual pass centralizes the plum/apricot/mint frontend palette in ThemeManager/OneGunUI, including legacy frontend controls and HUD accents. LobbyPlayerHubOverlay is a static portrait plus illustrated 2x2 destination grid; images and provenance are in UI/assets/hideout. Cosmetic clubhouse_decor geometry is authored into the production station and merged by its existing static batching. Maps, networking and course record definitions are unchanged by the visual pass.
+
+Hideout shortcut and destination menus preserve locomotion using the same movement-only player mode as Escape. A last-dispatched menu_input node reserves saved movement actions before UI navigation and suppresses locomotion while a text field or binding capture owns keyboard input. Camera/combat remain gated; native opaque menus may disable hidden 3D rendering independently. Prelaunch, eliminated-player and duel preparation locks are unchanged.

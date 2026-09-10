@@ -2,7 +2,7 @@ extends RefCounted
 ## Run/dash/jump circuit, sized for the unchanged 10 m/s controller.
 const G = preload("res://maps/hideout/geometry.gd")
 const COURSE_ID := "flow_circuit_v2"
-const MODE_BUTTONS := [Vector3(-9.35,0.3,-38.2),Vector3(-9.35,0.3,-46.3)]
+const MODE_BUTTONS := [Vector3(-9.6,1.05,-37.8),Vector3(-9.6,1.05,-46.7)]
 const COURSE_GATES := [Vector3(-12.5,0,-42.25),Vector3(-40,0,-42.25),Vector3(-60,0,-42.25),Vector3(-82,0,-57),Vector3(-62,0,-70.75),Vector3(-37,0,-70.75),Vector3(-8.5,0,-70.75)]
 const RECOVERY := [Vector3(-16,-0.11,-42.25),Vector3(-41,-0.11,-42.25),Vector3(-62,-0.11,-42.25),Vector3(-82,-0.11,-60),Vector3(-60,-0.11,-70.75),Vector3(-36,-0.11,-70.75),Vector3(-8.5,-0.11,-70.75)]
 
@@ -54,10 +54,8 @@ static func build(station: Node3D, kit: RefCounted) -> void:
 	for location in [Vector3(-23,6.3,-43),Vector3(-44,6.3,-43),Vector3(-64,6.3,-43),Vector3(-84,6.3,-57),Vector3(-64,6.3,-71),Vector3(-43,6.3,-71),Vector3(-22,6.3,-71)]:
 		G.lamp(station,location,Color("ffe0b2"),1.4,19)
 		G.box(root,"CoursePractical",location+Vector3(0,0.55,0),Vector3(3.4,0.1,0.4),kit.lamp_mat)
-	_door(root,"AGILITY / START",-42.25,G.GREEN,kit)
-	_door(root,"AGILITY / FINISH",-70.75,G.ORANGE,kit)
-	var rules := G.label(root,"CourseRules","RUN / JUMP / DASH",Vector3(-9.55,4.2,-42.25),40,G.PAPER,0.009)
-	rules.rotation.y=PI/2
+	_door(root,"START",-42.25,kit)
+	_door(root,"FINISH",-70.75,kit)
 	for index in range(2):
 		var button := Node3D.new()
 		button.name="CourseModeButton%d" % index
@@ -65,10 +63,13 @@ static func build(station: Node3D, kit: RefCounted) -> void:
 		button.position=MODE_BUTTONS[index]
 		button.rotation.y=PI/2
 		var color: Color=G.GREEN if index==0 else G.ORANGE
-		G.box(button,"ButtonCase",Vector3.ZERO,Vector3(2.4,1.9,0.25),kit.ink,true)
-		G.cylinder(button,"PushButton",Vector3(0,-0.35,0.25),0.32,0.16,G.material("course_button_"+str(index),color)).rotation.x=PI/2
-		G.label(button,"ModeTitle","STANDARD" if index==0 else "POWER-UP RUN",Vector3(0,0.55,0.2),36,color,0.006)
-		G.label(button,"ModeInfo","NO POWERS" if index==0 else "SURGE + EXTRA DASH",Vector3(0,0.12,0.2),24,G.PAPER,0.006)
+		G.box(button,"ButtonCase",Vector3.ZERO,Vector3(2.1,1.45,0.14),kit.painted,true)
+		G.box(button,"InsetFace",Vector3(0,0,0.09),Vector3(1.92,1.27,0.04),kit.ink)
+		var accent:=G.box(button,"SelectionAccent",Vector3(-0.88,0,0.13),Vector3(0.06,1.15,0.03),G.material("course_mode_"+str(index),color,0.2))
+		accent.set_meta("live_visual",true)
+		G.label(button,"ModeTitle","STANDARD" if index==0 else "POWER-UP",Vector3(0,0.29,0.15),40,color,0.006)
+		G.label(button,"ModeInfo","NO POWERS" if index==0 else "SURGE + EXTRA DASH",Vector3(0,-0.02,0.15),24,G.PAPER,0.006)
+		G.label(button,"SelectionState","SELECTED" if index==0 else "SELECT",Vector3(0,-0.38,0.15),23,color,0.006)
 		station._zone("course_standard" if index==0 else "course_powerup",MODE_BUTTONS[index]+Vector3(1.3,0,0),Vector3(3.2,4,2.7))
 	for i in range(COURSE_GATES.size()):
 		var at: Vector3=COURSE_GATES[i]
@@ -124,9 +125,17 @@ static func _wall(root: Node3D, title: String, at: Vector3, size: Vector3, mat: 
 	root.add_child(instance)
 	instance.position=at
 
-static func _door(root: Node3D, title: String, z: float, color: Color, kit: RefCounted) -> void:
-	for side in [-1,1]: G.box(root,"DoorJamb",Vector3(-10,2.3,z+side*3.13),Vector3(0.18,7,0.18),kit.brass)
-	G.panel(root,title.to_pascal_case(),title,Vector3(-9.55,5.3,z),Vector2(6.2,0.8),color).rotation.y=PI/2
+static func _door(root: Node3D, title: String, z: float, kit: RefCounted) -> void:
+	var door:=Node3D.new()
+	door.name="CourseStartDoor" if title=="START" else "CourseFinishDoor"
+	root.add_child(door)
+	for side in [-1,1]:
+		G.box(door,"DoorJamb",Vector3(-10,2.3,z+side*3.13),Vector3(0.18,7,0.18),kit.painted)
+		var trim:=G.box(door,"ModeTrimLeft" if side<0 else "ModeTrimRight",Vector3(-9.87,2.3,z+side*3.13),Vector3(0.035,7,0.10),G.material("course_trim",G.GREEN,0.3))
+		trim.set_meta("live_visual",true)
+	var sign:=G.panel(door,"Sign",title,Vector3(-9.55,5.3,z),Vector2(6.2,0.8),G.GREEN)
+	sign.rotation.y=PI/2
+	sign.get_node("Rule").set_meta("live_visual",true)
 
 static func _arrow(root: Node3D, at: Vector3, yaw: float, kit: RefCounted) -> void:
 	var arrow := Node3D.new()

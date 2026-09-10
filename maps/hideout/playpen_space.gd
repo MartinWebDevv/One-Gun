@@ -71,7 +71,7 @@ static func build(station: Node3D) -> void:
 	var line := G.label(root,"BarrierFloorText","COMBAT AREA / GEAR CLEARED ON EXIT",Vector3(17,0.05,-29.65),46,G.ORANGE,0.011)
 	line.rotation.x=-PI/2
 	G.panel(root,"HallExitSign","MAIN HALL / GEAR CLEARED ON EXIT",Vector3(17,5.3,-32),Vector2(12,0.7),G.CYAN).rotation.y=PI
-	G.box(root,"ArenaFoundation",Vector3(17,-1.55,-56.5),Vector3(55,0.7,45),G.material("pen_floor",Color("d5c5a8")),true)
+	G.box(root,"ArenaFoundation",Vector3(17,-1.55,-56.5),Vector3(55,0.7,45),G.material("pen_floor",Color("e4d5c4")),true)
 	# Shared side walls have real openings into the two training rooms.
 	for section in [[-10.0,-36.5,5.0],[-10.0,-56.5,22.0],[-10.0,-76.5,5.0],[44.0,-43.0,18.0],[44.0,-67.0,24.0]]:
 		var length: float=section[2]
@@ -91,7 +91,7 @@ static func build(station: Node3D) -> void:
 		for x in [2.0,32.0]:
 			G.box(root,"ArenaPractical",Vector3(x,6.82,z),Vector3(3.6,0.1,0.4),kit.lamp_mat)
 			G.lamp(station,Vector3(x,6.2,z),Color("ffe0b2"),1.4,14)
-	var court := G.material("pen_court",Color("6fb8ad"))
+	var court := G.material("pen_court",Color("cab8ce"))
 	G.box(root,"PracticeCourt",Vector3(17,-1.185,-52),Vector3(44,0.025,26),court)
 	for x in [-5.0,39.0]: G.box(root,"CourtSideline",Vector3(x,-1.16,-52),Vector3(0.12,0.025,26),kit.cream)
 	for z in [-39.0,-65.0]: G.box(root,"CourtEndline",Vector3(17,-1.16,z),Vector3(44,0.025,0.12),kit.cream)

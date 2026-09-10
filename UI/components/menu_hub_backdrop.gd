@@ -111,23 +111,10 @@ func _build_motes() -> void:
 
 
 func _grade_color() -> Color:
-	match _variant:
-		Variant.LOCKER:
-			return Color(0.006, 0.016, 0.055, 0.36)
-		Variant.PROFILE:
-			return Color(0.012, 0.014, 0.030, 0.42)
-		_:
-			return Color(0.025, 0.009, 0.010, 0.40)
-
+	return Color(OneGunUI.color("face"), 0.68)
 
 func _mote_colors() -> Array[Color]:
-	match _variant:
-		Variant.LOCKER:
-			return [Color(0.25, 0.60, 1.0), Color(1.0, 0.64, 0.20)]
-		Variant.PROFILE:
-			return [Color(1.0, 0.62, 0.20), Color(0.20, 0.72, 0.75)]
-		_:
-			return [Color(1.0, 0.50, 0.12), Color(0.50, 0.66, 1.0)]
+	return [OneGunUI.color("gold"),OneGunUI.color("green")]
 
 
 func _reduced_motion_enabled() -> bool:

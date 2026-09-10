@@ -36,6 +36,8 @@ var status := "ENTER THE START DOOR"
 
 func setup(preview: Node3D) -> void:
 	lab=preview
+	selected_powerup=HideoutSession.course_powerup_selected
+	preload("res://maps/hideout/course_style.gd").apply(lab.station,selected_powerup)
 	process_physics_priority=9000
 	for i in range(3):
 		var dummy := Target.new()
@@ -65,7 +67,8 @@ func setup(preview: Node3D) -> void:
 	board_rows=lab.station.find_child("CourseBoardRows",true,false)
 	board_footer=lab.station.find_child("CourseBoardFooter",true,false)
 	var local := Records.new()
-	local.configure("" if lab.automation or NetworkManager.is_online() else "user://hideout/course_records.json")
+	if NetworkManager.is_online(): local.configure("")
+	else: local.configure_profile(lab.automation)
 	set_records_provider(local)
 	lab.session.changed.connect(refresh_roster)
 
@@ -144,9 +147,14 @@ func can_select_mode(actor: Node3D, powered: bool) -> bool:
 func select_mode(powered: bool) -> void:
 	if not can_select_mode(lab.pilot,powered): return
 	cancel_trial()
-	selected_powerup=powered
+	remember_mode(powered)
 	Loadout.clear(lab.pilot)
 	lab.ui.show_toast(("POWER-UP RUN" if powered else "STANDARD RUN")+" READY / CROSS THE START LINE")
+
+func remember_mode(powered: bool) -> void:
+	selected_powerup=powered
+	HideoutSession.course_powerup_selected=powered
+	preload("res://maps/hideout/course_style.gd").apply(lab.station,powered)
 
 func restart_trial() -> void:
 	cancel_trial()
@@ -233,20 +241,20 @@ func live_status(id: String, powered: bool) -> String:
 func _render_wall_records() -> void:
 	if not is_instance_valid(board_leader): return
 	for powered in [false,true]:
-		var lines: PackedStringArray=["POWER-UP RUN" if powered else "STANDARD"]
+		var lines: PackedStringArray=["POWER-UP / PERSONAL BEST" if powered else "STANDARD / PERSONAL BEST"]
 		var rows: Array=records.lobby_rows(records_bucket(powered))
 		for i in mini(rows.size(),10):
 			var row: Dictionary=rows[i]
 			var value: String=format_time(row.time_ms/1000.0) if row.time_ms>=0 else "NO FINISH"
 			var live:=live_status(str(row.id),powered)
-			if not live.is_empty(): value=live.get_slice(" / ",0)
+			if not live.is_empty(): value+=" *"
 			lines.append("%02d  %s  %s" % [i+1,str(row.name).left(16),value])
 		if rows.is_empty(): lines.append("WAITING FOR RUNNERS")
 		var target: Label3D=board_rows if powered else board_leader
 		var text: String="\n".join(lines)
 		if target.text!=text: target.text=text
 	if board_footer:
-		board_footer.text="LAST FINISH / "+last_finish_text if not last_finish_text.is_empty() else "%d PLAYERS / INTERACT FOR BEST, LAST RUN & FINISHES" % records.members.size()
+		board_footer.text="LAST FINISH / "+last_finish_text if not last_finish_text.is_empty() else "%d PLAYERS / * RUNNING / INTERACT FOR LIVE TIMES" % records.members.size()
 
 func _refresh_records() -> void:
 	_render_wall_records()

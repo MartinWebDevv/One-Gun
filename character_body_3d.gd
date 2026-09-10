@@ -14,6 +14,9 @@ const ProtectionIconFactory = preload("res://protection_icon_factory.gd")
 # these at defaults and none of the online paths run.
 var is_online := false
 var external_input_blocked := false
+# Hideout menus: keep locomotion, give the pointer exclusively to UI.
+var menu_movement_only := false
+var menu_text_input_active := false
 var net_authority_id := 1
 var actor_id := 1
 var owner_peer_id := 1
@@ -304,7 +307,7 @@ func _apply_player_prefs():
 func _apply_gameplay_mouse_mode() -> void:
 	if not _is_local_online or input_prefix != "p1":
 		return
-	if PauseManager.is_pause_open():
+	if PauseManager.is_pause_open() or menu_movement_only:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
 		Input.mouse_mode = (Input.MOUSE_MODE_HIDDEN if use_gamepad_look
@@ -526,7 +529,7 @@ func _input(event):
 	if _one_of_us_intro_input_locked:
 		return
 	if use_gamepad_look or not _is_local_online or PauseManager.is_pause_open() \
-			or external_input_blocked or OnlineChat.is_typing():
+			or external_input_blocked or menu_movement_only or OnlineChat.is_typing():
 		return
 	if event is InputEventMouseMotion:
 		var sens = MOUSE_LOOK_BASE * mouse_look_sensitivity
@@ -595,8 +598,8 @@ func _physics_process(delta):
 		move_and_slide()
 		return
 
-	if is_online and _is_local_online \
-			and (PauseManager.is_pause_open() or external_input_blocked or OnlineChat.is_typing()):
+	if menu_text_input_active or (is_online and _is_local_online \
+			and (PauseManager.is_pause_open() or external_input_blocked or OnlineChat.is_typing())):
 		velocity.x = move_toward(velocity.x, 0.0, SPEED * delta)
 		velocity.z = move_toward(velocity.z, 0.0, SPEED * delta)
 		if not is_on_floor():
@@ -608,15 +611,15 @@ func _physics_process(delta):
 		_update_animation_after_motion(Vector2.ZERO, delta)
 		return
 
-	if use_gamepad_look:
+	if use_gamepad_look and not menu_movement_only:
 		_process_gamepad_look(delta)
 
 	_update_aiming(delta)
 	_update_active_slot_and_visuals()
 
-	if Input.is_action_just_pressed(input_prefix + "_cycle_left"):
+	if not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_cycle_left"):
 		_try_cycle_slot(-1)
-	if Input.is_action_just_pressed(input_prefix + "_cycle_right"):
+	if not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_cycle_right"):
 		_try_cycle_slot(1)
 
 	if not is_on_floor():
@@ -650,8 +653,8 @@ func _physics_process(delta):
 		elif double_jump_shoes_active:
 			_request_double_jump_shoes()
 
-	var primary_action_pressed := Input.is_action_just_pressed(input_prefix + "_fire")
-	var interact_action_pressed := Input.is_action_just_pressed(input_prefix + "_interact")
+	var primary_action_pressed := not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_fire")
+	var interact_action_pressed := not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_interact")
 	# Fire/swing always wins if a legacy save or remap binds both actions to the
 	# same input. A pickup requires an unambiguous Interact press.
 	if should_attempt_interact(interact_action_pressed, primary_action_pressed):
@@ -661,6 +664,9 @@ func _physics_process(delta):
 		interact_hold_active = not _try_interact()
 		interact_hold_timer = 0.0
 
+	if menu_movement_only:
+		interact_hold_active = false
+		interact_hold_timer = 0.0
 	if interact_hold_active:
 		if Input.is_action_pressed(input_prefix + "_interact"):
 			interact_hold_timer += delta
@@ -677,19 +683,19 @@ func _physics_process(delta):
 			active_item.begin_use()
 		else:
 			_try_primary_action()
-	if Input.is_action_just_released(input_prefix + "_fire"):
+	if not menu_movement_only and Input.is_action_just_released(input_prefix + "_fire"):
 		var released_item = get_active_item() if active_slot in ["item1", "item2"] else null
 		if released_item != null and released_item.has_method("release_use"):
 			released_item.release_use()
 
-	if Input.is_action_just_pressed(input_prefix + "_throw"):
+	if not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_throw"):
 		if active_slot == "weapon" and held_melee_weapon != null:
 			held_melee_weapon.begin_throw_preview()
-	if Input.is_action_just_released(input_prefix + "_throw"):
+	if not menu_movement_only and Input.is_action_just_released(input_prefix + "_throw"):
 		if active_slot == "weapon" and held_melee_weapon != null:
 			held_melee_weapon.release_throw()
 
-	if Input.is_action_just_pressed(input_prefix + "_decoy_command"):
+	if not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_decoy_command"):
 		_toggle_active_decoy_control()
 
 	if Input.is_action_just_pressed(input_prefix + "_dash") \
@@ -1418,13 +1424,13 @@ func _update_action_animation(delta: float) -> void:
 		_current_anim = ""
 
 func _update_aiming(_delta):
-	if Input.is_action_just_pressed(input_prefix + "_ads"):
+	if not menu_movement_only and Input.is_action_just_pressed(input_prefix + "_ads"):
 		var camera_item = get_active_item() if active_slot in ["item1", "item2"] else null
 		if camera_item != null and camera_item.has_method("is_camera_mode_active") and camera_item.is_camera_mode_active():
 			camera_item.cancel_use()
 			ads_blend_target = 0.0
 			return
-	var ads_held = Input.is_action_pressed(input_prefix + "_ads")
+	var ads_held = not menu_movement_only and Input.is_action_pressed(input_prefix + "_ads")
 	var target_blend = 1.0 if ads_held else 0.0
 	if target_blend != ads_blend_target:
 		ads_blend_target = target_blend

@@ -18,6 +18,16 @@ func _run() -> void:
 	host = args.has("--hideout-host")
 	for arg in args:
 		if arg.begins_with("--test-port="): port=int(arg.trim_prefix("--test-port="))
+	# Seed only the isolated fixture file for the account active on this test PC.
+	var fixture=preload("res://maps/hideout/course_records.gd").new()
+	fixture.configure_profile(true)
+	var account := SupabaseManager.current_user_id()
+	var key := "account:"+account.sha256_text() if not account.is_empty() else "local:profile"
+	if not fixture.storage_path.is_empty():
+		for bucket in fixture.personal_times:
+			if fixture.personal_times[bucket].has("local:profile"):
+				fixture.personal_times[bucket][key]=fixture.personal_times[bucket]["local:profile"]
+		fixture._save()
 	GameConfig.set_bot_count(0)
 	GameConfig.teams_enabled=false
 	NetworkManager.connection_succeeded.connect(func(): connection_done=true)
@@ -71,7 +81,11 @@ func _run() -> void:
 					if not await _wait_for(func(): return host_done,"host activity/transition checks",180000): return
 					NetworkManager.leave_online_to_main_menu()
 					if not await _wait_for(_own_home_ready,"guest returns to own home"): return
+					_check(HideoutSession.scrap_lobby_wins.is_empty(),"leaving for a new Hideout clears Scrap standings")
 					_check(HideoutSession.course_lobby_times.is_empty(),"leaving clears previous lobby records")
+					var home=get_tree().current_scene.training
+					_check(home.records.personal_best(home.records_bucket(false),home.viewer_id())<42000,"improved personal best survives disconnect and loads in own home")
+					_check(home.records.lobby_rows(home.records_bucket(false))[0].time_ms<42000,"fresh home board displays saved personal best without another run")
 					print("HIDEOUT_COMPLETE CLIENT")
 					get_tree().quit(0)
 				return
@@ -109,6 +123,15 @@ func _exercise_host() -> void:
 	var client_id:=NetworkManager.actor_id_for_peer(NetworkManager.peer_ids_sorted()[1])
 	var host_actor=scene.pilot
 	var guest=NetworkManager.find_actor(client_id)
+	var bucket: String=scene.training.records_bucket(false)
+	if not await _wait_for(func(): return scene.training.records.lobby_times.get(bucket,{}).get(str(client_id),-1)==42000,"guest uploads saved PB on join"): return
+	_check(scene.training.records.lobby_times[bucket][str(NetworkManager.local_actor_id())]==45000,"host saved PB appears before running")
+	_check(scene.training.records.lobby_times[scene.training.records_bucket(true)][str(client_id)]==30000,"guest Power-Up PB is shared separately")
+	_check(scene.training.records.lobby_details.is_empty(),"imported history does not invent session finishes")
+	await _verify_remote("saved_bests")
+	var menu_errors: Array[String]=await preload("res://tools/hideout_menu_validation.gd").run(scene)
+	_check(menu_errors.is_empty(),"host Escape movement and camera: "+str(menu_errors))
+	await _verify_remote("pause_movement")
 	manager.clear_inventory(host_actor)
 	manager.server_eliminate(client_id,host_actor.actor_id,manager.online_round_epoch)
 	_check(not guest.is_eliminated,"main hall rejects damage")
@@ -138,6 +161,12 @@ func _exercise_host() -> void:
 		training.runners[actor.actor_id].start=Time.get_ticks_msec()-1200
 		for gate in range(1,training.Space.COURSE_GATES.size()): training._gate_entered(actor,gate)
 	_check(training.records.lobby_rows(training.movement_key()+"/standard").filter(func(row): return row.time_ms>=1000).size()==2,"both players receive host-validated course records")
+	await _verify_remote("course")
+	var best_before: int=training.records.lobby_times[bucket][str(client_id)]
+	training._gate_entered(guest,0)
+	training.runners[client_id].start=Time.get_ticks_msec()-9000
+	for gate in range(1,training.Space.COURSE_GATES.size()): training._gate_entered(guest,gate)
+	_check(training.records.lobby_times[bucket][str(client_id)]==best_before,"slower finish never replaces shared personal best")
 	await _verify_remote("course")
 	await _exercise_course_modes(scene,host_actor,guest)
 	_teleport(host_actor.actor_id,scene.scrap.Space.TERMINAL_USE)
@@ -170,6 +199,10 @@ func _exercise_host() -> void:
 	await _verify_remote("duel")
 	manager.server_eliminate(client_id,host_actor.actor_id,manager.online_round_epoch)
 	_check(scene.scrap.state==scene.scrap.State.RESULT,"one elimination ends the duel")
+	_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"host awards one Scrap win")
+	scene.scrap.finish_elimination(client_id)
+	_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"duplicate elimination cannot award a second win")
+	await _verify_remote("scrap_wins")
 	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.IDLE,"duel reset"): return
 	_check(not guest.is_eliminated and not host_actor.holding_gun,"duel returns both players without gear")
 	_check(guest.position.distance_to(host_actor.position)>2.0,"fighters return to separate terminal positions")
@@ -190,6 +223,7 @@ func _exercise_host() -> void:
 	await _verify_remote("duel")
 	scene.scrap.leave()
 	_check(scene.scrap.state==scene.scrap.State.RESULT,"fighter leave cancels the duel")
+	_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"cancelled duels do not award wins")
 	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.IDLE,"cancelled duel resets"): return
 	await _verify_remote("duel_reset")
 	for cycle in range(2):
@@ -203,6 +237,8 @@ func _exercise_host() -> void:
 		await _verify_remote("return")
 		_check(NetworkManager.peers.size()==2,"both peers return to the same session")
 		var room:=get_tree().current_scene
+		_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"Scrap wins survive a normal match return")
+		_check(room.training.selected_powerup,"last course choice survives match return")
 		_check(room.training.records.lobby_rows(room.training.movement_key()+"/standard").filter(func(row): return row.time_ms>=1000).size()==2,"lobby course records survive a match return")
 	var returned:=get_tree().current_scene
 	var pen=returned.playpen
@@ -252,11 +288,30 @@ func _verify(phase: String) -> void:
 	else:
 		var scene:=get_tree().current_scene
 		match phase:
+			"pause_movement":
+				var menu_errors: Array[String]=await preload("res://tools/hideout_menu_validation.gd").run(scene)
+				_check(menu_errors.is_empty(),"guest Escape movement and camera: "+str(menu_errors))
+			"saved_bests":
+				var t=scene.training
+				if not await _wait_for(func(): return t.records.lobby_rows(t.records_bucket(false)).filter(func(row): return row.time_ms==42000 or row.time_ms==45000).size()==2,"both historical PBs reach guest board"): return
+				_check(t.records.lobby_rows(t.records_bucket(true)).filter(func(row): return row.time_ms==30000 or row.time_ms==33000).size()==2,"guest sees both historical Power-Up PBs")
+				_check(t.records.lobby_details.is_empty(),"guest historical times do not count as new finishes")
 			"course":
 				_check(scene.training.records.lobby_rows(scene.training.movement_key()+"/standard").filter(func(row): return row.time_ms>=1000).size()==2,"shared board contains both runners")
 				_check(scene.training.records.personal_best(scene.training.movement_key()+"/standard",str(NetworkManager.local_actor_id()))>=1000,"personal page contains the viewing player record")
+				var reloaded=scene.training.Records.new()
+				reloaded.configure(scene.training.personal_store.storage_path)
+				var saved: int=reloaded.personal_best(scene.training.records_bucket(false),scene.training.personal_key)
+				_check(saved>=1000 and saved<42000,"new guest PB is durably saved and slower finishes preserve it")
+				_check(scene.training.records.lobby_times[scene.training.records_bucket(false)][str(NetworkManager.local_actor_id())]==saved,"shared PB equals saved personal record")
 			"range": _check(scene.training.range_indices[1]==9 and scene.training.hits[1]==1,"range distance and hit count replicated")
+			"scrap_wins":
+				var winner:=str(NetworkManager.actor_id_for_peer(1))
+				_check(HideoutSession.scrap_lobby_wins[winner].wins==1,"guest receives lobby win standings immediately")
+				_check("1 WIN" in scene.scrap.wins_board.text,"physical wins board shows the winner")
 			"course_live":
+				_check(not scene.training.selected_powerup,"host choosing Power-Up does not change guest selection")
+				_check(scene.station.find_child("CourseStartDoor",true,false).get_node("Sign/Title").modulate==scene.G.GREEN,"guest doorway stays Standard while host runs Power-Up")
 				scene.training.board_assisted=true
 				scene._open("course_board")
 				await get_tree().create_timer(0.3).timeout
