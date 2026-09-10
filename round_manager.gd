@@ -407,6 +407,14 @@ func _net_apply_online_gun_action(action: String, data: Dictionary) -> void:
 	var gun = _online_loose_gun(str(data.get("gun_instance_name", ""))) \
 		if action == "pickup" else _online_loose_gun() \
 		if action == "return_loose" else _online_gun_for_actor(holder_actor_id)
+	if action == "set_can_fire" and not str(data.get("gun_instance_name", "")).is_empty():
+		gun = null
+		for candidate in get_tree().get_nodes_in_group("gun"):
+			if str(candidate.name) == str(data.gun_instance_name):
+				gun = candidate
+				break
+		# An expired loan must not unlock a different gun in another supply bay.
+		if gun == null: return
 	if gun == null and action in ["set_can_fire", "return_loose"]:
 		gun = _online_loose_gun()
 	if gun == null:

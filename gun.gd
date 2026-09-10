@@ -445,6 +445,7 @@ func _on_reload_finished():
 			var rm = _online_round_manager()
 			if rm != null:
 				rm.broadcast_online_gun_action("set_can_fire", {
+					"gun_instance_name": str(name),
 					"holder_actor_id": _holder_actor_id(),
 					"value": true,
 				})
@@ -525,10 +526,12 @@ func _local_pickup(p, preserve_melee: bool = false) -> bool:
 	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
+	var reload_remaining: float = $ReloadTimer.time_left
 	var prev_parent = get_parent()
 	if prev_parent != null:
 		prev_parent.remove_child(self)
 	hold_point.add_child(self)
+	_resume_reload_after_reparent(reload_remaining)
 	position = Vector3.ZERO
 	rotation = Vector3(0, PI, 0)
 	scale = Vector3.ONE * HELD_SCALE
@@ -550,10 +553,12 @@ func drop():
 	var world = get_tree().current_scene
 	visible = true
 	scale = Vector3.ONE
+	var reload_remaining: float = $ReloadTimer.time_left
 	var drop_transform = global_transform
 	var hold_point = get_parent()
 	hold_point.remove_child(self)
 	world.add_child(self)
+	_resume_reload_after_reparent(reload_remaining)
 	global_transform = drop_transform
 	$CollisionShape3D.disabled = false
 	$Area3D.monitoring = true
@@ -567,6 +572,11 @@ func drop():
 	GameEvents.gun_dropped.emit()
 	_start_loose_return()
 
+
+func _resume_reload_after_reparent(remaining: float) -> void:
+	# Timer stops on exiting the scene tree, even when the same gun is reattached.
+	if not can_fire:
+		$ReloadTimer.start(maxf(remaining, 0.001))
 
 func _enable_loose_physics() -> void:
 	# Held weapons are frozen long enough for the rigid body to enter a sleeping

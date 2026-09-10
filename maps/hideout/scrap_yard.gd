@@ -27,17 +27,21 @@ var split_cameras: Array[Camera3D]=[]
 var rng:=RandomNumberGenerator.new()
 var update_left:=0.0
 const Coin=preload("res://maps/hideout/scrap_coin.gd")
+var jumbotron: Node3D
 var coin_visual: Control
 var split_coins: Array[Control]=[]
 var split_huds: Array[Label]=[]
 var split_reticles: Array[Label]=[]
 var default_disable_3d:=false
+var transition: CanvasLayer
 var spectators: Array[Dictionary]=[]
 var pad_check:=0.0
 
 func setup(preview: Node3D) -> void:
 	lab=preview
 	rng.randomize()
+	transition=preload("res://maps/hideout/scrap_transition.gd").new()
+	add_child(transition)
 	board=lab.station.find_child("ScrapStatus",true,false)
 	wins_board=lab.station.find_child("ScrapWinsRows",true,false)
 	Standings.render(wins_board,false)
@@ -51,6 +55,9 @@ func setup(preview: Node3D) -> void:
 	banner.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	banner.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	banner.hide()
+	jumbotron=preload("res://maps/hideout/scrap_jumbotron.gd").new()
+	jumbotron.name="ScrapJumbotron"
+	lab.add_child(jumbotron)
 	coin_visual=Coin.new()
 	lab.ui.shell.add_child(coin_visual)
 	coin_visual.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -238,6 +245,7 @@ func _eliminated(id: int, _killer: int, _icon: String) -> void:
 				Standings.award("local:"+str(winner.actor_id),winner.get_display_name())
 				Standings.render(wins_board,false)
 			finish(winner.get_display_name()+" WINS")
+			winner.play_victory_dance()
 			return
 
 func finish(message: String) -> void:
@@ -258,7 +266,17 @@ func finish(message: String) -> void:
 	_show_result.call_deferred()
 
 func _show_result() -> void:
-	if state==State.RESULT: lab._open("scrap")
+	var expected := epoch
+	await get_tree().create_timer(2.5).timeout
+	if state!=State.RESULT or epoch!=expected: return
+	var local_fighter := fighters.has(lab.pilot)
+	await transition.fade(1.0,local_fighter)
+	if state!=State.RESULT or epoch!=expected:
+		transition.fade(0.0,local_fighter)
+		return
+	leave()
+	await get_tree().physics_frame
+	transition.fade(0.0,local_fighter)
 
 func leave() -> void:
 	if state==State.IDLE: return
@@ -351,6 +369,10 @@ func _refresh() -> void:
 		State.COUNTDOWN: text="%s / %s GETS THE GUN\nSTARTS IN %d" % [coin_side.to_upper(),fighters[gun_index].get_display_name(),ceili(time_left)]
 		State.ACTIVE: text="ONE ROUND / FIGHT!"
 		State.RESULT: text=result_text
+	var names: Array=[]
+	for actor in fighters:
+		if is_instance_valid(actor): names.append(actor.get_display_name())
+	jumbotron.present(names if state==State.ACTIVE else [],text,coin_side,state==State.FLIPPING,state in [State.FLIPPING,State.COUNTDOWN],time_left)
 	if board: board.text=text
 	banner.visible=not split_layer and Space.in_room(lab.pilot.position) and lab.ui.page.is_empty() and state!=State.IDLE
 	banner.offset_top=360 if state in [State.FLIPPING,State.COUNTDOWN] else 178
@@ -484,7 +506,7 @@ func gather_spectators() -> void:
 
 func _update_coin() -> void:
 	var active: bool=state in [State.FLIPPING,State.COUNTDOWN] and lab.ui.page.is_empty()
-	coin_visual.show_coin(active and not split_layer,state==State.FLIPPING,time_left,coin_side)
+	coin_visual.show_coin(active and not split_layer and is_fighter(lab.pilot),state==State.FLIPPING,time_left,coin_side)
 	for coin in split_coins: coin.show_coin(active,state==State.FLIPPING,time_left,coin_side)
 
 func apply_quality() -> void:

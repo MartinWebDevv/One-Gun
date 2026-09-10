@@ -12,7 +12,7 @@ func _physics_process(_delta: float) -> void:
 	if world.pilot.menu_text_input_active != typing:
 		world._sync_controls()
 	# Settings/Locker may reapply player preferences while their overlay is open.
-	if world._menu_is_open() and Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+	if (not WindowFocus.active or world._menu_is_open()) and Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _input(event: InputEvent) -> void:

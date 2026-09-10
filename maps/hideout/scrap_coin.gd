@@ -6,6 +6,7 @@ var side := "HEADS"
 var font: Font
 
 func _ready() -> void:
+	hide() # Only a fighter presentation may explicitly enable the screen overlay.
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 	font=load("res://fonts/cinematic/barlow_condensed/BarlowCondensed-ExtraBold.ttf")
 

@@ -307,7 +307,7 @@ func _apply_player_prefs():
 func _apply_gameplay_mouse_mode() -> void:
 	if not _is_local_online or input_prefix != "p1":
 		return
-	if PauseManager.is_pause_open() or menu_movement_only:
+	if PauseManager.is_pause_open() or menu_movement_only or not WindowFocus.active:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
 		Input.mouse_mode = (Input.MOUSE_MODE_HIDDEN if use_gamepad_look
@@ -398,6 +398,7 @@ func _apply_character_model(requested_id: String) -> void:
 	var visual_visible := true
 	var insert_index := get_child_count()
 	var socket_children := {}
+	var held_reload_times := {}
 	if current_visual != null:
 		visual_position = current_visual.position
 		visual_rotation = current_visual.rotation
@@ -411,6 +412,8 @@ func _apply_character_model(requested_id: String) -> void:
 				continue
 			socket_children[socket_name] = socket.get_children()
 			for child in socket.get_children():
+				if child.has_method("_resume_reload_after_reparent"):
+					held_reload_times[child]=child.get_node("ReloadTimer").time_left
 				child.reparent(self, true)
 		current_visual.free()
 	var next_visual := visual_scene.instantiate() as Node3D
@@ -429,6 +432,8 @@ func _apply_character_model(requested_id: String) -> void:
 		for child in socket_children[socket_name]:
 			if is_instance_valid(child):
 				child.reparent(next_socket, true)
+				if held_reload_times.has(child):
+					child._resume_reload_after_reparent(float(held_reload_times[child]))
 	character_model_id = safe_id
 	if next_visual.has_method("set_cosmetic_loadout"):
 		next_visual.call("set_cosmetic_loadout", cosmetic_loadout)
@@ -529,7 +534,7 @@ func _input(event):
 	if _one_of_us_intro_input_locked:
 		return
 	if use_gamepad_look or not _is_local_online or PauseManager.is_pause_open() \
-			or external_input_blocked or menu_movement_only or OnlineChat.is_typing():
+			or external_input_blocked or menu_movement_only or not WindowFocus.active or OnlineChat.is_typing():
 		return
 	if event is InputEventMouseMotion:
 		var sens = MOUSE_LOOK_BASE * mouse_look_sensitivity
@@ -598,7 +603,7 @@ func _physics_process(delta):
 		move_and_slide()
 		return
 
-	if menu_text_input_active or (is_online and _is_local_online \
+	if (not WindowFocus.active and _is_local_online) or menu_text_input_active or (is_online and _is_local_online \
 			and (PauseManager.is_pause_open() or external_input_blocked or OnlineChat.is_typing())):
 		velocity.x = move_toward(velocity.x, 0.0, SPEED * delta)
 		velocity.z = move_toward(velocity.z, 0.0, SPEED * delta)
@@ -1319,6 +1324,7 @@ func _refresh_animation_ground_state(delta: float) -> void:
 
 
 func _update_animation_after_motion(input_dir: Vector2, delta: float) -> void:
+	if _victory_dance_active: return
 	_refresh_animation_ground_state(delta)
 	_update_animation(input_dir, delta)
 

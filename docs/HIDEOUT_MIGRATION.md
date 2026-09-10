@@ -21,8 +21,7 @@ client/server exports exclude tools, so production has no dependency on that fol
 | Match / results return | Shared Hideout in the same hosted session |
 | Guest leave / host shutdown | Own offline Hideout; a guest leaving does not close the host |
 
-Full-screen menus suspend the local character's input and the room's root 3D
-rendering. Other players and host authority continue. The existing map-preview
+Full-screen menus preserve movement while reserving the cursor for UI and suspend the room's hidden root 3D rendering. Text entry and rebinding reserve movement keys. Other players and host authority continue. The existing map-preview
 SubViewport renders only while its Game Board is open. Settings keep their existing
 transaction/cancel behavior. Map selection is remembered by HideoutSession;
 personal settings and match rules remain owned by PlayerPrefs and GameConfig.
@@ -73,7 +72,7 @@ separate party/backend rollout:
   silently disconnected to perform a single-player join.
 - The existing hosted transport and configured matchmaking services are reused.
   No service, coordinator, server deployment or public build was published.
-- Network protocol is **7**. Both clients and the server need this revision.
+- Network protocol is **8**. Both clients and the server need this revision.
   Existing hosted services must be rebuilt/updated before live-service testing.
 - While the host is in a match, a late visitor has a local waiting Hideout and
   can spectate via the Game Board. A concurrently simulated waiting world while
@@ -282,3 +281,50 @@ The 1080p Low Scrap sample on the development RTX 4060 Ti remained near the prio
 Shortcut-menu input is reserved before UI dispatch by maps/hideout/menu_input.gd. It follows the player input prefix and saved movement bindings so jump/arrow/stick input cannot also activate a focused button. Pointer navigation stays active, and camera look/combat remain blocked until all menus close. Prelaunch, elimination and Scrap placement/countdown locks still take priority.
 
 Validation of shared menu movement: rendered UI checks pass for all ten shortcuts, actual locomotion, fixed camera, jump-vs-button focus, text entry, rebinding and restoration on close. Host and guest checks pass after preserving menu_input during the local-to-host upgrade; two match/return cycles, duels, course records and disconnect cleanup complete without engine errors. No new rendering, physics-query or network synchronization work was added; the input guard checks only the active focus/capture state.
+
+### Single player HUD while hosting
+
+Practice network initialization previously created the inherited OnlineHUD in addition to the Hideout-owned PlayerHUD, duplicating inventory, stamina, dashes and effects after hosting/joining. Practice HUD construction now has a scene override: the standalone arena keeps its online HUD, while the Hideout uses only its own player_hud.gd bound through local_player_ready. Match scenes keep their regular online HUD. Neither duplicate widgets nor a hidden second HUD are instantiated in the Hideout.
+
+Regression validation passes for hosting before any guest arrives, guest arrival, two match/Hideout return cycles, and each player leaving to their own home: exactly one inventory, stamina and dash widget exists and each references the local actor. Match scenes retain exactly one OnlineHUD; Hideouts contain exactly one PlayerHUD and no OnlineHUD. Existing duel, movement/menu, course and persistence checks also pass. The local test used direct loopback joining; discovery-port contention and an external social-service timeout were warnings, so this run does not qualify discovery/social availability.
+
+## September 9 course, Scrap and input repairs
+
+- Agility is a clean movement-only volume, separate from the Play Pen combat bound.
+  Entering either door retires carried weapons/items, outside powers and owned effects.
+  Both doors have layer-20 ordnance barriers. Bullets and loose loans cannot enter;
+  actor effect/pickup guards reject attacks and outside grants in the course.
+  Only the course start can grant its normal Speed Surge and Extra Dash.
+- The centre divider extends to x=-10 without shifting its far end. Start and
+  finish are both x=-12.5, 2.5m inside their doorway. Directional swept crossings
+  span the lanes, including their wall edges, and require every checkpoint in order.
+  Course version is now `flow_circuit_v3`; older-route PBs remain stored separately
+  because moving the finish changes the measured distance.
+- A four-sided overhead Scrap jumbotron presents the shared coin and fighter names
+  to spectators. Fighter one is red and fighter two is blue, with a neutral VS.
+  Spectators use the jumbotron exclusively for the coin; screen coin overlays are
+  shown only to duel participants; offline Watch mode has no screen coin. It uses world labels/meshes, with no additional camera, viewport
+  or lights. The existing 10Hz state presentation updates it; only the active coin
+  flip interpolates its rotation each rendered frame.
+- Disarm/drop/pickup preserve the remaining gun reload timer through reparenting.
+  Host reload completion addresses the exact gun, including a loose one.
+- The winner plays the selected victory animation during a 3s result phase. Fighters
+  fade out, acknowledge readiness, return to separate terminal positions and fade
+  back in after placement. The overlay is hidden by default and requires explicit
+  local-fighter ownership on both fade calls. Spectators (including offline Watch
+  mode) and other Hideout residents never fade. A bounded timeout prevents a missing acknowledgement
+  from holding the room indefinitely. No room scene reload is needed.
+- WindowFocus gates background input and releases stale actions on focus changes.
+  Regaining focus restores mouse ownership; Hideout clears a missed Alt-release latch.
+  The shared simulation continues while the local window is unfocused.
+- Roster appearance changes now hydrate existing host and guest actors in the Hideout,
+  so Locker changes are visible without respawning or rejoining.
+- Listen-host migration is not enabled in this repair. Tailscale supplies connectivity;
+  replacing ENet peer 1 requires a coordinated rehost/reconnect and state handoff.
+  Existing dedicated sessions separately support lobby-controller replacement.
+
+`tools/hideout_repair_validation.gd` exercises full-width/directional course crossings,
+clean entry/exit, projectile barriers, reload continuity and focus gating. The ENet
+harness additionally exercises replicated appearance, disarm during reload and the
+victory/return flow. Real Alt-Tab behavior, internet latency, spectator sightlines
+and weaker-laptop frame pacing still need human playtesting.

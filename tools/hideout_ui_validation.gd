@@ -47,6 +47,7 @@ func _run() -> void:
 	_check(menu_errors.is_empty(),"Escape and shortcut movement, cursor, camera and typing: "+str(menu_errors))
 	await _check_hub_routes(world)
 	await _check_course_buttons(world)
+	await preload("res://tools/hideout_repair_validation.gd").run(world,_check)
 	world.training.show_result=0
 	world.ui.toast_left=0
 	world.training.hud.hide()
@@ -65,6 +66,14 @@ func _run() -> void:
 	camera.position=Vector3(1.5,3.5,-98)
 	camera.look_at(Vector3(1.5,3.5,-85.3))
 	await _capture("scrap_wins")
+	camera.position=Vector3(17,3.8,-97)
+	camera.look_at(Vector3(17,7.4,-110))
+	world.scrap.set_process(false)
+	world.scrap.jumbotron.present([],"","heads",false,true,0)
+	await _capture("scrap_jumbotron_coin")
+	world.scrap.jumbotron.present(["FART FELLA","CHALLENGER"],"","",false,false,0)
+	await _capture("scrap_jumbotron_match")
+	world.scrap.set_process(true)
 	camera.position=Vector3(3,3,-40.8)
 	camera.look_at(Vector3(-10,1,-42.25))
 	await _capture("course_buttons")

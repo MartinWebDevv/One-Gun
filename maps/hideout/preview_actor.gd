@@ -43,10 +43,10 @@ func _try_primary_action():
 	if in_playpen(): super._try_primary_action()
 
 func apply_powerup(power_type: String, duration: float) -> bool:
-	return super.apply_powerup(power_type,duration) if in_playpen() else false
+	return super.apply_powerup(power_type,duration) if in_playpen() or bool(get_meta("course_grant",false)) else false
 
 func can_collect_powerup(power_type: String) -> bool:
-	return in_playpen() and super.can_collect_powerup(power_type)
+	return (in_playpen() or (bool(get_meta("course_grant",false)) and power_type in ["speed_surge","extra_dash"])) and super.can_collect_powerup(power_type)
 
 func activate_double_jump_shoes() -> void:
 	if in_playpen(): super.activate_double_jump_shoes()

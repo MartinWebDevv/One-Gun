@@ -13,7 +13,7 @@ for role in ("host","client"):
     # Distinct disks model two PCs with previously saved records, before any run.
     standard=45000 if role=="host" else 42000
     powered=33000 if role=="host" else 30000
-    prefix="flow_circuit_v2/dash3/sprint0/jump7.000/"
+    prefix="flow_circuit_v3/dash3/sprint0/jump7.000/"
     (out/(role+"_records.json")).write_text(json.dumps({"version":1,"personal":{
         prefix+"standard":{"local:profile":standard,"account:someone_else":1001},
         prefix+"powerup":{"local:profile":powered}}}))

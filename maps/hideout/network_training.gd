@@ -140,6 +140,8 @@ func _gate_entered(body: Node3D, index: int) -> void:
 	if index == 0:
 		if not runners.has(id):
 			refresh_roster()
+			manager.sync_actor(body)
+			manager.clear_inventory(body)
 			var powered: bool=selected_modes.get(id,false)
 			runners[id] = {"start":Time.get_ticks_msec(),"penalty":0,"next":1,"falls":0,"rules":movement_key(),"assisted":powered,"recovery":Space.RECOVERY[0]}
 			NetworkManager.broadcast_match_rpc(self,&"_course_loadout",[id,powered,true])
@@ -170,6 +172,7 @@ func _assisted(actor: Node) -> bool:
 func _physics_process(delta: float) -> void:
 	if initializing: return
 	if NetworkManager.is_host():
+		for actor in lab.get_node("NetPlayers").get_children(): _check_crossings(actor)
 		for id in runners.keys():
 			var actor = NetworkManager.find_actor(int(id))
 			if actor == null or actor.is_eliminated or movement_key()!=str(runners[id].rules):
@@ -187,6 +190,7 @@ func _physics_process(delta: float) -> void:
 					runners[actor.actor_id].penalty += 2000
 					runners[actor.actor_id].falls += 1
 					at = runners[actor.actor_id].recovery
+				previous_positions[actor.get_instance_id()]=at
 				NetworkManager.broadcast_match_rpc(manager,&"_net_recover_playpen_actor",[actor.actor_id,at,PI/2])
 		sync_left -= delta
 		if sync_left <= 0:

@@ -20,6 +20,8 @@ static func start(actor: CharacterBody3D, powered: bool) -> void:
 	if powered:
 		# Read the normal pickup default; no course-specific duration multiplier.
 		var pickup := preload("res://powerup.gd").new()
+		actor.set_meta("course_grant",true)
 		actor.apply_powerup("speed_surge",pickup.effect_duration)
 		actor.apply_powerup("extra_dash",pickup.effect_duration)
+		actor.set_meta("course_grant",false)
 		pickup.free()

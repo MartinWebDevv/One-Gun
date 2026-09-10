@@ -342,3 +342,12 @@ means Standard and orange means Power-Up, visible only to that player. Match
 returns retain the choice. The Scrap Yard win board counts one win per completed
 1v1, retains wins through normal matches in the same Hideout, and resets on leaving
 that lobby or restarting the game. Cancelled rounds and demo bots do not earn wins.
+
+### Hideout course isolation and Scrap results (2026-09-09)
+
+Neither agility doorway admits carried weapons, items or outside powerups; bullets
+stop at both doors. Only the selected run's normal starting bonuses are allowed.
+Start and finish are equally inset (2.5m), with full-lane directional checkpoint
+crossings. The adjusted route uses `flow_circuit_v3`; old-route times remain saved
+in their original buckets. Scrap results show the winner's selected dance for 3s,
+then fade through the acknowledged return to the terminal; lobby wins are unchanged.

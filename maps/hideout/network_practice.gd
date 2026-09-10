@@ -66,6 +66,11 @@ func _initialize_hideout() -> void:
 		lab.station.open_arrivals()
 		_reconcile_playpen_members()
 
+func _build_practice_hud(_root: Node) -> void:
+	# Hideout owns one player_hud.gd layer and binds it via local_player_ready.
+	# The inherited arena OnlineHUD would duplicate every player widget.
+	pass
+
 func _create_online_human() -> Node:
 	return preload("res://maps/hideout/network_actor.tscn").instantiate()
 
@@ -92,6 +97,13 @@ func _respawn_practice_actor(actor_id: int, generation: int) -> void:
 	_broadcast_online_state()
 
 func _roster_changed() -> void:
+	# Roster updates already reach every peer; hydrate existing actors too.
+	for actor in lab.get_node("NetPlayers").get_children():
+		if not NetworkManager.peers.has(actor.owner_peer_id): continue
+		var skin: String = NetworkManager.peer_skin_id(actor.owner_peer_id)
+		var model: String = NetworkManager.peer_model_id(actor.owner_peer_id)
+		if actor.character_skin_id != skin or actor.character_model_id != model:
+			actor.set_character_appearance(model, skin)
 	if NetworkManager.is_host() and not departing:
 		for actor in lab.get_node("NetPlayers").get_children():
 			if not NetworkManager.peers.has(actor.owner_peer_id): clear_inventory(actor)
@@ -115,6 +127,12 @@ func _process(delta: float) -> void:
 	if world_check_left > 0: return
 	world_check_left = 0.1
 	if not NetworkManager.is_host(): return
+	# Tracked loans only: remove loose gear/effects that crossed into a clean zone.
+	for entry in cleanup.objects.values():
+		var obj: Node3D = entry.ref.get_ref()
+		if not is_instance_valid(obj) or obj.is_queued_for_deletion(): continue
+		if "is_held" in obj and obj.is_held: continue
+		if not Space.contains(obj.global_position): cleanup._retire(obj)
 	_monitor_gun_refills()
 	for actor in lab.get_node("NetPlayers").get_children():
 		sync_actor(actor)
@@ -137,7 +155,7 @@ func can_affect(a: Node, b: Node) -> bool:
 
 func sync_actor(actor: CharacterBody3D) -> void:
 	if not NetworkManager.is_host(): return
-	var current := "scrap" if ScrapSpace.in_room(actor.global_position) else "pen" if Space.contains(actor.global_position) else "hall"
+	var current := "course" if preload("res://maps/hideout/agility_space.gd").contains(actor.global_position) else "scrap" if ScrapSpace.in_room(actor.global_position) else "pen" if Space.contains(actor.global_position) else "hall"
 	var before: String = memberships.get(actor.actor_id,"hall")
 	if before != current:
 		memberships[actor.actor_id] = current
@@ -214,6 +232,11 @@ func _on_world_node_added(node: Node) -> void:
 			if key in node:
 				var owner_actor = node.get(key)
 				if is_instance_valid(owner_actor) and scrap.is_fighter(owner_actor): node.set_meta("scrap_epoch",scrap.epoch)
+		if not node is RigidBody3D and "owner_player" in node and not Space.contains(node.global_position):
+			# Reject blasts before their _ready() can apply any effects.
+			node.set_script(null)
+			cleanup._retire(node)
+			return
 		if node is RigidBody3D:
 			node.collision_mask |= Space.BARRIER_LAYER
 			node.body_entered.connect(cleanup._ordnance_contact.bind(node))
@@ -221,6 +244,7 @@ func _on_world_node_added(node: Node) -> void:
 
 func _ground_initial(obj: RigidBody3D) -> void:
 	if not is_instance_valid(obj): return
+	obj.collision_mask |= Space.BARRIER_LAYER
 	for label in obj.find_children("*","Label3D",true,false):
 		label.no_depth_test = false
 		label.visibility_range_end = 12.0
@@ -464,4 +488,5 @@ func _net_eliminate(victim_id: int, killer_id: int, weapon_icon: String, lethal_
 @rpc("authority","reliable","call_local")
 func _net_respawn(victim_id: int, pos: Vector3, yaw: float) -> void:
 	super._net_respawn(victim_id,pos,yaw)
+	if is_instance_valid(scrap): scrap.return_placed(victim_id)
 	lab._sync_controls()

@@ -56,6 +56,7 @@ func _run() -> void:
 			var actor=scene.get("pilot")
 			if host and not announced and is_instance_valid(actor) and actor.is_online:
 				announced=true
+				_check_unique_player_hud("hosting before guest arrival")
 				_check(not scene.playpen.contains_actor(actor),"host arrival hall is safe")
 				_teleport(actor.actor_id,Vector3(17,-0.11,-36))
 				scene.playpen.sync_actor(actor)
@@ -67,6 +68,7 @@ func _run() -> void:
 				_check(scene.get("activities_ready"),"network activities initialized")
 				_check(scene.get_node("RoundManager").snapshot_received,"world state established before interaction")
 				if not host: _check(not scene.playpen.contains_actor(actor),"arrival hall is safe")
+				_check_unique_player_hud("shared Hideout arrival")
 				print("HIDEOUT_NETWORK_READY ", "HOST" if host else "CLIENT")
 				if host:
 					if not await _wait_for(func(): return peer_ready,"client scene acknowledgement"): return
@@ -86,6 +88,7 @@ func _run() -> void:
 					var home=get_tree().current_scene.training
 					_check(home.records.personal_best(home.records_bucket(false),home.viewer_id())<42000,"improved personal best survives disconnect and loads in own home")
 					_check(home.records.lobby_rows(home.records_bucket(false))[0].time_ms<42000,"fresh home board displays saved personal best without another run")
+					_check_unique_player_hud("guest returned to own home")
 					print("HIDEOUT_COMPLETE CLIENT")
 					get_tree().quit(0)
 				return
@@ -132,6 +135,7 @@ func _exercise_host() -> void:
 	var menu_errors: Array[String]=await preload("res://tools/hideout_menu_validation.gd").run(scene)
 	_check(menu_errors.is_empty(),"host Escape movement and camera: "+str(menu_errors))
 	await _verify_remote("pause_movement")
+	await _check_live_appearance(scene)
 	manager.clear_inventory(host_actor)
 	manager.server_eliminate(client_id,host_actor.actor_id,manager.online_round_epoch)
 	_check(not guest.is_eliminated,"main hall rejects damage")
@@ -197,17 +201,24 @@ func _exercise_host() -> void:
 		if object.is_in_group("melee"): duel_melee+=1
 	_check(duel_guns==1 and duel_melee==2,"Scrap Yard provides one gun and two melee weapons")
 	await _verify_remote("duel")
+	await _check_disarm_reload(scene)
+	var result_started:=Time.get_ticks_msec()
 	manager.server_eliminate(client_id,host_actor.actor_id,manager.online_round_epoch)
 	_check(scene.scrap.state==scene.scrap.State.RESULT,"one elimination ends the duel")
 	_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"host awards one Scrap win")
 	scene.scrap.finish_elimination(client_id)
 	_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"duplicate elimination cannot award a second win")
 	await _verify_remote("scrap_wins")
-	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.IDLE,"duel reset"): return
+	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.IDLE,"duel reset",6000): return
+	_check(Time.get_ticks_msec()-result_started<6000,"victory and acknowledged return complete without timeout delay")
+	await get_tree().create_timer(0.35).timeout
+	_check(scene.scrap.transition.veil.color.a<0.01,"return fade reveals the room after placement")
 	_check(not guest.is_eliminated and not host_actor.holding_gun,"duel returns both players without gear")
 	_check(guest.position.distance_to(host_actor.position)>2.0,"fighters return to separate terminal positions")
 	_check(get_tree().get_nodes_in_group("online_powerup").all(func(obj): return int(obj.get_meta("scrap_epoch",-1))<0),"duel power spawn retires with the round")
 	await _verify_remote("duel_reset")
+	await _check_spectator_return(scene)
+	await _verify_remote("spectator_return")
 	_teleport(host_actor.actor_id,scene.scrap.Space.TERMINAL_USE)
 	_teleport(client_id,scene.scrap.Space.TERMINAL_USE+Vector3(1,0,0))
 	await get_tree().create_timer(0.4).timeout
@@ -221,6 +232,7 @@ func _exercise_host() -> void:
 	if not await _wait_for(func(): return scene.scrap.state==scene.scrap.State.ACTIVE,"reverse-order duel starts"): return
 	_check(scene.controls_enabled and scene.ui.page.is_empty(),"host can call tails as second fighter and play")
 	await _verify_remote("duel")
+	await _check_disarm_reload(scene)
 	scene.scrap.leave()
 	_check(scene.scrap.state==scene.scrap.State.RESULT,"fighter leave cancels the duel")
 	_check(HideoutSession.scrap_lobby_wins[str(NetworkManager.local_actor_id())].wins==1,"cancelled duels do not award wins")
@@ -231,9 +243,11 @@ func _exercise_host() -> void:
 		NetworkManager.start_game("res://node_3d.tscn")
 		if not await _wait_for(_match_ready,"match ready",60000): return
 		_check(NetworkManager.peers.size()==2,"both peers survive match launch")
+		_check_unique_player_hud("host match HUD")
 		await _verify_remote("match")
 		NetworkManager.host_return_everyone_to_lobby()
 		if not await _wait_for(_hideout_ready,"return to shared Hideout",60000): return
+		_check_unique_player_hud("host match return")
 		await _verify_remote("return")
 		_check(NetworkManager.peers.size()==2,"both peers return to the same session")
 		var room:=get_tree().current_scene
@@ -258,6 +272,7 @@ func _exercise_host() -> void:
 	_check(NetworkManager.is_online() and get_tree().current_scene.scene_file_path==HideoutSession.SCENE,"guest leaving preserves host session")
 	NetworkManager.leave_online_to_main_menu()
 	if not await _wait_for(_own_home_ready,"host returns to own home"): return
+	_check_unique_player_hud("host returned to own home")
 	print("HIDEOUT_COMPLETE HOST")
 	get_tree().quit(0)
 
@@ -288,6 +303,14 @@ func _verify(phase: String) -> void:
 	else:
 		var scene:=get_tree().current_scene
 		match phase:
+			"spectator_return":
+				await _check_spectator_return(scene)
+			"appearance":
+				for actor in scene.get_node("NetPlayers").get_children():
+					_check(actor.character_model_id=="female" and actor.character_skin_id=="blue","roster changes update existing host and guest models")
+			"reload_ready":
+				var guns=get_tree().get_nodes_in_group("gun").filter(func(gun): return gun.get_meta("scrap_epoch",-1)==scene.scrap.epoch)
+				_check(guns.size()==1 and guns[0].can_fire,"guest receives reload completion for the disarmed gun")
 			"pause_movement":
 				var menu_errors: Array[String]=await preload("res://tools/hideout_menu_validation.gd").run(scene)
 				_check(menu_errors.is_empty(),"guest Escape movement and camera: "+str(menu_errors))
@@ -349,6 +372,7 @@ func _verify(phase: String) -> void:
 				_check(scene.pilot.position.distance_to(before)>0.3,"guest can actually move after the coin countdown")
 				_check(scene.pilot.holding_gun or is_instance_valid(scene.pilot.held_melee_weapon),"client received its coin-assigned weapon")
 			"duel_reset": _check(not scene.pilot.is_eliminated and not scene.pilot.holding_gun and not is_instance_valid(scene.pilot.held_melee_weapon),"client duel reset cleared inventory")
+	if phase in ["match","return"]: _check_unique_player_hud("guest " + phase)
 	print("PASS: remote ",phase)
 	_verified.rpc_id(1,phase)
 
@@ -430,3 +454,74 @@ func _exercise_course_modes(scene: Node3D, actor: CharacterBody3D, guest: Charac
 	await _verify_remote("course_guest_grant")
 	t.cancel_runner(guest.actor_id)
 	await _verify_remote("course_cancelled")
+
+func _check_unique_player_hud(context: String) -> void:
+	var world := get_tree().current_scene
+	var in_hideout: bool = world.scene_file_path == HideoutSession.SCENE
+	var expected_hud := "res://maps/hideout/player_hud.gd" if in_hideout else "res://online_hud.gd"
+	var unwanted_hud := "res://online_hud.gd" if in_hideout else "res://maps/hideout/player_hud.gd"
+	var counts := {expected_hud: 0, unwanted_hud: 0,
+		"res://inventory_slots.gd": 0, "res://stamina_bar.gd": 0, "res://dash_charges.gd": 0}
+	var actor = world.pilot if in_hideout else NetworkManager.find_net_player(NetworkManager.local_id())
+	var pending: Array[Node] = [world]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		pending.append_array(node.get_children())
+		var script = node.get_script()
+		if script == null or not counts.has(script.resource_path): continue
+		counts[script.resource_path] += 1
+		if script.resource_path not in [expected_hud, unwanted_hud]:
+			_check(node.player == actor, context + ": widget belongs to local actor: " + node.name)
+	for path in counts:
+		_check(counts[path] == (0 if path == unwanted_hud else 1), context + ": HUD instance count " + path.get_file() + " = " + str(counts[path]))
+	if in_hideout:
+		_check(world.player_hud.player == world.pilot, context + ": sole room HUD is bound to pilot")
+
+func _check_disarm_reload(scene: Node3D) -> void:
+	var manager=scene.playpen
+	var gun=get_tree().get_nodes_in_group("gun").filter(func(obj): return obj.get_meta("scrap_epoch",-1)==scene.scrap.epoch)[0]
+	var original: int=gun.player_ref.actor_id
+	var recipient: int=scene.scrap.fighter_ids.filter(func(id): return id!=original)[0]
+	manager.broadcast_online_gun_action("force_reload",{"holder_actor_id":original})
+	gun.net_force_disarm()
+	manager.broadcast_online_gun_action("pickup",{"holder_actor_id":recipient,"gun_instance_name":str(gun.name)})
+	_check(not gun.can_fire and not gun.get_node("ReloadTimer").is_stopped(),"online disarm transfers the still-reloading gun")
+	if not await _wait_for(func(): return gun.can_fire,"reload after disarm",12000): return
+	await _verify_remote("reload_ready")
+
+func _check_live_appearance(scene: Node3D) -> void:
+	var previous:=NetworkManager.peers.duplicate(true)
+	for id in NetworkManager.peers:
+		NetworkManager.peers[id]["model_id"]="female"
+		NetworkManager.peers[id]["skin_id"]="blue"
+	NetworkManager.lobby_changed.emit()
+	NetworkManager._broadcast_lobby_state()
+	await get_tree().create_timer(0.5).timeout
+	for actor in scene.get_node("NetPlayers").get_children():
+		_check(actor.character_model_id=="female" and actor.character_skin_id=="blue","host applies appearance changes to existing actors")
+	await _verify_remote("appearance")
+	for id in previous:
+		NetworkManager.peers[id]["model_id"]=previous[id].model_id
+		NetworkManager.peers[id]["skin_id"]=previous[id].skin_id
+	NetworkManager.lobby_changed.emit()
+	NetworkManager._broadcast_lobby_state()
+
+func _check_spectator_return(scene: Node3D) -> void:
+	# Present another pair's return to this peer, including a direct stale callback.
+	# This exercises the same snapshot receiver for hosts and guests without actors
+	# or RPC requests belonging to this local viewer.
+	var scrap=scene.scrap
+	var saved: Dictionary=scrap._snapshot().duplicate(true)
+	var returning: Dictionary=saved.duplicate(true)
+	returning.state=scrap.State.RETURNING
+	returning.fighters=[90001,90002]
+	returning.epoch=int(saved.epoch)+1
+	returning.remaining=8.0
+	scrap.set_process(false)
+	scrap._receive(returning)
+	await scrap._fade_for_return(int(returning.epoch))
+	await get_tree().create_timer(0.4).timeout
+	_check(not scrap.transition.visible and scrap.transition.veil.color.a==0.0,"another pair's return never fades this host/guest spectator")
+	_check(scene.controls_enabled,"spectator keeps movement through another pair's return")
+	scrap._receive(saved)
+	scrap.set_process(true)

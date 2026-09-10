@@ -1,13 +1,13 @@
 extends RefCounted
 ## Run/dash/jump circuit, sized for the unchanged 10 m/s controller.
 const G = preload("res://maps/hideout/geometry.gd")
-const COURSE_ID := "flow_circuit_v2"
+const COURSE_ID := "flow_circuit_v3"
 const MODE_BUTTONS := [Vector3(-9.6,1.05,-37.8),Vector3(-9.6,1.05,-46.7)]
-const COURSE_GATES := [Vector3(-12.5,0,-42.25),Vector3(-40,0,-42.25),Vector3(-60,0,-42.25),Vector3(-82,0,-57),Vector3(-62,0,-70.75),Vector3(-37,0,-70.75),Vector3(-8.5,0,-70.75)]
+const COURSE_GATES := [Vector3(-12.5,0,-42.25),Vector3(-40,0,-42.25),Vector3(-60,0,-42.25),Vector3(-82,0,-57),Vector3(-62,0,-70.75),Vector3(-37,0,-70.75),Vector3(-12.5,0,-70.75)]
 const RECOVERY := [Vector3(-16,-0.11,-42.25),Vector3(-41,-0.11,-42.25),Vector3(-62,-0.11,-42.25),Vector3(-82,-0.11,-60),Vector3(-60,-0.11,-70.75),Vector3(-36,-0.11,-70.75),Vector3(-8.5,-0.11,-70.75)]
 
 static func contains(at: Vector3) -> bool:
-	return at.x < -10.3 and at.x > -91.7 and at.z < -35.3 and at.z > -78.7
+	return at.x <= -9.7 and at.x > -91.7 and at.z < -35.3 and at.z > -78.7
 
 static func build(station: Node3D, kit: RefCounted) -> void:
 	var root := Node3D.new()
@@ -17,7 +17,7 @@ static func build(station: Node3D, kit: RefCounted) -> void:
 	G.box(root,"CourseRoof",Vector3(-51,7.4,-57),Vector3(82,0.4,44),kit.ink,true)
 	for z in [-35.0,-79.0]: _wall(root,"CourseEndWall",Vector3(-51,3,z),Vector3(82,8.4,0.6),kit.cream)
 	_wall(root,"CourseBackWall",Vector3(-92,3,-57),Vector3(0.6,8.4,44),kit.cream)
-	_wall(root,"CourseRouteDivider",Vector3(-41,3,-57),Vector3(54,8.4,10),kit.painted)
+	_wall(root,"CourseRouteDivider",Vector3(-39,3,-57),Vector3(58,8.4,10),kit.painted)
 	# A round inner apex gives a generous, continuous 180-degree turn.
 	var nose := G.cylinder(root,"RoundedTurnApex",Vector3(-68,3,-57),5,8.4,kit.painted)
 	var body := StaticBody3D.new()
@@ -71,6 +71,7 @@ static func build(station: Node3D, kit: RefCounted) -> void:
 		G.label(button,"ModeInfo","NO POWERS" if index==0 else "SURGE + EXTRA DASH",Vector3(0,-0.02,0.15),24,G.PAPER,0.006)
 		G.label(button,"SelectionState","SELECTED" if index==0 else "SELECT",Vector3(0,-0.38,0.15),23,color,0.006)
 		station._zone("course_standard" if index==0 else "course_powerup",MODE_BUTTONS[index]+Vector3(1.3,0,0),Vector3(3.2,4,2.7))
+	for z in [-42.25,-70.75]: _barrier(station,root,z,kit)
 	for i in range(COURSE_GATES.size()):
 		var at: Vector3=COURSE_GATES[i]
 		var area := Area3D.new()
@@ -81,8 +82,7 @@ static func build(station: Node3D, kit: RefCounted) -> void:
 		station.add_child(area)
 		area.position=at+Vector3(0,2,0)
 		var shape := BoxShape3D.new()
-		shape.size=Vector3(1,8,16.5) if i!=3 else Vector3(20,8,1)
-		if i in [0,6]: shape.size.z=6.2
+		shape.size=Vector3(1,9,17.6) if i!=3 else Vector3(22,9,1)
 		var gate := CollisionShape3D.new()
 		gate.shape=shape
 		area.add_child(gate)
@@ -145,3 +145,34 @@ static func _arrow(root: Node3D, at: Vector3, yaw: float, kit: RefCounted) -> vo
 	for side in [-1,1]:
 		var stroke := G.box(arrow,"RacingChevron",Vector3(side*0.38,0,0.38),Vector3(0.12,0.03,1.1),kit.brass)
 		stroke.rotation.y=side*-PI/4
+
+static func _barrier(station: Node3D, root: Node3D, z: float, kit: RefCounted) -> void:
+	var barrier := StaticBody3D.new()
+	barrier.name = "CourseOrdnanceBarrier"
+	barrier.collision_layer = 1 << 19
+	barrier.collision_mask = 0
+	station.add_child(barrier)
+	barrier.position = Vector3(-9.7,2.3,z)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(0.4,8,6.3)
+	collision.shape = shape
+	barrier.add_child(collision)
+	G.box(root,"CourseCleanLine",Vector3(-9.6,-1.16,z),Vector3(0.4,0.035,6.1),kit.brass)
+	var veil := G.material("course_clean_barrier",Color(0.61,0.8,0.7,0.12))
+	veil.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	veil.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	G.box(root,"CourseBarrierVeil",Vector3(-9.7,1.8,z),Vector3(0.03,6,6.1),veil)
+
+static func crossed_gate(from: Vector3, to: Vector3, index: int) -> bool:
+	if not from.is_finite() or not to.is_finite() or from.distance_to(to)>30.0: return false
+	var at: Vector3 = COURSE_GATES[index]
+	var a := from.z if index==3 else from.x
+	var b := to.z if index==3 else to.x
+	var plane := at.z if index==3 else at.x
+	var forward := index>=4
+	if (forward and not (a<plane and b>=plane)) or (not forward and not (a>plane and b<=plane)): return false
+	var hit := from.lerp(to,(plane-a)/(b-a))
+	if hit.y < -1.6 or hit.y > 7.4: return false
+	if index==3: return hit.x>=-91.9 and hit.x<=-71.0
+	return hit.z>=(-79.0 if forward else -52.0) and hit.z<=(-62.0 if forward else -35.0)

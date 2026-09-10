@@ -46,6 +46,7 @@ func _ready() -> void:
 	get_viewport().use_occlusion_culling = true
 	previous_mouse_mode = Input.mouse_mode
 	previous_disable_3d = get_viewport().disable_3d
+	WindowFocus.focus_changed.connect(_focus_changed)
 	previous_escape = PauseManager.escape_override
 	PauseManager.set_escape_override(_escape)
 	ui = preload("res://maps/hideout/interface.gd").new()
@@ -334,6 +335,10 @@ func _menu_captures_input() -> bool:
 		settings = native_overlay._player_settings_overlay
 	return is_instance_valid(settings) and not str(settings._capture_action).is_empty()
 
+func _focus_changed(focused: bool) -> void:
+	if focused: cursor_released = false
+	_sync_controls()
+
 func _sync_controls() -> void:
 	controls_enabled = not cursor_released and not departing and (activities_ready or waiting_for_match) and not NetworkManager._prelaunch_active and is_instance_valid(pilot) and not pilot.is_eliminated and (not is_instance_valid(scrap) or not scrap.pilot_locked())
 	if is_instance_valid(pilot):
@@ -346,7 +351,7 @@ func _sync_controls() -> void:
 		player_hud.set_room_visible(not departing and ui.page.is_empty() and not is_instance_valid(native_overlay))
 	ui.shell.visible = not is_instance_valid(native_overlay)
 	get_viewport().disable_3d = previous_disable_3d or is_instance_valid(native_overlay)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if controls_enabled and not _menu_is_open() and not automation and not PlayerPrefs.is_using_controller() else Input.MOUSE_MODE_VISIBLE
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if WindowFocus.active and controls_enabled and not _menu_is_open() and not automation and not PlayerPrefs.is_using_controller() else Input.MOUSE_MODE_VISIBLE
 
 func _refresh() -> void:
 	if not is_instance_valid(ui): return

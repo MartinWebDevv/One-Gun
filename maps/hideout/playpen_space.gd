@@ -13,7 +13,7 @@ static func contains(point: Vector3) -> bool:
 	if point.z <= BARRIER_Z+0.01 and point.z >= -34.1 and point.x>10.15 and point.x<23.85: return true
 	if point.x > -9.7 and point.x < 43.7 and point.z < -33.9 and point.z > -78.7: return true
 	if point.x >= 43.7 and point.x < 159.7 and point.z < -36.3 and point.z > -73.7: return true
-	return point.x > -91.7 and point.x <= -9.7 and point.z < -35.3 and point.z > -78.7
+	return false # Agility is a clean movement-only room, not a combat volume.
 
 static func contains_scrap(point: Vector3) -> bool:
 	if not point.is_finite() or point.y< -5 or point.y>10.2: return false

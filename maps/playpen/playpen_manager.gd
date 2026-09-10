@@ -90,6 +90,10 @@ func _setup_practice_network() -> void:
 	_player_spawner.spawn_path = NodePath("../NetPlayers")
 	_player_spawner.spawn_function = Callable(self, "_net_spawn_player")
 	root.add_child(_player_spawner)
+	_build_practice_hud(root)
+
+
+func _build_practice_hud(root: Node) -> void:
 	_build_online_hud(root)
 	_online_hud.set("practice_mode", true)
 

@@ -56,7 +56,7 @@ func _physics_process(delta: float) -> void:
 	if is_instance_valid(shooter) and shooter is CollisionObject3D:
 		excluded.append(shooter.get_rid())
 	var query := PhysicsRayQueryParameters3D.create(global_position,
-		global_position + linear_velocity * delta, 1, excluded)
+		global_position + linear_velocity * delta, 1 | (1 << 19), excluded)
 	query.hit_from_inside = true
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():

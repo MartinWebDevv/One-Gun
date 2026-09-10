@@ -3,7 +3,7 @@ extends Node
 signal round_changed
 const Space = preload("res://maps/hideout/scrap_space.gd")
 const Coin = preload("res://maps/hideout/scrap_coin.gd")
-enum State { IDLE, CALLING, FLIPPING, COUNTDOWN, ACTIVE, RESULT }
+enum State { IDLE, CALLING, FLIPPING, COUNTDOWN, ACTIVE, RESULT, RETURNING }
 var lab: Node3D
 var manager: Node
 var state := State.IDLE
@@ -18,6 +18,7 @@ const Standings=preload("res://maps/hideout/scrap_standings.gd")
 var wins_board: Label3D
 var board: Label3D
 var banner: Label
+var jumbotron: Node3D
 var coin_visual: Control
 var rng := RandomNumberGenerator.new()
 var update_left := 0.0
@@ -28,11 +29,16 @@ var pending_arrivals: Dictionary = {}
 var positioning := false
 var pending_equipment: Dictionary = {}
 var equipment_waiting := false
+var winner_id := -1
+var transition: CanvasLayer
+var pending_returns: Dictionary = {}
 
 func setup(preview: Node3D) -> void:
 	lab = preview
 	manager = get_parent()
 	rng.randomize()
+	transition=preload("res://maps/hideout/scrap_transition.gd").new()
+	add_child(transition)
 	board = lab.station.find_child("ScrapStatus",true,false)
 	wins_board=lab.station.find_child("ScrapWinsRows",true,false)
 	NetworkManager.lobby_changed.connect(_refresh_standings)
@@ -45,6 +51,9 @@ func setup(preview: Node3D) -> void:
 	banner.offset_top=178
 	banner.offset_bottom=280
 	banner.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	jumbotron=preload("res://maps/hideout/scrap_jumbotron.gd").new()
+	jumbotron.name="ScrapJumbotron"
+	lab.add_child(jumbotron)
 	coin_visual = Coin.new()
 	lab.ui.shell.add_child(coin_visual)
 	coin_visual.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -63,7 +72,7 @@ func can_fight(actor: Node3D) -> bool:
 	return state==State.ACTIVE and is_fighter(actor) and not actor.is_eliminated and Space.in_ring(actor.global_position)
 
 func pilot_locked() -> bool:
-	return is_fighter_id(NetworkManager.local_actor_id()) and state in [State.CALLING,State.FLIPPING,State.COUNTDOWN,State.RESULT]
+	return is_fighter_id(NetworkManager.local_actor_id()) and state in [State.CALLING,State.FLIPPING,State.COUNTDOWN,State.RESULT,State.RETURNING]
 
 func can_call(id: int) -> bool:
 	return state==State.CALLING and fighter_ids.size()==2 and fighter_ids[1]==id and not positioning
@@ -95,7 +104,16 @@ func _accept(id: int, action: String, value: String, request_epoch: int) -> void
 	var concurrent_join := action=="join" and state==State.CALLING and fighter_ids.size()==1 and request_epoch==epoch-1
 	if request_epoch != epoch and not concurrent_join: return
 	var actor = NetworkManager.find_actor(id)
-	if actor == null or actor.is_eliminated: return
+	if actor == null: return
+	if state==State.RETURNING and is_fighter_id(id) and pending_returns.has(id):
+		if action=="return_ready" and pending_returns[id]=="fade":
+			pending_returns[id]="placed"
+			_place_returning_fighter(id)
+		elif action=="returned" and pending_returns[id]=="placed":
+			pending_returns.erase(id)
+			if pending_returns.is_empty(): _finish_return()
+		return
+	if actor.is_eliminated: return
 	if action=="join":
 		if state not in [State.IDLE,State.CALLING] or fighter_ids.size()>=2 or id in fighter_ids: return
 		if not Space.at_terminal(actor.global_position):
@@ -108,6 +126,7 @@ func _accept(id: int, action: String, value: String, request_epoch: int) -> void
 			coin_side=""
 			result_text=""
 			gun_index=-1
+			winner_id=-1
 		fighter_ids.append(id)
 		manager.clear_inventory(actor)
 		manager.training.cancel_runner(id)
@@ -187,10 +206,16 @@ func _process(delta: float) -> void:
 					State.FLIPPING: _prepare_countdown()
 					State.COUNTDOWN: _begin_combat()
 					State.RESULT: _return_fighters()
+					State.RETURNING:
+						for id in pending_returns: _place_returning_fighter(int(id))
+						_finish_return()
 	update_left-=delta
 	if update_left<=0:
 		update_left=0.1
 		var next_text:=status_text()
+		var names: Array=[]
+		for id in fighter_ids: names.append(NetworkManager.peer_name(NetworkManager.peer_id_for_actor(int(id))))
+		jumbotron.present(names if state==State.ACTIVE else [],next_text,coin_side,state==State.FLIPPING,state in [State.FLIPPING,State.COUNTDOWN],time_left)
 		if board.text!=next_text: board.text=next_text
 		var local_fighter := is_fighter_id(NetworkManager.local_actor_id())
 		banner.visible=local_fighter
@@ -224,6 +249,7 @@ func _begin_combat() -> void:
 func finish_elimination(victim: int) -> void:
 	if not NetworkManager.is_host() or state!=State.ACTIVE or not is_fighter_id(victim): return
 	var winner: int = fighter_ids[1] if fighter_ids[0]==victim else fighter_ids[0]
+	winner_id=winner
 	Standings.award(str(winner),NetworkManager.peer_name(NetworkManager.peer_id_for_actor(winner)))
 	result_text = NetworkManager.peer_name(NetworkManager.peer_id_for_actor(winner))+" WINS"
 	_finish()
@@ -239,17 +265,39 @@ func _finish() -> void:
 	equipment_waiting=false
 	positioning=false
 	state=State.RESULT
-	time_left=6.0
+	time_left=3.0
 	manager.clear_duel_gear(epoch,fighter_ids)
 	_publish()
 
 func _return_fighters() -> void:
-	for index in fighter_ids.size():
-		var id: int=int(fighter_ids[index])
-		var actor = NetworkManager.find_actor(id)
-		if actor == null: continue
-		NetworkManager.broadcast_match_rpc(manager,&"_net_respawn",[id,Space.TERMINAL_USE+Vector3(-1.5 if index==0 else 1.5,0,1),0.0])
-		if manager.online_actor_state.has(id): manager.online_actor_state[id]["alive"]=true
+	state=State.RETURNING
+	time_left=8.0
+	for id in fighter_ids:
+		if NetworkManager.find_actor(int(id))!=null: pending_returns[id]="fade"
+	_publish()
+	if pending_returns.is_empty(): _finish_return()
+
+func _place_returning_fighter(id: int) -> void:
+	var index := fighter_ids.find(id)
+	if index<0 or NetworkManager.find_actor(id)==null: return
+	NetworkManager.broadcast_match_rpc(manager,&"_net_respawn",[id,Space.TERMINAL_USE+Vector3(-1.5 if index==0 else 1.5,0,1),0.0])
+	if manager.online_actor_state.has(id): manager.online_actor_state[id]["alive"]=true
+
+func return_placed(id: int) -> void:
+	if state!=State.RETURNING or id!=NetworkManager.local_actor_id(): return
+	var expected := epoch
+	await get_tree().physics_frame
+	if state==State.RETURNING and epoch==expected: _request("returned","",expected)
+
+func _fade_for_return(expected: int) -> void:
+	var local_fighter := is_fighter_id(NetworkManager.local_actor_id())
+	if state!=State.RETURNING or epoch!=expected or not local_fighter: return
+	await transition.fade(1.0,local_fighter)
+	if state==State.RETURNING and epoch==expected and is_fighter_id(NetworkManager.local_actor_id()):
+		_request("return_ready","",expected)
+
+func _finish_return() -> void:
+	pending_returns.clear()
 	manager._broadcast_online_state()
 	fighter_ids.clear()
 	state=State.IDLE
@@ -262,11 +310,12 @@ func status_text() -> String:
 		State.FLIPPING: return "CALL: "+call_side.to_upper()+" / FLIPPING"
 		State.COUNTDOWN: return coin_side.to_upper()+" / PREPARING GEAR" if equipment_waiting else coin_side.to_upper()+" / STARTING IN %d" % ceili(time_left)
 		State.ACTIVE: return "SCRAP! / ONE ROUND"
-		State.RESULT: return result_text
+		State.RESULT: return result_text+" / RETURNING IN %d" % ceili(time_left)
+		State.RETURNING: return "RETURNING TO THE SCRAP YARD"
 	return ""
 
 func _snapshot() -> Dictionary:
-	return {"state":state,"fighters":fighter_ids,"epoch":epoch,"remaining":time_left,"call":call_side,"coin":coin_side,"gun":gun_index,"result":result_text,"positioning":positioning,"equipment_waiting":equipment_waiting,"wins":HideoutSession.scrap_lobby_wins}
+	return {"state":state,"fighters":fighter_ids,"epoch":epoch,"remaining":time_left,"call":call_side,"coin":coin_side,"gun":gun_index,"result":result_text,"positioning":positioning,"equipment_waiting":equipment_waiting,"wins":HideoutSession.scrap_lobby_wins,"winner":winner_id}
 
 func _publish() -> void:
 	NetworkManager.broadcast_match_rpc(self,&"_receive",[_snapshot()])
@@ -290,11 +339,21 @@ func _receive(data: Dictionary) -> void:
 	coin_side=str(data.coin)
 	gun_index=int(data.gun)
 	result_text=str(data.result)
+	winner_id=int(data.get("winner",-1))
 	positioning=bool(data.get("positioning",false))
 	equipment_waiting=bool(data.get("equipment_waiting",false))
 	HideoutSession.scrap_lobby_wins=data.get("wins",{}).duplicate(true)
 	_refresh_standings()
+	if not is_fighter_id(NetworkManager.local_actor_id()) and not was_fighter:
+		transition.reset()
+	if not is_fighter_id(NetworkManager.local_actor_id()): coin_visual.hide()
 	if changed:
+		if state==State.RESULT and winner_id>=0:
+			var winner=NetworkManager.find_actor(winner_id)
+			if is_instance_valid(winner): winner.play_victory_dance()
+		if state==State.RETURNING and is_fighter_id(NetworkManager.local_actor_id()):
+			_fade_for_return(epoch)
+		elif state==State.IDLE and was_fighter: transition.fade(0.0,was_fighter)
 		var local_fighter := is_fighter_id(NetworkManager.local_actor_id())
 		if local_fighter and state==State.CALLING:
 			lab._open("scrap")

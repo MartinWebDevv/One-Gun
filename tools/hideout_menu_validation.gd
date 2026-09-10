@@ -77,7 +77,7 @@ static func _check_shortcut_menus(world: Node3D) -> Array[String]:
 		Input.action_press(actor.input_prefix + "_move_forward")
 		await world.get_tree().create_timer(0.15).timeout
 		Input.action_release(actor.input_prefix + "_move_forward")
-		if Vector2(actor.position.x-start.x,actor.position.z-start.z).length() < 0.2: errors.append("no actual movement: " + page)
+		if Vector2(actor.position.x-start.x,actor.position.z-start.z).length() < 0.2: errors.append("no actual movement: %s distance=%.3f focus=%s typing=%s velocity=%s" % [page,Vector2(actor.position.x-start.x,actor.position.z-start.z).length(),WindowFocus.active,actor.menu_text_input_active,actor.velocity])
 		# Real dispatched jump key: it must not click a focused menu action.
 		var button := Button.new()
 		button.text = "Input probe"

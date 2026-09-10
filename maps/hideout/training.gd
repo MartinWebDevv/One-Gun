@@ -33,6 +33,7 @@ var hud: Label
 var hud_left := 0.0
 var show_result := 0.0
 var status := "ENTER THE START DOOR"
+var previous_positions: Dictionary = {}
 
 func setup(preview: Node3D) -> void:
 	lab=preview
@@ -48,9 +49,7 @@ func setup(preview: Node3D) -> void:
 		targets.append(dummy)
 		range_labels.append(lab.station.find_child("RangeStatus%d" % i,true,false))
 		set_distance(i,0)
-	for area in lab.station.find_children("*","Area3D",true,false):
-		if area.has_meta("course_gate"):
-			area.body_entered.connect(_gate_entered.bind(int(area.get_meta("course_gate"))))
+	# Swept line crossings below cannot miss a thin trigger during a dash.
 	hud=Label.new()
 	lab.ui.shell.add_child(hud)
 	hud.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -124,6 +123,7 @@ func start_trial() -> void:
 	runner_id=viewer_id()
 	run_rules=movement_key()
 	assisted=selected_powerup
+	lab.playpen.clear_inventory(lab.pilot)
 	Loadout.start(lab.pilot,assisted)
 	running=true
 	elapsed=0
@@ -170,6 +170,7 @@ func _physics_process(delta: float) -> void:
 	if lab==null: return
 	show_result=maxf(0,show_result-delta)
 	var actor: CharacterBody3D=lab.pilot
+	_check_crossings(actor)
 	if actor.is_eliminated: cancel_trial("DEATH / RUN CANCELLED")
 	elif running:
 		# Only the marked finish may complete a run. Backtracking cannot submit a time.
@@ -182,6 +183,7 @@ func _physics_process(delta: float) -> void:
 		actor.position=recovery if running else Space.RECOVERY[0]
 		actor.velocity=Vector3.ZERO
 		actor.reset_physics_interpolation()
+		previous_positions[actor.get_instance_id()]=actor.position
 		lab.ui.show_toast("AGILITY / Fall +2s / Returned to checkpoint" if running else "AGILITY / Returned to entry")
 	board_tick-=delta
 	if board_tick<=0:
@@ -259,3 +261,11 @@ func _render_wall_records() -> void:
 func _refresh_records() -> void:
 	_render_wall_records()
 	if lab.ui.page=="course_board": preload("res://maps/hideout/course_board_ui.gd").refresh_live(lab.ui,self)
+
+func _check_crossings(actor: CharacterBody3D) -> void:
+	var id := actor.get_instance_id()
+	var previous: Vector3 = previous_positions.get(id,actor.position)
+	previous_positions[id] = actor.position
+	if actor.is_eliminated: return
+	for index in range(Space.COURSE_GATES.size()):
+		if Space.Course.crossed_gate(previous,actor.position,index): _gate_entered(actor,index)

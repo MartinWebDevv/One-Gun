@@ -11,6 +11,7 @@ const PlayerScene = preload("res://player.tscn")
 var lab: Node3D
 var slots: Array[Dictionary] = []
 var objects: Dictionary = {}
+var course_members: Dictionary = {}
 var effect_lifetimes: Dictionary = {}
 var members: Dictionary = {}
 var deaths: Dictionary = {}
@@ -84,6 +85,10 @@ func contains_object(obj: Node3D) -> bool:
 
 func sync_actor(actor: CharacterBody3D) -> void:
 	var id := actor.get_instance_id()
+	var in_course := preload("res://maps/hideout/agility_space.gd").contains(actor.global_position)
+	if in_course != bool(course_members.get(id,false)):
+		course_members[id]=in_course
+		clear_inventory(actor)
 	var inside: bool = contains_actor(actor) and not actor.is_eliminated and (actor!=opponent or sparring_mode!="off")
 	var was_inside: bool = members.get(id,false)
 	if inside == was_inside and members.has(id): return
@@ -98,7 +103,7 @@ func sync_actor(actor: CharacterBody3D) -> void:
 		clear_inventory(actor)
 		if actor==lab.pilot and was_inside and not actor.is_eliminated:
 			exits+=1
-			var area_name: String="SCRAP YARD" if is_instance_valid(lab.scrap) and lab.scrap.Space.in_room(actor.position) else "MAIN HALL"
+			var area_name: String="AGILITY" if preload("res://maps/hideout/agility_space.gd").contains(actor.position) else "SCRAP YARD" if is_instance_valid(lab.scrap) and lab.scrap.Space.in_room(actor.position) else "MAIN HALL"
 			lab.ui.show_toast(area_name+" / Weapons, items and powerups cleared.")
 
 func clear_inventory(actor: CharacterBody3D) -> void:
@@ -179,7 +184,7 @@ func _object_ready(obj: Node) -> void:
 		obj.body_entered.connect(_ordnance_contact.bind(obj))
 
 func _ordnance_contact(body: Node, obj: Node) -> void:
-	if body.name in ["PlayPenOrdnanceBarrier","ScrapSpectatorBarrier"]: _retire(obj)
+	if body is CollisionObject3D and body.collision_layer & Space.BARRIER_LAYER: _retire(obj)
 
 func _retire(obj: Node) -> void:
 	if not is_instance_valid(obj) or obj.is_queued_for_deletion(): return
