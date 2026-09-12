@@ -56,9 +56,9 @@ static func run(world: Node3D, check: Callable) -> void:
 	reload_gun.get_node("ReloadTimer").start(0.3)
 	reload_gun.force_disarm()
 	reload_gun._local_pickup(actor)
-	check.call(not reload_gun.get_node("ReloadTimer").is_stopped(),"disarm and re-pick preserve the running reload timer")
+	check.call(reload_gun.can_fire and reload_gun.get_node("ReloadTimer").is_stopped(),"disarm pickup immediately clears the old reload")
 	await world.get_tree().create_timer(0.4).timeout
-	check.call(reload_gun.can_fire,"disarmed gun becomes fireable after remaining reload")
+	check.call(reload_gun.can_fire,"picked-up gun stays ready after the old reload would have expired")
 	var old_model: String=actor.character_model_id
 	var old_skin: String=actor.character_skin_id
 	reload_gun.can_fire=false

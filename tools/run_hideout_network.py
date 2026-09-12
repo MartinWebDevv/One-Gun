@@ -8,18 +8,20 @@ startup=subprocess.STARTUPINFO()
 startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 startup.wShowWindow=0
 procs=[]
+# Recovery also reads .bak/.tmp, so each run needs fresh fixture paths.
+record_files={role:role+"_records_"+str(time.time_ns())+".json" for role in ("host","client")}
 for role in ("host","client"):
     (out/(role+".log")).write_text("")
     # Distinct disks model two PCs with previously saved records, before any run.
     standard=45000 if role=="host" else 42000
     powered=33000 if role=="host" else 30000
     prefix="flow_circuit_v3/dash3/sprint0/jump7.000/"
-    (out/(role+"_records.json")).write_text(json.dumps({"version":1,"personal":{
+    (out/record_files[role]).write_text(json.dumps({"version":1,"personal":{
         prefix+"standard":{"local:profile":standard,"account:someone_else":1001},
         prefix+"powerup":{"local:profile":powered}}}))
 try:
     for role in ('host','client'):
-        command=[str(root/'Godot_v4.7.1-stable_win64.exe'),'--headless','--path',str(root),'--log-file',str(out/(role+'.log')),'res://tools/hideout_network_validation.tscn','--','--hideout-test','--hideout-'+role,'--course-records-file=res://artifacts/hideout_migration/'+role+'_records.json']
+        command=[str(root/'Godot_v4.7.1-stable_win64.exe'),'--headless','--path',str(root),'--log-file',str(out/(role+'.log')),'res://tools/hideout_network_validation.tscn','--','--hideout-test','--hideout-'+role,'--course-records-file=res://artifacts/hideout_migration/'+record_files[role]]
         procs.append(subprocess.Popen(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,startupinfo=startup))
         if role=='host':
             deadline=time.monotonic()+60

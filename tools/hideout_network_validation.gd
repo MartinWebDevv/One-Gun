@@ -132,6 +132,11 @@ func _exercise_host() -> void:
 	_check(scene.training.records.lobby_times[scene.training.records_bucket(true)][str(client_id)]==30000,"guest Power-Up PB is shared separately")
 	_check(scene.training.records.lobby_details.is_empty(),"imported history does not invent session finishes")
 	await _verify_remote("saved_bests")
+	# Model a cloud reply arriving after the initial scene snapshot on each peer.
+	scene.training.personal_store.merge_bests(scene.training.personal_key,{bucket:44000})
+	await _verify_remote("late_cloud_bests")
+	if not await _wait_for(func(): return scene.training.records.lobby_times.get(bucket,{}).get(str(client_id),-1)==41000,"late guest cloud best reaches host without another run"): return
+	_check(scene.training.records.lobby_details.is_empty(),"cloud restores do not invent session finishes")
 	var menu_errors: Array[String]=await preload("res://tools/hideout_menu_validation.gd").run(scene)
 	_check(menu_errors.is_empty(),"host Escape movement and camera: "+str(menu_errors))
 	await _verify_remote("pause_movement")
@@ -308,6 +313,10 @@ func _verify(phase: String) -> void:
 			"appearance":
 				for actor in scene.get_node("NetPlayers").get_children():
 					_check(actor.character_model_id=="female" and actor.character_skin_id=="blue","roster changes update existing host and guest models")
+			"reload_locked":
+				var guns=get_tree().get_nodes_in_group("gun").filter(func(gun): return gun.get_meta("scrap_epoch",-1)==scene.scrap.epoch)
+				_check(guns.size()==1 and not guns[0].can_fire and guns[0].get_node("ReloadTimer").time_left>1.0,"guest receives a full ongoing reload after transferred shot")
+				_check(guns.size()==1 and guns[0].get_reload_progress()<0.5,"guest reload progress uses the full duration")
 			"reload_ready":
 				var guns=get_tree().get_nodes_in_group("gun").filter(func(gun): return gun.get_meta("scrap_epoch",-1)==scene.scrap.epoch)
 				_check(guns.size()==1 and guns[0].can_fire,"guest receives reload completion for the disarmed gun")
@@ -319,6 +328,12 @@ func _verify(phase: String) -> void:
 				if not await _wait_for(func(): return t.records.lobby_rows(t.records_bucket(false)).filter(func(row): return row.time_ms==42000 or row.time_ms==45000).size()==2,"both historical PBs reach guest board"): return
 				_check(t.records.lobby_rows(t.records_bucket(true)).filter(func(row): return row.time_ms==30000 or row.time_ms==33000).size()==2,"guest sees both historical Power-Up PBs")
 				_check(t.records.lobby_details.is_empty(),"guest historical times do not count as new finishes")
+			"late_cloud_bests":
+				var t=scene.training
+				var bucket: String=t.records_bucket(false)
+				var host_id:=str(NetworkManager.actor_id_for_peer(1))
+				if not await _wait_for(func(): return t.records.lobby_times.get(bucket,{}).get(host_id,-1)==44000,"late host cloud best reaches guest without another run"): return
+				t.personal_store.merge_bests(t.personal_key,{bucket:41000})
 			"course":
 				_check(scene.training.records.lobby_rows(scene.training.movement_key()+"/standard").filter(func(row): return row.time_ms>=1000).size()==2,"shared board contains both runners")
 				_check(scene.training.records.personal_best(scene.training.movement_key()+"/standard",str(NetworkManager.local_actor_id()))>=1000,"personal page contains the viewing player record")
@@ -483,11 +498,33 @@ func _check_disarm_reload(scene: Node3D) -> void:
 	var original: int=gun.player_ref.actor_id
 	var recipient: int=scene.scrap.fighter_ids.filter(func(id): return id!=original)[0]
 	manager.broadcast_online_gun_action("force_reload",{"holder_actor_id":original})
+	# Transfer late enough that the old implicit Timer.start() reused a tiny delay.
+	await get_tree().create_timer(1.7).timeout
 	gun.net_force_disarm()
 	manager.broadcast_online_gun_action("pickup",{"holder_actor_id":recipient,"gun_instance_name":str(gun.name)})
-	_check(not gun.can_fire and not gun.get_node("ReloadTimer").is_stopped(),"online disarm transfers the still-reloading gun")
-	if not await _wait_for(func(): return gun.can_fire,"reload after disarm",12000): return
-	await _verify_remote("reload_ready")
+	_check(gun.can_fire and gun.get_node("ReloadTimer").is_stopped(),"online disarm pickup is immediately ready to shoot")
+	# Fire through the real host request gate, away from the opponent.
+	# Check both owners, so guest requests and host-owned gun behavior are covered.
+	for holder_id in [recipient,original]:
+		if int(gun.player_ref.actor_id)!=holder_id:
+			gun.net_force_drop()
+			manager.broadcast_online_gun_action("pickup",{"holder_actor_id":holder_id,"gun_instance_name":str(gun.name)})
+		var holder=NetworkManager.find_actor(holder_id)
+		var before: int=manager._next_online_shot_id
+		var direction: Vector3=holder.get_aim_direction().normalized()
+		var origin: Vector3=holder.global_position+Vector3(0,2.0,0)
+		manager._server_route_online_gun_action(holder_id,"fire",manager.online_round_epoch,direction,"",origin,true)
+		_check(manager._next_online_shot_id==before+1,"transferred gun accepts its first shot immediately on pickup")
+		_check(not gun.can_fire and gun.get_node("ReloadTimer").time_left>1.9,"online shot restores the full two-second reload")
+		# Retire this test shot before it can hit the other fixture player.
+		manager._server_retire_online_projectile(manager._next_online_shot_id,manager.online_round_epoch,origin)
+		await _verify_remote("reload_locked")
+		for i in range(12):
+			manager._server_route_online_gun_action(holder_id,"fire",manager.online_round_epoch,direction,"",origin,true)
+			await get_tree().create_timer(0.03).timeout
+		_check(manager._next_online_shot_id==before+1 and not gun.can_fire,"host rejects repeated fire requests throughout reload")
+		if not await _wait_for(func(): return gun.can_fire,"full reload after transferred shot",4000): return
+		await _verify_remote("reload_ready")
 
 func _check_live_appearance(scene: Node3D) -> void:
 	var previous:=NetworkManager.peers.duplicate(true)

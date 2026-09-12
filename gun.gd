@@ -159,7 +159,7 @@ func _server_try_fire(sender_id: int, dir: Vector3, epoch: int,
 func _net_spawn_bullet(origin: Vector3, dir: Vector3, shooter_id: int, epoch: int,
 		shot_id: int = -1) -> void:
 	can_fire = false
-	$ReloadTimer.start()
+	$ReloadTimer.start(reload_time)
 	var bullet = BulletScene.instantiate()
 	bullet.set("projectile_speed", projectile_speed)
 	bullet.set("net_shooter_id", shooter_id)
@@ -314,7 +314,7 @@ func fire():
 	_launch_bullet_instance(bullet, fire_ray["origin"], fire_direction, player_ref)
 	AudioManager.play_sfx("gun_shot")
 	GameEvents.combat_noise.emit(global_position, int(player_ref.get("actor_id")) if player_ref != null else -1, "gunshot", 30.0)
-	$ReloadTimer.start()
+	$ReloadTimer.start(reload_time)
 
 func force_full_reload() -> void:
 	if NetworkManager.is_online():
@@ -340,7 +340,7 @@ func _apply_forced_reload() -> void:
 func get_reload_progress():
 	if can_fire:
 		return 1.0
-	return 1.0 - ($ReloadTimer.time_left / $ReloadTimer.wait_time)
+	return clampf(1.0 - ($ReloadTimer.time_left / reload_time), 0.0, 1.0)
 
 func _get_fire_camera() -> Camera3D:
 	if player_ref == null:
@@ -526,12 +526,14 @@ func _local_pickup(p, preserve_melee: bool = false) -> bool:
 	angular_velocity = Vector3.ZERO
 	$CollisionShape3D.disabled = true
 	$Area3D.monitoring = false
-	var reload_remaining: float = $ReloadTimer.time_left
 	var prev_parent = get_parent()
 	if prev_parent != null:
 		prev_parent.remove_child(self)
 	hold_point.add_child(self)
-	_resume_reload_after_reparent(reload_remaining)
+	# A granted ground pickup is ready immediately, even after a mid-reload disarm.
+	# Cosmetic reattachment uses _resume_reload_after_reparent instead.
+	$ReloadTimer.stop()
+	can_fire = true
 	position = Vector3.ZERO
 	rotation = Vector3(0, PI, 0)
 	scale = Vector3.ONE * HELD_SCALE
@@ -575,6 +577,8 @@ func drop():
 
 func _resume_reload_after_reparent(remaining: float) -> void:
 	# Timer stops on exiting the scene tree, even when the same gun is reattached.
+	# start(remaining) also changes wait_time: every new shot must explicitly use
+	# reload_time, and HUD progress must remain relative to that full duration.
 	if not can_fire:
 		$ReloadTimer.start(maxf(remaining, 0.001))
 

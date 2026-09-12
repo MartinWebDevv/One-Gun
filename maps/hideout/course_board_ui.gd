@@ -27,7 +27,7 @@ static func build(ui: CanvasLayer, training: Node) -> void:
 			ui._copy(training.format_time(best/1000.0) if best>=0 else "SET YOUR FIRST TIME",42,ui.G.GREEN)
 			ui.contents.get_child(ui.contents.get_child_count()-1).name="PersonalLiveBest"
 			ui._copy("YOUR BEST EVER ON THIS COURSE",23)
-			ui._copy("Your personal best is saved on this PC and shared when you join a Hideout. Standard and Power-Up times stay separate for each movement setup.",20)
+			ui._copy("Your personal best is saved on this PC, backed up to your signed-in account, and shared when you join a Hideout. Standard and Power-Up times stay separate for each movement setup.",20)
 		"world":
 			ui._copy("WORLD TIMES",30)
 			if not training.records.world_available():
@@ -35,12 +35,16 @@ static func build(ui: CanvasLayer, training: Node) -> void:
 				ui._copy("World rankings are coming in a future update. Lobby times and Your Best are available now.",21)
 			else:
 				for row in training.records.world_rows(bucket): ui._copy("%s / %s" % [row.name,training.format_time(row.time_ms/1000.0)],24)
+	ui._copy(training.cloud_caption(),19,ui.G.CYAN)
+	ui.contents.get_child(ui.contents.get_child_count()-1).name="CourseCloudStatus"
 	if training.records.save_error!=OK: ui._copy("Your latest best is available this session, but could not be saved on this PC.",19,ui.G.ORANGE)
 	ui._button(ui.contents,"COURSE / HOW TO RUN","page","agility",ui.G.GREEN)
 
 static func refresh_live(ui: CanvasLayer, training: Node) -> void:
 	if ui.page!="course_board": return
 	var bucket: String=training.records_bucket(training.board_assisted)
+	var cloud: Label=ui.contents.get_node_or_null("CourseCloudStatus")
+	if cloud: cloud.text=training.cloud_caption()
 	var personal: Label=ui.contents.get_node_or_null("PersonalLiveBest")
 	if personal:
 		var best: int=training.records.personal_best(bucket,training.viewer_id())

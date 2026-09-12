@@ -132,7 +132,10 @@ Sprinting is a match-wide setting (`GameConfig.sprinting_enabled`) that applies 
 
 - **One gun spawns per match** — no ammo pickups, no second gun.
 - Semi-automatic: one shot per trigger pull, then a reload.
-- Reload time: 2.0s.
+- Reload time: 2.0s after every shot. A successful gun pickup is immediately
+  ready to fire, including a gun disarmed during reload, in both One Gun matches
+  and the Scrap Yard. Pickup clears the old reload; the next shot always starts
+  the full 2.0s. Cosmetic reattachment is not a pickup and preserves the reload.
 - Bullet speed: 200 m/s, still a physically simulated projectile with a 10s emergency lifetime. Its bright visible sphere remains 0.1m radius for readability, while the gameplay collision core is a precise 0.025m radius so a visibly offset shot cannot graze a target.
 - A bullet hit is an **instant elimination** — there is no health pool or damage falloff.
 - Every valid hostile bullet contact, including a protected or nonlethal All Gun hit, shows the victim a red directional arc for 0.9s. The arc uses the shot's impact bearing, stays camera-relative while the victim is alive, and freezes across an immediate lethal spectator handoff so the direction remains readable. Hits within 20 degrees merge and refresh; at most four distinct bearings display together.
@@ -333,9 +336,11 @@ separate bucket from legacy arbitrary assisted runs.
 The Hideout course board shows the personal best of every current lobby member,
 including their saved time before they run in this lobby. A faster finish becomes
 their new saved best; a slower finish only updates their latest-run details.
-Standard/Power-Up, course versions and movement configurations stay separate.
-Personal bests persist on the player's PC across sessions, using their signed-in
-account identity when available, and are shared when joining another Hideout.
+Standard/Power-Up and movement configurations stay separate. Known v2/v3 times
+are merged by taking the faster value; the original version history remains saved.
+Personal bests persist locally and back up to the signed-in account in Supabase.
+Sign-in restores a faster cloud best, and joining a Hideout shares it with the lobby.
+Empty/slower syncs cannot replace a best; offline improvements upload after reconnect.
 
 Agility retries reuse the player's last chosen mode; green START/FINISH decoration
 means Standard and orange means Power-Up, visible only to that player. Match
@@ -349,5 +354,6 @@ Neither agility doorway admits carried weapons, items or outside powerups; bulle
 stop at both doors. Only the selected run's normal starting bonuses are allowed.
 Start and finish are equally inset (2.5m), with full-lane directional checkpoint
 crossings. The adjusted route uses `flow_circuit_v3`; old-route times remain saved
-in their original buckets. Scrap results show the winner's selected dance for 3s,
+in their original buckets and are also recovered into the current board. Record
+identity is independent of geometry changes; updates must not silently hide bests. Scrap results show the winner's selected dance for 3s,
 then fade through the acknowledged return to the terminal; lobby wins are unchanged.

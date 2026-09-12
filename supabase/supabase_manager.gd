@@ -65,8 +65,9 @@ var _initial_load_in_progress := false
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Dedicated gameplay servers have no account/store UI and must not ship or
-	# contact a player-facing Supabase project.
-	if OS.has_feature("dedicated_server"):
+	# contact a player-facing Supabase project. Automated peers must not restore
+	# or rotate the actual player's saved sign-in session either.
+	if OS.has_feature("dedicated_server") or OS.get_cmdline_user_args().has("--hideout-test"):
 		return
 	_load_configuration()
 	call_deferred("_restore_session")
@@ -556,13 +557,19 @@ func _restore_session() -> void:
 
 
 func _authenticated_request(path: String, method := HTTPClient.METHOD_GET,
-		payload = null) -> Dictionary:
+		payload = null, expected_user_id := "") -> Dictionary:
 	if not is_authenticated():
 		return {"ok": false, "status": 401, "message": "Not signed in."}
+	if not expected_user_id.is_empty() and current_user_id()!=expected_user_id:
+		return {"ok":false,"status":409,"message":"Account changed."}
 	if not await _ensure_fresh_access_token():
 		return {"ok": false, "status": 401, "message": "The session could not be refreshed."}
+	if not expected_user_id.is_empty() and current_user_id()!=expected_user_id:
+		return {"ok":false,"status":409,"message":"Account changed."}
 	var response := await _request(path, method, payload, true)
 	if int(response.get("status", 0)) == 401 and await _refresh_session():
+		if not expected_user_id.is_empty() and current_user_id()!=expected_user_id:
+			return {"ok":false,"status":409,"message":"Account changed."}
 		response = await _request(path, method, payload, true)
 	return response
 

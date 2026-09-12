@@ -40,6 +40,7 @@ RewardIdentityManager="*res://supabase/reward_identity_manager.gd"
 OnlineChat="*res://online_chat.gd"
 HideoutSession="*res://hideout_session.gd"
 WindowFocus="*res://window_focus.gd"
+CourseCloud="*res://supabase/course_cloud.gd"
 
 [display]
 

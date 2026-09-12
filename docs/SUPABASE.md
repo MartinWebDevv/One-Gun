@@ -1,6 +1,6 @@
 # Supabase integration
 
-One Gun uses Supabase only for persistent identity, cosmetic progression, and the authenticated friends/presence layer.
+One Gun uses Supabase for persistent identity, cosmetic progression, authenticated friends/presence, and agility personal-best backups.
 Godot/ENet remains responsible for lobbies, Tailscale discovery, gameplay,
 authority, and match replication. itch.io and GitHub remain distribution paths.
 
@@ -46,6 +46,8 @@ OS account and its `user://` directory as the session security boundary.
   low-frequency presence heartbeats, short-lived named-lobby invitations, and invite responses.
 - `RewardIdentityManager`: one random private confirmation secret per signed-in app
   session. Only its SHA-256 claim hash crosses ENet before a match.
+- `CourseCloud`: one shared local personal-best cache, account-bound minimum-only
+  cloud sync on sign-in/improvement, restoration, and retry after connection failure.
 
 UI observes manager signals and never makes raw Supabase calls. Private reads require
 a valid player JWT. Catalog strings are data and are never loaded as Godot paths.
@@ -293,3 +295,61 @@ funds, already-owned outfit pieces, duplicate/nonexistent items, an early quitte
 offline behavior, local splitscreen (results-only), repeated transitions, and the
 exported itch-compatible Windows build. These tests change real backend/player state
 and are intentionally not automated with unknown credentials.
+
+
+## Agility personal-best recovery and cloud backup — 2026-09-10
+
+`20260910_agility_personal_bests.sql` is applied to the linked project. Live checks
+confirmed the migration ledger, table RLS, denied direct client access, and
+signed-in-only RPC execution. Recovered records were uploaded with the existing
+player session and read back through the same RPC; an empty sync preserved them.
+
+`CourseCloud` loads `user://hideout/course_records.json` before sign-in. It merges
+the old online file, valid `.bak` and `.tmp` files, and known v2 buckets into the
+current v3 record identity, always taking the faster time for the same account,
+movement setup and category. Original version buckets and legacy files remain.
+Writes retain a previous-file backup and use a flushed temporary file plus rename;
+unreadable primary files are copied aside before replacement. Geometry edits must
+not silently reset record identity again. A deliberate record reset/new competitive
+season requires an explicit design decision and a visible historical record path.
+
+`sync_agility_personal_bests(p_bests)` derives identity from `auth.uid()` and returns
+only that account's records. No player ID is accepted from the client. The RPC
+validates bucket/time limits, serializes an account's concurrent imports, and
+updates only improvements. `agility_personal_best_history` records the initial best
+and each improvement; empty or slower imports never erase a best or append history.
+Both tables deny direct client reads/writes/deletes. The security-definer RPC pins
+an empty search path and is executable only by authenticated accounts.
+
+Cloud replies merge into the local cache and immediately update/share the lobby
+board, including replies arriving after the first scene snapshot. Account changes
+invalidate pending replies and bind uploads to the original account across token
+refresh. Signed-out local-profile records are not silently assigned to an account.
+Offline improvements remain local and retry after 45 seconds; requests are
+asynchronous and coalesced, with no per-frame network or disk activity. The board
+shows backup status. Dedicated/headless automation never syncs these records;
+`--hideout-test` also prevents restoring/rotating the real saved Auth session.
+
+Players must run this client revision on the PC containing their old saves and
+sign into the same account to upload recovered records. After upload, another PC
+can restore their bests at sign-in. Standard, selected Power-Up, legacy arbitrary
+assisted runs, and different movement setups remain separate. This is backup of
+personal receipts (including solo/legacy runs), not a verified World leaderboard.
+
+Validation from the project root:
+
+```powershell
+& '.\Godot_v4.7.1-stable_win64.exe' --headless --path . --script res://tools/course_cloud_validation.gd -- --hideout-test
+npm install --prefix artifacts/course_cloud_validation/db --no-audit --no-fund @electric-sql/pglite
+node tools/run_course_database_test.mjs
+python tools/run_hideout_network.py
+```
+
+The SQL runner uses disposable in-memory PostgreSQL with synthetic accounts,
+checking auth isolation, grants, validation rollback, minimum-only updates, history,
+and migration reapplication. It never runs fixture writes against the live project.
+The Godot test covers legacy/backup recovery, empty-device restore, offline retry,
+a faster run during a request, and account-switch isolation. Network fixtures use
+unique files per run so backup recovery cannot import an earlier test's scores.
+`tools/recover_course_records.gd -- --recover-course-records --hideout-test` is an
+explicit local recovery utility; normal graphical startup performs the same merge.

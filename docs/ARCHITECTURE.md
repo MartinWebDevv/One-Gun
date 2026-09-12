@@ -23,6 +23,7 @@ Registered in `project.godot` under `[autoload]`, load order as listed:
 | `NetworkManager` | `network_manager.gd` | ENet session, roster, authoritative lobby/match coordination, and reliable text-chat routing |
 | `RewardIdentityManager` | `supabase/reward_identity_manager.gd` | Creates one private random reward-confirmation secret per signed-in app session and exchanges only its SHA-256 claim hash through ENet before a match |
 | `OnlineChat` | `online_chat.gd` | Persistent online-only lobby/match chat UI, local history, fade timing, and composition input capture |
+| `CourseCloud` | `supabase/course_cloud.gd` | Shared local personal-best store, legacy/backup recovery, asynchronous account-bound Supabase minimum-only sync and restoration; loaded after HideoutSession/WindowFocus |
 
 ## 2. Scene Flow
 
@@ -279,12 +280,18 @@ modes clear old powers at selection/start; the powered mode grants normal pickup
 snapshots omit record history; accepted finishes publish immediately and update
 existing board rows. The wall shows Standard and Power-Up columns simultaneously.
 
-Production Hideout course records use one account-keyed device file for solo and
-online PBs, with a faster-only migration of legacy online history. On the first
-full scene snapshot the client uploads its saved PBs; the host binds them to that
-peer's actor ID and broadcasts standings. Imported PBs do not increment session
-finish counters. Protocol 6 adds this upload. See `HIDEOUT_MIGRATION.md` for storage,
-validation and the separate future cloud/world scope.
+Production Hideout course records use `CourseCloud.store`, an account-keyed local
+cache shared by solo and online play. It merges valid backup/pending/legacy files
+and known v2 aliases into the stable v3 record identity, retaining original buckets.
+Supabase restores and backs up records through an authenticated minimum-only RPC and maintains
+improvement history. Sign-in/improvements trigger coalesced asynchronous requests;
+failures retry after 45s without blocking play. Account generations and an expected
+user guard across Auth refresh prevent stale-response or upload crossover.
+On the first scene snapshot and later personal/cloud improvements, the client
+shares its PBs; the host binds them to the sender actor and broadcasts standings.
+Imports do not increment session finish counters. The ENet payload is unchanged.
+See `SUPABASE.md` and `HIDEOUT_MIGRATION.md` for tests, deployed schema and recovery;
+verified World rankings remain separate future work.
 
 Hideout session state also retains local course selection and Scrap wins across
 match returns. Wins are server-owned snapshot data cleared on session teardown;
@@ -300,8 +307,11 @@ Hideout shortcut and destination menus preserve locomotion using the same moveme
 
 September 9 repairs: WindowFocus is an always-processing local input gate. Course
 crossings are swept per actor; agility is excluded from combat containment and
-both doors collide with ordnance on layer 20. Gun reparenting restarts its remaining
-reload timer; completion routes by gun instance name. NetworkPractice applies roster
+both doors collide with ordnance on layer 20. Gun drops and cosmetic reattachment
+resume the remaining reload; a successful pickup stops it and is immediately ready
+to fire on every peer. Completion routes by gun instance name. Resuming changes
+its `wait_time`, so local and replicated shots explicitly start `reload_time` and
+the progress ring divides by that full duration, never the resumed remainder. NetworkPractice applies roster
 appearance changes to already-spawned actors. Scrap adds a lightweight four-face
 jumbotron and a result/fade/placement-acknowledgement return phase (protocol 8).
 See HIDEOUT_MIGRATION.md for exact timings, record-version changes and limitations.

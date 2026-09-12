@@ -37,3 +37,6 @@ services/match-coordinator/.dev.vars
 services/match-coordinator/.env
 services/match-coordinator/node_modules/
 services/match-coordinator/.wrangler/
+
+# Disposable agility recovery/cloud validation data and database runtime
+/artifacts/course_cloud_validation/

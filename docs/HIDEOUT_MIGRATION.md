@@ -77,10 +77,10 @@ separate party/backend rollout:
 - While the host is in a match, a late visitor has a local waiting Hideout and
   can spectate via the Game Board. A concurrently simulated waiting world while
   its owner plays elsewhere needs a separate persistent-world server.
-- Course personal bests are account-keyed, device-local saved times shared with
-  the current lobby on entry. New online finishes are host-accepted; imported
-  history also includes solo runs and is not globally verified. Cross-device
-  cloud sync and World/verified record storage remain future.
+- Course personal bests are account-keyed, saved locally, backed up/restored through
+  Supabase, and shared with the current lobby on entry or later cloud restoration.
+  New online finishes are host-accepted; imported history also includes solo runs
+  and is not globally verified. World/verified rankings remain future.
 - Human feel, maximum-party stress, adverse latency/reconnect and weaker-laptop
   frame pacing still require real playtesting.
 
@@ -192,10 +192,12 @@ hashed signed-in account ID (or the existing offline local profile). On load,
 legacy `online_course_records.json` is merged by taking the faster time in each
 identity/category bucket; the legacy file is preserved. A faster accepted finish
 replaces the saved best; slower finishes cannot replace it. Records survive a
-restart, leaving a lobby and changing the session actor ID. They are saved on this
-PC, not cloud-synced or independently verified world rankings.
+restart, leaving a lobby and changing the session actor ID. The 2026-09-10 recovery
+adds Supabase account backup and restores hidden v2 bests into the current board;
+these are still personal receipts, not independently verified world rankings.
 
-After the full scene-ready snapshot, each client uploads its own saved times once.
+After the full scene-ready snapshot, each client shares its own saved times, then
+shares again only when the values change (including a delayed cloud restore).
 The host binds that upload to the sender's actor ID, validates course buckets and
 time bounds, merges faster times and immediately broadcasts the shared standings.
 The host imports its own saved times before sending join snapshots. No account ID
@@ -298,8 +300,9 @@ Regression validation passes for hosting before any guest arrives, guest arrival
 - The centre divider extends to x=-10 without shifting its far end. Start and
   finish are both x=-12.5, 2.5m inside their doorway. Directional swept crossings
   span the lanes, including their wall edges, and require every checkpoint in order.
-  Course version is now `flow_circuit_v3`; older-route PBs remain stored separately
-  because moving the finish changes the measured distance.
+  Course geometry is `flow_circuit_v3`. The initial revision hid older-route PBs;
+  the 2026-09-10 recovery merges their faster values into the current board while
+  retaining their original buckets. Further geometry changes must not reset records.
 - A four-sided overhead Scrap jumbotron presents the shared coin and fighter names
   to spectators. Fighter one is red and fighter two is blue, with a neutral VS.
   Spectators use the jumbotron exclusively for the coin; screen coin overlays are
@@ -328,3 +331,43 @@ clean entry/exit, projectile barriers, reload continuity and focus gating. The E
 harness additionally exercises replicated appearance, disarm during reload and the
 victory/return flow. Real Alt-Tab behavior, internet latency, spectator sightlines
 and weaker-laptop frame pacing still need human playtesting.
+
+
+## Course recovery and account backup — 2026-09-10
+
+The v2-to-v3 bucket change hid existing records rather than deleting their files.
+Recovery merges the shared/legacy files plus backup/pending writes, keeps source
+history, and takes the fastest value per account, movement setup and category.
+`CourseCloud.store` is the common solo/online personal cache; the stable record ID
+is owned by `course_records.gd`, separately from the room geometry ID.
+
+The linked Supabase migration now stores minimum-only account PBs and improvement
+history. Sign-in restores them; new bests save locally before asynchronous backup.
+Late cloud replies refresh both the viewer and other lobby members without another
+run. Account switches cannot upload/restore another account's pending response.
+Cloud failure retains local progress and retries. See `SUPABASE.md` for schema,
+recovery behavior, deployment verification, and isolated SQL/client tests.
+
+The multiplayer test also checks delayed cloud restorations on both host and guest
+and verifies they do not increment lobby finish counts. Automated peers no longer
+restore the real saved Supabase session; fixture files are unique per test run.
+
+
+## Reload duration after disarm — 2026-09-10
+
+The previous reparent fix called `Timer.start(remaining)`, which also replaced
+`wait_time`. The next shot used parameterless `start()` and inherited that short
+remainder, sometimes nearly zero. Local and replicated shots now explicitly start
+the configured two-second reload. Following the clarified pickup rule, a granted
+pickup immediately clears any old reload in both Scrap Yard and regular One Gun.
+The next shot still starts the full two seconds. Drops continue the old timer
+until pickup; cosmetic reattachment preserves its remaining time/progress.
+
+`tools/gun_reload_validation.tscn` reproduces a transfer with 0.05s remaining,
+checks immediate pickup readiness, subsequent local/replicated reloads,
+repeated-click rejection, cosmetic reattachment, forced reload and round reset.
+The original test reproduced five failures in the shortened-duration code.
+The two-peer `tools/run_hideout_network.py` also transfers late in a reload, fires
+immediately through the host combat gate with both owners, checks the guest's
+replicated reload, rejects repeated requests and waits for normal completion.
+No new timers, per-frame work, rendering, or network messages were added.

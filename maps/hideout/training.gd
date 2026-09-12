@@ -67,7 +67,10 @@ func setup(preview: Node3D) -> void:
 	board_footer=lab.station.find_child("CourseBoardFooter",true,false)
 	var local := Records.new()
 	if NetworkManager.is_online(): local.configure("")
-	else: local.configure_profile(lab.automation)
+	elif lab.automation: local.configure_profile(true)
+	else:
+		local=CourseCloud.store
+		CourseCloud.account_changed.connect(_cloud_account_changed)
 	set_records_provider(local)
 	lab.session.changed.connect(refresh_roster)
 
@@ -223,7 +226,7 @@ func refresh_roster() -> void:
 	records.set_members(roster)
 
 func movement_key() -> String:
-	return "%s/dash%d/sprint%d/jump%.3f" % [Space.Course.COURSE_ID,GameConfig.max_dash_charges,int(GameConfig.sprinting_enabled),lab.pilot.jump_velocity]
+	return "%s/dash%d/sprint%d/jump%.3f" % [Records.RECORDS_ID,GameConfig.max_dash_charges,int(GameConfig.sprinting_enabled),lab.pilot.jump_velocity]
 
 func records_bucket(with_assists: bool) -> String:
 	return movement_key()+("/powerup" if with_assists else "/standard")
@@ -269,3 +272,11 @@ func _check_crossings(actor: CharacterBody3D) -> void:
 	if actor.is_eliminated: return
 	for index in range(Space.COURSE_GATES.size()):
 		if Space.Course.crossed_gate(previous,actor.position,index): _gate_entered(actor,index)
+
+func _cloud_account_changed() -> void:
+	cancel_trial("ACCOUNT CHANGED / RUN CANCELLED")
+	refresh_roster()
+	_refresh_records()
+
+func cloud_caption() -> String:
+	return "Local rehearsal records" if lab.automation else CourseCloud.status

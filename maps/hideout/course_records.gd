@@ -11,20 +11,54 @@ var lobby_details: Dictionary = {}
 var storage_path := ""
 var save_error := OK
 
+# Record identity is independent of room geometry revisions. Never bump this to
+# reset a board: known route revisions are explicitly merged, preserving sources.
+const RECORDS_ID := "flow_circuit_v3"
+
+static func canonical_bucket(bucket: String) -> String:
+	return RECORDS_ID+bucket.trim_prefix("flow_circuit_v2") if bucket.begins_with("flow_circuit_v2/") else bucket
+
 func configure(path := "") -> void:
 	storage_path=path
-	if path.is_empty() or not FileAccess.file_exists(path): return
-	var parsed: Variant=JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary or parsed.get("version")!=1: return
+	if path.is_empty(): return
+	# Merge the last good backup and an interrupted atomic write; always take min.
+	for source in [path,path+".bak",path+".tmp"]:
+		_merge_file(source)
+
+func _merge_file(path: String) -> bool:
+	if not FileAccess.file_exists(path): return false
+	var parser := JSON.new()
+	if parser.parse(FileAccess.get_file_as_string(path))!=OK: return false
+	var parsed: Variant=parser.data
+	if not parsed is Dictionary or parsed.get("version")!=1: return false
 	var buckets: Variant=parsed.get("personal",{})
-	if not buckets is Dictionary: return
+	if not buckets is Dictionary: return false
+	var improved := false
 	for bucket in buckets:
 		if not buckets[bucket] is Dictionary: continue
-		var records := {}
 		for id in buckets[bucket]:
 			var time: Variant=buckets[bucket][id]
-			if _valid_time(time): records[str(id)]=int(time)
-		personal_times[str(bucket)]=records
+			if not _valid_time(time): continue
+			# Keep the original bucket as recovery history as well as the visible PB.
+			improved=_merge_one(str(bucket),str(id),int(time)) or improved
+			improved=_merge_one(canonical_bucket(str(bucket)),str(id),int(time)) or improved
+	return improved
+
+func _merge_one(bucket: String, id: String, time_ms: int) -> bool:
+	if not personal_times.has(bucket): personal_times[bucket]={}
+	if time_ms>=int(personal_times[bucket].get(id,3600001)): return false
+	personal_times[bucket][id]=time_ms
+	return true
+
+func merge_bests(id: String, bests: Dictionary) -> bool:
+	var improved := false
+	for bucket in bests:
+		if bucket is String and _valid_time(bests[bucket]):
+			improved=_merge_one(canonical_bucket(bucket),id,int(bests[bucket])) or improved
+	if improved:
+		_save()
+		changed.emit()
+	return improved
 
 func configure_profile(automation := false) -> void:
 	if automation:
@@ -37,26 +71,22 @@ func configure_profile(automation := false) -> void:
 		return
 	configure(PROFILE_PATH)
 	merge_history(LEGACY_ONLINE_PATH)
+	# Persist recovered aliases even when the legacy file has no faster value.
+	if not personal_times.is_empty(): _save()
 
 func merge_history(path: String) -> void:
-	if not FileAccess.file_exists(path): return
-	var previous = get_script().new()
-	previous.configure(path)
 	var improved := false
-	for bucket in previous.personal_times:
-		if not personal_times.has(bucket): personal_times[bucket]={}
-		for id in previous.personal_times[bucket]:
-			var time_ms: int=previous.personal_times[bucket][id]
-			if time_ms<int(personal_times[bucket].get(id,3600001)):
-				personal_times[bucket][id]=time_ms
-				improved=true
+	for source in [path,path+".bak",path+".tmp"]:
+		improved=_merge_file(source) or improved
 	if improved: _save()
 
 func saved_bests(id: String) -> Dictionary:
 	var result := {}
 	for bucket in personal_times:
 		var time_ms := personal_best(bucket,id)
-		if _valid_time(time_ms): result[bucket]=time_ms
+		if _valid_time(time_ms):
+			var canonical := canonical_bucket(str(bucket))
+			result[canonical]=mini(time_ms,int(result.get(canonical,3600001)))
 	return result
 
 func share_saved_bests(actor_id: String, bests: Dictionary) -> bool:
@@ -131,6 +161,13 @@ func _save() -> void:
 	if storage_path.is_empty(): return
 	save_error=DirAccess.make_dir_recursive_absolute(storage_path.get_base_dir())
 	if save_error!=OK: return
+	if FileAccess.file_exists(storage_path):
+		var parser := JSON.new()
+		var valid := parser.parse(FileAccess.get_file_as_string(storage_path))==OK
+		var old: Variant=parser.data if valid else null
+		var backup := storage_path+".bak" if old is Dictionary and old.get("version")==1 else storage_path+".unreadable_"+str(Time.get_unix_time_from_system())
+		save_error=DirAccess.copy_absolute(storage_path,backup)
+		if save_error!=OK: return
 	var file := FileAccess.open(storage_path+".tmp",FileAccess.WRITE)
 	if file==null:
 		save_error=FileAccess.get_open_error()

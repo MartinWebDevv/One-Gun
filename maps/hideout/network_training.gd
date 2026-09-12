@@ -12,6 +12,8 @@ var selected_modes: Dictionary = {}
 var live_times: Dictionary = {}
 var received_at := 0
 var personal_bests_shared := false
+var shared_bests: Dictionary = {}
+var personal_run_key := ""
 
 func setup(preview: Node3D) -> void:
 	manager = get_parent()
@@ -21,20 +23,30 @@ func setup(preview: Node3D) -> void:
 	records.lobby_times = HideoutSession.course_lobby_times.duplicate(true)
 	records.lobby_details = HideoutSession.course_lobby_details.duplicate(true)
 	personal_store = Records.new()
-	if not NetworkManager.is_dedicated_server(): personal_store.configure_profile(lab.automation)
+	if not NetworkManager.is_dedicated_server():
+		if lab.automation: personal_store.configure_profile(true)
+		else:
+			personal_store=CourseCloud.store
+			CourseCloud.account_changed.connect(_cloud_account_changed)
 	var account := SupabaseManager.current_user_id()
 	personal_key = "account:"+account.sha256_text() if account != "" else "local:profile"
 	personal_store.set_members([{"id":personal_key,"name":NetworkManager.local_name()}])
+	personal_run_key=personal_key
+	personal_store.changed.connect(_personal_records_changed)
 	_refresh_records()
 	if NetworkManager.is_host():
 		selected_modes[NetworkManager.local_actor_id()]=selected_powerup
 		_share_personal_bests()
 
 func _share_personal_bests() -> void:
-	if personal_bests_shared or personal_store==null or NetworkManager.is_dedicated_server(): return
-	personal_bests_shared=true
+	if personal_store==null or NetworkManager.is_dedicated_server(): return
+	if not NetworkManager.is_host() and not manager.snapshot_received: return
 	var bests: Dictionary=personal_store.saved_bests(personal_key)
-	if NetworkManager.is_host(): _accept_personal_bests(NetworkManager.local_id(),bests)
+	if personal_bests_shared and bests==shared_bests: return
+	personal_bests_shared=true
+	shared_bests=bests.duplicate(true)
+	if NetworkManager.is_host():
+		if _accept_personal_bests(NetworkManager.local_id(),bests): _publish()
 	else: _report_personal_bests.rpc_id(1,bests,selected_powerup)
 
 @rpc("any_peer","reliable")
@@ -50,7 +62,7 @@ func _accept_personal_bests(peer: int, bests: Dictionary) -> bool:
 	if not NetworkManager.peer_ids_sorted().has(peer) or bests.size()>128: return false
 	var accepted := {}
 	var bucket_pattern := RegEx.new()
-	bucket_pattern.compile("^"+Space.Course.COURSE_ID+"/dash[0-9]+/sprint[01]/jump[0-9]+\\.[0-9]{3}/(standard|powerup)$")
+	bucket_pattern.compile("^"+Records.RECORDS_ID+"/dash[0-9]+/sprint[01]/jump[0-9]+\\.[0-9]{3}/(standard|powerup)$")
 	for bucket in bests:
 		if bucket is String and bucket.length()<=128 and bucket_pattern.search(bucket)!=null:
 			accepted[bucket]=bests[bucket]
@@ -59,7 +71,7 @@ func _accept_personal_bests(peer: int, bests: Dictionary) -> bool:
 
 func movement_key() -> String:
 	var jump := 7.0 if not is_instance_valid(lab.pilot) else float(lab.pilot.jump_velocity)
-	return "%s/dash%d/sprint%d/jump%.3f" % [Space.Course.COURSE_ID,GameConfig.max_dash_charges,int(GameConfig.sprinting_enabled),jump]
+	return "%s/dash%d/sprint%d/jump%.3f" % [Records.RECORDS_ID,GameConfig.max_dash_charges,int(GameConfig.sprinting_enabled),jump]
 
 func rules_caption() -> String:
 	return "%d DASHES / SPRINT %s" % [GameConfig.max_dash_charges,"ON" if GameConfig.sprinting_enabled else "OFF"]
@@ -127,7 +139,9 @@ func _select_mode(id: int, powered: bool) -> void:
 func _course_loadout(id: int, powered: bool, start: bool) -> void:
 	var actor=NetworkManager.find_actor(id)
 	if actor==null: return
-	if start: Loadout.start(actor,powered)
+	if start:
+		Loadout.start(actor,powered)
+		if id==NetworkManager.local_actor_id(): personal_run_key=personal_key
 	else: Loadout.clear(actor)
 	if id==NetworkManager.local_actor_id():
 		remember_mode(powered)
@@ -255,7 +269,7 @@ func _receive(data: Dictionary) -> void:
 func _finished(id: int, bucket: String, time_ms: int) -> void:
 	var actor=NetworkManager.find_actor(id)
 	if actor!=null: Loadout.clear(actor)
-	if id != NetworkManager.local_actor_id(): return
+	if id != NetworkManager.local_actor_id() or personal_run_key!=personal_key: return
 	personal_store.submit_completed_run(bucket,personal_key,time_ms)
 	if not records.personal_times.has(bucket): records.personal_times[bucket] = {}
 	records.personal_times[bucket][viewer_id()] = personal_store.personal_best(bucket,personal_key)
@@ -268,6 +282,7 @@ func _finished(id: int, bucket: String, time_ms: int) -> void:
 func _refresh_records() -> void:
 	if personal_store != null and records != null:
 		records.save_error=personal_store.save_error
+		records.personal_times.clear()
 		for bucket in personal_store.personal_times:
 			records.personal_times[bucket] = {viewer_id():personal_store.personal_best(bucket,personal_key)}
 	super._refresh_records()
@@ -316,3 +331,17 @@ func _restart(id: int) -> void:
 	cancel_runner(id)
 	manager.clear_inventory(actor)
 	NetworkManager.broadcast_match_rpc(manager,&"_net_recover_playpen_actor",[id,Vector3(-8,-0.11,-42.25),PI/2])
+
+func _personal_records_changed() -> void:
+	_refresh_records()
+	_share_personal_bests.call_deferred()
+
+func _cloud_account_changed() -> void:
+	var key: String=CourseCloud.current_key()
+	if key==personal_key: return
+	cancel_trial()
+	personal_key=key
+	personal_run_key=""
+	personal_bests_shared=false
+	personal_store.set_members([{"id":personal_key,"name":NetworkManager.local_name()}])
+	_personal_records_changed()
